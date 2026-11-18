@@ -88,7 +88,7 @@ from house_rules.writing import (  # noqa: F401
 # because that check shares its transcript scan with the visual and plain-summary checks and its patterns are
 # read by delegate and scope too. The checks themselves live in the parts:
 #   core          handover_evidence_check    (reply text, the evidence claims and the not-checked disclosure)
-#   safe_git      handover_commit_check
+#   safe_git      handover_commit_check, handover_handoff_check
 #   writing       handover_turn_writes, handover_plain_check, handover_page_editor_check, handover_visual_check,
 #                 handover_long_reply
 #   design_loop   handover_stop_lines, handover_page_row, handover_checkpoints, handover_qa_retry,
@@ -145,7 +145,7 @@ def event_handover():
     trace_lines_early = []
     transcript_path = _field(_TRANSCRIPT_RE, payload)
     if transcript_path and (_parity_enabled() or _visual_check_enabled() or _plain_summary_enabled()
-                            or _clear_writing_enabled()):
+                            or _clear_writing_enabled() or handoff_enabled()):
         turn_records, _detail = _records_since_last_user_message(transcript_path)
         if turn_records is not None:
             written_now, committed_now = handover_turn_writes(turn_records)
@@ -195,7 +195,8 @@ def event_handover():
     page_note = handover_page_row(payload, transcript_path, have_reply, reply_text, long_words, trace_lines)
     if not retry:
         if handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                                needs_evidence, uncommitted, plain_problems, trace_lines, written=written_now):
+                                needs_evidence, uncommitted, plain_problems, trace_lines, written=written_now,
+                                committed=committed_now):
             return 0
     else:
         handover_qa_retry(payload, have_reply, reply_text, trace_lines)
@@ -287,6 +288,8 @@ EVENTS = {
     "verdict": event_verdict,
     "subagentcommit": event_subagentcommit,
     "autosave": event_autosave,
+    "autosavefinal": event_autosave_final,
+    "pickup": event_pickup,
     "commitgate": event_commitgate,
     "worktreesweep": event_worktreesweep,
     "agentcap": event_agentcap,
@@ -309,6 +312,7 @@ def main(argv):
         return 0
     try:
         core.keep_payload()  # the speed switches need the payload before some handlers read it
+        core.apply_switches()  # typed feature switches set the HOUSE_RULES_ values every check reads
         return handler()
     except BaseException as exc:
         # The last-resort net. A stack trace on stdout would be read as a malformed hook

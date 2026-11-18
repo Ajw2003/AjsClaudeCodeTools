@@ -1115,7 +1115,7 @@ def event_subagentcommit():
             )
             return 0
         advice = " ".join(
-            _branch_advice(bool(branch and branch.startswith(owned_branch_prefixes())), branch,
+            _branch_advice(is_owned_branch(branch), branch,
                            "HEAD is detached in %s" % top)
             for top, branch, _files in left
         )
@@ -1136,7 +1136,7 @@ def event_subagentcommit():
 # subagent killed mid-run (the 2026-09-29 safety-classifier outage). See docs/6-decisions/
 # Decisions.md, 2026-09-30. Related future direction: issue #105 (dynamic dispatch).
 
-AUTOSAVE_REF_PREFIX = "refs/house-rules/autosave/"
+AUTOSAVE_REF_PREFIX = "refs/house-rules/saves/"  # not autosave/: git cannot nest <branch>/<id> under an old autosave/<branch> save
 
 
 COMMITGATE_THRESHOLD = 3
@@ -1166,16 +1166,30 @@ WIP_CHECKPOINT = "wip: checkpoint - %d min without a commit" % CHECKPOINT_MINUTE
 WIP_PARENT = "wip: parent checkpoint of subagent work"
 
 
-_AUTOSAVE_TOOLS = {"Write", "Edit", "NotebookEdit", "Bash"}
+_AUTOSAVE_TOOLS = {"Write", "Edit", "NotebookEdit", "Bash", "PowerShell"}  # PowerShell: the Windows shell tool (#535 QA)
 
 
 def _autosave_enabled():
     return os.environ.get("HOUSE_RULES_AUTOSAVE", "on").strip().lower() not in _TOGGLE_OFF
 
 
-def _autosave_target(payload):
-    """(repo top, branch, tool_name) when the edited file (or, for Bash, the payload
-    cwd) is in a repo on a worktree-agent- branch; None otherwise - not a subagent worktree."""
+def _git_top(start):
+    """The directory holding `.git` (a folder, or a file in a linked worktree), walking up from
+    `start`; a file check per level, no git process."""
+    d = os.path.abspath(start)
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def _autosave_target(payload, agent_only=False):
+    """(repo top, branch, tool_name) when the edited file (or, for Bash, the payload cwd) is in
+    a repo on an attached branch; branch is None on a detached HEAD. None when not in a repo, or
+    (agent_only) not on a worktree-agent- branch. Reads .git/HEAD only: no git process (#486)."""
     try:
         data = json.loads(payload)
     except ValueError:
@@ -1189,26 +1203,45 @@ def _autosave_target(payload):
         return None
     if not os.path.isabs(path) and data.get("cwd"):
         path = os.path.join(data["cwd"], path)
-    # Fast path: .git/HEAD is a file read, so a branch that is not a subagent worktree branch
-    # is ruled out with zero git subprocesses. An unreadable HEAD raises (loud, as before).
     start = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+    while start and not os.path.isdir(start):  # a written file may since have been moved
+        parent = os.path.dirname(start)
+        if parent == start:
+            return None
+        start = parent
+    top = _git_top(start)
     git_dir = _git_dir(start)
-    if not git_dir:
+    if not top or not git_dir:
         return None
     head = _read_text(os.path.join(git_dir, "HEAD")).strip()
-    if not head.startswith("ref: refs/heads/" + AUTOSAVE_BRANCH_PREFIX):
-        return None
-    top = _repo_top(os.path.join(path, "x") if os.path.isdir(path) else path, {})
-    if not top:
-        return None
-    branch = _repo_branch(top)
-    if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX):
+    if head.startswith("ref: refs/heads/"):
+        branch = head[len("ref: refs/heads/"):]
+    elif head:
+        branch = None
+    else:
+        raise RuntimeError("%s/HEAD is empty or unreadable" % git_dir)
+    if agent_only and not (branch and branch.startswith(AUTOSAVE_BRANCH_PREFIX)):
         return None
     return top, branch, tool
 
 
+def _autosave_ref(top, branch):
+    """refs/house-rules/saves/<branch>/<folder id>: one save per folder. The id is made once and kept
+    in the git dir (a linked worktree has its own), so two clones or worktrees never overwrite each other."""
+    path = os.path.join(_git_dir(top), "house-rules-folder-id")
+    fid = _read_text(path).strip() if os.path.isfile(path) else ""
+    if not fid:
+        import secrets
+
+        fid = secrets.token_hex(4)
+        _write_atomic(path, fid)
+    return "%s%s/%s" % (AUTOSAVE_REF_PREFIX, branch, fid)
+
+
 def _autosave_state_path(top, branch, kind):
-    gitdir = _ag(top, ["rev-parse", "--absolute-git-dir"])[1].strip()
+    gitdir = _git_dir(top)  # a file read; handles .git being a file in a linked worktree
+    if not gitdir:
+        raise RuntimeError("no git directory under %s" % top)
     return os.path.join(gitdir, "house-rules-autosave-%s.%s" % (branch.replace("/", "_"), kind))
 
 
@@ -1238,7 +1271,7 @@ def _shown(files):
 def _autosave_push(top, branch, sha, now, force=False):
     """Push the autosave ref to origin, at most once per AUTOSAVE_PUSH_INTERVAL unless `force`.
     Returns a systemMessage string, or None."""
-    ref = AUTOSAVE_REF_PREFIX + branch
+    ref = _autosave_ref(top, branch)
     stamp = _autosave_state_path(top, branch, "pushed")
     prev = _autosave_read(stamp).split()
     if len(prev) == 2 and prev[1] == sha:
@@ -1247,6 +1280,7 @@ def _autosave_push(top, branch, sha, now, force=False):
         return None  # saved locally; the next edit after the window pushes the latest
     if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
         marker = _autosave_state_path(top, branch, "noorigin")
+        _autosave_write(stamp, "%s %s" % (now, prev[1] if len(prev) == 2 else "-"))  # throttle this too
         if _autosave_read(marker):
             return None
         _autosave_write(marker, "1")
@@ -1263,12 +1297,52 @@ def _autosave_push(top, branch, sha, now, force=False):
     return None
 
 
+HANDOFF_FACTS = ".house-rules/handoff-facts.md"
+
+
+def _autosave_facts(top, branch, env, now):
+    """#486: the handoff facts file, written only into the temporary index. No absolute paths."""
+    import time as _t
+
+    def one(args, **kw):
+        rc, out, _e = _ag(top, args, check=False, **kw)
+        return out.strip() if rc == 0 else ""
+
+    ab = one(["rev-list", "--left-right", "--count", "@{u}...HEAD"]).split()
+    ahead = ("%s ahead, %s behind %s" % (ab[1], ab[0], one(["rev-parse", "--abbrev-ref", "@{u}"]))
+             if len(ab) == 2 else "no upstream")
+    files = [f for f in one(["diff", "--cached", "--name-only", "HEAD"], env=env).splitlines() if f]
+    shown = "\n".join("- " + f for f in files[:20])
+    if len(files) > 20:
+        shown += "\n- ... and %d more" % (len(files) - 20)
+    loop = "none"
+    try:
+        from house_rules import design_loop as _dl
+
+        state, problem = _dl._loop_read(_git_dir(top))
+        if problem:
+            loop = "could not read: " + problem
+        elif state.get("feature"):
+            lab = state.get("labels") or {}
+            issues = []
+            for i in state.get("issues") or []:
+                key = "%s#%s" % (i.get("repo"), i.get("number"))
+                issues.append("%s: %s" % (key, ", ".join(lab.get(key, [])) or "no labels"))
+            loop = "feature %s, stage %s\n" % (state["feature"], state.get("stage")) + "\n".join("- " + i for i in issues)
+    except Exception as exc:
+        loop = "could not read (%s: %s)" % (type(exc).__name__, exc)
+    return ("# Handoff facts\n\n- Branch: %s\n- Last commit: %s\n- Upstream: %s\n- Saved (UTC): %s\n\n"
+            "## Uncommitted files (%d)\n%s\n\n## Design loop\n%s\n"
+            % (branch, one(["log", "-1", "--format=%h %s"]) or "none", ahead,
+               _t.strftime("%Y-%m-%d %H:%M:%SZ", _t.gmtime(now)), len(files), shown or "none", loop))
+
+
 def _autosave_snapshot(top, branch, force_push=False):
     """Snapshot the worktree, untracked files included, to the autosave ref without touching
     the real index, branch or working tree, then push it. Returns a systemMessage or None."""
     import time as _t
 
-    ref = AUTOSAVE_REF_PREFIX + branch
+    ref = _autosave_ref(top, branch)
     now = _t.time()
     idx = _autosave_state_path(top, branch, "index")
     env = {"GIT_INDEX_FILE": idx}
@@ -1277,6 +1351,9 @@ def _autosave_snapshot(top, branch, force_push=False):
             os.remove(idx)
         _ag(top, ["read-tree", "HEAD"], env=env)
         _autosave_stage(top, branch, env=env)
+        facts = _autosave_facts(top, branch, env, now)
+        blob = _ag(top, ["hash-object", "-w", "--stdin"], input_bytes=facts.encode("utf-8"))[1].strip()
+        _ag(top, ["update-index", "--add", "--cacheinfo", "100644,%s,%s" % (blob, HANDOFF_FACTS)], env=env)
         tree = _ag(top, ["write-tree"], env=env)[1].strip()
     finally:
         if os.path.exists(idx):
@@ -1294,7 +1371,9 @@ def _autosave_snapshot(top, branch, force_push=False):
                         "commit-tree", tree, "-p", "HEAD", "-m",
                         "house-rules autosave: %s %s" % (branch, stamp)])[1].strip()
         _ag(top, ["update-ref", ref, sha])
-    return _autosave_push(top, branch, sha, now, force=force_push)
+    msg = _autosave_push(top, branch, sha, now, force=force_push)
+    big = _autosave_big_note()
+    return " | ".join(x for x in (msg, big) if x) or None
 
 
 def _wip_message(subject):
@@ -1302,14 +1381,31 @@ def _wip_message(subject):
     return subject + "\n\nCommitted by Edens Agent"
 
 
+_AUTOSAVE_BIG_SKIPPED = []  # the last _autosave_stage call's files left out for size, for the caller's note
+
+
 def _autosave_stage(top, branch, env=None):
-    """#477 (A11): stage tracked changes plus the files the helper wrote with Write, Edit or NotebookEdit.
-    Other untracked files are left out: one may be a token or a data dump that must never reach origin."""
+    """Stage tracked changes plus every new file git does not ignore (aj, 2026-11-17, reversing #477's
+    file-tool-only rule: a file made by a shell command was never saved). A new file over BIG_FILE_BYTES is
+    left out and kept in _AUTOSAVE_BIG_SKIPPED, so big files still reach git only on aj's word."""
+    from house_rules.bigfiles import BIG_FILE_BYTES
+
     _ag(top, ["add", "-u"], env=env)
-    written = [p for p in _autosave_read(_autosave_state_path(top, branch, "written")).splitlines()
-               if p and os.path.isfile(os.path.join(top, p))]
-    if written:
-        _ag(top, ["add", "--"] + written, env=env)
+    new = [p for p in _ag(top, ["ls-files", "--others", "--exclude-standard", "-z"], env=env)[1].split("\0") if p]
+    keep, big = [], []
+    for p in new:
+        full = os.path.join(top, p)
+        (big if os.path.isfile(full) and os.path.getsize(full) > BIG_FILE_BYTES else keep).append(p)
+    for i in range(0, len(keep), 200):  # stays under the command-line length limit on Windows
+        _ag(top, ["add", "--"] + keep[i:i + 200], env=env)
+    _AUTOSAVE_BIG_SKIPPED[:] = big
+
+
+def _autosave_big_note():
+    from house_rules.bigfiles import BIG_FILE_BYTES
+
+    return ("house-rules autosave: left out %s, over the %d MB big-file limit; it reaches git only with "
+            "\"LFS approved: <file>\"." % (", ".join(_AUTOSAVE_BIG_SKIPPED), BIG_FILE_BYTES // (1024 * 1024))) if _AUTOSAVE_BIG_SKIPPED else ""
 
 
 def _autosave_remember(top, branch, payload):
@@ -1358,8 +1454,55 @@ def _head_age_seconds(top):
     return _t.time() - int(_ag(top, ["log", "-1", "--format=%ct"])[1].strip() or "0")
 
 
+def _cloud_autosave(top, branch, tool, payload, force=False):
+    """#528: a cloud session cannot push the hidden saves ref, so on the agent's own branch commit the
+    tracked changes plus the files it wrote as `wip: autosave` and push the branch, at most once per
+    AUTOSAVE_PUSH_INTERVAL unless `force`. Returns systemMessage lines."""
+    import time as _t
+    from house_rules.safe_git import is_protected_branch
+
+    if is_protected_branch(branch, top) or not is_owned_branch(branch):
+        marker = _autosave_state_path(top, branch, "cloudsaid")
+        if _autosave_read(marker):
+            return []
+        _autosave_write(marker, "1")
+        return ["house-rules autosave: `%s` is not the agent's own branch (or is the default branch), so a cloud "
+                "session saves nothing here. Branch off to `ajsagent/<topic>` to be saved. (Said once.)" % branch]
+    if tool in ("Write", "Edit", "NotebookEdit"):
+        _autosave_remember(top, branch, payload)
+    if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
+        return []
+    now = _t.time()
+    stamp = _autosave_state_path(top, branch, "cloudpushed")
+    prev = _autosave_read(stamp).strip()
+    if not force and prev and now - float(prev) < AUTOSAVE_PUSH_INTERVAL:
+        return []  # commit and push together, so edits inside the window make no commit
+    _autosave_write(stamp, str(now))  # before the attempt: a dead origin costs one timeout a minute
+    try:
+        sha, done = _wip_commit(top, branch, "wip: autosave")
+    except RuntimeError as exc:
+        return ["house-rules autosave: could not commit on %s (%s). Nothing was saved." % (branch, exc)]
+    try:
+        _ag(top, ["push", "--quiet", "-u", "origin", branch], timeout=AUTOSAVE_PUSH_TIMEOUT)
+    except RuntimeError as exc:
+        return ["house-rules autosave: could not push %s to origin (%s). It is committed locally only." % (branch, exc)]
+    return [x for x in (_autosave_big_note(),) if x]
+
+
+def _save_said(top, branch, when=""):
+    """#535 QA: the visible line for a save that went through, naming the files and whether the save
+    is on GitHub yet, so a save that never happens is noticed (the desktop app saved nothing, silently)."""
+    files = _dirty_files(top)
+    pushed = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
+    rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", _autosave_ref(top, branch)], check=False)
+    on_github = len(pushed) == 2 and rc == 0 and pushed[1] == cur.strip()
+    return "house-rules autosave%s: saved %d changed file(s) on %s (%s) %s." % (
+        when, len(files), branch, _shown(files),
+        "and pushed the save to GitHub" if on_github else "on this computer; it goes to GitHub at the end of the turn")
+
+
 def event_autosave():
-    """PostToolUse (Write|Edit|NotebookEdit|Bash) on a worktree-agent- branch: after a
+    """PostToolUse (Write|Edit|NotebookEdit|Bash|PowerShell) on a worktree-agent- branch: after a
     CHECKPOINT_MINUTES stretch with no commit, commit for the subagent; then snapshot the
     worktree to the autosave ref and push it. The same entry records `gh issue create` calls for
     the issue gate (_issues_record), which is why it runs on any branch."""
@@ -1377,16 +1520,34 @@ def event_autosave():
         if target is None:
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
+            elif _autosave_enabled():
+                trace_noop("house-rules autosave: this call was outside a git repository, so there is nothing to save.")
             return 0
         top, branch, tool = target
+        if branch is None:  # detached HEAD: skipped, said once
+            marker = _autosave_state_path(top, "detached", "said")
+            if not _autosave_read(marker):
+                _autosave_write(marker, "1")
+                issue_notes.append("house-rules autosave: HEAD is detached, so nothing is saved for this "
+                                   "checkout. (Said once.)")
+            if issue_notes:
+                emit({"systemMessage": " | ".join(issue_notes)})
+            return 0
+        if os.environ.get("CLAUDE_CODE_REMOTE") == "true":
+            notes = issue_notes + _cloud_autosave(top, branch, tool, payload, force=bool(issue_notes))
+            if notes:
+                emit({"systemMessage": " | ".join(notes)})
+            return 0
         if tool in ("Write", "Edit", "NotebookEdit"):
             _autosave_remember(top, branch, payload)
         if tool not in _AUTOSAVE_TOOLS or not _dirty_files(top):
             if issue_notes:
                 emit({"systemMessage": " | ".join(issue_notes)})
+            elif tool in _AUTOSAVE_TOOLS:
+                trace_noop("house-rules autosave: nothing on %s differs from the last commit, so there is nothing to save." % branch)
             return 0
         notes = list(issue_notes)
-        if _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
+        if branch.startswith(AUTOSAVE_BRANCH_PREFIX) and _head_age_seconds(top) >= CHECKPOINT_MINUTES * 60:
             sha, done = _wip_commit(top, branch, WIP_CHECKPOINT)
             if sha:
                 notes.append("house-rules autosave: %d min passed without a commit on %s, so the "
@@ -1400,9 +1561,65 @@ def event_autosave():
         if notes:
             emit({"systemMessage": " | ".join(notes)})
         else:
-            trace("autosave: %s%s saved." % (AUTOSAVE_REF_PREFIX, branch))
+            trace(_save_said(top, branch))
     except Exception as exc:
         emit({"systemMessage": "house-rules plugin: autosave hit an error (%s: %s) and did not run for this call."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
+def event_autosave_final():
+    """Stop / StopFailure (#529): save at once, skipping the one-minute window, when the folder changed
+    since the last save (or has none). A read-only turn pushes nothing. On the PC it never makes a
+    commit; a cloud session on its own branch commits `wip: autosave` (_cloud_autosave)."""
+    try:
+        if not _autosave_enabled():
+            return 0
+        payload = read_payload()
+        if not payload:
+            emit({"systemMessage": "house-rules plugin: autosave (end of turn) got an empty payload and did not run."})
+            return 0
+        target = _autosave_target(payload)
+        if target is None or target[1] is None:  # not in a repo (said by the pickup), or detached HEAD (said by the edit hook)
+            trace_noop("house-rules autosave (end of turn): not on a branch of a git repository, so nothing was saved.")
+            return 0
+        top, branch, _tool = target
+        if os.environ.get("CLAUDE_CODE_REMOTE") == "true":
+            before = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+            notes = _cloud_autosave(top, branch, "Bash", payload, force=True)  # no-op when clean
+            after = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+            if notes:
+                emit({"systemMessage": " | ".join(notes)})
+            elif after != before:
+                trace("house-rules autosave (end of turn): committed %s as `wip: autosave` on %s and pushed it to GitHub."
+                      % (after[:7], branch))
+            elif is_owned_branch(branch):
+                trace("house-rules autosave (end of turn): nothing changed on %s since the last commit, so nothing was saved." % branch)
+            return 0
+        saved = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
+        since = float(saved[0]) if len(saved) == 2 else 0.0  # a file changed after the last save
+        # every changed or new file git does not ignore (2026-11-17: saves no longer depend on how a file was made)
+        changed = [p for p in set(_dirty_files(top))
+                   if os.path.exists(os.path.join(top, p)) and os.path.getmtime(os.path.join(top, p)) > since]
+        rc, cur, _e = _ag(top, ["rev-parse", "--verify", "-q", _autosave_ref(top, branch)], check=False)
+        head = _ag(top, ["rev-parse", "HEAD"])[1].strip()
+        stale = rc != 0 or _ag(top, ["rev-parse", cur.strip() + "^"], check=False)[1].strip() != head
+        if not (changed or stale):
+            # aj, 2026-11-17: say the work is saved, not only that nothing changed (the mid-turn save already pushed it)
+            n = len(_dirty_files(top))
+            if not n:
+                trace("house-rules autosave (end of turn): nothing on %s is uncommitted; your work is in its commits." % branch)
+                return 0
+            on_github = len(saved) == 2 and rc == 0 and saved[1] == cur.strip()
+            at = time.strftime("%H:%M UTC", time.gmtime(since)) if since else "earlier"
+            trace("house-rules autosave (end of turn): your work is saved %s: %d file(s) on %s, saved at %s. Nothing "
+                  "changed after that." % ("on GitHub" if on_github else "on this computer only, not yet on GitHub",
+                                           n, branch, at))
+            return 0
+        msg = _autosave_snapshot(top, branch, force_push=True)
+        emit({"systemMessage": msg}) if msg else trace(_save_said(top, branch, " (end of turn)"))
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: autosave (end of turn) hit an error (%s: %s) and did not save."
                                % (type(exc).__name__, exc)})
     return 0
 
@@ -1424,7 +1641,7 @@ def event_commitgate():
                 return 0
         if not _autosave_enabled():
             return 0
-        target = _autosave_target(payload)
+        target = _autosave_target(payload, agent_only=True)
         if target is None:
             return 0
         top, branch, tool = target
@@ -1468,7 +1685,7 @@ def _autosave_cleanup(top):
     branch = _repo_branch(top)
     if not branch or not branch.startswith(AUTOSAVE_BRANCH_PREFIX) or _dirty_files(top):
         return None
-    ref = AUTOSAVE_REF_PREFIX + branch
+    ref = _autosave_ref(top, branch)
     had_ref = _ag(top, ["rev-parse", "--verify", "-q", ref], check=False)[0] == 0
     _ag(top, ["update-ref", "-d", ref], check=False)
     pushed = _autosave_read(_autosave_state_path(top, branch, "pushed")).split()
@@ -1909,3 +2126,186 @@ def _append_thread_link(body):
 core.register_session_start("inject", _strip_subagent_markers)
 core.register_session_start("inject", _append_thread_link)
 core.register_prompt(_scope_delegate_link)
+
+
+# --- #531: pickup (SessionStart) - the handoff note, the newest save's facts, and what other folders' saves hold
+PICKUP_CAP = 6000
+PICKUP_ANNOUNCE = ("Open your first reply to the user with one line saying what this pickup found on %s: how many "
+                   "uncommitted files the newest save holds and when it was saved (from the facts above), and, if files "
+                   "are listed as missing here, that a restore command is ready and you will ask before running it.")
+PICKUP_NOTE_CAP = 3500
+PICKUP_FETCH_TIMEOUT = 5
+# Two separate namespaces so a <branch>/<id> save never has to nest under an old <branch> save (git's D/F rule).
+PICKUP_REMOTE_PREFIX = "refs/house-rules/remote-saves/"
+PICKUP_REMOTE_OLD_PREFIX = "refs/house-rules/remote-autosave/"
+_PICKUP_OLD_PREFIX = "refs/house-rules/autosave/"
+
+
+def _pickup_cut(text, cap, what):
+    if len(text) <= cap:
+        return text
+    return text[:cap] + "\n[house-rules pickup: %s was %d characters and is cut at %d; read it directly for the rest]" % (
+        what, len(text), cap)
+
+
+def _pickup_fetch(top, branch):
+    """"" when fetched, else why GitHub could not be reached."""
+    if _ag(top, ["remote", "get-url", "origin"], check=False)[0] != 0:
+        return "no `origin` remote"
+    try:
+        for src, dst in ((AUTOSAVE_REF_PREFIX, PICKUP_REMOTE_PREFIX), (_PICKUP_OLD_PREFIX, PICKUP_REMOTE_OLD_PREFIX),
+                         ("refs/heads/" + branch, "refs/remotes/origin/" + branch)):
+            glob = "*" if src.endswith("/") else ""
+            rc, _o, err = _ag(top, ["fetch", "--quiet", "origin", "+%s%s:%s%s" % (src, glob, dst, glob)],
+                              timeout=PICKUP_FETCH_TIMEOUT, check=False)
+            if rc != 0 and not (not glob and "couldn't find remote ref" in err):  # a branch not on origin yet is fine
+                return (err.splitlines() or ["exit %d" % rc])[0][:120]
+    except RuntimeError as exc:
+        return "git fetch failed: %s" % exc
+    return ""
+
+
+def _pickup_missing(top, snap, g):
+    """(files only in the snapshot, files changed in both it and this folder). Never the facts file or the
+    design-loop stage file: only aj's approvals move the stage, and the guard refuses it."""
+    rc, names, _e = g("diff", "--name-only", "-z", snap + "^", snap)
+    only, both = [], []
+    skip = (HANDOFF_FACTS, ".claude/house-rules-loop.json")
+    for f in [n for n in names.split("\0") if n and n not in skip] if rc == 0 else []:
+        sb = g("rev-parse", "--verify", "-q", "%s:%s" % (snap, f))
+        if sb[0] != 0:
+            continue  # deleted in the save: nothing to restore
+        work = g("hash-object", "--", f)[1].strip() if os.path.isfile(os.path.join(top, f)) else None
+        if work == sb[1].strip():
+            continue
+        hb = g("rev-parse", "--verify", "-q", "HEAD:" + f)
+        (only if work == (hb[1].strip() if hb[0] == 0 else None) else both).append(f)
+    return only, both
+
+
+def _pickup_build(top, branch):
+    """(context lines, problem line or ""). Lines are empty when there is nothing to report."""
+    import shlex
+    g = lambda *a: _ag(top, list(a), check=False)
+    problem = _pickup_fetch(top, branch)
+    if problem:
+        problem = "GitHub could not be reached (%s); local saves are used" % problem
+    paths, parts = [], []
+    behind_line = ""
+    rc, out, _e = g("rev-list", "--left-right", "--count", "HEAD...origin/" + branch)
+    if rc == 0 and len(out.split()) == 2:
+        ahead, behind = (int(x) for x in out.split())
+        if ahead or behind:
+            behind_line = "This folder is %d commit(s) behind and %d ahead of origin/%s." % (behind, ahead, branch)
+    note_rel = "docs/5-today/handoff-%s.md" % branch.replace("/", "-")
+    rc, note, _e = g("show", "HEAD:" + note_rel)
+    if rc != 0:
+        wp = os.path.join(top, note_rel)
+        note = _read_text(wp) if os.path.isfile(wp) else ""
+    if note.strip():
+        paths.append(note_rel)
+        parts.append("Handoff note (%s):\n%s" % (note_rel, _pickup_cut(note.strip(), PICKUP_NOTE_CAP, note_rel)))
+    fid_path = os.path.join(_git_dir(top) or "", "house-rules-folder-id")
+    own = _read_text(fid_path).strip() if os.path.isfile(fid_path) else ""
+    # Every save of this branch: (commit time, ref, folder id or "" for an old single save). Other folders' only.
+    saves, seen, newest = [], set(), None
+    for prefix in (AUTOSAVE_REF_PREFIX, PICKUP_REMOTE_PREFIX):
+        rc, out, _e = g("for-each-ref", "--format=%(committerdate:unix) %(objectname) %(refname)", prefix + branch + "/")
+        for line in out.splitlines() if rc == 0 else []:
+            ts, sha, ref = line.split(" ", 2)
+            if not ts.isdigit():
+                continue
+            newest = max(newest or (0, ""), (int(ts), ref))  # the facts come from the newest save, this folder's included
+            fid = ref.rsplit("/", 1)[1]
+            if fid != own and sha not in seen:
+                seen.add(sha)
+                saves.append((int(ts), ref, fid))
+    olds = []
+    for ref in (_PICKUP_OLD_PREFIX + branch, PICKUP_REMOTE_OLD_PREFIX + branch):
+        rc, out, _e = g("log", "-1", "--format=%ct %H", ref)
+        f = out.split()
+        if rc == 0 and len(f) == 2 and f[0].isdigit():
+            newest = max(newest or (0, ""), (int(f[0]), ref))
+            if f[1] not in seen:
+                seen.add(f[1])
+                olds.append((int(f[0]), ref, ""))
+    saves.sort(reverse=True)
+    olds.sort(reverse=True)
+    missing_blocks = []
+    if newest:
+        paths.append(newest[1])
+        rc, facts, _e = g("show", "%s:%s" % (newest[1], HANDOFF_FACTS))
+        if rc == 0 and facts.strip():
+            parts.append("Facts from the newest save (%s):\n%s" % (newest[1], facts.strip()))
+    for ts, snap, fid in saves + olds:
+        only, both = _pickup_missing(top, snap, g)
+        label = "folder %s" % fid if fid else "an old single save"
+        if only:
+            # Applying the save's own diff, not `git restore`: the guard refuses restore (it can throw edits away),
+            # while `git apply` stops on any file that changed since, so it never overwrites anything.
+            missing_blocks.append("Only in the save from %s (%d min old), not in this folder: %s.\nRestore command: git diff %s^ %s -- %s | git apply"
+                                  % (label, max(0, int((time.time() - ts) / 60)), ", ".join(only), snap, snap,
+                                     " ".join(shlex.quote(f) for f in only)))
+        if both:
+            missing_blocks.append("Changed in both this folder and the save from %s (conflict, never restored by the hook): %s." % (label, ", ".join(both)))
+    if missing_blocks:
+        missing_blocks.append("Ask aj before running any restore command; the hook never restores anything.")
+    now = time.time()
+    recent = set()
+    for prefix, nested in ((AUTOSAVE_REF_PREFIX, 1), (PICKUP_REMOTE_PREFIX, 1), (_PICKUP_OLD_PREFIX, 0), (PICKUP_REMOTE_OLD_PREFIX, 0)):
+        rc, out, _e = g("for-each-ref", "--format=%(refname) %(committerdate:unix)", prefix)
+        for line in out.splitlines() if rc == 0 else []:
+            ref, _s, ts = line.rpartition(" ")
+            name = ref[len(prefix):]
+            name = name.rsplit("/", 1)[0] if nested else name
+            if name != branch and ts.isdigit() and now - int(ts) < 86400:
+                recent.add(name)
+    if not (parts or behind_line or missing_blocks):
+        return [], problem
+    lines = ["house-rules pickup: loaded from %s" % " and ".join(paths or ["origin state"])]
+    if problem:
+        lines.append(problem + ".")
+    lines += [x for x in [behind_line] + missing_blocks if x]
+    lines += parts
+    if recent:
+        lines.append("Other branches with a save under 24 h old: %s." % ", ".join(sorted(recent)))
+    return lines, problem
+
+
+def event_pickup():
+    """SessionStart (#531): the branch's handoff note, the newest save's facts, how far behind origin the
+    folder is, and files other folders' saves hold that this folder lacks. Never restores anything."""
+    try:
+        if os.environ.get("HOUSE_RULES_HANDOFF", "on").strip().lower() in _TOGGLE_OFF:
+            return 0
+        payload = read_payload()
+        cwd = core._payload_cwd(payload or "")
+        top = _git_top(cwd)
+        if not top:
+            trace("house-rules pickup: this folder (%s) is not inside a git repository, so nothing is saved or "
+                  "picked up here." % (os.path.basename(cwd.rstrip("/\\")) or cwd or "unknown"))
+            return 0
+        rc, branch, _e = _ag(top, ["symbolic-ref", "-q", "--short", "HEAD"], check=False)
+        if rc != 0 or not branch.strip():
+            trace("house-rules pickup: HEAD is detached, so there is no branch to pick up and nothing is saved.")
+            return 0
+        lines, problem = _pickup_build(top, branch.strip())
+        out = {}
+        if lines:
+            text = "\n".join(lines)
+            if len(text) > PICKUP_CAP:
+                text = text[:PICKUP_CAP] + "\n[house-rules pickup: output was %d characters and is cut at %d]" % (len(text), PICKUP_CAP)
+            # aj, 2026-11-17: the desktop app shows no SessionStart notice, so Claude says it instead
+            text += "\n\n" + PICKUP_ANNOUNCE % branch.strip()
+            out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": text}
+        if problem:
+            out["systemMessage"] = "house-rules pickup: " + problem + "."
+        elif trace_enabled():
+            out["systemMessage"] = ("house-rules pickup: gave Claude the handoff for %s (its note, save facts or missing files)." % branch.strip()
+                                    if lines else "house-rules pickup: nothing to pick up on %s: no handoff note and no "
+                                    "save from another folder." % branch.strip())
+        if out:
+            emit(out)
+    except Exception as exc:
+        emit({"systemMessage": "house-rules pickup: could not check for a handoff (%s: %s)" % (type(exc).__name__, exc)})
+    return 0

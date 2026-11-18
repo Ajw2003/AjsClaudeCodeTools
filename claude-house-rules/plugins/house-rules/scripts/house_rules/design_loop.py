@@ -17,6 +17,7 @@ import urllib.parse
 
 from house_rules import core
 from house_rules.core import *  # noqa: F401,F403
+from house_rules.writing import _pages_enabled  # noqa: F401  (#537)
 from house_rules.core import (  # noqa: F401
     _builders_enabled,
     _GATED_TOOLS,
@@ -694,7 +695,7 @@ def _loop_unlogged(state, top, label, name):
 # A capitalised header before a colon ends it only when an answer code does not follow (#266): "enforced QA
 # stage: 1A" is a name and its codes, but a pasted "Build plan: 1A" header is cut whole.
 _LOOP_NAME_END_RE = re.compile(r"[.!?](?:\s|$)|\s+(?:Build|Design) plan:|\s+[A-Z][A-Za-z ]{0,30}:\s(?!\d+[A-Za-z*](?:\s|$))"
-                               r"|\s+[-–—]\s|\s*:\s*\d+[A-Za-z*](?:\s|$)")
+                               r"|\s+[-–—]\s|,\s|\s*:\s*\d+[A-Za-z*](?:\s|$)")  # ",\s": #535 QA, aj's "QA failed: X, why"
 
 
 # #403: a name also ends at the first `<` that starts a tag ("</message>" pasted from a reply), and
@@ -1999,7 +2000,9 @@ def _close_check(repo, number, reason, state):
         return False, ("a not-planned close needs an approved sweep or a named list, and #%d is not on one "
                        "with the action not_planned" % number)
     if holders:
-        return False, "#%d's feature passed QA but no merged pull request is recorded since" % number
+        miss = next((e["merge_miss"] for e in holders if e.get("merge_miss")), "")
+        return False, "#%d's feature passed QA but no merged pull request is recorded since%s" % (
+            number, (" (" + miss + ")") if miss else "")
     if sweep:
         return False, "#%d is on the approved sweep list with a different action than completed" % number
     return False, ("no QA pass is recorded for a feature that holds #%d, and it is on no approved sweep or "
@@ -2317,6 +2320,12 @@ def _check_commit(ctx):
     return "commit %s on your own branch" % ", ".join(ctx["uncommitted"][:8])
 
 
+def _check_handoff(ctx):
+    # #530: the work is uploaded and described. Lazy import: safe_git is loaded after this module.
+    from house_rules.safe_git import handover_handoff_check
+    return handover_handoff_check(ctx.get("written") or [], ctx.get("committed"), ctx.get("cwd"))
+
+
 def _check_plain(ctx):
     if not ctx.get("plain_problems"):
         return ""
@@ -2503,6 +2512,7 @@ CHECKPOINTS = [
     ("reply ends", "qa page", _check_qa_page, "block"),
     ("reply ends", "decided for you", _check_decided, "block"),
     ("reply ends", "changelog", _check_changelog, "block"),
+    ("reply ends", "handoff", _check_handoff, "block"),
 ]
 
 
@@ -2513,6 +2523,7 @@ CHECKPOINT_RULES = {
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
     "decided for you": "Design points are aj's to decide; a reply puts them as options, not as \"I went with ...\".",
+    "handoff": "A turn that wrote or committed files is pushed, with a fresh clean handoff note.",
     "changelog": "Every change adds a line to the repo's CHANGELOG.md, in the same turn.",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
@@ -2710,6 +2721,33 @@ def _merged_pr_refs(state, repo, number):
         return _pr_refs(proc.stdout, repo), ""
     except Exception as exc:
         return [], "its body could not be read (%s: %s)" % (type(exc).__name__, exc)
+
+
+LOOP_ISSUE_BODIES_ENV = "HOUSE_RULES_LOOP_ISSUE_BODIES_FILE"  # tests: {"owner/repo#n": issue body}
+_PART_OF_RE = re.compile(r"\bPart of\s+#(\d+)", re.IGNORECASE)
+
+
+def _issue_parent(repo, number):
+    """(parent number or None, problem) from the `Part of #N` line of issue `number`'s body, read through REST
+    (not GraphQL, which cloud sessions refuse). problem says why the body could not be read ("" when it could)."""
+    stand_in = os.environ.get(LOOP_ISSUE_BODIES_ENV)
+    try:
+        if stand_in:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                body = json.load(f)["%s#%d" % (repo, number)]
+        else:
+            if not repo or not shutil.which("gh"):
+                raise RuntimeError("no repo is named" if not repo else "gh is not installed")
+            import subprocess
+            proc = subprocess.run(["gh", "api", "repos/%s/issues/%d" % (repo, number), "--jq", ".body // \"\""],
+                                  capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+            if proc.returncode != 0:
+                raise RuntimeError(((proc.stderr or "").strip().splitlines() or ["gh exited %d" % proc.returncode])[0])
+            body = proc.stdout
+        m = _PART_OF_RE.search(body or "")
+        return (int(m.group(1)) if m else None), ""
+    except Exception as exc:
+        return None, "#%d's body could not be read (%s: %s)" % (number, type(exc).__name__, exc)
 
 
 # #510: after a merge, the local branch of the merged pull request and the finished helper worktrees are deleted
@@ -2917,9 +2955,25 @@ def event_closablemerge():
         stamp_trace = ""  # #510: said through the one emit below, never as a second JSON object on stdout
         if open_:
             refs, why = _merged_pr_refs(state, repo, number)
-            hit = [e for e in open_ if any(isinstance(i, dict) and i.get("number") == n
-                                           and _close_repo_match(r, i.get("repo", ""))
-                                           for i in e.get("issues") or [] for r, n in refs)]
+            have = {(r.lower(), n) for r, n in refs}
+            looked = {}  # (repo, issue) -> parent number or None, for the refusal text
+            miss = []
+
+            def _entry_hit(e):
+                for i in e.get("issues") or []:
+                    if not isinstance(i, dict) or not isinstance(i.get("number"), int):
+                        continue
+                    irepo = (i.get("repo") or repo or "").lower()
+                    if any(n == i["number"] and _close_repo_match(r, i.get("repo", "")) for r, n in refs):
+                        return True
+                    par, perr = _issue_parent(irepo, i["number"])
+                    looked[(irepo, i["number"])] = par
+                    if perr:
+                        miss.append(perr)
+                    if par is not None and (irepo, par) in have:
+                        return True
+                return False
+            hit = [e for e in open_ if _entry_hit(e)]
             for e in hit:
                 e["merged_pr"] = {"repo": repo, "number": number, "at": int(time.time())}
             if hit:
@@ -2932,8 +2986,16 @@ def event_closablemerge():
                              'guard allows those closes once aj says yes. Offer aj: "Close as completed: %s". '
                              "Never close without aj's word." % (repo, number, ", ".join(nums)))
             else:
-                notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (
-                    repo, number, why or "it links none of the QA-passed issues with `Refs #N`"))
+                found = ", ".join("%s#%d" % tuple(r) if isinstance(r, (list, tuple)) else str(r) for r in sorted(have)) or "no refs"
+                looked_txt = "; ".join("#%d (parent %s)" % (n, ("#%d" % p) if p is not None else "none")
+                                       for (_, n), p in sorted(looked.items()))
+                detail = "looked for a Refs/Part of link to %s, found %s%s%s" % (
+                    looked_txt or "any QA-passed issue", found, ("; could not tell: " + "; ".join(miss)) if miss else "",
+                    ("; " + why) if why else "")
+                for e in open_:
+                    e["merge_miss"] = "pull request %s#%d: %s" % (repo, number, detail)
+                _loop_write(git_dir, state)
+                notes.append("house-rules: the merge of %s#%d stamped no closable record, because %s." % (repo, number, detail))
             stamp_trace = "house-rules plugin: merge of %s#%d stamped %d closable record(s)." % (repo, number, len(hit))
         # U3: the merge never moves the stage; aj is asked for the verdict. On the default branch a QA stage file
         # already reads as Done (_loop_read_merged), so asking there would be noise.
@@ -3012,7 +3074,7 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
     # #309 (incident 6 of #303): the page row reports instead of blocking, on the first reply and the retry
     # alike, until the restructure. It pushed another repo's work into a session as a proposal page.
     page_note = ""
-    if _loop_enabled():
+    if _loop_enabled() and _pages_enabled():
         try:
             pctx = {"reply": reply_text if have_reply else "", "long_words": long_words,
                     "cwd": _payload_cwd(payload),
@@ -3038,7 +3100,7 @@ def handover_page_row(payload, transcript_path, have_reply, reply_text, long_wor
 
 
 def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_words, editor_owed,
-                         needs_evidence, uncommitted, plain_problems, trace_lines, written=None):
+                         needs_evidence, uncommitted, plain_problems, trace_lines, written=None, committed=False):
     """The blocking checkpoints at "reply ends" (first reply only). True when the reply was blocked (the
     block is emitted here). An error is added to trace_lines and nothing is blocked."""
     try:
@@ -3047,7 +3109,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             "long_words": long_words,
             "editor_owed": editor_owed,
             "needs_evidence": needs_evidence,
-            "uncommitted": uncommitted, "written": list(written or []),
+            "uncommitted": uncommitted, "written": list(written or []), "committed": committed,
             "plain_problems": plain_problems, "cwd": _payload_cwd(payload),
             "user_text": _last_user_text(transcript_path) if transcript_path else "",
         }

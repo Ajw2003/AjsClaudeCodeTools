@@ -1083,25 +1083,58 @@ def _describe_fetch_error(exc):
     return "%s: %s" % (type(exc).__name__, detail) if detail else type(exc).__name__
 
 
-def _github_version(problems):
-    """GitHub's published version: raw.githubusercontent first, then the contents API, both
-    inside one _GITHUB_FETCH_TIMEOUT budget. Two routes because some sandboxes reset
-    connections to raw.githubusercontent.com while api.github.com works (docs/architecture.md,
-    "versioncheck checks three copies of the version"). Each failed route goes into problems."""
+def _vc_branch_ref(problems):
+    """The branch the house-rules marketplace is pinned to (tools/use_branch.py adds it as
+    owner/repo#<branch>), or "" for the default branch. Read from known_marketplaces.json beside
+    installed_plugins.json; unreadable counts as the default branch."""
+    path = os.path.join(os.path.dirname(_installed_plugins_path()), "known_marketplaces.json")
+    if not os.path.isfile(path):
+        return ""
+    try:
+        entry = json.loads(_read_text(path)).get(_VC_DEFAULT_MARKETPLACE) or {}
+    except Exception as exc:
+        problems.append("could not read known_marketplaces.json (%s), so main was used" % type(exc).__name__)
+        return ""
+    src = entry.get("source") if isinstance(entry.get("source"), dict) else {}
+    return src.get("ref") or entry.get("ref") or ""
+
+
+def _github_urls(ref):
+    """(raw URL, contents-API URL) for plugin.json on `ref`, or on main when ref is ""."""
+    raw_url = os.environ.get("HOUSE_RULES_VC_GITHUB_URL") or _GITHUB_PLUGIN_JSON_URL
+    if not ref:
+        return raw_url, _github_api_url(raw_url)
+    from urllib.parse import quote
+
+    m = _RAW_URL_RE.match(raw_url)
+    if not m:
+        return raw_url, ""
+    owner, repo, _main, path = m.groups()
+    # a branch name holds "/", so the raw URL spells it refs/heads/<branch> and the API takes it quoted
+    return ("https://raw.githubusercontent.com/%s/%s/refs/heads/%s/%s" % (owner, repo, ref, path),
+            "https://api.github.com/repos/%s/%s/contents/%s?ref=%s" % (owner, repo, path, quote(ref, safe="")))
+
+
+def _github_version(problems, ref=""):
+    """GitHub's published version, on the marketplace's branch when it is pinned to one (#535 QA:
+    a branch build compared with main was told to update down). raw.githubusercontent first, then
+    the contents API, both inside one _GITHUB_FETCH_TIMEOUT budget. Two routes because some
+    sandboxes reset connections to raw.githubusercontent.com while api.github.com works
+    (docs/architecture.md, "versioncheck checks three copies of the version"). Each failed route
+    goes into problems."""
     override = os.environ.get("HOUSE_RULES_VC_GITHUB")
     if override is not None:
         return override
     import time
 
     deadline = time.monotonic() + _GITHUB_FETCH_TIMEOUT
-    raw_url = os.environ.get("HOUSE_RULES_VC_GITHUB_URL") or _GITHUB_PLUGIN_JSON_URL
+    raw_url, api_url = _github_urls(ref)
     failures = []
     try:
         return _fetch_version(raw_url, {}, _GITHUB_FETCH_TIMEOUT)
     except Exception as exc:
         failures.append("raw.githubusercontent.com (%s)" % _describe_fetch_error(exc))
 
-    api_url = _github_api_url(raw_url)
     remaining = deadline - time.monotonic()
     if not api_url:
         failures.append("no GitHub API fallback (HOUSE_RULES_VC_GITHUB_URL is not a raw URL)")
@@ -1320,7 +1353,9 @@ def event_versioncheck():
         installed = _plugin_version(problems)
         plugin_id, on_disk = _installed_on_disk(problems)
         market_version = _marketplace_version(problems)
-        github_version = _github_version(problems)
+        branch_ref = _vc_branch_ref(problems)
+        where = "the %s branch" % branch_ref if branch_ref else "the default branch"
+        github_version = _github_version(problems, branch_ref)
         latest = github_version or market_version
 
         if _is_synced_copy():
@@ -1357,17 +1392,17 @@ def event_versioncheck():
             )
         if market_version and github_version and market_version != github_version:
             reasons.append(
-                "the local marketplace clone is %s but GitHub's default branch has %s - the "
+                "the local marketplace clone is %s but %s on GitHub has %s - the "
                 "marketplace clone itself has not synced. Run `%s`, then `%s`."
-                % (market_version, github_version, marketplace_cmd, update_cmd)
+                % (market_version, where, github_version, marketplace_cmd, update_cmd)
             )
         elif not market_version and installed and github_version and _version_tuple(installed) < _version_tuple(github_version):
             # The marketplace clone could not be found/read at all - fall back to comparing
             # the installed copy straight against GitHub so a mismatch is still caught.
             reasons.append(
-                "installed copy is %s but GitHub's default branch has %s (the local "
+                "installed copy is %s but %s on GitHub has %s (the local "
                 "marketplace clone could not be checked). Run `%s`, then `%s`."
-                % (installed, github_version, marketplace_cmd, update_cmd)
+                % (installed, where, github_version, marketplace_cmd, update_cmd)
             )
 
         if not reasons:
@@ -1396,8 +1431,8 @@ def event_versioncheck():
                 emit(out)
             else:
                 trace(
-                    "versioncheck: installed %s matches the marketplace clone and GitHub's "
-                    "default branch." % (installed or "unknown")
+                    "versioncheck: installed %s matches the marketplace clone and %s on "
+                    "GitHub." % (installed or "unknown", where)
                 )
             return 0
 
@@ -2016,7 +2051,7 @@ AUTOSAVE_BRANCH_PREFIX = "worktree-agent-"
 AUTOSAVE_GIT_TIMEOUT = 4.0
 
 
-def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True):
+def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True, input_bytes=None):
     """Run git in `top`; (returncode, stdout, stderr). Raises RuntimeError on failure when
     `check`, and on a timeout always - every caller turns that into a systemMessage."""
     import subprocess
@@ -2028,7 +2063,7 @@ def _ag(top, args, timeout=AUTOSAVE_GIT_TIMEOUT, env=None, check=True):
     try:
         proc = subprocess.run(
             ["git"] + args, cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            timeout=timeout, env=e,
+            timeout=timeout, env=e, input=input_bytes,
         )
     except subprocess.TimeoutExpired:
         raise RuntimeError("git %s timed out after %ss" % (args[0], timeout))
@@ -2188,6 +2223,12 @@ def owned_branch_prefixes():
     """The defaults plus HOUSE_RULES_OWNED_BRANCHES (comma-separated extras, never replacing)."""
     extra = tuple(p.strip() for p in os.environ.get("HOUSE_RULES_OWNED_BRANCHES", "").split(",") if p.strip())
     return OWNED_BRANCH_PREFIXES + extra
+
+
+def is_owned_branch(branch, extra=()):
+    """Is `branch` the agent's own? An `ajsagent/` prefix in any case counts (cloud sessions lowercase it)."""
+    return bool(branch) and (branch.startswith(owned_branch_prefixes() + tuple(extra))
+                             or branch.lower().startswith("ajsagent/"))
 
 
 # Any -C at all, broad on purpose (`grep -C 3` included); only the `git -C <dir>` form below is
@@ -2614,25 +2655,47 @@ def _issues_enabled():
 # Speed switches (#524, docs/4-systems/speed-switches.md): two switches aj types in chat, saved per repo.
 # "design" covers the design loop and the issue gate; "builders" covers delegation and the agent cap.
 MODE_FILE = "house-rules-mode.json"  # .claude/ of the main checkout, beside the design loop's stage file
-MODE_SWITCHES = ("design", "builders")
-_MODE_SWITCH_RE = re.compile(r"\b(design\s+loop|builders)\s+(on|off)\b", re.IGNORECASE)
+# Feature switches (#536): each typed group is stored under a short key and maps onto the HOUSE_RULES_ settings the
+# plugin already reads. The guards and the credit check have no setting here, so no typed line reaches them.
+_MODE_GROUPS = {
+    "design": ("HOUSE_RULES_LOOP", "HOUSE_RULES_ISSUES"),
+    "pages": ("HOUSE_RULES_PAGES",),
+    "builders": ("HOUSE_RULES_DELEGATION", "HOUSE_RULES_AGENTS"),
+    "issues": ("HOUSE_RULES_ISSUES",),
+    "writing": ("HOUSE_RULES_CLEAR_WRITING", "HOUSE_RULES_PLAIN_SUMMARY", "HOUSE_RULES_VISUAL_CHECK",
+                "HOUSE_RULES_PARITY", "HOUSE_RULES_VOICE"),
+    "autosave": ("HOUSE_RULES_AUTOSAVE", "HOUSE_RULES_HANDOFF"),
+}
+_MODE_GROUPS["house"] = tuple(dict.fromkeys(v for g in _MODE_GROUPS.values() for v in g)) + (
+    "HOUSE_RULES_HARVEST", "HOUSE_RULES_COMMIT_CHECK", "HOUSE_RULES_HANDOVER", "HOUSE_RULES_RERUNS",
+    "HOUSE_RULES_DISKREPORT")
+MODE_SWITCHES = tuple(_MODE_GROUPS)
+_MODE_NAMES = {"design loop": "design", "writing checks": "writing", "house rules": "house"}
+_MODE_NAME_RE = r"(?:design\s+loop|pages|builders|issues|writing\s+checks|autosave|house\s+rules)"
+_MODE_ONE = _MODE_NAME_RE + r"\s+(?:on|off)(?:\s+everywhere)?"
+_MODE_SWITCH_RE = re.compile(r"\b(%s)\s+(on|off)(\s+everywhere)?\b" % _MODE_NAME_RE, re.IGNORECASE)
 # A switch counts only when its sentence or line holds nothing else, so a quoted mention does not flip it.
-_MODE_LINE_RE = re.compile(r"\s*(?:/house-rules:mode\s+)?(?:(?:design\s+loop|builders)\s+(?:on|off)[\s,]*(?:and\s+)?)+",
-                           re.IGNORECASE)
+_MODE_LINE_RE = re.compile(r"\s*(?:/house-rules:mode\s+)?(?:%s[\s,]*(?:and\s+)?)+" % _MODE_ONE, re.IGNORECASE)
 _MODE_CACHE = {}
 
 
-def _mode_file(cwd):
-    """The repo's switch file, or None outside a git checkout."""
+def _mode_key(name):
+    name = " ".join(name.lower().split())
+    return _MODE_NAMES.get(name, name)
+
+
+def _mode_files(cwd):
+    """(folder file, everywhere file). The folder file is the main checkout's in a repo, else <cwd>/.claude."""
     top, _gd = _issues_locate(cwd)
     common = _common_git_dir(top) if top else None
-    return os.path.join(os.path.dirname(common), ".claude", MODE_FILE) if common else None
+    folder = os.path.join(os.path.dirname(common) if common else os.path.abspath(cwd), ".claude", MODE_FILE)
+    config = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    return folder, os.path.join(config, MODE_FILE)
 
 
-def _mode_typed(cwd):
-    """{switch: "on"|"off"} aj typed for this repo; {} when none or unreadable (said on stderr)."""
-    path = _mode_file(cwd)
-    if not path or not os.path.isfile(path):
+def _mode_read(path):
+    """{group: "on"|"off"} saved in one file; {} when none or unreadable (said on stderr)."""
+    if not os.path.isfile(path):
         return {}
     try:
         data = json.loads(_read_text(path))
@@ -2642,8 +2705,24 @@ def _mode_typed(cwd):
         return {}
 
 
+def _mode_typed(cwd):
+    """{group: "on"|"off"} aj typed: this folder's file wins, then the everywhere file, group by group."""
+    folder, everywhere = _mode_files(cwd)
+    return dict(_mode_read(everywhere), **_mode_read(folder))
+
+
+def apply_switches():
+    """Set the mapped HOUSE_RULES_ values for this hook call from the typed groups (typed beats settings.json).
+    "house rules" goes first so a more specific group typed beside it wins. Nothing typed: environment untouched."""
+    raw = _PAYLOAD_CACHE
+    typed = _mode_typed(_payload_cwd(raw)) if raw else {}
+    for group in sorted(typed, key=lambda g: g != "house"):
+        for var in _MODE_GROUPS[group]:
+            os.environ[var] = typed[group]
+
+
 def _mode_state(payload=None):
-    """{switch: (off?, why)} for this hook call: aj's typed switch for the repo, else on. There is no model
+    """{switch: (off?, why)} for design and builders this hook call: aj's typed switch, else on. There is no model
     default: hooks are not told the model at session start (probed 2026-11-12), so aj chose typed switches only.
     Cached per process."""
     raw = payload if payload is not None else _PAYLOAD_CACHE
@@ -2651,14 +2730,20 @@ def _mode_state(payload=None):
         return _MODE_CACHE[raw]
     typed = _mode_typed(_payload_cwd(raw)) if raw else {}
     state = {}
-    for name in MODE_SWITCHES:
+    for name in ("design", "builders"):
         if name in typed:
-            state[name] = (typed[name] == "off", "you typed \"%s %s\"" % (
-                "design loop" if name == "design" else name, typed[name]))
+            state[name] = (typed[name] == "off", "you typed \"%s %s\"%s" % (
+                "design loop" if name == "design" else name, typed[name], _mode_where(name, raw)))
         else:
             state[name] = (False, "")
     _MODE_CACHE[raw] = state
     return state
+
+
+def _mode_where(group, raw):
+    """", in this folder" / ", everywhere" for a typed group, "" when nothing typed it."""
+    folder, everywhere = _mode_files(_payload_cwd(raw)) if raw else ("", "")
+    return ", in this folder" if group in _mode_read(folder) else ", everywhere" if group in _mode_read(everywhere) else ""
 
 
 def _switch_off(name, env_var):
@@ -2674,26 +2759,33 @@ def _builders_enabled():
 
 
 def _mode_apply(text, payload):
-    """aj's own message "design loop off" / "builders on" saves the switch. Returns a note, or ""."""
+    """aj's own message "pages off" / "builders on everywhere" saves the switch. Returns a note, or ""."""
     found = [m for part in re.split(r"[.\n;!?]", text or "") if _MODE_LINE_RE.fullmatch(part)
              for m in _MODE_SWITCH_RE.findall(part)]
     if not found:
         return ""
-    path = _mode_file(_payload_cwd(payload))
-    if not path:
-        return "House rules: you typed a switch, but this folder is not in a git repo, so nothing was saved."
-    typed = _mode_typed(_payload_cwd(payload))
-    for which, value in found:
-        typed["design" if which.lower().startswith("design") else "builders"] = value.lower()
-    try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        _write_atomic(path, json.dumps(typed, indent=1, sort_keys=True))
-    except OSError as exc:
-        return "House rules: could not save the switch to %s (%s), so nothing changed." % (path, exc)
+    folder, everywhere = _mode_files(_payload_cwd(payload))
+    notes = []
+    for path, wanted in ((folder, False), (everywhere, True)):
+        mine = [(n, v) for n, v, e in found if bool(e) == wanted]
+        if not mine:
+            continue
+        saved = _mode_read(path)
+        for name, value in mine:
+            saved[_mode_key(name)] = value.lower()
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            _write_atomic(path, json.dumps(saved, indent=1, sort_keys=True))
+        except OSError as exc:
+            notes.append("could not save the switch to %s (%s), so nothing changed." % (path, exc))
+            continue
+        top, _gd = _issues_locate(_payload_cwd(payload))
+        notes.append("saved %s %s in %s%s." % (
+            ", ".join("%s %s" % (k, v) for k, v in sorted(saved.items())),
+            "everywhere" if wanted else "for this folder", path,
+            "; commit it with the next commit" if top and not wanted else ""))
     _MODE_CACHE.clear()
-    return ("House rules: saved %s for this repo in %s; commit it with the next commit. %s" % (
-        ", ".join("%s %s" % ("design loop" if k == "design" else k, v) for k, v in sorted(typed.items())),
-        path, _mode_note(payload)))
+    return "House rules: %s %s" % (" ".join(notes), _mode_note(payload))
 
 
 def _mode_note(payload=None):
@@ -2708,8 +2800,21 @@ def _mode_note(payload=None):
     if _switch_off("builders", "HOUSE_RULES_DELEGATION"):
         parts.append("Builders OFF (%s): the \"delegate the execution\" rule does not apply; build it yourself in "
                      "this conversation." % (st["builders"][1] or "HOUSE_RULES_DELEGATION=off"))
+    raw = payload if payload is not None else _PAYLOAD_CACHE
+    typed = _mode_typed(_payload_cwd(raw)) if raw else {}
+    # settings.json only counts for a group nothing typed, and not once "house rules off" has set every value
+    sj = lambda g, var: g not in typed and typed.get("house") != "off" and os.environ.get(var, "on").strip().lower() in _TOGGLE_OFF
+    extra = (("pages", "HOUSE_RULES_PAGES", "Pages OFF (%s): no page, no 160-word page rule, no page editor pass; approvals still count."),
+             ("issues", "HOUSE_RULES_ISSUES", "Issues OFF (%s): no issue-before-code gate."),
+             ("writing", "HOUSE_RULES_CLEAR_WRITING", "Writing checks OFF (%s): the clear-writing, plain-summary, visual and parity checks are skipped."),
+             ("autosave", "HOUSE_RULES_AUTOSAVE", "Autosave OFF (%s): no autosave or handoff."),
+             ("house", None, "House rules OFF (%s): everything is off except the destructive-command guard, the main-branch guard and the credit check, which still apply."))
+    for g, var, text in extra:
+        if typed.get(g) == "off" or (var and g != "issues" and sj(g, var)) or (g == "issues" and "design" not in typed and sj(g, var)):
+            parts.append(text % ((("you typed \"%s off\"" % {"writing": "writing checks", "house": "house rules"}.get(g, g)) + _mode_where(g, raw))
+                                 if g in typed else "%s=off in settings.json" % var))
     if parts:
-        parts.append("Type \"design loop on\" or \"builders on\" to switch back.")
+        parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules) to switch back; add \"everywhere\" for all folders.")
     return " ".join(parts)
 
 

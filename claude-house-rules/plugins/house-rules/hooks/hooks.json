@@ -44,6 +44,15 @@
             "timeout": 90
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" pickup",
+            "timeout": 25
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -148,6 +157,26 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" autosavefinal",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" autosavefinal",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -242,7 +271,7 @@
         ]
       },
       {
-        "matcher": "Write|Edit|NotebookEdit|Bash|mcp__(github|GitHub)__issue_write",
+        "matcher": "Write|Edit|NotebookEdit|Bash|PowerShell|mcp__(github|GitHub)__issue_write",
         "hooks": [
           {
             "type": "command",

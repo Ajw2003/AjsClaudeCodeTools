@@ -1,0 +1,180 @@
+{
+ "title": "Feature Switches Anywhere",
+ "eyebrow": "Design for approval \u00b7 added to the phase 3 revision \u00b7 nothing built yet",
+ "approval": "Design approved: Feature switches",
+ "replyPrefix": "Design approved: Feature switches",
+ "reply": "",
+ "short": {
+  "lead": "Today you can type two switches in chat, \"design loop off\" and \"builders off\". They are saved only inside a git repository (a folder tracked by git). Anywhere else, the plugin says nothing was saved. The other features (the page rule, the editor pass, the writing checks and autosave among them) can only be turned off by hand-editing settings whose names start with HOUSE_RULES_. This change lets you switch any feature group off or on by typing one line, in any folder, git or not, for that folder or for the whole machine. This is a stop-gap: it quiets the plugin now, until pages can be made to fit each project.",
+  "hint": "Tap an item to see what it changes.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "The moment",
+    "\"pages off\" just works, wherever you are",
+    "",
+    "In a Unity project, a scratch folder or a cloud session, you type \"pages off\" on its own line. From the next prompt no page is asked for, and the rule text says so. \"pages on\" brings it back.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4ODAgMjYwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz4KPHRleHQgeD0iMjAiIHk9IjMwIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5XaGljaCBzd2l0Y2ggd2lucywgYWZ0ZXIgdGhpcyBjaGFuZ2U8L3RleHQ+CjxyZWN0IHg9IjIwIiB5PSI0OCIgd2lkdGg9Ijg0MCIgaGVpZ2h0PSI1MiIgcng9IjEwIiBmaWxsPSIjM2I3ZGQ4IiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzNiN2RkOCIvPjx0ZXh0IHg9IjM2IiB5PSI3MiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNiN2RkOCI+MS4gVGhpcyBmb2xkZXI8L3RleHQ+PHRleHQgeD0iMzYiIHk9IjkxIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5Zb3UgdHlwZSAicGFnZXMgb2ZmIiBpbiBhIHByb2plY3Q6IHNhdmVkIGluIHRoYXQgZm9sZGVyJ3MgLmNsYXVkZS9ob3VzZS1ydWxlcy1tb2RlLmpzb24sIGdpdCByZXBvIG9yIG5vdDwvdGV4dD4KPHJlY3QgeD0iMjAiIHk9IjExMCIgd2lkdGg9Ijg0MCIgaGVpZ2h0PSI1MiIgcng9IjEwIiBmaWxsPSIjZDk4MjJiIiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iI2Q5ODIyYiIvPjx0ZXh0IHg9IjM2IiB5PSIxMzQiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNkOTgyMmIiPjIuIEV2ZXJ5d2hlcmUgb24gdGhpcyBtYWNoaW5lPC90ZXh0Pjx0ZXh0IHg9IjM2IiB5PSIxNTMiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPllvdSB0eXBlICJwYWdlcyBvZmYgZXZlcnl3aGVyZSI6IHNhdmVkIGluIH4vLmNsYXVkZS9ob3VzZS1ydWxlcy1tb2RlLmpzb24sIHVzZWQgd2hlcmUgYSBmb2xkZXIgaGFzIHNhaWQgbm90aGluZzwvdGV4dD4KPHJlY3QgeD0iMjAiIHk9IjE3MiIgd2lkdGg9Ijg0MCIgaGVpZ2h0PSI1MiIgcng9IjEwIiBmaWxsPSIjOWFhMGE2IiBmaWxsLW9wYWNpdHk9IjAuMTIiIHN0cm9rZT0iIzlhYTBhNiIvPjx0ZXh0IHg9IjM2IiB5PSIxOTYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzZjQ0NGIiPjMuIFNldHRpbmdzIGZpbGUsIHRoZW4gb248L3RleHQ+PHRleHQgeD0iMzYiIHk9IjIxNSIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+SE9VU0VfUlVMRVNfLi4uPW9mZiBpbiBzZXR0aW5ncy5qc29uIHN0aWxsIHdvcmtzIGFzIHRvZGF5OyB3aXRoIG5vdGhpbmcgc2FpZCBhbnl3aGVyZSwgZXZlcnkgZmVhdHVyZSBpcyBvbjwvdGV4dD4KPHRleHQgeD0iMjAiIHk9IjI0OCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJmN2Q1YSI+TmV2ZXIgc3dpdGNoZWQgb2ZmIGJ5IGFueSBvZiB0aGVzZTogdGhlIGd1YXJkIHRoYXQgcmVmdXNlcyBkZXN0cnVjdGl2ZSBjb21tYW5kcywgYW5kIHRoZSBndWFyZCB0aGF0IHJlZnVzZXMgY29tbWl0cyB0byBtYWluLjwvdGV4dD48L3N2Zz4=",
+     "alt": "Three layers: this folder's switch wins, then a machine-wide switch, then settings.json; the two safety guards never switch off",
+     "caption": "Option A in choices 1 and 3. A plain diagram, not a screenshot."
+    }
+   ],
+   [
+    "loop",
+    "What exists",
+    "Two typed switches and many hand-edited settings",
+    "",
+    "Reused: the code that reads typed switches (_mode_apply, which counts only a line you type on its own), the switch file format, the /house-rules:mode command, and every existing HOUSE_RULES_ setting, which keeps working. Changed: where the file is found (any folder, not only a git repo) and how many names it knows.",
+    "Nothing from you."
+   ],
+   [
+    "search",
+    "Unknown",
+    "Cloud sessions forget the machine-wide file",
+    "",
+    "A cloud container is thrown away when the session ends, so \"everywhere\" in a cloud session lasts only that session. A folder switch inside a repo lasts if it is committed, as today.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You pick three choices",
+    "you",
+    "Then a build plan step with its tests, built on AjsAgent/phase-3-handoff with the rest of phase 3.",
+    "Your picks in the three choices below, then the line \"Design approved: Feature switches\"."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "Switches saved in any folder",
+   "A switch typed outside git is saved instead of dropped (choice 1).",
+   null,
+   "The folder's own .claude/house-rules-mode.json is used, git repo or not; inside a repo it stays in the main checkout as today.",
+   [
+    "Outside git, a typed switch is not saved.",
+    "Saved in the folder, or machine-wide with \"everywhere\".",
+    "Projects that are not repos stop getting pages and builders forced on."
+   ]
+  ],
+  [
+   "new",
+   "Every feature group has a typed switch",
+   "Named groups you type in chat (choice 2).",
+   null,
+   "Each group has its own one-line switch: house rules (everything below at once), design loop, pages (the page rule, editor pass and 160-word rule; approvals still count), builders, issues, writing checks and autosave. /house-rules:mode lists every group with its state and where that state came from.",
+   [
+    "Two typed switches.",
+    "Seven groups plus one master switch.",
+    "You never edit a settings file to quiet the plugin."
+   ]
+  ],
+  [
+   "new",
+   "Safety guards stay on",
+   "The destructive-command and main-branch guards are not switchable from chat (choice 3).",
+   null,
+   "They are what stops lost work, and they are cheap when nothing risky happens.",
+   [
+    "Same as today.",
+    "Same as today, and the note shown when a switch goes off says so.",
+    "Nothing destructive slips through because a switch was left off."
+   ]
+  ]
+ ],
+ "choices": [
+  [
+   "q1",
+   "Where is a switch saved?",
+   [
+    [
+     "A",
+     "In this folder by default, or machine-wide when you add \"everywhere\"; a folder's own switch wins",
+     1,
+     "Works in any folder, and one line quiets every project at once when you want that."
+    ],
+    [
+     "B",
+     "In this folder only",
+     0,
+     "Simplest, but each new folder starts noisy again."
+    ],
+    [
+     "C",
+     "Machine-wide only",
+     0,
+     "One switch for everything, but a project that needs the full loop cannot keep it on."
+    ]
+   ],
+   "A covers both the one-project and the everywhere case."
+  ],
+  [
+   "q2",
+   "Which switches can you type?",
+   [
+    [
+     "A",
+     "Seven groups plus a master \"house rules off\": design loop, pages, builders, issues, writing checks, autosave",
+     1,
+     "Short names you can remember, one per thing you notice."
+    ],
+    [
+     "B",
+     "Every setting by its name, for example \"visual check off\"",
+     0,
+     "Finest control, but one name per setting to remember."
+    ],
+    [
+     "C",
+     "Only a master switch plus today's two",
+     0,
+     "Least to build, but pages cannot be turned off without the whole loop."
+    ]
+   ],
+   "A lets you drop pages alone, which is the stifling part you named."
+  ],
+  [
+   "q3",
+   "Can a switch turn the safety guards off?",
+   [
+    [
+     "A",
+     "No: the destructive-command and main-branch guards always stay on",
+     1,
+     "Turning everything else off can never cost work."
+    ],
+    [
+     "B",
+     "Yes: \"house rules off\" turns literally everything off",
+     0,
+     "Total quiet, but a mistaken destructive command (such as a hard reset) or a commit to main would go through."
+    ]
+   ],
+   "A keeps the stop-gap safe to leave on."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Type a switch in any folder, for that folder or everywhere, for any feature group; the two safety guards stay on.",
+  "changing": "Nothing yet.",
+  "blocking": "Your three picks.",
+  "next": "One build step with its tests on AjsAgent/phase-3-handoff, then into phase 3's QA.",
+  "todo": [
+   "Pick one option in each choice.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it. It starts \"Design approved: Feature switches\"."
+  ]
+ }
+}

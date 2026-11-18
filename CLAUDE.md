@@ -39,6 +39,8 @@ All commands run from the repo root; each is detailed in docs/architecture.md or
 - `python tools/verify_tools.py` — proves the scripts in `tools/` do what they claim.
 - `.\tools\bootstrap.ps1` / `tools/bootstrap.sh` — installs or updates the plugin on this device.
 - `tools\update.bat` — double-click update; no Python or clone needed.
+- `python tools/use_branch.py <branch>` — switches the installed plugin to a branch build (`main` goes
+  back) and prints the ref, version and commit actually installed.
 - `python tools/clean_install_test.py` — proves the *published* plugin installs cleanly from
   GitHub on a fresh machine.
 - `python tools/measure_footprint.py` — measures the *installed* plugin's real token cost; see

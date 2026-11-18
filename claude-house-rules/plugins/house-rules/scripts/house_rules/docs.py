@@ -131,8 +131,8 @@ def event_docstiers():
                     len(moves),
                     "; ".join(moves),
                     (
-                        "It is also missing %d tier(s) outright - %s. Load "
-                        "house-rules:project-docs and scaffold those before any other work."
+                        "It is also missing %d tier(s) outright - %s. Offer "
+                        "aj to scaffold those with house-rules:project-docs."
                         % (len(missing), ", ".join(missing))
                         if missing
                         else "Load house-rules:project-docs for the current folder layout."
@@ -182,10 +182,17 @@ def event_docstiers():
                     % (configured_owner, reason)
                 )
 
+        if git_dir is None:
+            # #521: scaffolding is only offered inside a repository; say we looked, give no instruction.
+            emit({"suppressOutput": True, "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": "House rules, documentation tiers: not inside a repository, so the "
+                "tier check has nothing to suggest."}})
+            return 0
         text = (
             "House rules, documentation goes in tiers: this project is missing %d of the six "
-            "documentation tiers - %s. Load house-rules:project-docs and scaffold the missing "
-            "tiers before any other work, in every repo. %s"
+            "documentation tiers - %s. Offer aj to scaffold them with house-rules:project-docs "
+            "(aj's own request comes first; do not start it unasked). %s"
             % (len(missing), ", ".join(missing), ownership_note)
         ) + changelog_note
         emit(
