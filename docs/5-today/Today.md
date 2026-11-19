@@ -5,6 +5,8 @@ Flexible pages, plugin 2.82.0, built and waiting on aj's QA (issues #541 to #545
 The QA page was then rewritten by hand as `docs/qa/flexible-pages-qa.html`: four numbered steps, each with a copy button, the exact output to expect and a tick-box. The builder version in `docs/plans/` is superseded.
 The hand-written page replaced the published claude.ai page at the same link, and both branches were pushed again.
 
+Then aj typed "QA failed: flexible pages": the desktop app still ran the old build (its claude.ai account copy follows main). Issues back to `in progress`; the agent now runs the QA itself in headless sessions on the branch code.
+
 Later on 2026-11-19: the finished work was pushed to `AjsAgent/speed-switches` too (both branches at the same commit). Each QA test on the page now carries its exact PowerShell command or prompt; `use_branch.py AjsAgent/speed-switches` installed 2.82.0 in a throwaway config here.
 
 ## 2026-11-18

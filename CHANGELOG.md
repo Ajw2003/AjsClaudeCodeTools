@@ -6,6 +6,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as long as it meets seven basics; waiting on aj's QA.
 
+- 2026-11-19: aj's QA failed because the desktop app loaded the claude.ai account's plugin copy (following main), not the branch build `use_branch.py` installs. QA now runs in the agent's own headless sessions on the branch code: `docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py`.
 - 2026-11-19: the QA page is now hand-written at `docs/qa/flexible-pages-qa.html` (aj found the builder version's steps vague: tests hidden behind identical icons, commands buried, the next-step box showing my step). It sits outside `docs/plans/` because this session's 2.81.2 page check refuses hand-written pages there; aj chose that.
 - 2026-11-19: picked up after a usage-limit cut-off; the QA page is `docs/plans/flexible-pages-qa.html` and issues #541 to #545 say `needs review`. verify.py 1294 of 1294, verify_tools 54 of 54.
 
