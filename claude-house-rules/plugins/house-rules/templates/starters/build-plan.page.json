@@ -1,0 +1,81 @@
+{
+ "title": "<replace: build plan title>",
+ "eyebrow": "Build plan · nothing built yet",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: <feature>",
+ "short": {
+  "lead": "<replace: one sentence: what gets built, in how many steps>",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Step 1",
+    "<replace: first step>",
+    "",
+    "<replace: what it builds>",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
+     "alt": "<replace: what the picture shows>",
+     "caption": "<replace: what the picture shows>"
+    }
+   ],
+   [
+    "hammer",
+    "Step 2",
+    "<replace: second step>",
+    "",
+    "<replace: what it builds>",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the plan",
+    "you",
+    "The build starts.",
+    "Send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "<replace: what step 1 touches>",
+   "<replace: one line>",
+   null,
+   "Done when: <replace: what you can see working>",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "<replace: what step 2 touches>",
+   "<replace: one line>",
+   null,
+   "Done when: <replace: what you can see working>",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "<replace: what this plan builds>",
+  "changing": "<replace: what changes, named>",
+  "blocking": "<replace: what waits on aj, named>",
+  "next": "After you approve, I build step 1.",
+  "todo": [
+   "Read the steps in order.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

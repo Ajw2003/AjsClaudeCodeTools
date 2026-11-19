@@ -428,6 +428,49 @@ _pc_r = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), 
 _pc_u = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _pc_f + ".nope"], capture_output=True, text=True, timeout=60)
 _mp_cases.append(("page_criteria (#542): the command exits 1 naming the miss, and 2 for an unreadable file",
                   _pc_r.returncode == 1 and "Basic 3" in _pc_r.stdout and _pc_u.returncode == 2))
+# ---- starters: one optional content skeleton per page type (#544) ----
+_mp_cases.append(("starters (#544): make_page's type list equals page_criteria's", tuple(__import__("make_page").PAGE_TYPES) == tuple(_pc.TYPES)))
+_sp = _mp_proj("starts", {"use": "defaults"})
+_mp_git(_sp, "init", "-q", "-b", "main")
+for _n in ("a.py",):
+    with open(os.path.join(_sp, _n), "w", encoding="utf-8") as _f:
+        _f.write("a\n")
+_mp_git(_sp, "add", "-A")
+_mp_git(_sp, "commit", "-q", "-m", "base")
+_GAPS = {"review": ["Type review: the page has no finding; add at least one element marked data-basic=\"finding\"."]}  # item 4: the template has no finding element
+for _typ in _pc.TYPES:
+    _sf = os.path.join(_mp_tmp, "st-" + _typ + ".page.json")
+    _rc1, _o1 = _mp("start", _typ, "--out", _sf)
+    _rc1b, _ = _mp("start", _typ, "--out", _sf)  # a second start must not overwrite
+    with open(_sf, encoding="utf-8") as _f:
+        _raw = _f.read()
+    _left = len(re.findall(r"<replace:", _raw))
+    _raw = _raw.replace("<replace: base branch, such as origin/main>", "main").replace("<feature>", "demo")
+    _raw = re.sub(r"<replace:[^>]*>", "x", _raw)
+    with open(_sf, "w", encoding="utf-8") as _f:
+        _f.write(_raw)
+    _rc2, _o2 = _mp("build", _sf, "--project", _sp)
+    _bh = os.path.join(_sp, "docs", "plans", "st-" + _typ + ".html")
+    _bt = open(_bh, encoding="utf-8").read() if os.path.isfile(_bh) else ""
+    _stripped = re.sub(r"<!-- house-rules make_page[^>]*-->", "", _bt)
+    _msgs = _pc.check(_stripped)
+    _mp_cases.append(("starters (#544): %s starts with placeholders, will not overwrite, builds, and carries the meta tag" % _typ,
+                      _rc1 == 0 and "make_page.py build" in _o1 and _left > 0 and _rc1b == 2 and _rc2 == 0
+                      and '<meta name="house-rules-page" content="%s">' % _typ in _bt))
+    _mp_cases.append(("starters (#544): the built %s page %s" % (_typ, "meets the basics" if _typ not in _GAPS else "misses exactly the documented gap"),
+                      _bt != "" and _msgs == _GAPS.get(_typ, [])))
+_rc, _o = _mp("start", "poster")
+_mp_cases.append(("starters (#544): start with an unknown type dies naming the five types",
+                  _rc == 2 and "proposal, build-plan, qa, review, art" in _o))
+_bp = _mp_content("badtype")
+with open(_bp, encoding="utf-8") as _f:
+    _bj = json.load(_f)
+_bj["pageType"] = "poster"
+with open(_bp, "w", encoding="utf-8") as _f:
+    json.dump(_bj, _f)
+_rc, _o = _mp("build", _bp, "--project", _sp)
+_mp_cases.append(("starters (#544): build with an unknown pageType dies naming the five types",
+                  _rc == 2 and "proposal, build-plan, qa, review, art" in _o))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

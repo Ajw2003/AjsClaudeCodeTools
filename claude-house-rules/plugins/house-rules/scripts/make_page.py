@@ -2,6 +2,7 @@
 """make_page.py - builds a handover page from content JSON, the project's style file and the template.
 
     make_page.py build <content.json> [--out docs/plans/<name>.html] [--project <root>]
+    make_page.py start <proposal|build-plan|qa|review|art> [--out FILE]
     make_page.py style --quick
     make_page.py style --draft [--from <tokens.json>] [--project <root>]
 
@@ -15,6 +16,9 @@ project whose style file says `"pictures": "required"`, such an item must also c
 The project style file is `docs/page-style.json` (see docs/plans/page-style/plunderspell.page-style.json).
 `{"use": "defaults"}` means the template's own look. One palette is applied in every theme the file
 allows; when `themes` has one entry the page is forced to that theme.
+
+`start` copies the optional starter for a page type from templates/starters/. A content field `"pageType"` (one of
+those five) is written into the built page's head as <meta name="house-rules-page">.
 
 Exit codes: 0 built, 2 refused or bad input, 3 no style file (two options are printed).
 
@@ -37,6 +41,8 @@ STYLE_REL = os.path.join("docs", "page-style.json")
 DRAFT_REL = os.path.join("docs", "page-style.draft.json")
 CMD_DRAFT = "make_page.py style --draft"
 CMD_QUICK = "make_page.py style --quick"
+PAGE_TYPES = ("proposal", "build-plan", "qa", "review", "art")  # same list as page_criteria.TYPES; a check keeps them equal
+STARTERS = os.path.join(PLUGIN, "templates", "starters")
 HEX = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 
 
@@ -421,6 +427,41 @@ def record_qa_page(project, out, key="qa_page", value=None, what="QA page"):
     print("make_page: recorded %s %s in %s" % (key, data[key], stage))
 
 
+def _plain(s):
+    import html
+    return html.unescape(re.sub(r"<[^>]+>", "", str(s))).strip()
+
+
+def static_parts(page):
+    """The summary, next step, to-do list and per-type facts written into the file itself, so the page check
+    (which reads HTML, not script) sees the basics' markers. The template's script writes the same first three."""
+    import html
+    esc = lambda t: html.escape(str(t), quote=False)
+    w = page["wrapup"]
+    todo = w["todo"]
+    facts = []
+    for c in page.get("changes") or []:
+        if len(c) > 5 and isinstance(c[5], list) and not any(f[0] == "exists" for f in facts):
+            facts.append(("exists", "What exists today", c[5][0]))
+        if len(c) > 4 and str(c[4]).startswith("Done when"):
+            facts.append(("done-when", c[1], c[4]))
+        if c[0] == "keep" and c[1] == "Still unverified":
+            facts.append(("unverified", "Still unverified", c[4]))
+    for q in page.get("choices") or []:
+        for o in q[2]:
+            if o[2] and not any(f[0] == "suggested" for f in facts):
+                facts.append(("suggested", "Suggested", "%s · %s" % (o[0], o[1])))
+    ico = '<span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span>'
+    rows = []
+    for k, h, t in facts:
+        p = '<p data-basic="%s">%s</p>' % (k, esc(t))
+        if len(str(t).split()) > 50:  # a long text folds away (basic 4)
+            p = "<details><summary>Show</summary>%s</details>" % p
+        rows.append('<div class="wu">%s<div><h3>%s</h3>%s</div></div>' % (ico, esc(h), p))
+    return (esc(page["short"]["lead"]), esc(_plain(w.get("next") or todo[0])),
+            "".join('<li><label><input type="checkbox"> %s</label></li>' % x for x in todo), "".join(rows))
+
+
 def build(args):
     project = os.path.abspath(args.project or os.getcwd())
     style_path = os.path.join(project, STYLE_REL)
@@ -440,6 +481,8 @@ def build(args):
         apply_qa(page, project)
     if "sweep" in page:
         apply_sweep(page)
+    if "pageType" in page and page["pageType"] not in PAGE_TYPES:
+        die("content 'pageType' is %r; the allowed values are: %s" % (page["pageType"], ", ".join(PAGE_TYPES)))
     check_approval(page)
     apply_approval_todo(page)
     page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one
@@ -460,6 +503,17 @@ def build(args):
         die("the template has no 'const PAGE = {...};' block: %s" % TEMPLATE)
     js = json.dumps(page, ensure_ascii=False, indent=2).replace("</", "<\\/")
     html = html[:m.start()] + "const PAGE = " + js + ";\n" + html[m.end():]
+    lead, nxt, todo, facts = static_parts(page)
+    for old, new in (('id="lead" data-basic="summary">', lead), ('id="nextstep">', nxt),
+                     ('id="todo" data-basic="steps">', todo), ('id="facts">', facts)):
+        i = html.find(old)
+        if i < 0:
+            die("the template lacks %s: %s" % (old, TEMPLATE))
+        i += len(old)
+        html = html[:i] + new + html[i:]
+    if page.get("pageType"):
+        html = html.replace('<meta charset="utf-8">\n', '<meta charset="utf-8">\n<meta name="house-rules-page" content="%s">\n'
+                            % page["pageType"], 1)
     title = str(page.get("title", ""))
     esc = title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     html = re.sub(r"<title>.*?</title>", lambda _: "<title>%s</title>" % esc, html, count=1, flags=re.S)
@@ -483,6 +537,17 @@ def build(args):
         record_qa_page(project, out)
     if "sweep" in page:
         record_sweep(project, page)
+
+
+def start_cmd(args):
+    if args.type not in PAGE_TYPES:
+        die("unknown page type %r; the allowed values are: %s" % (args.type, ", ".join(PAGE_TYPES)))
+    out = os.path.abspath(args.out or "%s.page.json" % args.type)
+    if os.path.exists(out):
+        die("%s already exists; pick another --out, this will not overwrite it" % out)
+    shutil.copyfile(os.path.join(STARTERS, args.type + ".page.json"), out)
+    print("make_page: wrote the %s starter to %s" % (args.type, out))
+    print("Replace every <replace: ...> in it with the project's words, then run: make_page.py build %s" % out)
 
 
 # ---- step 2: visual check -------------------------------------------------------------------
@@ -726,6 +791,9 @@ def main(argv=None):
     b.add_argument("content")
     b.add_argument("--out")
     b.add_argument("--project")
+    st = sub.add_parser("start")
+    st.add_argument("type")
+    st.add_argument("--out")
     s = sub.add_parser("style")
     s.add_argument("--quick", action="store_true")
     s.add_argument("--draft", action="store_true")
@@ -734,6 +802,8 @@ def main(argv=None):
     args = ap.parse_args(argv)
     if args.cmd == "build":
         build(args)
+    elif args.cmd == "start":
+        start_cmd(args)
     else:
         style_cmd(args)
 
