@@ -10,16 +10,18 @@ Make the design loop stop forcing one page format. aj wants a page to suit what 
 - aj approved the design and the build plan on 2026-11-18 ("Build plan approved: flexible pages 1A 2A"). Stage: Build. The systems doc is `docs/4-systems/flexible-pages.md`.
 - Step 1 (#542, `scripts/page_criteria.py`) is built and committed (0db1cd5); I re-ran its 21 checks and the command line.
 - Step 2 (#543, the page check reads a page) is built and committed (25b3fdd); the builder reports its 7 new cases pass.
-- Step 3 (#544, starters) is with a builder helper; step 4 (#545) waits on it.
+- Step 3 (#544, starters) is built and committed (419461a); its builder's test claims are not independently confirmed (its first combined test run timed out).
+- Step 4 (#545, rules text, docs, plugin 2.82.0) is with a builder helper. The QA page is mine to build after a full verify run.
 
 ## The next step
 
-Check the builder's step 3, then hand step 4 (rules, docs, version, QA page). When all is built, swap each issue's `in progress` for `needs review`.
+Check the builder's step 4, run the full verify.py and tools/verify_tools.py myself, build the QA page, then swap each issue's `in progress` for `needs review`. (Step 4 was handed off) (rules, docs, version, QA page). When all is built, swap each issue's `in progress` for `needs review`.
 
 ## What is unverified
 
 - The checker's `--visual` phone-width option and `--type` on the command line were never run.
-- Step 2's checks were run by the builder only; the full verify.py has not been run since the changes.
+- The full verify.py has not been run by me since steps 2 and 3.
+- A builder-made review page cannot carry a finding marker; an art page passes the checker only because the template's icon sprite counts as a picture.
 - Phase 3 live headless-session tests were not re-run on this PC (they start paid sessions).
 - The seven Windows-only test failures are not fixed or root-caused beyond reading three of them.
 - The phase 4 roadmap item has all 15 issues closed; its recorded-day finish test has not been decided on.
