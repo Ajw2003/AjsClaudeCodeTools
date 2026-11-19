@@ -55,7 +55,7 @@
 <div class="eyebrow">QA · house-rules 2.82.0 · branch AjsAgent/speed-switches</div>
 <h1>Flexible pages: your QA</h1>
 
-<p data-basic="summary">Hand-written pages now pass if they meet the seven basics. Real sessions running the branch code passed all three tests on the third run. Read that result and send your verdict.</p>
+<p data-basic="summary">Hand-written pages now pass if they meet the seven basics. On the third run, all three live tests passed in real sessions running this branch's code. Read the result and tell me whether you accept it.</p>
 
 <div class="next" data-basic="next"><b>Your next step:</b> do Step 1 below. It prints the third run's three results on your PC.</div>
 
@@ -77,24 +77,24 @@
     </g>
     <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--soft)"/></marker></defs>
   </svg>
-  <p>Run 2 failed because a page missing its type and its checklist was refused for the type only. The checker now names every missing basic.</p>
+  <p>Run 2 failed because a page missing both its page type and its checklist was refused with only the page type named. The checker now names every missing basic.</p>
 </section>
 
 <section class="card">
   <h2>What each test does</h2>
   <ul class="plain">
-    <li><b>refused-once:</b> a session writes a page with no checklist. It must be refused once, with Basic 6 named, and then saved with one.</li>
+    <li><b>refused-once:</b> a session writes a page with no checklist. It must be refused once, with Basic 6 (the checklist) named in the refusal, and then saved after the session adds a checklist.</li>
     <li><b>good-page:</b> a session writes a page that meets every basic. It must be saved without a refusal.</li>
-    <li><b>starter:</b> <code>make_page.py start qa</code> must write a starter file whose page type is QA.</li>
+    <li><b>starter:</b> Running <code>make_page.py start qa</code> must write a starter page file with its page type set to QA.</li>
   </ul>
-  <p>Each test is a real headless session with the branch's plugin loaded directly, so the copy your desktop app uses plays no part.</p>
+  <p>Each test is a real session run without a window (headless), loading this branch's plugin directly. Your desktop app's installed copy is not involved.</p>
 </section>
 
 <div class="steps" data-basic="steps">
 
 <section class="card">
   <div class="step-head"><span class="num">1</span><h2>Read the third run's results</h2></div>
-  <p>Open the Start menu, type <b>Windows PowerShell</b> and press Enter. Paste this command and press Enter. It works from any folder.</p>
+  <p>Open the Start menu, type <b>Windows PowerShell</b> and press Enter. Paste this command and press Enter. It does not matter which folder PowerShell opens in.</p>
   <pre id="c1">Select-String -Path "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\docs\plans\2026-11-19-flexible-pages-live-tests\live_flexible_pages-result-3.txt" -Pattern "^(PASS|FAIL)" | ForEach-Object { $_.Line }</pre>
   <button class="copy" data-copy="c1">Copy command</button>
   <div class="label">You should see</div>
@@ -106,7 +106,7 @@ PASS starter: docs/plans/starter.page.json written with pageType qa: True (exit 
 
 <section class="card">
   <div class="step-head"><span class="num">2</span><h2>Send me your answer</h2></div>
-  <p>If you are happy with the results, copy this and send it to me in our chat. If not, tell me what to change.</p>
+  <p>If you are happy with the results, copy the reply below and send it to me in our chat. If not, tell me which result you are unhappy with, or what to change.</p>
   <pre id="c2">QA passed: flexible pages</pre>
   <button class="copy" data-copy="c2">Copy reply</button>
   <label class="tick"><input type="checkbox"> I sent my answer.</label>
@@ -117,14 +117,14 @@ PASS starter: docs/plans/starter.page.json written with pageType qa: True (exit 
 <section class="card" data-basic="unverified">
   <h2>What I have not checked</h2>
   <ul class="plain">
-    <li>All three runs were in a cloud session on Linux, not on your Windows PC. You chose not to spend more of your plan's allowance on a fourth run.</li>
-    <li>Run 3 came before the verify.py fix for #546 was merged. That fix only takes effect when verify.py sets a special setting, so the live sessions behave the same.</li>
+    <li>All three runs were in a cloud session on Linux, not on your Windows PC. You chose not to use more of your plan's allowance on a fourth run, so none was done.</li>
+    <li>Run 3 happened before the verify.py fix for #546 (verify.py now ignores your typed switches in the repo it tests) was merged. The fix only applies when verify.py sets an ignore list, so the live-test sessions behave the same with or without it.</li>
     <li>Your desktop app will keep loading the old plugin until this branch is merged into main.</li>
   </ul>
   <details><summary>What I did check, on your PC</summary>
     <ul class="plain">
-      <li><span class="ok">Ran:</span> verify.py, 1289 of 1295 checks. The 6 failures are the known Windows-only ones listed in #523.</li>
-      <li><span class="ok">Ran:</span> tools/verify_tools.py, 53 of 54 checks. Its one failure (A16) is also on #523's list.</li>
+      <li><span class="ok">Ran:</span> verify.py, 1289 of 1295 checks. The 6 failures are known Windows-only failures, listed in issue #523.</li>
+      <li><span class="ok">Ran:</span> tools/verify_tools.py, 53 of 54 checks. Its one failure (check A16) is also listed in issue #523.</li>
       <li><span class="ok">Passed:</span> the command in Step 1, which printed the three lines shown.</li>
     </ul>
   </details>

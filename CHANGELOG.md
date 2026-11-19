@@ -6,7 +6,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 - 2026-11-19: verify.py no longer picks up switches typed in the repo it tests (#546). Its new check (g) handed the ignore list to the wrong environment copy and failed everywhere; fixed when merged.
 - 2026-11-19: live test run 3 passed 3 of 3 on the branch code (`live_flexible_pages-result-3.txt`).
-- 2026-11-19: the QA page now reports the three live runs instead of asking aj to test in the desktop app: `docs/qa/flexible-pages-qa.html`, two steps (read run 3's result, send the verdict). aj chose to skip a fourth run.
+- 2026-11-19: the QA page now reports the three live runs instead of asking aj to test in the desktop app: `docs/qa/flexible-pages-qa.html`, two steps (read run 3's result, send the verdict). aj chose to skip a fourth run. Editor pass applied (plainer wording, issue numbers named).
 
 Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as long as it meets seven basics; waiting on aj's QA.
 
