@@ -4,7 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-- 2026-11-19: verify.py no longer picks up switches typed in the repo it tests (#546).
+- 2026-11-19: verify.py no longer picks up switches typed in the repo it tests (#546). Its new check (g) handed the ignore list to the wrong environment copy and failed everywhere; fixed when merged.
+- 2026-11-19: live test run 3 passed 3 of 3 on the branch code (`live_flexible_pages-result-3.txt`).
 
 Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as long as it meets seven basics; waiting on aj's QA.
 

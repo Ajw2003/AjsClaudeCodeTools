@@ -13,6 +13,8 @@ Live test run 2 failed one test: the page checker stopped at a missing page type
 
 The checker fix for #542 is merged. verify.py turned out to fail 9 checks whenever a typed switch is saved in the repo; aj chose to fix verify.py (#546), now being built; live test run 3 is running.
 
+Picked up after a usage-limit cut-off: live test run 3 passed 3 of 3, and the #546 fix is merged into `AjsAgent/speed-switches` with its own test corrected. On aj's PC, from the repo with the typed switch present, verify.py passes 1289 of 1295 and verify_tools 53 of 54; every failure is a known Windows-only one (#523). Waiting on aj: run the live tests once more (they use plan allowance), then the QA report page.
+
 Later on 2026-11-19: the finished work was pushed to `AjsAgent/speed-switches` too (both branches at the same commit). Each QA test on the page now carries its exact PowerShell command or prompt; `use_branch.py AjsAgent/speed-switches` installed 2.82.0 in a throwaway config here.
 
 ## 2026-11-18

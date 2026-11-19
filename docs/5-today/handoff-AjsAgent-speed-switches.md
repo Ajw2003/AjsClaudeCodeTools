@@ -1,29 +1,29 @@
-# Handoff: AjsAgent/speed-switches (2026-11-18)
+# Handoff: AjsAgent/speed-switches (2026-11-19, run 3 passed; #546 merged)
 
 ## What the work is for
 
-Make the design loop stop forcing one page format. aj wants a page to suit what it shows (proposal, build plan, QA, review, art), always with visuals, short blocks, numbered steps, a visible next step and a tick-box checklist when there is something to do.
+Make the design loop stop forcing one page format. A page may take any format that meets seven basics (summary, next step, a picture per idea, short blocks, numbered steps, a checklist when aj acts, fits 375px), checked by `scripts/page_criteria.py`.
 
 ## Where it stands
 
-- The branch holds all of main and is pushed.
-- aj approved the design and the build plan on 2026-11-18 ("Build plan approved: flexible pages 1A 2A"). Stage: Build. The systems doc is `docs/4-systems/flexible-pages.md`.
-- Step 1 (#542, `scripts/page_criteria.py`) is built and committed (0db1cd5); I re-ran its 21 checks and the command line.
-- Step 2 (#543, the page check reads a page) is built and committed (25b3fdd); the builder reports its 7 new cases pass.
-- Step 3 (#544, starters) is built and committed (419461a); its builder's test claims are not independently confirmed (its first combined test run timed out).
-- Step 4 (#545, rules text, docs, plugin 2.82.0) is built and committed. On 2026-11-19 a cloud session ran the full verify.py (1294 of 1294) and tools/verify_tools.py (54 of 54).
+- All four steps (#542 to #545) are built; plugin 2.82.0. Stage: Build. Issues #541 to #546 say `in progress`.
+- aj's desktop QA failed because the desktop app loads the claude.ai account's plugin copy (follows main). QA now runs as headless sessions on the branch code: `docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py`.
+- Run 1 passed 3 of 3, run 2 failed refused-once (checker stopped at a missing type; fixed, 1608f64), run 3 passed 3 of 3 (`live_flexible_pages-result-3.txt`).
+- #546 (verify.py ignores the repo's typed switches) is merged here (adb5ec4). Its check (g) set the ignore list on `os.environ`, but the hook runs with the `_fs_env` copy, so it failed everywhere; corrected in the commit after the merge.
+- On aj's Windows PC, from the repo with `.claude/house-rules-mode.json` present: verify.py 1289 of 1295, verify_tools 53 of 54. Every failure is on #523's Windows-only list (safe_git 81, 84, 206; design_loop 266, 344; make_page A14; tools A16).
+- `ajsagent/sharp-edison-y4xjzv` (the cloud session's branch) is now behind this one; its handoff note is superseded by this file.
 
 ## The next step
 
-Check the builder's step 4, run the full verify.py and tools/verify_tools.py myself, build the QA page, then swap each issue's `in progress` for `needs review`. (Step 4 was handed off) (rules, docs, version, QA page). When all is built, swap each issue's `in progress` for `needs review`.
+aj decides whether to run the live tests once more (`live_flexible_pages.py`, three headless sessions that use plan allowance). Then rebuild the QA page as a report of those runs and swap issues #541 to #546 to `needs review`.
 
 ## What is unverified
 
-- A builder-made review page cannot carry a finding marker; an art page passes the checker only because the template's icon sprite counts as a picture.
-- Phase 3 live headless-session tests were not re-run on this PC (they start paid sessions).
-- The seven Windows-only test failures are not fixed or root-caused beyond reading three of them.
-- The phase 4 roadmap item has all 15 issues closed; its recorded-day finish test has not been decided on.
+- The corrected check (g) has not run on Linux CI yet; it passed twice on aj's PC.
+- `tools/use_branch.py` reports "OK" for the CLI copy even when the desktop app will load the account copy; not yet an issue.
+- The builder's QA mode fills the "Your next step" box from `wrapup.next` (the agent's step); not yet an issue.
+- A make_page.py review page cannot carry a finding marker; an art page passes only because the template's hidden icon sprite counts as a picture.
 
 ## Issue numbers
 
-Flexible pages: #541 (parent), #542, #543, #544, #545 (steps). Related: #535 (feature switches), #539 (version check asks the desktop account copy to update).
+Flexible pages: #541 (parent), #542 to #545 (steps), #546 (verify.py switch leak). Related: #523 (Windows-only test failures), #539 (version check and the desktop account copy).
