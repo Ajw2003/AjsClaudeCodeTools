@@ -7,7 +7,7 @@ checks; the failures are Linux-only path assumptions in tests). New: a proposal 
 Flexible pages design approved (1A 2A 3A). Systems doc `docs/4-systems/flexible-pages.md`, parent issue #541 with steps
 #542 to #545, build plan page `docs/plans/2026-11-18-flexible-pages-build-plan.html` waiting on aj's approval and two choices.
 
-Flexible pages design and build plan both approved (aj); stage is Build. Step 1 (#542, the page checker) is built and checked (21 checks pass); step 2 (#543) is with a builder; decisions log updated.
+Flexible pages design and build plan both approved (aj); stage is Build. Step 1 (#542, the page checker) is built and checked (21 checks pass); step 2 (#543, the page check reads pages) is built; step 3 (#544, starters) is with a builder; decisions log updated.
 
 # Earlier — 2026-11-12
 
