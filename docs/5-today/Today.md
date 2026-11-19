@@ -1,4 +1,8 @@
-# Today — 2026-11-18
+# Today — 2026-11-19
+
+Flexible pages, plugin 2.82.0, built and waiting on aj's QA (issues #541 to #545, all `needs review`). The cut-off Windows session's step 4 was recovered from its autosave onto `ajsagent/sharp-edison-y4xjzv`; verify.py passes 1294 of 1294 and verify_tools 54 of 54. QA page: `docs/plans/flexible-pages-qa.html`.
+
+## 2026-11-18
 
 Branch `AjsAgent/speed-switches` now holds all of main. Phase 3 retested on aj's Windows PC (1246 of 1252 and 53 of 54
 checks; the failures are Linux-only path assumptions in tests). New: a proposal page for flexible page formats,

@@ -7,17 +7,17 @@
   "hint": "Tap a row to see what was run and what it showed.",
   "key": [["Checked by me", ""], ["Your test", "you"]],
   "items": [
-   ["flask", "Checked", "Full hook checks: verify.py passes 1294 of 1294", "", "Run in this cloud session on 2026-11-19 after the pickup. tools/verify_tools.py passes 54 of 54 and docs_drift.py finds 0 stale citations.", "Nothing from you."],
+   ["flask", "Checked", "Full hook checks: verify.py passes 1294 of 1294", "", "Run in this cloud session on 2026-11-19, after the branch was picked up. tools/verify_tools.py passes 54 of 54 and docs_drift.py finds 0 stale citations.", "Nothing from you."],
    ["flask", "Checked", "The checker's --type and --visual options work", "", "page_criteria.py on a hand-made QA page: with two wrong marker names it named both and exited 1; with them fixed it printed 'all basics met', and --visual showed no overflow at 375px in light and dark.", "Nothing from you."],
-   ["hand", "Your test", "Install the branch build", "you", "Run tools/use_branch.py with the branch name. Expect it to report version 2.82.0 installed.", "Follow step 1 in Wrap-up."],
+   ["hand", "Your test", "Install the branch build", "you", "Run python tools/use_branch.py ajsagent/sharp-edison-y4xjzv from the repo root. Expect it to report version 2.82.0 installed.", "Follow step 1 in Wrap-up."],
    ["hand", "Your test", "A hand-made page missing a basic is refused once", "you", "In a new session, ask for a short page written by hand (not with make_page.py) under docs/plans/ that has no tick-box checklist. Expect one refusal that names the missing checklist, then a pass once it is added.", "Follow step 2 in Wrap-up."],
-   ["hand", "Your test", "A starter gives a skeleton", "you", "Run make_page.py start qa. Expect 'wrote the qa starter to ...qa.page.json': a skeleton with <replace: ...> fields.", "Follow step 3 in Wrap-up."]
+   ["hand", "Your test", "A starter writes a skeleton page", "you", "Run make_page.py start qa. Expect the message 'wrote the qa starter to ...qa.page.json'. The file is a skeleton with <replace: ...> fields.", "Follow step 3 in Wrap-up."]
   ]
  },
  "changes": [
-  ["chg", "Checker (scripts/page_criteria.py)", "Reads a page and lists each failed basic in plain words.", ["Only builder-made pages passed.", "Any page passes if it meets the seven basics and its type's extras."], "Step 1, issue #542 (page_criteria.py checks a page against the seven basics)."],
-  ["chg", "Page check (scripts/house_rules/design_loop.py)", "An unmarked page is read by the checker instead of refused.", ["A page without the builder mark was refused, however good.", "It is read; a miss refuses once, naming each failed basic."], "Step 2, issue #543 (the page check reads a page instead of refusing it)."],
-  ["chg", "Starters (templates/starters/, make_page.py start)", "One optional content skeleton per page type.", ["The builder had one shape for every page.", "proposal, build-plan, qa, review and art each have a starter."], "Step 3, issue #544 (one optional starter per page type)."],
+  ["chg", "Checker (scripts/page_criteria.py)", "Reads a page and lists each failed basic in plain words.", ["Only pages made by make_page.py passed.", "Any page passes if it meets the seven basics and its type's extras."], "Step 1, issue #542 (page_criteria.py checks a page against the seven basics)."],
+  ["chg", "Page check (scripts/house_rules/design_loop.py)", "An unmarked page is read by the checker instead of refused.", ["A page without the make_page.py mark was refused, however good.", "It is read; a miss refuses once, naming each failed basic."], "Step 2, issue #543 (the page check reads a page instead of refusing it)."],
+  ["chg", "Starters (templates/starters/, make_page.py start)", "One optional content skeleton per page type.", ["make_page.py had one shape for every page.", "proposal, build-plan, qa, review and art each have a starter."], "Step 3, issue #544 (one optional starter per page type)."],
   ["chg", "Rules and docs (rules/show-dont-tell.md, docs/4-systems/flexible-pages.md)", "The rule text names the seven basics and the types; plugin 2.82.0.", ["The rule said every page is built by make_page.py.", "It names the basics, the types and the markers."], "Step 4, issue #545 (rule text, docs and version)."]
  ],
  "qa": {
@@ -25,7 +25,7 @@
   "base": "origin/main",
   "unverified": [
    "Not run on your Windows PC or the desktop app; every check ran in this cloud sandbox",
-   "A builder-made review page cannot carry a finding marker, and an art page passes only because the template's hidden icon sprite counts as a picture",
+   "A review page made by make_page.py cannot carry a finding marker, and an art page passes only because the template's hidden icon sprite counts as a picture",
    "The page check does not test that the next-step box stays on screen; only --visual or a look does"
   ],
   "files": {}
@@ -33,11 +33,11 @@
  "wrapup": {
   "summary": "Flexible pages are built as house-rules 2.82.0 and wait for your QA.",
   "changing": "The page check, the new checker, the starters, the page rule text and the flexible pages systems doc.",
-  "blocking": "Your QA of #541, flexible pages.",
+  "blocking": "Your QA of issue #541 (flexible pages).",
   "next": "On a pass I open a pull request into main. On a fail I fix it on this branch.",
   "todo": [
    "Step 1: run python tools/use_branch.py ajsagent/sharp-edison-y4xjzv from the repo root. Expect version 2.82.0.",
-   "Step 2: in a new session, ask for a hand-written page under docs/plans/ with no checklist. Expect one refusal naming it.",
+   "Step 2: in a new session, ask for a hand-written page under docs/plans/ with no checklist. Expect one refusal naming the missing checklist.",
    "Step 3: run python claude-house-rules/plugins/house-rules/scripts/make_page.py start qa. Expect it to write qa.page.json, a skeleton to fill in.",
    "Reply \"QA passed: flexible pages\", or say what failed."
   ]

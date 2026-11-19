@@ -6,6 +6,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as long as it meets seven basics; waiting on aj's QA.
 
+- 2026-11-19: picked up after a usage-limit cut-off; the QA page is `docs/plans/flexible-pages-qa.html` and issues #541 to #545 say `needs review`. verify.py 1294 of 1294, verify_tools 54 of 54.
+
 - A page no longer has to come from the page builder: the page check reads it and, if a basic is missing, refuses once naming each one (#543). Pages with the builder's mark still pass unread.
 - `scripts/page_criteria.py` is the checker for the seven basics (#542); its phone-width check is the optional `--visual` flag (first run 2026-11-19: light and dark, no overflow).
 - `make_page.py start <type>` gives one optional starter per page type (proposal, build plan, QA, review, art) (#544). Known gaps: a builder `review` page cannot carry a `finding` marker, and `art` passes only because the template's hidden icon sprite counts as a picture.
