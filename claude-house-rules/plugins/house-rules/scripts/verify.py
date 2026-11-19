@@ -106,6 +106,7 @@ _DOC_READERS = {
 _SCRIPT_PARTS = {  # scripts/<file> -> parts
     "clarity.py": ["writing", "design_loop"],     # the clear-writing cases live in design_loop.py (see the doc)
     "make_page.py": ["make_page"],
+    "page_criteria.py": ["make_page"],
     "docref.py": ["docs"],
     "plain_docs_check.py": ["docs"],
     "harvest_scan.py": ["docs"],
