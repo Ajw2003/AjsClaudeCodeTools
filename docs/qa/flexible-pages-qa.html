@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="house-rules-page" content="qa">
+<title>Flexible pages: your QA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+  :root {
+    --bg: #f4f6fa; --card: #ffffff; --ink: #18202e; --soft: #5a6475; --line: #dde3ec;
+    --me: #2f5bd3; --me-soft: #e3eafc; --you: #b5650d; --you-soft: #fdf0e1;
+    --ok: #1f7a4d; --code-bg: #18202e; --code-ink: #e9eef7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11151d; --card: #1a202b; --ink: #e9eef7; --soft: #a3adbd; --line: #2c3442;
+      --me: #8aa8ff; --me-soft: #223055; --you: #f0a95a; --you-soft: #3a2a17;
+      --ok: #5fd39a; --code-bg: #0b0e14; --code-ink: #e9eef7;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 17px/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 120px; }
+  h1, h2 { font-family: "Bricolage Grotesque", system-ui, sans-serif; line-height: 1.15; }
+  h1 { font-size: 30px; margin: 4px 0 12px; }
+  h2 { font-size: 22px; margin: 0 0 8px; }
+  .eyebrow { color: var(--me); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 16px 0; }
+  .next { position: sticky; top: 0; z-index: 5; background: var(--you-soft); color: var(--ink);
+          border: 2px solid var(--you); border-radius: 12px; padding: 10px 14px; margin: 12px 0; }
+  .next b { color: var(--you); }
+  .flow { width: 100%; height: auto; display: block; }
+  .step-head { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+  .num { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--you); color: #fff;
+         display: grid; place-items: center; font-weight: 700; font-size: 18px; }
+  .label { font-size: 13px; font-weight: 700; color: var(--soft); text-transform: uppercase; letter-spacing: .05em; margin: 14px 0 4px; }
+  pre { background: var(--code-bg); color: var(--code-ink); border-radius: 10px; padding: 12px; margin: 0;
+        font: 14px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
+  pre.out { background: transparent; color: var(--ink); border: 1px dashed var(--line); }
+  button.copy { margin-top: 6px; font: inherit; font-size: 15px; font-weight: 700; color: #fff; background: var(--me);
+                border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  .tick { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 10px;
+          background: var(--you-soft); border-radius: 10px; }
+  .tick input { width: 22px; height: 22px; margin: 2px 0 0; flex: none; }
+  .pic { width: 100%; max-width: 360px; height: auto; display: block; margin: 6px 0 4px; }
+  ul.plain { margin: 6px 0; padding-left: 20px; }
+  .ok { color: var(--ok); font-weight: 700; }
+  ol.steps { list-style: none; padding: 0; margin: 0; }
+</style>
+</head>
+<body>
+<main>
+<div class="eyebrow">QA · house-rules 2.82.0 · branch AjsAgent/speed-switches</div>
+<h1>Flexible pages: your QA</h1>
+
+<p data-basic="summary">Pages can now take any format that meets seven basics. Three short tests check that on your PC; this page is itself hand-written.</p>
+
+<div class="next" data-basic="next"><b>Your next step:</b> do Step 1 below, which installs the new plugin build.</div>
+
+<section class="card" data-basic="picture">
+  <h2>The three tests</h2>
+  <svg class="flow" viewBox="0 0 640 120" role="img" aria-label="Step 1 install, then Step 2 test a hand-made page, then Step 3 try a starter, then send your reply">
+    <g font-family="Atkinson Hyperlegible, sans-serif" font-size="15" text-anchor="middle">
+      <rect x="6" y="20" width="130" height="70" rx="12" fill="var(--you-soft)" stroke="var(--you)" stroke-width="2"/>
+      <text x="71" y="50" fill="var(--ink)" font-weight="700">1. Install</text><text x="71" y="72" fill="var(--soft)">PowerShell</text>
+      <path d="M140 55h24" stroke="var(--soft)" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="170" y="20" width="130" height="70" rx="12" fill="var(--you-soft)" stroke="var(--you)" stroke-width="2"/>
+      <text x="235" y="50" fill="var(--ink)" font-weight="700">2. Refusal</text><text x="235" y="72" fill="var(--soft)">Claude Code</text>
+      <path d="M304 55h24" stroke="var(--soft)" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="334" y="20" width="130" height="70" rx="12" fill="var(--you-soft)" stroke="var(--you)" stroke-width="2"/>
+      <text x="399" y="50" fill="var(--ink)" font-weight="700">3. Starter</text><text x="399" y="72" fill="var(--soft)">PowerShell</text>
+      <path d="M468 55h24" stroke="var(--soft)" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="498" y="20" width="136" height="70" rx="12" fill="var(--me-soft)" stroke="var(--me)" stroke-width="2"/>
+      <text x="566" y="50" fill="var(--ink)" font-weight="700">4. Reply</text><text x="566" y="72" fill="var(--soft)">to me</text>
+    </g>
+    <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--soft)"/></marker></defs>
+  </svg>
+</section>
+
+<ol class="steps" data-basic="steps">
+
+<li class="card">
+  <div class="step-head"><span class="num">1</span><h2>Install the new plugin build</h2></div>
+  <svg class="pic" viewBox="0 0 360 70" role="img" aria-label="A PowerShell window running one command"><rect x="1" y="1" width="358" height="68" rx="10" fill="var(--code-bg)"/><circle cx="18" cy="16" r="5" fill="#e5534b"/><circle cx="34" cy="16" r="5" fill="#e3b341"/><circle cx="50" cy="16" r="5" fill="#57ab5a"/><text x="16" y="50" fill="var(--code-ink)" font-family="monospace" font-size="15">PS&gt; python ...use_branch.py</text></svg>
+  <p>Open the Start menu, type <b>Windows PowerShell</b> and press Enter. Paste this command and press Enter. It works from any folder.</p>
+  <pre id="c1">python "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py" AjsAgent/speed-switches</pre>
+  <button class="copy" data-copy="c1">Copy command</button>
+  <div class="label">You should see, at the end</div>
+  <pre class="out" data-basic="expected">marketplace ref : AjsAgent/speed-switches
+plugin version  : 2.82.0
+OK: installed build matches the request. Restart Claude Code to load it.</pre>
+  <p>Then close Claude Code completely and open it again, so it loads the new build.</p>
+  <label class="tick"><input type="checkbox"> I saw "plugin version  : 2.82.0" and reopened Claude Code.</label>
+</li>
+
+<li class="card">
+  <div class="step-head"><span class="num">2</span><h2>Check a hand-made page is refused once</h2></div>
+  <svg class="pic" viewBox="0 0 360 80" role="img" aria-label="A chat bubble with your prompt, then a refusal naming the missing checklist"><rect x="1" y="4" width="250" height="32" rx="10" fill="var(--me-soft)"/><text x="12" y="25" fill="var(--ink)" font-size="14" font-family="sans-serif">You: write a page with no checklist</text><rect x="100" y="44" width="258" height="32" rx="10" fill="var(--you-soft)" stroke="var(--you)"/><text x="112" y="65" fill="var(--ink)" font-size="14" font-family="sans-serif">Refused: Basic 6 (checklist)</text></svg>
+  <p>Open a new Claude Code session in the folder <b>C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools</b>. Paste this prompt and send it.</p>
+  <pre id="c2">Write a short hand-made HTML page at docs/plans/qa-test-page.html without make_page.py, with no tick-box checklist, then add one if it is refused.</pre>
+  <button class="copy" data-copy="c2">Copy prompt</button>
+  <div class="label">You should see</div>
+  <p>One refusal that starts like this and names Basic 6:</p>
+  <pre class="out">House rules, page check: ... is a hand-written page and it misses these basics:
+Basic 6 (checklist): the page asks aj to act but has no checklist; ...</pre>
+  <p>Then Claude adds a checklist and the save goes through. That means pages are now read, not refused for skipping the builder.</p>
+  <label class="tick"><input type="checkbox"> I saw one refusal naming Basic 6, then the save went through.</label>
+</li>
+
+<li class="card">
+  <div class="step-head"><span class="num">3</span><h2>Make a starter page</h2></div>
+  <svg class="pic" viewBox="0 0 360 70" role="img" aria-label="A command writes a skeleton file into your temp folder"><rect x="1" y="10" width="170" height="50" rx="10" fill="var(--code-bg)"/><text x="14" y="40" fill="var(--code-ink)" font-family="monospace" font-size="14">make_page start qa</text><path d="M176 35h40" stroke="var(--soft)" stroke-width="2"/><path d="M216 28l10 7l-10 7z" fill="var(--soft)"/><rect x="234" y="6" width="110" height="58" rx="6" fill="var(--card)" stroke="var(--line)" stroke-width="2"/><text x="289" y="40" text-anchor="middle" fill="var(--ink)" font-family="sans-serif" font-size="13">qa-test.page.json</text></svg>
+  <p>In the same PowerShell window, paste this command and press Enter. It writes into your temp folder, so the repo stays clean.</p>
+  <pre id="c3">python "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\make_page.py" start qa --out "$env:TEMP\qa-test.page.json"</pre>
+  <button class="copy" data-copy="c3">Copy command</button>
+  <div class="label">You should see</div>
+  <pre class="out">make_page: wrote the qa starter to C:\Users\aj\AppData\Local\Temp\qa-test.page.json</pre>
+  <label class="tick"><input type="checkbox"> I saw "wrote the qa starter to".</label>
+</li>
+
+<li class="card">
+  <div class="step-head"><span class="num">4</span><h2>Send me your answer</h2></div>
+  <p>If all three worked, copy this and send it to me in our chat. If one failed, tell me the step number and paste what it printed.</p>
+  <pre id="c4">QA passed: flexible pages</pre>
+  <button class="copy" data-copy="c4">Copy reply</button>
+  <label class="tick"><input type="checkbox"> I sent my answer.</label>
+</li>
+
+</ol>
+
+<section class="card" data-basic="unverified">
+  <h2>What I have not checked</h2>
+  <ul class="plain">
+    <li>None of these steps has run on your Windows PC. I ran steps 1 and 3 on Linux, where they printed the lines above.</li>
+    <li>Step 2 needs a session on 2.82.0; mine runs 2.81.2, so I only ran the checker alone.</li>
+    <li>The folder path comes from older notes in this repo, not from you.</li>
+  </ul>
+  <details><summary>What I did check</summary>
+    <ul class="plain">
+      <li><span class="ok">Passed:</span> verify.py, 1294 of 1294 checks, on 2026-11-19.</li>
+      <li><span class="ok">Passed:</span> tools/verify_tools.py, 54 of 54 checks.</li>
+      <li><span class="ok">Passed:</span> this page, read by page_criteria.py with the phone-width check.</li>
+    </ul>
+  </details>
+</section>
+</main>
+<script>
+document.querySelectorAll("button.copy").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var text = document.getElementById(b.dataset.copy).textContent;
+    var label = b.textContent;
+    navigator.clipboard.writeText(text).then(function () {
+      b.textContent = "Copied";
+    }, function () {
+      b.textContent = "Copy blocked: select the text instead";
+    }).finally(function () { setTimeout(function () { b.textContent = label; }, 2000); });
+  });
+});
+</script>
+</body>
+</html>
