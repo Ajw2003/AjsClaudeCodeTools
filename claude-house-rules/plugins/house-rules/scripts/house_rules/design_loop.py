@@ -2371,7 +2371,7 @@ def _page_deny(page, fails=None, notes=()):
                                  "permissionDecisionReason": why + "".join(" (" + n + ")" for n in notes)}})
 
 
-def _page_limit(page, notes):
+def _page_limit(page, problems):
     """maxBlockWords from the project's docs/page-style.json (None = plugin default); a bad file adds a note."""
     d = os.path.dirname(os.path.abspath(page))
     while not os.path.isdir(os.path.join(d, "docs")):
@@ -2388,7 +2388,7 @@ def _page_limit(page, notes):
             return v
         raise ValueError("maxBlockWords is not a positive whole number")
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        notes.append("%s could not be used (%s: %s), so the default block length applies."
+        problems.append("%s could not be used (%s: %s), so the default block length applies."
                      % (f, type(exc).__name__, exc))
         return None
 

@@ -1,6 +1,6 @@
 # Flexible pages
 
-Status: **design approved 2026-11-18 ("Design approved: flexible pages 1A 2A 3A"), not built.** Design page:
+Status: **built (steps 1-3 built, step 4 rule text, docs and version in plugin 2.82.0); waiting on aj's QA.** Design approved 2026-11-18 ("Design approved: flexible pages 1A 2A 3A"). Design page:
 `docs/plans/2026-11-18-flexible-pages-design.html`.
 
 ## What it owns
@@ -40,13 +40,20 @@ test) refused any page under `docs/plans/` without the builder's mark, however g
 Stages, approval phrases, issue labels, the QA page's measured line counts, and the builder's mark (a page with the mark
 still passes without being read).
 
-## How it will work
+## How it works
 
 | Piece | Where | What it does |
 |---|---|---|
-| Checker | `scripts/page_criteria.py` (new) | Reads a page's HTML and lists each failed basic in plain words |
-| Page check | `event_pagecheck` | A page with no mark is read by the checker instead of refused; a pass is allowed |
-| Starters | `templates/starters/` (new) | One content skeleton per type for `make_page.py` |
-| Rules | `rules/show-dont-tell.md`, `rules/detail/show-dont-tell.md` | Name the basics and the types |
+| Checker | `scripts/page_criteria.py` | Reads a page's HTML and lists each failed basic in plain words; `--visual` adds a phone-width check |
+| Page check | `event_pagecheck` in `scripts/house_rules/design_loop.py` | A page with no builder mark is read by the checker instead of refused; a pass is allowed, a miss refuses once |
+| Starters | `templates/starters/`, `make_page.py start <type>` | One optional content skeleton per type |
+| Rules | `rules/show-dont-tell.md`, `rules/detail/show-dont-tell.md` | Name the seven basics, the types, the `<meta name="house-rules-page">` declaration and `data-basic="..."` markers |
 
-Steps and issues are tracked under the parent issue for flexible pages.
+Steps and issues are tracked under the parent issue for flexible pages (#542 to #545).
+
+## Traps
+
+- A builder-made `review` page cannot carry a `data-basic="finding"` marker; the test asserts that one message.
+- `art` passes the checker only because the template's hidden icon sprite counts as a picture. The fixed template does not do the art layout (picture first, side by side).
+- The checker does not check statically that the next-step box stays on screen.
+- The phone-width check is the optional `--visual` flag and has never been run.

@@ -123,10 +123,7 @@ checklist is written here, where every session can read it.
 
 ## The handover page
 
-Every page is built by the page builder, `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py build
-<content.json>`, from `templates/handover-page.html`, which fills in from one PAGE block. The builder
-overrides the claude.ai publish tool's own page design, writes the page under `docs/plans/`, copies
-its pictures beside it and stamps a builder mark that the page check looks for.
+Any format passes if it meets seven basics: a one-sentence summary; a "Your next step" box that stays on screen; a picture or diagram for every idea; no block over 60 words (long detail folds away); numbered steps, one action each; a tick-box checklist whenever aj has something to do; fits 375px wide in light and dark. Each type adds only what it needs: proposal (what exists first, options with one suggested, the approval phrase), build plan (steps in order, a "done when" per step, code touched), QA (tick-box steps, expected result per step, what was not verified), review (findings ranked with where, why, fix), art (picture first, variants side by side, almost no words). A page declares its type with `<meta name="house-rules-page">` and marks each basic with `data-basic="..."`. The builder (`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py build <content.json>`, from `templates/handover-page.html`) and `make_page.py start <type>` starters are optional shortcuts; a builder page carries the mark and passes unread. The page check reads an unmarked page under `docs/plans/` and refuses once, naming each failed basic. See docs/4-systems/flexible-pages.md.
 
 **Why:** pages made outside the template skipped the four parts and the pictures (the audit,
 `docs/handover-page-audit-2026-10-15.md`); a mark the check can see makes the template unskippable.
@@ -152,8 +149,7 @@ the reply through with a note that no page could be made. Only "no page" in aj's
 the block never offers that phrase to me. `HOUSE_RULES_LOOP=off` turns them all off.
 
 **Why:** a page that the agent could skip by replying "no page" was skipped (aj, 2026-10-15, #281); the
-three-block limit stops a broken page builder from looping a session with nobody watching. A page that was saved or
-published without the builder mark is refused.
+three-block limit stops a broken page builder from looping a session with nobody watching. 
 
 **Why:** a rule the model must remember to follow was skipped; a check at a fixed point doesn't depend
 on that.

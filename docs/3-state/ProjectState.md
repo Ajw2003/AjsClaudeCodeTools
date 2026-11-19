@@ -417,3 +417,7 @@ invocation.
 - 2026-11-17: desktop pickup works: a second desktop session quoted the pickup note word for word ("house-rules pickup: loaded from refs/house-rules/saves/AjsAgent/qa-pickup/f1337b37" and the facts, 8 uncommitted files). Its on-screen line never showed: the desktop app displays PostToolUse and Stop notices but showed no SessionStart one. aj also asked for the end-of-turn line to say the work is saved (wording ready, code closed in QA).
 - 2026-11-17: aj typed "QA failed: Feature switches" (reword the end-of-turn line, have Claude announce the pickup); issues back to in progress. Built in delegation.py (end-of-turn trace, PICKUP_ANNOUNCE), plugin 2.81.2.
 - 2026-11-17: 2.81.2 full verify 1253 of 1253, verify_tools 54 of 54, docs drift 0; use_branch in a throwaway config installed 2.81.2 at 8ab0039. QA page rebuilt for the second desktop retest; all 14 issues back to needs review.
+
+## Flexible pages (#542 to #545)
+
+Plugin 2.82.0. State: built, waiting on aj's QA. Any page format passes if it meets seven basics; `scripts/page_criteria.py` reads unmarked pages, starters via `make_page.py start <type>`. Known gaps (review `finding` marker, art layout, next-step box not checked statically, `--visual` never run) are in [`docs/4-systems/flexible-pages.md`](../4-systems/flexible-pages.md).
