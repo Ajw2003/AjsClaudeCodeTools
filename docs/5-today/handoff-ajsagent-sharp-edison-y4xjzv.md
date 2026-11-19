@@ -20,7 +20,7 @@ aj runs the three tests on the QA page and replies "QA passed: flexible pages" o
 - Nothing has run on aj's Windows PC or in the desktop app since the pickup.
 - A review page made by make_page.py cannot carry a finding marker; an art page passes only because the template's hidden icon sprite counts as a picture.
 - The page check does not test that the next-step box stays on screen; only `--visual` or a look does.
-- `AjsAgent/speed-switches` on GitHub still stops at step 3; the finished work is only on this branch.
+- `AjsAgent/speed-switches` on GitHub now matches this branch (pushed 2026-11-19, 795bbec); the QA page names it.
 
 ## Issue numbers
 
