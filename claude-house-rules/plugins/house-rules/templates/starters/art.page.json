@@ -1,0 +1,68 @@
+{
+ "title": "<replace: art title>",
+ "eyebrow": "Art · pictures first",
+ "pageType": "art",
+ "kind": "summary",
+ "approval": "Art seen: <feature>",
+ "short": {
+  "lead": "<replace: one sentence: what the pictures show>",
+  "hint": "Tap a picture.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "eye",
+    "Picture",
+    "<replace: name>",
+    "",
+    "<replace: one line>",
+    "<replace: one line>",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
+     "alt": "<replace: what the picture shows>",
+     "caption": "<replace: what the picture shows>"
+    }
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "<replace: two variants>",
+   "<replace: one line>",
+   null,
+   "<replace: one line>",
+   null,
+   null,
+   {
+    "before": {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
+     "alt": "<replace: variant A>"
+    },
+    "after": {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23dff3e8%22/%3E%3C/svg%3E",
+     "alt": "<replace: variant B>"
+    },
+    "caption": "<replace: A beside B>"
+   }
+  ]
+ ],
+ "wrapup": {
+  "summary": "<replace: what the pictures show>",
+  "changing": "<replace: what changes, named>",
+  "blocking": "<replace: what waits on aj, named>",
+  "next": "Say which variant you like.",
+  "todo": [
+   "Look at the pictures.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

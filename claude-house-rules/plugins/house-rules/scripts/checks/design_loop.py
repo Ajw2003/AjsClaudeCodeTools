@@ -467,10 +467,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.81.2",
+    "issues: the rules section and its detail file exist, and the plugin is 2.82.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.81.2",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.82.0",
     "rules section + detail file + version",
 )
 
@@ -2592,6 +2592,44 @@ _pc_cases.append(("HOUSE_RULES_LOOP=off allows a hand-written Write and a hand-w
                   and _pc("Artifact", {"file_path": _pc_hand_f}, _pc_off) == ""))
 _pc_cases.append(("a payload with no tool_input fails open with a note",
                   "could not run" in _pc("Write", None)))
+_pc_good = ('<!doctype html><html><head><meta name="house-rules-page" content="art"></head><body>'
+            '<p data-basic="summary">A short page.</p><p data-basic="next">Look at it.</p><svg></svg>'
+            '<p>%s</p></body></html>')
+_pc_good_t = _pc_good % "one two three four five six seven eight nine ten"
+_pc_good_f = _pc_file("good.html", _pc_good_t)
+_pc_bad_t = _pc_good_t.replace('<meta name="house-rules-page" content="art">', "")
+_pc_bad_f = _pc_file("bad.html", _pc_bad_t)
+_pc_cases.append(("Write of a hand-made docs/plans page that meets the basics is allowed",
+                  _pc("Write", {"file_path": _pc_plans, "content": _pc_good_t}) == ""))
+_o = _pc("Write", {"file_path": _pc_plans, "content": _pc_bad_t})
+_pc_cases.append(("a hand-made page missing the type meta is refused, naming the basic and the builder command",
+                  _pc_denied(_o) and "no known type" in _o and "make_page.py build <content.json>" in _o))
+_pc_cases.append(("Artifact publish of a good hand-made page is allowed, a bad one refused",
+                  _pc("Artifact", {"file_path": _pc_good_f}) == "" and _pc_denied(_pc("Artifact", {"file_path": _pc_bad_f}))))
+_pc_cases.append(("a builder-marked page is allowed unread",
+                  _pc("Write", {"file_path": _pc_plans, "content": _pc_built}) == ""))
+_pc_proj = os.path.join(_pc_tmp, "proj")
+os.makedirs(os.path.join(_pc_proj, "docs", "plans"))
+_pc_pp = os.path.join(_pc_proj, "docs", "plans", "y.html")
+_pc_style = os.path.join(_pc_proj, "docs", "page-style.json")
+with open(_pc_style, "w", encoding="utf-8") as _f:
+    _f.write('{"basics": {"maxBlockWords": 5}}')
+_o = _pc("Write", {"file_path": _pc_pp, "content": _pc_good_t})
+_pc_cases.append(("page-style.json maxBlockWords 5 refuses a page with a 10-word block",
+                  _pc_denied(_o) and "Basic 4" in _o))
+with open(_pc_style, "w", encoding="utf-8") as _f:
+    _f.write("{not json")
+_o = _pc("Write", {"file_path": _pc_pp, "content": _pc_good_t})
+_pc_cases.append(("a malformed page-style.json uses the default and prints a note",
+                  not _pc_denied(_o) and "page-style.json" in _o and "default" in _o))
+_pc_shim = os.path.join(_pc_tmp, "shim")
+os.makedirs(_pc_shim)
+with open(os.path.join(_pc_shim, "sitecustomize.py"), "w") as _f:
+    _f.write("import sys; sys.modules['page_criteria'] = None")  # makes the import fail
+_o = _pc("Write", {"file_path": _pc_plans, "content": _pc_bad_t},
+         dict(_pc_env, PYTHONPATH=_pc_shim + os.pathsep + os.environ.get("PYTHONPATH", "")))
+_pc_cases.append(("a checker that cannot load allows the call with a note",
+                  not _pc_denied(_o) and "could not load" in _o))
 for _t, _ok in _pc_cases:
     report("PASS" if _ok else "FAIL", "pagecheck: " + _t)
 shutil.rmtree(_pc_tmp, True)

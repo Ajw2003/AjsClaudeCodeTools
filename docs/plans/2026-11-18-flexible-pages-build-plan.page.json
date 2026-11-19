@@ -1,0 +1,165 @@
+{
+ "title": "Flexible Pages: Build Plan",
+ "eyebrow": "Build plan for your approval · four steps · issues #541 to #545 · I have not written any code yet",
+ "approval": "Build plan approved: flexible pages",
+ "replyPrefix": "Build plan approved: flexible pages",
+ "reply": "",
+ "short": {
+  "lead": "You approved the design: any page format is allowed, if it meets seven basics. This is how I will build it, in four steps. Each step is one issue. Each step ends with a check that I run and show you. Your part: answer two choices, then approve.",
+  "hint": "Tap a step to see what it builds.",
+  "key": [
+   [
+    "Exists today",
+    ""
+   ],
+   [
+    "Needs you",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "The moment",
+    "I write a page and it is not refused for being hand-made",
+    "",
+    "The page check stops asking whether the builder made the page. It asks whether the page meets the seven basics. A good hand-made page is allowed. A page that misses a basic is refused once, and the message names that basic.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4ODAgMjkwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48dGV4dCB4PSIyMCIgeT0iMjgiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPldoYXQgaGFwcGVucyB3aGVuIGEgcGFnZSBpcyB3cml0dGVuPC90ZXh0PjxyZWN0IHg9IjIwIiB5PSI0NCIgd2lkdGg9IjE3MCIgaGVpZ2h0PSI2NCIgcng9IjEwIiBmaWxsPSIjM2I3ZGQ4IiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzNiN2RkOCIvPjx0ZXh0IHg9IjMyIiB5PSI3MCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNiN2RkOCI+V3JpdGUgYSBwYWdlPC90ZXh0Pjx0ZXh0IHg9IjMyIiB5PSI5MCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+dW5kZXIgZG9jcy9wbGFuczwvdGV4dD48bGluZSB4MT0iMTkwIiB5MT0iNzYiIHgyPSIyMTQiIHkyPSI3NiIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiLz48cG9seWdvbiBwb2ludHM9IjIyMCw3NiAyMTIsNzEgMjEyLDgxIiBmaWxsPSIjN2Q4MzhjIi8+PHJlY3QgeD0iMjIwIiB5PSI0NCIgd2lkdGg9IjE5MCIgaGVpZ2h0PSI2NCIgcng9IjEwIiBmaWxsPSIjM2I3ZGQ4IiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzNiN2RkOCIvPjx0ZXh0IHg9IjIzMiIgeT0iNzAiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzYjdkZDgiPkhhcyB0aGUgYnVpbGRlciBtYXJrPzwvdGV4dD48dGV4dCB4PSIyMzIiIHk9IjkwIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5leGlzdHMgdG9kYXk8L3RleHQ+PGxpbmUgeDE9IjQxMCIgeTE9Ijc2IiB4Mj0iNDM0IiB5Mj0iNzYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBvbHlnb24gcG9pbnRzPSI0NDAsNzYgNDMyLDcxIDQzMiw4MSIgZmlsbD0iIzdkODM4YyIvPjxyZWN0IHg9IjQ0MCIgeT0iNDQiIHdpZHRoPSIxNzAiIGhlaWdodD0iNjQiIHJ4PSIxMCIgZmlsbD0iIzNiN2RkOCIgZmlsbC1vcGFjaXR5PSIwLjEwIiBzdHJva2U9IiMzYjdkZDgiLz48dGV4dCB4PSI0NTIiIHk9IjcwIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2I3ZGQ4Ij5BbGxvd2VkPC90ZXh0Pjx0ZXh0IHg9IjQ1MiIgeT0iOTAiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPmFzIHRvZGF5PC90ZXh0Pjx0ZXh0IHg9IjIyMCIgeT0iMTI4IiBmb250LXNpemU9IjEyIiAgZmlsbD0iIzdkODM4YyI+bm8gbWFyazogdG9kYXkgaXQgaXMgcmVmdXNlZDwvdGV4dD48cmVjdCB4PSIyMjAiIHk9IjE0NiIgd2lkdGg9IjE5MCIgaGVpZ2h0PSI2NCIgcng9IjEwIiBmaWxsPSIjMmY4ZjViIiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzJmOGY1YiIvPjx0ZXh0IHg9IjIzMiIgeT0iMTcyIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMmY4ZjViIj5SZWFkIHRoZSBwYWdlPC90ZXh0Pjx0ZXh0IHg9IjIzMiIgeT0iMTkyIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5wYWdlX2NyaXRlcmlhLnB5IChzdGVwIDEpPC90ZXh0PjxsaW5lIHgxPSI0MTAiIHkxPSIxNzgiIHgyPSI0MzQiIHkyPSIxNzgiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBvbHlnb24gcG9pbnRzPSI0NDAsMTc4IDQzMiwxNzMgNDMyLDE4MyIgZmlsbD0iIzdkODM4YyIvPjxyZWN0IHg9IjQ0MCIgeT0iMTQ2IiB3aWR0aD0iMTcwIiBoZWlnaHQ9IjY0IiByeD0iMTAiIGZpbGw9IiMyZjhmNWIiIGZpbGwtb3BhY2l0eT0iMC4xMCIgc3Ryb2tlPSIjMmY4ZjViIi8+PHRleHQgeD0iNDUyIiB5PSIxNzIiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjhmNWIiPkJhc2ljcyBtZXQ/PC90ZXh0Pjx0ZXh0IHg9IjQ1MiIgeT0iMTkyIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5zdGVwIDI8L3RleHQ+PGxpbmUgeDE9IjYxMCIgeTE9IjE2MCIgeDI9IjYzNCIgeTI9IjE2MCIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiLz48cG9seWdvbiBwb2ludHM9IjY0MCwxNjAgNjMyLDE1NSA2MzIsMTY1IiBmaWxsPSIjN2Q4MzhjIi8+PHJlY3QgeD0iNjQwIiB5PSIxMjgiIHdpZHRoPSIyMjAiIGhlaWdodD0iNTYiIHJ4PSIxMCIgZmlsbD0iIzJmOGY1YiIgZmlsbC1vcGFjaXR5PSIwLjEwIiBzdHJva2U9IiMyZjhmNWIiLz48dGV4dCB4PSI2NTIiIHk9IjE1NCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOGY1YiI+WWVzOiBhbGxvd2VkPC90ZXh0PjxsaW5lIHgxPSI2MTAiIHkxPSIxOTYiIHgyPSI2MzQiIHkyPSIxOTYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBvbHlnb24gcG9pbnRzPSI2NDAsMTk2IDYzMiwxOTEgNjMyLDIwMSIgZmlsbD0iIzdkODM4YyIvPjxyZWN0IHg9IjY0MCIgeT0iMTk2IiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjU2IiByeD0iMTAiIGZpbGw9IiMyZjhmNWIiIGZpbGwtb3BhY2l0eT0iMC4xMCIgc3Ryb2tlPSIjMmY4ZjViIi8+PHRleHQgeD0iNjUyIiB5PSIyMjIiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjhmNWIiPk5vOiByZWZ1c2VkIG9uY2U8L3RleHQ+PHRleHQgeD0iNjUyIiB5PSIyNDIiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPm5hbWVzIGVhY2ggZmFpbGVkIGJhc2ljPC90ZXh0Pjx0ZXh0IHg9IjIwIiB5PSIyNzYiIGZvbnQtc2l6ZT0iMTIiICBmaWxsPSIjN2Q4MzhjIj5CbHVlIGV4aXN0cyB0b2RheS4gR3JlZW4gaXMgbmV3LjwvdGV4dD48L3N2Zz4=",
+     "alt": "A page with the builder mark is allowed as today. A page without it is read by a new checker and allowed if the basics are met, or refused once naming each failed basic.",
+     "caption": "Blue exists today. Green is new. A plain diagram."
+    }
+   ],
+   [
+    "search",
+    "What exists",
+    "The page check is one small test",
+    "",
+    "event_pagecheck in design_loop.py allows a page only if the builder mark is in the first 4096 characters. The builder's template has four fixed parts. Nothing reads what a page contains. I reuse that hook and the builder's phone-width check. I add one script and change one test.",
+    "Nothing from you."
+   ],
+   [
+    "flask",
+    "Your part",
+    "Two choices, then approve",
+    "",
+    "The two choices below are about how the checker finds the next-step box, the checklist and the page type.",
+    "Answer both choices."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "Step 1 (#542): the checker",
+   "scripts/page_criteria.py",
+   null,
+   "A script that reads one page and prints each failed basic in plain words. It looks for a summary, a next-step box, a picture, steps, a checklist, and blocks over 60 words outside folded detail. It also runs the existing phone-width check. Planned shape: check(html, type) returns a list of messages. main prints them, and exits with code 1 if there are any. New verify.py cases test it: one passing page per type, and one failing page per basic.",
+   [
+    "Nothing reads a page's content.",
+    "One script lists each failed basic.",
+    "Done when the new cases and the full verify.py pass."
+   ]
+  ],
+  [
+   "chg",
+   "Step 2 (#543): the page check reads, not refuses",
+   "event_pagecheck in design_loop.py",
+   null,
+   "A page without the builder mark goes to the checker instead of being refused straight away. If it passes, it is allowed. If it fails, it is refused once, and the message names each failed basic. Pages with the mark are allowed, as today. A project's docs/page-style.json may add stricter limits. I update the existing verify.py cases that expect every unmarked page to be refused.",
+   [
+    "Any page without the mark is refused.",
+    "A page that meets the basics is allowed.",
+    "Done when a good hand-made page is written freely and a bad one is refused with the reason."
+   ]
+  ],
+  [
+   "new",
+   "Step 3 (#544): five starters",
+   "templates/starters/ and make_page.py",
+   null,
+   "A content skeleton for each of five page types: proposal, build plan, QA, review and art. Each one is built on the basics. make_page.py can start from one. The builder's own template gains a next-step box that stays on screen, so builder pages meet the basics too. Using a starter is optional.",
+   [
+    "One template for every page.",
+    "A starter per type, or no starter.",
+    "Done when a page from each starter passes the checker."
+   ]
+  ],
+  [
+   "chg",
+   "Step 4 (#545): rules, docs, version, QA page",
+   "rules/show-dont-tell.md and docs",
+   null,
+   "The rule text names the basics and the page types. The injected rules text has a size limit, so I cut as much as I add. I update the systems doc, the state doc, Today, the changelog and the plugin version. Then I build the QA page, which has the steps you follow.",
+   [
+    "Rules describe one template.",
+    "Rules describe the basics and the types.",
+    "Done when verify.py passes and you say \"QA passed: flexible pages\"."
+   ]
+  ],
+  [
+   "keep",
+   "Stages, approval phrases, issue labels",
+   "No change",
+   null,
+   "Your words still move the stage. The destructive-command guard, the main-branch guard and the credit check do not change.",
+   [
+    "Same as today.",
+    "Same as today.",
+    "Nothing about how you approve changes."
+   ]
+  ]
+ ],
+ "choices": [
+  [
+   "q1",
+   "How does the checker find the next-step box and the checklist?",
+   [
+    [
+     "A",
+     "The page marks them with a data-basic attribute (for example data-basic=\"next\")",
+     1,
+     "Reliable. It needs only a few characters of markup, in any format. If a page forgets the marker, the message says which one is missing."
+    ],
+    [
+     "B",
+     "The checker guesses from the words on the page",
+     0,
+     "No markup is needed. But a good page can fail because of its wording, and a bad page can pass."
+    ]
+   ],
+   "A. A wrong guess either blocks a good page or lets a bad page through."
+  ],
+  [
+   "q2",
+   "How does a page say what type it is?",
+   [
+    [
+     "A",
+     "A meta tag in the page head: house-rules-page, with proposal, build-plan, qa, review or art",
+     1,
+     "It is one line. It is explicit. The checker then applies that type's extra rules."
+    ],
+    [
+     "B",
+     "The checker infers the type from the file name and the words",
+     0,
+     "Nothing to add to the page. But it will sometimes pick the wrong type."
+    ]
+   ],
+   "A. The checker never has to guess the type."
+  ]
+ ],
+ "wrapup": {
+  "summary": "The build plan for flexible pages has four steps. Each step is its own issue. Each step ends with a check that I run and show you.",
+  "changing": "Nothing is built yet.",
+  "blocking": "Your pick of A or B in each of the two choices, or any change you want to the plan.",
+  "next": "After you approve, I build step 1, then step 2, step 3 and step 4. Then I give you a QA page with steps to follow.",
+  "todo": [
+   "Pick A or B in each of the two choices.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it. The reply starts with \"Build plan approved: flexible pages\"."
+  ]
+ }
+}

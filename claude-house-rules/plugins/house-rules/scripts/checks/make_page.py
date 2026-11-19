@@ -378,6 +378,102 @@ except OSError:
     _nargs = []
 _mp_cases.append(("A14: the node check runs `node -e`, with the page path as the fifth word",
                   len(_nargs) > 4 and _nargs[0] == "-e" and _nargs[3] == "PAGE.html"))
+# ---- page_criteria.py: a page checked against the seven basics (#542) ----
+sys.path.insert(0, HERE)
+import page_criteria as _pc
+
+
+def _pcp(typ, drop=(), add="", body_extra=""):
+    parts = {"summary": '<p data-basic="summary">A short summary of the page.</p>',
+             "next": '<p data-basic="next">Next: tick the box.</p>',
+             "pic": '<svg width="1" height="1"></svg>', "steps": '<ol><li>One step.</li></ol>',
+             "check": '<input type="checkbox"> done',
+             "exists": '<p data-basic="exists">It exists.</p>', "suggested": '<p data-basic="suggested">Do it.</p>',
+             "done-when": '<p data-basic="done-when">When green.</p>', "unverified": '<p data-basic="unverified">Not run.</p>',
+             "finding": '<p data-basic="finding">A finding.</p>'}
+    want = {"proposal": ["exists", "suggested", "check"], "build-plan": ["done-when", "check"], "qa": ["unverified", "check"],
+            "review": ["finding"], "art": []}[typ]
+    keys = ["summary", "next", "pic"] + (["steps"] if typ != "art" else []) + want
+    meta = '<meta name="house-rules-page" content="%s">' % typ
+    return meta + "".join(parts[k] for k in keys if k not in drop) + add + body_extra
+
+
+for _typ in _pc.TYPES:
+    _mp_cases.append(("page_criteria (#542): a complete %s page passes" % _typ, _pc.check(_pcp(_typ)) == []))
+for _name, _typ, _drop, _word in (("basic 1 summary", "art", ("summary",), "Basic 1"), ("basic 2 next", "art", ("next",), "Basic 2"),
+                                  ("basic 3 picture", "art", ("pic",), "Basic 3"), ("basic 5 steps", "qa", ("steps",), "Basic 5"),
+                                  ("basic 6 checklist", "qa", ("check",), "Basic 6"),
+                                  ("extras exists", "proposal", ("exists",), "exists"), ("extras done-when", "build-plan", ("done-when",), "done-when"),
+                                  ("extras unverified", "qa", ("unverified",), "unverified"), ("extras finding", "review", ("finding",), "finding")):
+    _m = _pc.check(_pcp(_typ, drop=_drop))
+    _mp_cases.append(("page_criteria (#542): a page missing %s fails and names it" % _name, len(_m) == 1 and _word in _m[0]))
+_m = _pc.check(_pcp("qa", drop=("check",)).replace('<meta name="house-rules-page" content="qa">', ""))
+_mp_cases.append(("page_criteria (#542): a page with no type and no checklist names both in one result",
+                  len(_m) == 2 and "no known type" in _m[0] and "Basic 6 (checklist)" in _m[1]))
+_m = _pc.check(_pcp("art", drop=("summary",), add='<p data-basic="summary">%s</p>' % ("w " * 41)))
+_mp_cases.append(("page_criteria (#542): a 41-word summary fails basic 1", len(_m) == 1 and "Basic 1" in _m[0]))
+_long = "alpha beta gamma delta epsilon zeta eta theta " + "w " * 60
+_m = _pc.check(_pcp("art", add="<p>%s</p>" % _long))
+_mp_cases.append(("page_criteria (#542): a block over 60 words fails basic 4 and names its first 8 words",
+                  len(_m) == 1 and "Basic 4" in _m[0] and "alpha beta gamma delta epsilon zeta eta theta" in _m[0]))
+_mp_cases.append(("page_criteria (#542): the same long block inside details does not fail basic 4",
+                  _pc.check(_pcp("art", add="<details><summary>More</summary><p>%s</p></details>" % _long)) == []))
+_mp_cases.append(("page_criteria (#542): a review page with you-act needs a checklist (basic 6)",
+                  any("Basic 6" in x for x in _pc.check(_pcp("review", add='<p data-basic="you-act">Act</p>')))))
+_mp_cases.append(("page_criteria (#542): a missing type names the five allowed values",
+                  "proposal, build-plan, qa, review, art" in _pc.check("<p>x</p>")[0]))
+_mp_cases.append(("page_criteria (#542): a builder-marked page passes unread",
+                  _pc.check("<!doctype html>\n<!-- house-rules make_page 1.0 -->\n<p>nothing here</p>") == []))
+_pc_f = os.path.join(_mp_tmp, "pc.html")
+with open(_pc_f, "w", encoding="utf-8") as _f:
+    _f.write(_pcp("art", drop=("pic",)))
+_pc_r = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _pc_f], capture_output=True, text=True, timeout=60)
+_pc_u = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _pc_f + ".nope"], capture_output=True, text=True, timeout=60)
+_mp_cases.append(("page_criteria (#542): the command exits 1 naming the miss, and 2 for an unreadable file",
+                  _pc_r.returncode == 1 and "Basic 3" in _pc_r.stdout and _pc_u.returncode == 2))
+# ---- starters: one optional content skeleton per page type (#544) ----
+_mp_cases.append(("starters (#544): make_page's type list equals page_criteria's", tuple(__import__("make_page").PAGE_TYPES) == tuple(_pc.TYPES)))
+_sp = _mp_proj("starts", {"use": "defaults"})
+_mp_git(_sp, "init", "-q", "-b", "main")
+for _n in ("a.py",):
+    with open(os.path.join(_sp, _n), "w", encoding="utf-8") as _f:
+        _f.write("a\n")
+_mp_git(_sp, "add", "-A")
+_mp_git(_sp, "commit", "-q", "-m", "base")
+_GAPS = {"review": ["Type review: the page has no finding; add at least one element marked data-basic=\"finding\"."]}  # item 4: the template has no finding element
+for _typ in _pc.TYPES:
+    _sf = os.path.join(_mp_tmp, "st-" + _typ + ".page.json")
+    _rc1, _o1 = _mp("start", _typ, "--out", _sf)
+    _rc1b, _ = _mp("start", _typ, "--out", _sf)  # a second start must not overwrite
+    with open(_sf, encoding="utf-8") as _f:
+        _raw = _f.read()
+    _left = len(re.findall(r"<replace:", _raw))
+    _raw = _raw.replace("<replace: base branch, such as origin/main>", "main").replace("<feature>", "demo")
+    _raw = re.sub(r"<replace:[^>]*>", "x", _raw)
+    with open(_sf, "w", encoding="utf-8") as _f:
+        _f.write(_raw)
+    _rc2, _o2 = _mp("build", _sf, "--project", _sp)
+    _bh = os.path.join(_sp, "docs", "plans", "st-" + _typ + ".html")
+    _bt = open(_bh, encoding="utf-8").read() if os.path.isfile(_bh) else ""
+    _stripped = re.sub(r"<!-- house-rules make_page[^>]*-->", "", _bt)
+    _msgs = _pc.check(_stripped)
+    _mp_cases.append(("starters (#544): %s starts with placeholders, will not overwrite, builds, and carries the meta tag" % _typ,
+                      _rc1 == 0 and "make_page.py build" in _o1 and _left > 0 and _rc1b == 2 and _rc2 == 0
+                      and '<meta name="house-rules-page" content="%s">' % _typ in _bt))
+    _mp_cases.append(("starters (#544): the built %s page %s" % (_typ, "meets the basics" if _typ not in _GAPS else "misses exactly the documented gap"),
+                      _bt != "" and _msgs == _GAPS.get(_typ, [])))
+_rc, _o = _mp("start", "poster")
+_mp_cases.append(("starters (#544): start with an unknown type dies naming the five types",
+                  _rc == 2 and "proposal, build-plan, qa, review, art" in _o))
+_bp = _mp_content("badtype")
+with open(_bp, encoding="utf-8") as _f:
+    _bj = json.load(_f)
+_bj["pageType"] = "poster"
+with open(_bp, "w", encoding="utf-8") as _f:
+    json.dump(_bj, _f)
+_rc, _o = _mp("build", _bp, "--project", _sp)
+_mp_cases.append(("starters (#544): build with an unknown pageType dies naming the five types",
+                  _rc == 2 and "proposal, build-plan, qa, review, art" in _o))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

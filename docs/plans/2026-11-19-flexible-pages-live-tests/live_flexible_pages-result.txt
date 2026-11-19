@@ -1,0 +1,7 @@
+plugin under test: /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules version 2.82.0
+session plugins: [{"name": "house-rules", "path": "/home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules", "source": "house-rules@inline", "version": "2.82.0"}]
+PASS refused-once: 1 page refusal(s), 1 naming Basic 6; page saved with a checkbox: True (exit 0)
+    PreToolUse:Write {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"House rules, page check: /tmp/claude-0/-home-user-AjsClaudeCodeTools/3c67f2a7-ae6b-5878-9da2-3c15cad614be/scratchpad/live/refused-once/docs/plans/qa-test-page.html is a hand-w
+PASS good-page: page saved: True, after 0 page refusal(s) (exit 0)
+PASS starter: docs/plans/starter.page.json written with pageType qa: True (exit 0)
+exit 0

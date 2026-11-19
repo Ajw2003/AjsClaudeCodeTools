@@ -1,4 +1,34 @@
-# Today — 2026-11-12
+# Today — 2026-11-19
+
+Flexible pages, plugin 2.82.0, built and waiting on aj's QA (issues #541 to #545, all `needs review`). The cut-off Windows session's step 4 was recovered from its autosave onto `ajsagent/sharp-edison-y4xjzv`; verify.py passes 1294 of 1294 and verify_tools 54 of 54. QA page: `docs/plans/flexible-pages-qa.html`.
+
+The QA page was then rewritten by hand as `docs/qa/flexible-pages-qa.html`: four numbered steps, each with a copy button, the exact output to expect and a tick-box. The builder version in `docs/plans/` is superseded.
+The hand-written page replaced the published claude.ai page at the same link, and both branches were pushed again.
+
+Then aj typed "QA failed: flexible pages": the desktop app still ran the old build (its claude.ai account copy follows main). Issues back to `in progress`; the agent now runs the QA itself in headless sessions on the branch code.
+
+Live test run 1 passed 3 of 3 on the branch build (refused once, good page, starter); run 2 is running. The design loop was switched off and back on by aj.
+
+Live test run 2 failed one test: the page checker stopped at a missing page type and hid the missing checklist. A fix for step 1 (#542) is being built.
+
+The checker fix for #542 is merged. verify.py turned out to fail 9 checks whenever a typed switch is saved in the repo; aj chose to fix verify.py (#546), now being built; live test run 3 is running.
+
+Picked up after a usage-limit cut-off: live test run 3 passed 3 of 3, and the #546 fix is merged into `AjsAgent/speed-switches` with its own test corrected. On aj's PC, from the repo with the typed switch present, verify.py passes 1289 of 1295 and verify_tools 53 of 54; every failure is a known Windows-only one (#523). aj chose to skip a fourth run. The QA page `docs/qa/flexible-pages-qa.html` now reports runs 1 to 3 and asks aj to read run 3's result and reply; it meets all seven basics by `page_criteria.py --visual`. Published on aj's account as "Flexible pages: your QA"; issues #541 to #546 now say `needs review`. aj typed "QA passed: flexible pages"; stage Done, decisions log updated, pull request to main opened.
+
+Later on 2026-11-19: the finished work was pushed to `AjsAgent/speed-switches` too (both branches at the same commit). Each QA test on the page now carries its exact PowerShell command or prompt; `use_branch.py AjsAgent/speed-switches` installed 2.82.0 in a throwaway config here.
+
+## 2026-11-18
+
+Branch `AjsAgent/speed-switches` now holds all of main. Phase 3 retested on aj's Windows PC (1246 of 1252 and 53 of 54
+checks; the failures are Linux-only path assumptions in tests). New: a proposal page for flexible page formats,
+`docs/plans/2026-11-18-flexible-pages-design.html`, waiting on aj's three choices. No code built yet.
+
+Flexible pages design approved (1A 2A 3A). Systems doc `docs/4-systems/flexible-pages.md`, parent issue #541 with steps
+#542 to #545, build plan page `docs/plans/2026-11-18-flexible-pages-build-plan.html` waiting on aj's approval and two choices.
+
+Flexible pages design and build plan both approved (aj); stage is Build. Step 1 (#542, the page checker) is built and checked (21 checks pass); step 2 (#543, the page check reads pages) is built; step 3 (#544, starters) is built; step 4 (#545, rules, docs, version) is with a builder; decisions log updated.
+
+# Earlier — 2026-11-12
 
 Roadmap phases 1 and 2, plugin 2.79.0, on the branch `AjsAgent/qol-phases-1-2`, both passed by aj's QA. Phase 1 (#493):
 approvals work with the feature name first and in cloud sessions, an "Approve" button counts, a build plan reads the

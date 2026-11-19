@@ -1,0 +1,65 @@
+{
+ "title": "<replace: review title>",
+ "eyebrow": "Review · findings, most serious first",
+ "pageType": "review",
+ "kind": "summary",
+ "approval": "Review read: <feature>",
+ "short": {
+  "lead": "<replace: one sentence: what was reviewed and how many findings>",
+  "hint": "Tap a finding.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "search",
+    "Finding 1",
+    "<replace: most serious finding>",
+    "",
+    "<replace: where it is, why it matters>",
+    "<replace: the fix>",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
+     "alt": "<replace: what the picture shows>",
+     "caption": "<replace: what the picture shows>"
+    }
+   ],
+   [
+    "search",
+    "Finding 2",
+    "<replace: next finding>",
+    "",
+    "<replace: where it is, why it matters>",
+    "<replace: the fix>"
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "keep",
+   "<replace: finding, with where it is>",
+   "<replace: why it matters>",
+   null,
+   "Fix: <replace: the fix>",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "<replace: what was reviewed>",
+  "changing": "<replace: what changes, named>",
+  "blocking": "<replace: what waits on aj, named>",
+  "next": "Say which findings to fix first.",
+  "todo": [
+   "Read the findings, most serious first.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

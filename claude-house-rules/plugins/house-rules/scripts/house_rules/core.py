@@ -2695,6 +2695,9 @@ def _mode_files(cwd):
 
 def _mode_read(path):
     """{group: "on"|"off"} saved in one file; {} when none or unreadable (said on stderr)."""
+    # verify.py lists the real switch files here so aj's typed switches cannot leak into its checks (#546)
+    if os.path.realpath(path) in [os.path.realpath(q) for q in os.environ.get("HOUSE_RULES_MODE_IGNORE", "").split(os.pathsep) if q]:
+        return {}
     if not os.path.isfile(path):
         return {}
     try:

@@ -147,6 +147,10 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .secondary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:700;min-height:48px}
 .nav{display:flex;justify-content:space-between;gap:10px}
 .nav .primary{margin-left:auto}
+.nextbox{position:sticky;bottom:0;z-index:3;background:var(--card);border:2px solid var(--you);border-radius:12px;padding:10px 14px;display:grid;gap:2px;font-size:.92rem}
+.nextbox b{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--you)}
+.wu li label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.wu li input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--accent)}
 .status{font-size:.88rem;color:var(--muted)}
 .missing{color:var(--gap);font-weight:700}
 @media (prefers-reduced-motion:no-preference){.panel{animation:in .2s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
@@ -228,7 +232,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead"></p>
+      <p class="lead" id="lead" data-basic="summary"></p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -248,6 +252,8 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"></ol></div></div></div>
+    <div class="wrapup" id="facts"></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -259,6 +265,7 @@ dialog.lightbox button{margin-top:10px}
     <button class="secondary" id="prev" type="button">‹ Back</button>
     <button class="primary" id="next" type="button">Next ›</button>
   </div>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep"></span></aside>
 </div>
 
 <script>
@@ -391,8 +398,10 @@ const W = PAGE.wrapup;
 document.getElementById("wrapup").innerHTML = [
   ["file", "Summary", W.summary, "accent"], ["swap", "What's changing", W.changing, "accent"],
   ["stop", "What's blocking", W.blocking, "gap"], ["next", "What's next", W.next, "ok"]
-].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("") +
-  `<div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)">${ic("hand")}</span><div><h3>What you need to do</h3><ol>${W.todo.map(x => `<li>${x}</li>`).join("")}</ol></div></div>`;
+].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("");
+// The to-do list is ticked off; make_page.py writes the same list and next-step text into the file so a reader without script sees them.
+document.getElementById("todo").innerHTML = W.todo.map(x => `<li><label><input type="checkbox"> ${x}</label></li>`).join("");
+document.getElementById("nextstep").textContent = W.next || W.todo[0].replace(/<[^>]*>/g, "");
 
 const out = document.getElementById("out"), miss = document.getElementById("miss");
 function reply() {

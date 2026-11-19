@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="house-rules-page" content="qa">
+<title>Flexible pages: your QA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+  :root {
+    --bg: #f4f6fa; --card: #ffffff; --ink: #18202e; --soft: #5a6475; --line: #dde3ec;
+    --me: #2f5bd3; --me-soft: #e3eafc; --you: #b5650d; --you-soft: #fdf0e1;
+    --ok: #1f7a4d; --code-bg: #18202e; --code-ink: #e9eef7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11151d; --card: #1a202b; --ink: #e9eef7; --soft: #a3adbd; --line: #2c3442;
+      --me: #8aa8ff; --me-soft: #223055; --you: #f0a95a; --you-soft: #3a2a17;
+      --ok: #5fd39a; --code-bg: #0b0e14; --code-ink: #e9eef7;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 17px/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 120px; }
+  h1, h2 { font-family: "Bricolage Grotesque", system-ui, sans-serif; line-height: 1.15; }
+  h1 { font-size: 30px; margin: 4px 0 12px; }
+  h2 { font-size: 22px; margin: 0 0 8px; }
+  .eyebrow { color: var(--me); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 16px 0; }
+  .next { position: sticky; top: 0; z-index: 5; background: var(--you-soft); color: var(--ink);
+          border: 2px solid var(--you); border-radius: 12px; padding: 10px 14px; margin: 12px 0; }
+  .next b { color: var(--you); }
+  .flow { width: 100%; height: auto; display: block; }
+  .step-head { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+  .num { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--you); color: #fff;
+         display: grid; place-items: center; font-weight: 700; font-size: 18px; }
+  .label { font-size: 13px; font-weight: 700; color: var(--soft); text-transform: uppercase; letter-spacing: .05em; margin: 14px 0 4px; }
+  pre { background: var(--code-bg); color: var(--code-ink); border-radius: 10px; padding: 12px; margin: 0;
+        font: 14px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
+  pre.out { background: transparent; color: var(--ink); border: 1px dashed var(--line); }
+  button.copy { margin-top: 6px; font: inherit; font-size: 15px; font-weight: 700; color: #fff; background: var(--me);
+                border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  .tick { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 10px;
+          background: var(--you-soft); border-radius: 10px; }
+  .tick input { width: 22px; height: 22px; margin: 2px 0 0; flex: none; }
+  .pic { width: 100%; max-width: 360px; height: auto; display: block; margin: 6px 0 4px; }
+  ul.plain { margin: 6px 0; padding-left: 20px; }
+  .ok { color: var(--ok); font-weight: 700; }
+  p, b, li { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+<div class="eyebrow">QA · house-rules 2.82.0 · branch AjsAgent/speed-switches</div>
+<h1>Flexible pages: your QA</h1>
+
+<p data-basic="summary">Hand-written pages now pass if they meet the seven basics. On the third run, all three live tests passed in real sessions running this branch's code. Read the result and tell me whether you accept it.</p>
+
+<div class="next" data-basic="next"><b>Your next step:</b> do Step 1 below. It prints the third run's three results on your PC.</div>
+
+<section class="card" data-basic="picture">
+  <h2>Three runs of the live tests</h2>
+  <svg class="flow" viewBox="0 0 640 130" role="img" aria-label="Run 1 passed 3 of 3, run 2 failed one test, the checker was fixed, run 3 passed 3 of 3">
+    <g font-family="Atkinson Hyperlegible, sans-serif" font-size="15" text-anchor="middle">
+      <rect x="6" y="20" width="140" height="80" rx="12" fill="var(--card)" stroke="var(--ok)" stroke-width="2"/>
+      <text x="76" y="52" fill="var(--ink)" font-weight="700">Run 1</text><text x="76" y="78" fill="var(--ok)" font-weight="700">3 of 3 passed</text>
+      <path d="M150 60h18" stroke="var(--soft)" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="174" y="20" width="140" height="80" rx="12" fill="var(--you-soft)" stroke="var(--you)" stroke-width="2"/>
+      <text x="244" y="52" fill="var(--ink)" font-weight="700">Run 2</text><text x="244" y="78" fill="var(--you)" font-weight="700">1 test failed</text>
+      <path d="M318 60h18" stroke="var(--soft)" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="342" y="20" width="126" height="80" rx="12" fill="var(--me-soft)" stroke="var(--me)" stroke-width="2"/>
+      <text x="405" y="52" fill="var(--ink)" font-weight="700">Fix</text><text x="405" y="78" fill="var(--soft)">checker</text>
+      <path d="M472 60h18" stroke="var(--soft)" stroke-width="2" marker-end="url(#a)"/>
+      <rect x="496" y="20" width="138" height="80" rx="12" fill="var(--card)" stroke="var(--ok)" stroke-width="3"/>
+      <text x="565" y="52" fill="var(--ink)" font-weight="700">Run 3</text><text x="565" y="78" fill="var(--ok)" font-weight="700">3 of 3 passed</text>
+    </g>
+    <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--soft)"/></marker></defs>
+  </svg>
+  <p>Run 2 failed because a page missing both its page type and its checklist was refused with only the page type named. The checker now names every missing basic.</p>
+</section>
+
+<section class="card">
+  <h2>What each test does</h2>
+  <ul class="plain">
+    <li><b>refused-once:</b> a session writes a page with no checklist. It must be refused once, with Basic 6 (the checklist) named in the refusal, and then saved after the session adds a checklist.</li>
+    <li><b>good-page:</b> a session writes a page that meets every basic. It must be saved without a refusal.</li>
+    <li><b>starter:</b> Running <code>make_page.py start qa</code> must write a starter page file with its page type set to QA.</li>
+  </ul>
+  <p>Each test is a real session run without a window (headless), loading this branch's plugin directly. Your desktop app's installed copy is not involved.</p>
+</section>
+
+<div class="steps" data-basic="steps">
+
+<section class="card">
+  <div class="step-head"><span class="num">1</span><h2>Read the third run's results</h2></div>
+  <p>Open the Start menu, type <b>Windows PowerShell</b> and press Enter. Paste this command and press Enter. It does not matter which folder PowerShell opens in.</p>
+  <pre id="c1">Select-String -Path "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\docs\plans\2026-11-19-flexible-pages-live-tests\live_flexible_pages-result-3.txt" -Pattern "^(PASS|FAIL)" | ForEach-Object { $_.Line }</pre>
+  <button class="copy" data-copy="c1">Copy command</button>
+  <div class="label">You should see</div>
+  <pre class="out" data-basic="expected">PASS refused-once: 1 page refusal(s), 1 naming Basic 6; page saved with a checkbox: True (exit 0)
+PASS good-page: page saved: True, after 0 page refusal(s) (exit 0)
+PASS starter: docs/plans/starter.page.json written with pageType qa: True (exit 0)</pre>
+  <label class="tick"><input type="checkbox"> I saw three lines starting with PASS.</label>
+</section>
+
+<section class="card">
+  <div class="step-head"><span class="num">2</span><h2>Send me your answer</h2></div>
+  <p>If you are happy with the results, copy the reply below and send it to me in our chat. If not, tell me which result you are unhappy with, or what to change.</p>
+  <pre id="c2">QA passed: flexible pages</pre>
+  <button class="copy" data-copy="c2">Copy reply</button>
+  <label class="tick"><input type="checkbox"> I sent my answer.</label>
+</section>
+
+</div>
+
+<section class="card" data-basic="unverified">
+  <h2>What I have not checked</h2>
+  <ul class="plain">
+    <li>All three runs were in a cloud session on Linux, not on your Windows PC. You chose not to use more of your plan's allowance on a fourth run, so none was done.</li>
+    <li>Run 3 happened before the verify.py fix for #546 (verify.py now ignores your typed switches in the repo it tests) was merged. The fix only applies when verify.py sets an ignore list, so the live-test sessions behave the same with or without it.</li>
+    <li>Your desktop app will keep loading the old plugin until this branch is merged into main.</li>
+  </ul>
+  <details><summary>What I did check, on your PC</summary>
+    <ul class="plain">
+      <li><span class="ok">Ran:</span> verify.py, 1289 of 1295 checks. The 6 failures are known Windows-only failures, listed in issue #523.</li>
+      <li><span class="ok">Ran:</span> tools/verify_tools.py, 53 of 54 checks. Its one failure (check A16) is also listed in issue #523.</li>
+      <li><span class="ok">Passed:</span> the command in Step 1, which printed the three lines shown.</li>
+    </ul>
+  </details>
+</section>
+</main>
+<script>
+document.querySelectorAll("button.copy").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var text = document.getElementById(b.dataset.copy).textContent;
+    var label = b.textContent;
+    navigator.clipboard.writeText(text).then(function () {
+      b.textContent = "Copied";
+    }, function () {
+      b.textContent = "Copy blocked: select the text instead";
+    }).finally(function () { setTimeout(function () { b.textContent = label; }, 2000); });
+  });
+});
+</script>
+</body>
+</html>

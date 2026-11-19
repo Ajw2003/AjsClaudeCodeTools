@@ -7,6 +7,34 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-19 - Flexible pages: QA passed on live headless runs
+
+**Context.** aj's first QA on the desktop app failed because the app loads the claude.ai account's plugin copy, which
+follows main, so it never ran the branch build. QA moved to headless sessions loading the branch code with `--plugin-dir`
+(`docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py`). Run 2 found the checker stopping at a missing
+page type (fixed, #542); run 3 passed 3 of 3. verify.py's leak of aj's typed switches into its own checks was fixed (#546).
+
+**Decision.** aj typed "QA passed: flexible pages" on 2026-11-19 after reading run 3's result, and chose to skip a fourth
+run. Rejected: QA in the desktop app before merge (it cannot load a branch build). **Status.** Done, issues #541 to #546
+`needs review` until the pull request merges.
+
+---
+
+## 2026-11-18 - Flexible pages: design and build plan approved
+
+**Context.** Every page had to come from `make_page.py`'s one four-part template, and the page check refused any page
+without the builder's mark, however good the page. aj finds that stifling and wants each page to suit its product (proposal,
+build plan, QA, review, art), with visuals, short blocks, clear steps, a next step always shown and a checklist when
+there is something to do.
+
+**Decision.** Design approved 2026-11-18 ("Design approved: flexible pages 1A 2A 3A"): any format passes if it meets
+seven basics; the checker refuses once on a miss; five optional starters; the basics live in the plugin. Build plan approved
+the same day ("Build plan approved: flexible pages 1A 2A"): the checker finds the next-step box and checklist by a
+`data-basic` marker, and a page declares its type in a `house-rules-page` meta tag. Rejected: guessing either from the
+page's words (a wrong guess blocks a good page or lets a bad one through). **Status.** Build, issues #541 to #545.
+
+---
+
 ## 2026-11-17 - QA failed again: say the work is saved, and have Claude announce the pickup
 
 **Context.** With the claude.ai account copy of house-rules switched off, the desktop app ran 2.81.1: it saved and

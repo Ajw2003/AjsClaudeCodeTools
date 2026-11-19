@@ -1,0 +1,45 @@
+{
+ "title": "Flexible pages: your QA",
+ "eyebrow": "QA · house-rules 2.82.0 · branch AjsAgent/speed-switches",
+ "pageType": "qa",
+ "short": {
+  "lead": "A page can now take any format that meets seven basics, and the page check reads it instead of refusing it for lacking the builder's mark; three tests are yours.",
+  "hint": "Tap a row to see what was run and what it showed.",
+  "key": [["Checked by me", ""], ["Your test", "you"]],
+  "items": [
+   ["flask", "Checked", "Full hook checks: verify.py passes 1294 of 1294", "", "Run in this cloud session on 2026-11-19, after the branch was picked up. tools/verify_tools.py passes 54 of 54 and docs_drift.py finds 0 stale citations.", "Nothing from you."],
+   ["flask", "Checked", "The checker's --type and --visual options work", "", "page_criteria.py on a hand-made QA page: with two wrong marker names it named both and exited 1; with them fixed it printed 'all basics met', and --visual showed no overflow at 375px in light and dark.", "Nothing from you."],
+   ["hand", "Your test", "Install the branch build", "you", "In Windows PowerShell run: python \"C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py\" AjsAgent/speed-switches. Expect 'plugin version  : 2.82.0' and 'OK: installed build matches the request.' Then close and reopen Claude Code.", "Follow step 1 in Wrap-up."],
+   ["hand", "Your test", "A hand-made page missing a basic is refused once", "you", "In a new Claude Code session in the repo, type this prompt: \"Write a short hand-made HTML page at docs/plans/qa-test-page.html without make_page.py, with no tick-box checklist, then add one if it is refused.\" Expect one refusal naming 'Basic 6 (checklist)', then expect the save to go through.", "Follow step 2 in Wrap-up."],
+   ["hand", "Your test", "A starter writes a skeleton page", "you", "In Windows PowerShell run: python \"C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\claude-house-rules\\plugins\\house-rules\\scripts\\make_page.py\" start qa --out \"$env:TEMP\\qa-test.page.json\". Expect 'make_page: wrote the qa starter to' and the file path.", "Follow step 3 in Wrap-up."]
+  ]
+ },
+ "changes": [
+  ["chg", "Checker (scripts/page_criteria.py)", "Reads a page and lists each failed basic in plain words.", ["Only pages made by make_page.py passed.", "Any page passes if it meets the seven basics and its type's extras."], "Step 1, issue #542 (page_criteria.py checks a page against the seven basics)."],
+  ["chg", "Page check (scripts/house_rules/design_loop.py)", "An unmarked page is read by the checker instead of refused.", ["A page without the make_page.py mark was refused, however good.", "It is read; a miss refuses once, naming each failed basic."], "Step 2, issue #543 (the page check reads a page instead of refusing it)."],
+  ["chg", "Starters (templates/starters/, make_page.py start)", "One optional content skeleton per page type.", ["make_page.py had one shape for every page.", "proposal, build-plan, qa, review and art each have a starter."], "Step 3, issue #544 (one optional starter per page type)."],
+  ["chg", "Rules and docs (rules/show-dont-tell.md, docs/4-systems/flexible-pages.md)", "The rule text names the seven basics and the types; plugin 2.82.0.", ["The rule said every page is built by make_page.py.", "It names the basics, the types and the markers."], "Step 4, issue #545 (rule text, docs and version)."]
+ ],
+ "qa": {
+  "feature": "flexible pages",
+  "base": "origin/main",
+  "unverified": [
+   "Not run on your Windows PC or the desktop app; every check ran in this cloud sandbox",
+   "A review page made by make_page.py cannot carry a finding marker, and an art page passes only because the template's hidden icon sprite counts as a picture",
+   "The page check does not test that the next-step box stays on screen; only --visual or a look does"
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "Flexible pages are built as house-rules 2.82.0 and wait for your QA.",
+  "changing": "The page check, the new checker, the starters, the page rule text and the flexible pages systems doc.",
+  "blocking": "Your QA of issue #541 (flexible pages).",
+  "next": "On a pass I open a pull request into main. On a fail I fix it on this branch.",
+  "todo": [
+   "Step 1: install the branch build, using the command in the \"Install the branch build\" row. Expect version 2.82.0.",
+   "Step 2: in a new session, type the prompt from the \"A hand-made page missing a basic is refused once\" row. Expect one refusal naming the checklist.",
+   "Step 3: run the command in the \"A starter writes a skeleton page\" row. Expect it to write qa-test.page.json.",
+   "Reply \"QA passed: flexible pages\", or say what failed."
+  ]
+ }
+}

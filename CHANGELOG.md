@@ -4,6 +4,22 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+- 2026-11-19: verify.py no longer picks up switches typed in the repo it tests (#546). Its new check (g) handed the ignore list to the wrong environment copy and failed everywhere; fixed when merged.
+- 2026-11-19: live test run 3 passed 3 of 3 on the branch code (`live_flexible_pages-result-3.txt`).
+- 2026-11-19: the QA page now reports the three live runs instead of asking aj to test in the desktop app: `docs/qa/flexible-pages-qa.html`, two steps (read run 3's result, send the verdict). aj chose to skip a fourth run. Editor pass applied (plainer wording, issue numbers named).
+
+Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as long as it meets seven basics. aj's QA passed on 2026-11-19 (recorded in `.claude/house-rules-loop.json`, c6d2a42); pull request #547 to main opened.
+
+- 2026-11-19: aj's QA failed because the desktop app loaded the claude.ai account's plugin copy (following main), not the branch build `use_branch.py` installs. QA now runs in the agent's own headless sessions on the branch code: `docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py`.
+- 2026-11-19: the QA page is now hand-written at `docs/qa/flexible-pages-qa.html` (aj found the builder version's steps vague: tests hidden behind identical icons, commands buried, the next-step box showing my step). It sits outside `docs/plans/` because this session's 2.81.2 page check refuses hand-written pages there; aj chose that.
+- 2026-11-19: picked up after a usage-limit cut-off; the QA page is `docs/plans/flexible-pages-qa.html` and issues #541 to #545 say `needs review`. verify.py 1294 of 1294, verify_tools 54 of 54.
+
+- A page no longer has to come from the page builder: the page check reads it and, if a basic is missing, refuses once naming each one (#543). Pages with the builder's mark still pass unread.
+- `scripts/page_criteria.py` is the checker for the seven basics (#542); its phone-width check is the optional `--visual` flag (first run 2026-11-19: light and dark, no overflow).
+- `make_page.py start <type>` gives one optional starter per page type (proposal, build plan, QA, review, art) (#544). Known gaps: a builder `review` page cannot carry a `finding` marker, and `art` passes only because the template's hidden icon sprite counts as a picture.
+- Rule text and `docs/4-systems/flexible-pages.md` now describe the basics and the types instead of "every page is built by make_page.py" (#545); plugin bumped to 2.82.0.
+- The checker no longer stops at a missing page type; it names every other failed basic too (#542).
+
 Plugin 2.81.2 (2.81.0 plus the desktop QA fixes): phase 3, pick up on any account (#495), and feature switches anywhere (#535). Waiting on aj's QA.
 
 - Work is saved as it happens: on every edit (at most once a minute) and at once when a turn ends or a usage limit cuts it off. On a PC each folder saves under `refs/house-rules/saves/<branch>/<folder id>`, so no folder erases another's save; a cloud session, which cannot push that ref, commits `wip: autosave` on its own branch and pushes it (#527, #528, #529).
@@ -18,6 +34,9 @@ Plugin 2.81.2 (2.81.0 plus the desktop QA fixes): phase 3, pick up on any accoun
 - CI fix for #540: the session-start rules text is back under its 9,700-character limit (the added save-and-pickup sentence in `house-rules.md` was cut; `rules/detail/commit-branches.md` still holds it), and the committed loop state is `done` after aj's QA pass, so the handover checks no longer see an unfinished QA stage.
 - QA steps for aj's PC as 13 step cards in `docs/plans/2026-11-17-phase-3-qa-steps.md`.
 - Fixes: `verify.py --only <text>` (#44); agent frontmatter fields no longer forbidden (#46); no leading `&` in handed-over commands unless PowerShell-only (#137); a warning when Python is missing for two checks (#205); a merged phase pull request lets its step issues close (#520); the docs-tiers note offers instead of orders (#521); switching to a new owned branch and committing in one command is allowed (#522); the guard counts lowercase `ajsagent/` branches as the agent's (#528); a flaky approval check fixed.
+- Flexible pages approved (aj, 2026-11-18, 1A 2A 3A): the systems doc `docs/4-systems/flexible-pages.md`, issues #541 to #545 and a build plan page `docs/plans/2026-11-18-flexible-pages-build-plan.html`; no code yet.
+- A proposal page for flexible page formats (any format that meets seven basics, optional starters per page type): docs/plans/2026-11-18-flexible-pages-design.html (not built yet; waiting on approval).
+- A proposal page for creating issues on repos you own without a permission prompt: docs/plans/issue-create-no-prompt.html (not built yet; waiting on approval).
 
 Plugin 2.80.0: speed switches (#524, #525).
 

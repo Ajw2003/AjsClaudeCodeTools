@@ -106,6 +106,7 @@ _DOC_READERS = {
 _SCRIPT_PARTS = {  # scripts/<file> -> parts
     "clarity.py": ["writing", "design_loop"],     # the clear-writing cases live in design_loop.py (see the doc)
     "make_page.py": ["make_page"],
+    "page_criteria.py": ["make_page"],
     "docref.py": ["docs"],
     "plain_docs_check.py": ["docs"],
     "harvest_scan.py": ["docs"],
@@ -267,6 +268,13 @@ def main(argv):
 
     if args.only:
         os.environ["HOUSE_RULES_VERIFY_ONLY"] = args.only     # the part subprocesses inherit it; common.report() reads it
+    # the repo's own typed switches and aj's everywhere file must not reach the checks (#546)
+    _gc = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], capture_output=True, text=True,
+                         cwd=os.path.dirname(os.path.abspath(__file__)))
+    _root = os.path.dirname(_gc.stdout.strip()) if _gc.returncode == 0 and _gc.stdout.strip() else os.getcwd()
+    _cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    os.environ["HOUSE_RULES_MODE_IGNORE"] = os.pathsep.join(
+        [os.path.join(_root, ".claude", "house-rules-mode.json"), os.path.join(_cfg, "house-rules-mode.json")])
     cores = os.cpu_count() or 1
     workers = 1 if args.serial else max(1, min(cores, len(chosen)))
     print()
