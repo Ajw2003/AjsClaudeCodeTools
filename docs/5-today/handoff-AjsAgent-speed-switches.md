@@ -6,7 +6,7 @@ Make the design loop stop forcing one page format. A page may take any format th
 
 ## Where it stands
 
-- All four steps (#542 to #545) are built; plugin 2.82.0. Stage: Build. Issues #541 to #546 say `needs review` (2026-11-19).
+- All four steps (#542 to #545) are built; plugin 2.82.0. Stage: Done. Issues #541 to #546 say `needs review` (2026-11-19).
 - aj's desktop QA failed because the desktop app loads the claude.ai account's plugin copy (follows main). QA now runs as headless sessions on the branch code: `docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py`.
 - Run 1 passed 3 of 3, run 2 failed refused-once (checker stopped at a missing type; fixed, 1608f64), run 3 passed 3 of 3 (`live_flexible_pages-result-3.txt`).
 - #546 (verify.py ignores the repo's typed switches) is merged here (adb5ec4). Its check (g) set the ignore list on `os.environ`, but the hook runs with the `_fs_env` copy, so it failed everywhere; corrected in the commit after the merge.
@@ -15,7 +15,7 @@ Make the design loop stop forcing one page format. A page may take any format th
 
 ## The next step
 
-aj chose to skip a fourth live run. QA page: `docs/qa/flexible-pages-qa.html`, published on aj's account as "Flexible pages: your QA". Waiting on aj to read run 3's result and reply "QA passed: flexible pages"; then open the pull request to main (`Refs #541`, never Closes).
+aj typed "QA passed: flexible pages" (2026-11-19); stage Done. The pull request to main is open (`Refs #541`). After it merges, offer aj the close line for #541 to #546; never close them unasked.
 
 ## What is unverified
 

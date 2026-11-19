@@ -7,6 +7,19 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-19 - Flexible pages: QA passed on live headless runs
+
+**Context.** aj's first QA on the desktop app failed because the app loads the claude.ai account's plugin copy, which
+follows main, so it never ran the branch build. QA moved to headless sessions loading the branch code with `--plugin-dir`
+(`docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py`). Run 2 found the checker stopping at a missing
+page type (fixed, #542); run 3 passed 3 of 3. verify.py's leak of aj's typed switches into its own checks was fixed (#546).
+
+**Decision.** aj typed "QA passed: flexible pages" on 2026-11-19 after reading run 3's result, and chose to skip a fourth
+run. Rejected: QA in the desktop app before merge (it cannot load a branch build). **Status.** Done, issues #541 to #546
+`needs review` until the pull request merges.
+
+---
+
 ## 2026-11-18 - Flexible pages: design and build plan approved
 
 **Context.** Every page had to come from `make_page.py`'s one four-part template, and the page check refused any page
