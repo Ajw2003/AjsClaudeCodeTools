@@ -6,13 +6,13 @@ Make the design loop stop forcing one page format. aj wants a page to suit what 
 
 ## Where it stands
 
-- The branch now contains all of main (merged 2026-11-18; one CHANGELOG.md conflict, both sides kept).
-- A design proposal page for flexible formats is built and committed: `docs/plans/2026-11-18-flexible-pages-design.html`. It is a proposal only; no code is written.
-- Phase 3 was retested on aj's Windows PC: `verify.py` 1246 of 1252, `tools/verify_tools.py` 53 of 54. The failures are tests that assume Linux paths. CI on main passes.
+- The branch holds all of main and is pushed.
+- aj approved the design on 2026-11-18 ("Design approved: flexible pages 1A 2A 3A"). The systems doc is `docs/4-systems/flexible-pages.md`.
+- The parent issue and four step issues exist. The build plan page `docs/plans/2026-11-18-flexible-pages-build-plan.html` is built and waits on aj's approval and two choices. No code is written.
 
 ## The next step
 
-aj answers the three choices on the proposal page (how a page is checked, whether starters exist, where the basics live) with "Design approved: flexible pages" plus the picks. After that: a build plan page, step issues, then build `page_criteria.py` and relax the page check in `design_loop.py`.
+aj answers the build plan page's two choices and says "Build plan approved: flexible pages". Then build step 1 (the checker `scripts/page_criteria.py`), then the page check, the starters, and the rules, docs and QA page.
 
 ## What is unverified
 
@@ -22,4 +22,4 @@ aj answers the three choices on the proposal page (how a page is checked, whethe
 
 ## Issue numbers
 
-None yet for flexible pages. Related: #535 (feature switches), #539 (version check asks the desktop account copy to update).
+Flexible pages: #541 (parent), #542, #543, #544, #545 (steps). Related: #535 (feature switches), #539 (version check asks the desktop account copy to update).
