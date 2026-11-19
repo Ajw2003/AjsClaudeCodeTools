@@ -2348,6 +2348,11 @@ _PAGE_DENY = (
     "Pages are built, not typed. Write the content file, then run: python3 %s build <content.json> "
     "and use the page it builds. HOUSE_RULES_LOOP=off turns this check off."
 )
+_PAGE_DENY_BASICS = (
+    "House rules, page check: %s is a hand-written page and it misses these basics:\n%s\n"
+    "Fix them in the page, or build it instead: python3 %s build <content.json> and use the page it builds. "
+    "HOUSE_RULES_LOOP=off turns this check off."
+)
 
 
 def _page_note(text):
@@ -2359,10 +2364,58 @@ def _page_in_plans(path):
     return any(parts[i] == "docs" and parts[i + 1] == "plans" for i in range(len(parts) - 1))
 
 
-def _page_deny(page):
+def _page_deny(page, fails=None, notes=()):
     script = os.path.join(_plugin_root(), "scripts", "make_page.py")
+    why = (_PAGE_DENY_BASICS % (page, "\n".join(fails), script)) if fails else _PAGE_DENY % (page, script)
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-                                 "permissionDecisionReason": _PAGE_DENY % (page, script)}})
+                                 "permissionDecisionReason": why + "".join(" (" + n + ")" for n in notes)}})
+
+
+def _page_limit(page, notes):
+    """maxBlockWords from the project's docs/page-style.json (None = plugin default); a bad file adds a note."""
+    d = os.path.dirname(os.path.abspath(page))
+    while not os.path.isdir(os.path.join(d, "docs")):
+        if os.path.dirname(d) == d:
+            return None
+        d = os.path.dirname(d)
+    f = os.path.join(d, "docs", "page-style.json")
+    if not os.path.isfile(f):
+        return None
+    try:
+        with open(f, encoding="utf-8") as fh:
+            v = json.load(fh)["basics"]["maxBlockWords"]
+        if isinstance(v, int) and not isinstance(v, bool) and v > 0:
+            return v
+        raise ValueError("maxBlockWords is not a positive whole number")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        notes.append("%s could not be used (%s: %s), so the default block length applies."
+                     % (f, type(exc).__name__, exc))
+        return None
+
+
+def _page_read(text, page):
+    """(failed basics, notes) for an unmarked page. A checker that cannot load fails open, with a note."""
+    notes = []
+    try:
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import page_criteria
+    except Exception as exc:
+        return [], ["the page checker could not load (%s: %s), so %s was not read; the call is allowed."
+                    % (type(exc).__name__, exc, page)]
+    lim = _page_limit(page, notes)
+    return page_criteria.check(text, max_block_words=lim), notes
+
+
+def _page_verdict(text, page):
+    """True when allowed. Denies once when basics fail; otherwise a note (if any) is the only output."""
+    fails, notes = _page_read(text, page)
+    if fails:
+        _page_deny(page, fails, notes)
+        return False
+    if notes:
+        _page_note("; ".join(notes))
+    return True
 
 
 def _page_candidates(ti):
@@ -2393,7 +2446,7 @@ def event_pagecheck():
                 return 0  # not a docs/plans page: nothing to check, nothing to say
             if PAGE_MARK_RE.search(str(ti.get("content") or "")):
                 return 0
-            _page_deny(fp)
+            _page_verdict(str(ti.get("content") or ""), fp)
             return 0
         # Artifact (or any other tool the matcher routes here)
         action = str(ti.get("action") or ti.get("command") or ti.get("operation") or "").lower()
@@ -2415,13 +2468,12 @@ def event_pagecheck():
         for page in pages:
             try:
                 with open(page, encoding="utf-8", errors="replace") as fh:
-                    head = fh.read(4096)
+                    text = fh.read()
             except OSError as exc:
                 _page_note("could not read %s (%s), so the check did not run; the publish is allowed."
                            % (page, type(exc).__name__))
                 continue
-            if not PAGE_MARK_RE.search(head):
-                _page_deny(page)
+            if not PAGE_MARK_RE.search(text[:4096]) and not _page_verdict(text, page):
                 return 0
     except Exception as exc:
         emit({"systemMessage": "house-rules plugin: the page check hit an error (%s: %s) and did not "

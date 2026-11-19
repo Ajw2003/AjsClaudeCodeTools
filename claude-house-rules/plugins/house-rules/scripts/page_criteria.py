@@ -17,7 +17,7 @@ import re
 import sys
 from html.parser import HTMLParser
 
-MAX_BLOCK_WORDS = 60  # docs/page-style.json may override this later (step 2)
+MAX_BLOCK_WORDS = 60  # docs/page-style.json overrides it via check(max_block_words=)
 MAX_SUMMARY_WORDS = 40
 TYPES = ("proposal", "build-plan", "qa", "review", "art")
 BUILDER_MARK = re.compile(r"<!--\s*house-rules make_page\b")
@@ -41,6 +41,7 @@ class _Page(HTMLParser):
         self.pictures = 0
         self.has_ol = False
         self.has_checkbox = False
+        self.max_words = MAX_BLOCK_WORDS
         self.long = None       # first words of the first block over the limit
 
     def _hidden(self):
@@ -87,7 +88,7 @@ class _Page(HTMLParser):
             if t in BLOCKS and self.frames:
                 tg, parts, leaf, hidden = self.frames.pop()
                 words = " ".join(parts).split()
-                if not hidden and (tg != "div" or leaf) and len(words) > MAX_BLOCK_WORDS and self.long is None:
+                if not hidden and (tg != "div" or leaf) and len(words) > self.max_words and self.long is None:
                     self.long = " ".join(words[:8])
             if t == tag:
                 break
@@ -101,10 +102,11 @@ class _Page(HTMLParser):
             self.basic[b] = (self.basic[b] + " " + data).strip()
 
 
-def check(html_text, page_type=None):
+def check(html_text, page_type=None, max_block_words=None):
     if BUILDER_MARK.search(html_text[:4096]):
         return []
     p = _Page()
+    p.max_words = MAX_BLOCK_WORDS if max_block_words is None else max_block_words
     p.feed(html_text)
     p.close()
     t = page_type or p.meta_type
@@ -127,7 +129,7 @@ def check(html_text, page_type=None):
         out.append("Basic 3 (picture): the page has no picture; add an img, svg, canvas, video or picture.")
     if p.long:
         out.append("Basic 4 (short blocks): a block starting \"%s\" is over %d words; split it up or move the detail "
-                   "inside a details element." % (p.long, MAX_BLOCK_WORDS))
+                   "inside a details element." % (p.long, p.max_words))
     if t != "art" and not (p.has_ol or "steps" in p.basic):
         out.append("Basic 5 (steps): the page has no numbered steps; add an ol, or mark the steps data-basic=\"steps\".")
     need_list = t in ("proposal", "build-plan", "qa") or "you-act" in p.basic
