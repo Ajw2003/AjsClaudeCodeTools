@@ -1,4 +1,4 @@
-# Handoff: ajsagent/sharp-edison-y4xjzv (2026-11-19)
+# Handoff: ajsagent/sharp-edison-y4xjzv (2026-11-19, after the hand-written QA page)
 
 ## What the work is for
 
@@ -13,11 +13,13 @@ Make the design loop stop forcing one page format. A page may take any format th
 
 ## The next step
 
+Both `ajsagent/sharp-edison-y4xjzv` and `AjsAgent/speed-switches` hold the same commits; the hand-written QA page is also published as a private claude.ai page.
+
 aj runs the three tests on the QA page and replies "QA passed: flexible pages" or says what failed. On a pass, open a pull request into main (`Refs #541`).
 
 ## What is unverified
 
-- The builder's QA mode fills the "Your next step" box from `wrapup.next`, which is my step after QA, not aj's; not yet raised as an issue.
+- The builder's QA mode fills the "Your next step" box from `wrapup.next`, which is my step after QA, not aj's; queued as a suggested task card for aj, not yet an issue.
 
 - Nothing has run on aj's Windows PC or in the desktop app since the pickup.
 - A review page made by make_page.py cannot carry a finding marker; an art page passes only because the template's hidden icon sprite counts as a picture.
