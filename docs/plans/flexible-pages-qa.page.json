@@ -10,7 +10,7 @@
    ["flask", "Checked", "Full hook checks: verify.py passes 1294 of 1294", "", "Run in this cloud session on 2026-11-19, after the branch was picked up. tools/verify_tools.py passes 54 of 54 and docs_drift.py finds 0 stale citations.", "Nothing from you."],
    ["flask", "Checked", "The checker's --type and --visual options work", "", "page_criteria.py on a hand-made QA page: with two wrong marker names it named both and exited 1; with them fixed it printed 'all basics met', and --visual showed no overflow at 375px in light and dark.", "Nothing from you."],
    ["hand", "Your test", "Install the branch build", "you", "In Windows PowerShell run: python \"C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py\" AjsAgent/speed-switches. Expect 'plugin version  : 2.82.0' and 'OK: installed build matches the request.' Then close and reopen Claude Code.", "Follow step 1 in Wrap-up."],
-   ["hand", "Your test", "A hand-made page missing a basic is refused once", "you", "In a new Claude Code session in the repo, type: Write a short hand-made HTML page at docs/plans/qa-test-page.html without make_page.py, with no tick-box checklist, then add one if it is refused. Expect one refusal naming 'Basic 6 (checklist)', then the save going through.", "Follow step 2 in Wrap-up."],
+   ["hand", "Your test", "A hand-made page missing a basic is refused once", "you", "In a new Claude Code session in the repo, type this prompt: \"Write a short hand-made HTML page at docs/plans/qa-test-page.html without make_page.py, with no tick-box checklist, then add one if it is refused.\" Expect one refusal naming 'Basic 6 (checklist)', then expect the save to go through.", "Follow step 2 in Wrap-up."],
    ["hand", "Your test", "A starter writes a skeleton page", "you", "In Windows PowerShell run: python \"C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\claude-house-rules\\plugins\\house-rules\\scripts\\make_page.py\" start qa --out \"$env:TEMP\\qa-test.page.json\". Expect 'make_page: wrote the qa starter to' and the file path.", "Follow step 3 in Wrap-up."]
   ]
  },
@@ -36,9 +36,9 @@
   "blocking": "Your QA of issue #541 (flexible pages).",
   "next": "On a pass I open a pull request into main. On a fail I fix it on this branch.",
   "todo": [
-   "Step 1: install the branch build (command in the Install row). Expect version 2.82.0.",
-   "Step 2: in a new session, type the prompt in the refusal row. Expect one refusal naming the checklist.",
-   "Step 3: run the starter command in the starter row. Expect it to write qa-test.page.json.",
+   "Step 1: install the branch build, using the command in the \"Install the branch build\" row. Expect version 2.82.0.",
+   "Step 2: in a new session, type the prompt from the \"A hand-made page missing a basic is refused once\" row. Expect one refusal naming the checklist.",
+   "Step 3: run the command in the \"A starter writes a skeleton page\" row. Expect it to write qa-test.page.json.",
    "Reply \"QA passed: flexible pages\", or say what failed."
   ]
  }
