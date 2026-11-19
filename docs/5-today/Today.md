@@ -13,7 +13,7 @@ Live test run 2 failed one test: the page checker stopped at a missing page type
 
 The checker fix for #542 is merged. verify.py turned out to fail 9 checks whenever a typed switch is saved in the repo; aj chose to fix verify.py (#546), now being built; live test run 3 is running.
 
-Picked up after a usage-limit cut-off: live test run 3 passed 3 of 3, and the #546 fix is merged into `AjsAgent/speed-switches` with its own test corrected. On aj's PC, from the repo with the typed switch present, verify.py passes 1289 of 1295 and verify_tools 53 of 54; every failure is a known Windows-only one (#523). aj chose to skip a fourth run. The QA page `docs/qa/flexible-pages-qa.html` now reports runs 1 to 3 and asks aj to read run 3's result and reply; it meets all seven basics by `page_criteria.py --visual`.
+Picked up after a usage-limit cut-off: live test run 3 passed 3 of 3, and the #546 fix is merged into `AjsAgent/speed-switches` with its own test corrected. On aj's PC, from the repo with the typed switch present, verify.py passes 1289 of 1295 and verify_tools 53 of 54; every failure is a known Windows-only one (#523). aj chose to skip a fourth run. The QA page `docs/qa/flexible-pages-qa.html` now reports runs 1 to 3 and asks aj to read run 3's result and reply; it meets all seven basics by `page_criteria.py --visual`. Published on aj's account as "Flexible pages: your QA"; issues #541 to #546 now say `needs review`.
 
 Later on 2026-11-19: the finished work was pushed to `AjsAgent/speed-switches` too (both branches at the same commit). Each QA test on the page now carries its exact PowerShell command or prompt; `use_branch.py AjsAgent/speed-switches` installed 2.82.0 in a throwaway config here.
 
