@@ -7,12 +7,12 @@ Make the design loop stop forcing one page format. aj wants a page to suit what 
 ## Where it stands
 
 - The branch holds all of main and is pushed.
-- aj approved the design on 2026-11-18 ("Design approved: flexible pages 1A 2A 3A"). The systems doc is `docs/4-systems/flexible-pages.md`.
-- The parent issue and four step issues exist. The build plan page `docs/plans/2026-11-18-flexible-pages-build-plan.html` is built and waits on aj's approval and two choices. No code is written.
+- aj approved the design and the build plan on 2026-11-18 ("Build plan approved: flexible pages 1A 2A"). Stage: Build. The systems doc is `docs/4-systems/flexible-pages.md`.
+- Step 1 (#542, `scripts/page_criteria.py`) was handed to a builder helper and is in progress; steps 2 to 4 (#543, #544, #545) wait on it.
 
 ## The next step
 
-aj answers the build plan page's two choices and says "Build plan approved: flexible pages". Then build step 1 (the checker `scripts/page_criteria.py`), then the page check, the starters, and the rules, docs and QA page.
+Check the builder's step 1 against its quoted test output, push, then hand step 2 (the page check reads a page) and step 3 (starters) to builders, then step 4 (rules, docs, version, QA page). When all is built, swap each issue's `in progress` for `needs review`.
 
 ## What is unverified
 

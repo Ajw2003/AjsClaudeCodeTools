@@ -7,6 +7,8 @@ checks; the failures are Linux-only path assumptions in tests). New: a proposal 
 Flexible pages design approved (1A 2A 3A). Systems doc `docs/4-systems/flexible-pages.md`, parent issue #541 with steps
 #542 to #545, build plan page `docs/plans/2026-11-18-flexible-pages-build-plan.html` waiting on aj's approval and two choices.
 
+Flexible pages design and build plan both approved (aj); stage is Build. Step 1 (#542, the page checker) is with a builder; decisions log updated.
+
 # Earlier — 2026-11-12
 
 Roadmap phases 1 and 2, plugin 2.79.0, on the branch `AjsAgent/qol-phases-1-2`, both passed by aj's QA. Phase 1 (#493):
