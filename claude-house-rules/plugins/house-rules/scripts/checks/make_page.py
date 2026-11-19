@@ -407,6 +407,9 @@ for _name, _typ, _drop, _word in (("basic 1 summary", "art", ("summary",), "Basi
                                   ("extras unverified", "qa", ("unverified",), "unverified"), ("extras finding", "review", ("finding",), "finding")):
     _m = _pc.check(_pcp(_typ, drop=_drop))
     _mp_cases.append(("page_criteria (#542): a page missing %s fails and names it" % _name, len(_m) == 1 and _word in _m[0]))
+_m = _pc.check(_pcp("qa", drop=("check",)).replace('<meta name="house-rules-page" content="qa">', ""))
+_mp_cases.append(("page_criteria (#542): a page with no type and no checklist names both in one result",
+                  len(_m) == 2 and "no known type" in _m[0] and "Basic 6 (checklist)" in _m[1]))
 _m = _pc.check(_pcp("art", drop=("summary",), add='<p data-basic="summary">%s</p>' % ("w " * 41)))
 _mp_cases.append(("page_criteria (#542): a 41-word summary fails basic 1", len(_m) == 1 and "Basic 1" in _m[0]))
 _long = "alpha beta gamma delta epsilon zeta eta theta " + "w " * 60

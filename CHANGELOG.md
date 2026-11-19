@@ -14,6 +14,7 @@ Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as 
 - `scripts/page_criteria.py` is the checker for the seven basics (#542); its phone-width check is the optional `--visual` flag (first run 2026-11-19: light and dark, no overflow).
 - `make_page.py start <type>` gives one optional starter per page type (proposal, build plan, QA, review, art) (#544). Known gaps: a builder `review` page cannot carry a `finding` marker, and `art` passes only because the template's hidden icon sprite counts as a picture.
 - Rule text and `docs/4-systems/flexible-pages.md` now describe the basics and the types instead of "every page is built by make_page.py" (#545); plugin bumped to 2.82.0.
+- The checker no longer stops at a missing page type; it names every other failed basic too (#542).
 
 Plugin 2.81.2 (2.81.0 plus the desktop QA fixes): phase 3, pick up on any account (#495), and feature switches anywhere (#535). Waiting on aj's QA.
 
