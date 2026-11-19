@@ -1,4 +1,11 @@
-# Today — 2026-11-12
+# Today — 2026-11-19
+
+Refused QA test page, nothing shipped. aj asked for a short hand-made HTML page at `docs/plans/qa-test-page.html`
+with no tick-box checklist, and a checklist if refused. The page check refused the file twice, first without and then
+with the checklist, because it wants a `make_page` build. No page file exists. A CHANGELOG line records the attempt.
+Waiting on aj to choose: build with `make_page`, turn the check off with `HOUSE_RULES_LOOP=off`, or leave it.
+
+# Earlier — 2026-11-12
 
 Roadmap phases 1 and 2, plugin 2.79.0, on the branch `AjsAgent/qol-phases-1-2`, both passed by aj's QA. Phase 1 (#493):
 approvals work with the feature name first and in cloud sessions, an "Approve" button counts, a build plan reads the
