@@ -47,7 +47,7 @@
   .pic { width: 100%; max-width: 360px; height: auto; display: block; margin: 6px 0 4px; }
   ul.plain { margin: 6px 0; padding-left: 20px; }
   .ok { color: var(--ok); font-weight: 700; }
-  ol.steps { list-style: none; padding: 0; margin: 0; }
+  p, b { overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -55,7 +55,7 @@
 <div class="eyebrow">QA · house-rules 2.82.0 · branch AjsAgent/speed-switches</div>
 <h1>Flexible pages: your QA</h1>
 
-<p data-basic="summary">Pages can now take any format that meets seven basics. Three short tests check that on your PC; this page is itself hand-written.</p>
+<p data-basic="summary">Pages can now be written in any format, as long as they meet seven basics. Three short tests on your PC check this, and this page is itself hand-written.</p>
 
 <div class="next" data-basic="next"><b>Your next step:</b> do Step 1 below, which installs the new plugin build.</div>
 
@@ -79,9 +79,9 @@
   </svg>
 </section>
 
-<ol class="steps" data-basic="steps">
+<div class="steps" data-basic="steps">
 
-<li class="card">
+<section class="card">
   <div class="step-head"><span class="num">1</span><h2>Install the new plugin build</h2></div>
   <svg class="pic" viewBox="0 0 360 70" role="img" aria-label="A PowerShell window running one command"><rect x="1" y="1" width="358" height="68" rx="10" fill="var(--code-bg)"/><circle cx="18" cy="16" r="5" fill="#e5534b"/><circle cx="34" cy="16" r="5" fill="#e3b341"/><circle cx="50" cy="16" r="5" fill="#57ab5a"/><text x="16" y="50" fill="var(--code-ink)" font-family="monospace" font-size="15">PS&gt; python ...use_branch.py</text></svg>
   <p>Open the Start menu, type <b>Windows PowerShell</b> and press Enter. Paste this command and press Enter. It works from any folder.</p>
@@ -93,23 +93,23 @@ plugin version  : 2.82.0
 OK: installed build matches the request. Restart Claude Code to load it.</pre>
   <p>Then close Claude Code completely and open it again, so it loads the new build.</p>
   <label class="tick"><input type="checkbox"> I saw "plugin version  : 2.82.0" and reopened Claude Code.</label>
-</li>
+</section>
 
-<li class="card">
-  <div class="step-head"><span class="num">2</span><h2>Check a hand-made page is refused once</h2></div>
+<section class="card">
+  <div class="step-head"><span class="num">2</span><h2>Check that a hand-made page is refused once</h2></div>
   <svg class="pic" viewBox="0 0 360 80" role="img" aria-label="A chat bubble with your prompt, then a refusal naming the missing checklist"><rect x="1" y="4" width="250" height="32" rx="10" fill="var(--me-soft)"/><text x="12" y="25" fill="var(--ink)" font-size="14" font-family="sans-serif">You: write a page with no checklist</text><rect x="100" y="44" width="258" height="32" rx="10" fill="var(--you-soft)" stroke="var(--you)"/><text x="112" y="65" fill="var(--ink)" font-size="14" font-family="sans-serif">Refused: Basic 6 (checklist)</text></svg>
   <p>Open a new Claude Code session in the folder <b>C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools</b>. Paste this prompt and send it.</p>
   <pre id="c2">Write a short hand-made HTML page at docs/plans/qa-test-page.html without make_page.py, with no tick-box checklist, then add one if it is refused.</pre>
   <button class="copy" data-copy="c2">Copy prompt</button>
   <div class="label">You should see</div>
-  <p>One refusal that starts like this and names Basic 6:</p>
+  <p>You should get one refusal. It starts like this and names Basic 6, the checklist basic:</p>
   <pre class="out">House rules, page check: ... is a hand-written page and it misses these basics:
 Basic 6 (checklist): the page asks aj to act but has no checklist; ...</pre>
-  <p>Then Claude adds a checklist and the save goes through. That means pages are now read, not refused for skipping the builder.</p>
+  <p>Then Claude adds a checklist and the save goes through. That means the checker now reads hand-written pages for the basics. It no longer refuses a page just because it skipped make_page.py.</p>
   <label class="tick"><input type="checkbox"> I saw one refusal naming Basic 6, then the save went through.</label>
-</li>
+</section>
 
-<li class="card">
+<section class="card">
   <div class="step-head"><span class="num">3</span><h2>Make a starter page</h2></div>
   <svg class="pic" viewBox="0 0 360 70" role="img" aria-label="A command writes a skeleton file into your temp folder"><rect x="1" y="10" width="170" height="50" rx="10" fill="var(--code-bg)"/><text x="14" y="40" fill="var(--code-ink)" font-family="monospace" font-size="14">make_page start qa</text><path d="M176 35h40" stroke="var(--soft)" stroke-width="2"/><path d="M216 28l10 7l-10 7z" fill="var(--soft)"/><rect x="234" y="6" width="110" height="58" rx="6" fill="var(--card)" stroke="var(--line)" stroke-width="2"/><text x="289" y="40" text-anchor="middle" fill="var(--ink)" font-family="sans-serif" font-size="13">qa-test.page.json</text></svg>
   <p>In the same PowerShell window, paste this command and press Enter. It writes into your temp folder, so the repo stays clean.</p>
@@ -118,24 +118,24 @@ Basic 6 (checklist): the page asks aj to act but has no checklist; ...</pre>
   <div class="label">You should see</div>
   <pre class="out">make_page: wrote the qa starter to C:\Users\aj\AppData\Local\Temp\qa-test.page.json</pre>
   <label class="tick"><input type="checkbox"> I saw "wrote the qa starter to".</label>
-</li>
+</section>
 
-<li class="card">
+<section class="card">
   <div class="step-head"><span class="num">4</span><h2>Send me your answer</h2></div>
   <p>If all three worked, copy this and send it to me in our chat. If one failed, tell me the step number and paste what it printed.</p>
   <pre id="c4">QA passed: flexible pages</pre>
   <button class="copy" data-copy="c4">Copy reply</button>
   <label class="tick"><input type="checkbox"> I sent my answer.</label>
-</li>
+</section>
 
-</ol>
+</div>
 
 <section class="card" data-basic="unverified">
   <h2>What I have not checked</h2>
   <ul class="plain">
     <li>None of these steps has run on your Windows PC. I ran steps 1 and 3 on Linux, where they printed the lines above.</li>
-    <li>Step 2 needs a session on 2.82.0; mine runs 2.81.2, so I only ran the checker alone.</li>
-    <li>The folder path comes from older notes in this repo, not from you.</li>
+    <li>Step 2 needs a session on 2.82.0, but mine runs 2.81.2. So I ran only the page checker by itself.</li>
+    <li>The folder path C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools comes from older notes in this repo, not from you.</li>
   </ul>
   <details><summary>What I did check</summary>
     <ul class="plain">

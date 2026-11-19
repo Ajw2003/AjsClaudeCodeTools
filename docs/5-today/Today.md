@@ -2,6 +2,8 @@
 
 Flexible pages, plugin 2.82.0, built and waiting on aj's QA (issues #541 to #545, all `needs review`). The cut-off Windows session's step 4 was recovered from its autosave onto `ajsagent/sharp-edison-y4xjzv`; verify.py passes 1294 of 1294 and verify_tools 54 of 54. QA page: `docs/plans/flexible-pages-qa.html`.
 
+The QA page was then rewritten by hand as `docs/qa/flexible-pages-qa.html`: four numbered steps, each with a copy button, the exact output to expect and a tick-box. The builder version in `docs/plans/` is superseded.
+
 Later on 2026-11-19: the finished work was pushed to `AjsAgent/speed-switches` too (both branches at the same commit). Each QA test on the page now carries its exact PowerShell command or prompt; `use_branch.py AjsAgent/speed-switches` installed 2.82.0 in a throwaway config here.
 
 ## 2026-11-18
