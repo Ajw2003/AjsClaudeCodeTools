@@ -8,7 +8,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 - 2026-11-19: live test run 3 passed 3 of 3 on the branch code (`live_flexible_pages-result-3.txt`).
 - 2026-11-19: the QA page now reports the three live runs instead of asking aj to test in the desktop app: `docs/qa/flexible-pages-qa.html`, two steps (read run 3's result, send the verdict). aj chose to skip a fourth run. Editor pass applied (plainer wording, issue numbers named).
 
-Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as long as it meets seven basics. aj's QA passed on 2026-11-19; pull request to main opened.
+Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as long as it meets seven basics. aj's QA passed on 2026-11-19 (recorded in `.claude/house-rules-loop.json`, c6d2a42); pull request #547 to main opened.
 
 - 2026-11-19: aj's QA failed because the desktop app loaded the claude.ai account's plugin copy (following main), not the branch build `use_branch.py` installs. QA now runs in the agent's own headless sessions on the branch code: `docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py`.
 - 2026-11-19: the QA page is now hand-written at `docs/qa/flexible-pages-qa.html` (aj found the builder version's steps vague: tests hidden behind identical icons, commands buried, the next-step box showing my step). It sits outside `docs/plans/` because this session's 2.81.2 page check refuses hand-written pages there; aj chose that.
