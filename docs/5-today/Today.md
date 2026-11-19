@@ -1,4 +1,10 @@
-# Today — 2026-11-12
+# Today — 2026-11-18
+
+Branch `AjsAgent/speed-switches` now holds all of main. Phase 3 retested on aj's Windows PC (1246 of 1252 and 53 of 54
+checks; the failures are Linux-only path assumptions in tests). New: a proposal page for flexible page formats,
+`docs/plans/2026-11-18-flexible-pages-design.html`, waiting on aj's three choices. No code built yet.
+
+# Earlier — 2026-11-12
 
 Roadmap phases 1 and 2, plugin 2.79.0, on the branch `AjsAgent/qol-phases-1-2`, both passed by aj's QA. Phase 1 (#493):
 approvals work with the feature name first and in cloud sessions, an "Approve" button counts, a build plan reads the

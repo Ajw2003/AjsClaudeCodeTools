@@ -18,6 +18,7 @@ Plugin 2.81.2 (2.81.0 plus the desktop QA fixes): phase 3, pick up on any accoun
 - CI fix for #540: the session-start rules text is back under its 9,700-character limit (the added save-and-pickup sentence in `house-rules.md` was cut; `rules/detail/commit-branches.md` still holds it), and the committed loop state is `done` after aj's QA pass, so the handover checks no longer see an unfinished QA stage.
 - QA steps for aj's PC as 13 step cards in `docs/plans/2026-11-17-phase-3-qa-steps.md`.
 - Fixes: `verify.py --only <text>` (#44); agent frontmatter fields no longer forbidden (#46); no leading `&` in handed-over commands unless PowerShell-only (#137); a warning when Python is missing for two checks (#205); a merged phase pull request lets its step issues close (#520); the docs-tiers note offers instead of orders (#521); switching to a new owned branch and committing in one command is allowed (#522); the guard counts lowercase `ajsagent/` branches as the agent's (#528); a flaky approval check fixed.
+- A proposal page for flexible page formats (any format that meets seven basics, optional starters per page type): docs/plans/2026-11-18-flexible-pages-design.html (not built yet; waiting on approval).
 - A proposal page for creating issues on repos you own without a permission prompt: docs/plans/issue-create-no-prompt.html (not built yet; waiting on approval).
 
 Plugin 2.80.0: speed switches (#524, #525).
