@@ -9,6 +9,8 @@ Then aj typed "QA failed: flexible pages": the desktop app still ran the old bui
 
 Live test run 1 passed 3 of 3 on the branch build (refused once, good page, starter); run 2 is running. The design loop was switched off and back on by aj.
 
+Live test run 2 failed one test: the page checker stopped at a missing page type and hid the missing checklist. A fix for step 1 (#542) is being built.
+
 Later on 2026-11-19: the finished work was pushed to `AjsAgent/speed-switches` too (both branches at the same commit). Each QA test on the page now carries its exact PowerShell command or prompt; `use_branch.py AjsAgent/speed-switches` installed 2.82.0 in a throwaway config here.
 
 ## 2026-11-18
