@@ -420,4 +420,5 @@ invocation.
 
 ## Flexible pages (#542 to #545)
 
-Plugin 2.82.0. State: built, waiting on aj's QA. Any page format passes if it meets seven basics; `scripts/page_criteria.py` reads unmarked pages, starters via `make_page.py start <type>`. Known gaps (review `finding` marker, art layout, next-step box not checked statically, `--visual` never run) are in [`docs/4-systems/flexible-pages.md`](../4-systems/flexible-pages.md).
+Plugin 2.82.0. State: built, waiting on aj's QA. Any page format passes if it meets seven basics; `scripts/page_criteria.py` reads unmarked pages, starters via `make_page.py start <type>`. Known gaps (review `finding` marker, art layout, next-step box not checked statically, `--visual` not part of the page check) are in [`docs/4-systems/flexible-pages.md`](../4-systems/flexible-pages.md).
+- 2026-11-19: picked up after a usage-limit cut-off (cloud session). Full verify.py 1294 of 1294, verify_tools 54 of 54, docs drift 0. `page_criteria.py --type` and `--visual` run for the first time on a hand-made page: both work.

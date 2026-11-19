@@ -11,7 +11,7 @@ Make the design loop stop forcing one page format. aj wants a page to suit what 
 - Step 1 (#542, `scripts/page_criteria.py`) is built and committed (0db1cd5); I re-ran its 21 checks and the command line.
 - Step 2 (#543, the page check reads a page) is built and committed (25b3fdd); the builder reports its 7 new cases pass.
 - Step 3 (#544, starters) is built and committed (419461a); its builder's test claims are not independently confirmed (its first combined test run timed out).
-- Step 4 (#545, rules text, docs, plugin 2.82.0) is with a builder helper. The QA page is mine to build after a full verify run.
+- Step 4 (#545, rules text, docs, plugin 2.82.0) is built and committed. On 2026-11-19 a cloud session ran the full verify.py (1294 of 1294) and tools/verify_tools.py (54 of 54).
 
 ## The next step
 
@@ -19,8 +19,6 @@ Check the builder's step 4, run the full verify.py and tools/verify_tools.py mys
 
 ## What is unverified
 
-- The checker's `--visual` phone-width option and `--type` on the command line were never run.
-- The full verify.py has not been run by me since steps 2 and 3.
 - A builder-made review page cannot carry a finding marker; an art page passes the checker only because the template's icon sprite counts as a picture.
 - Phase 3 live headless-session tests were not re-run on this PC (they start paid sessions).
 - The seven Windows-only test failures are not fixed or root-caused beyond reading three of them.

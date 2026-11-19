@@ -56,4 +56,4 @@ Steps and issues are tracked under the parent issue for flexible pages (#542 to 
 - A builder-made `review` page cannot carry a `data-basic="finding"` marker; the test asserts that one message.
 - `art` passes the checker only because the template's hidden icon sprite counts as a picture. The fixed template does not do the art layout (picture first, side by side).
 - The checker does not check statically that the next-step box stays on screen.
-- The phone-width check is the optional `--visual` flag and has never been run.
+- The phone-width check is the optional `--visual` flag; first run 2026-11-19 on a hand-made QA page (light and dark, no overflow). The page check itself does not run it.
