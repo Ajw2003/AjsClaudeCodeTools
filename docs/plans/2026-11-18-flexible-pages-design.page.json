@@ -1,0 +1,190 @@
+{
+ "title": "Flexible Pages That Fit What They Show",
+ "eyebrow": "Design for approval · swaps the one-template rule for seven basics · nothing built yet",
+ "approval": "Design approved: flexible pages",
+ "replyPrefix": "Design approved: flexible pages",
+ "reply": "",
+ "short": {
+  "lead": "Today every page is poured into one template, and a page not made by the builder is refused, even a good one. The proposal: any format is allowed as long as the page meets seven short basics that make it easy to read and act on. Each type of page (proposal, build plan, QA, review, art) then adds only what its job needs.",
+  "hint": "Tap an item to open it.",
+  "key": [
+   [
+    "Exists today",
+    ""
+   ],
+   [
+    "Needs your pick",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "check",
+    "Today",
+    "One template for everything",
+    "",
+    "The builder (make_page.py) fills one template with four parts: In short, Changes, Choices, Wrap-up. The page check refuses any page under docs/plans without the builder's mark. A QA page and a summary page are small variations of the same template.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4ODAgMzAwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48dGV4dCB4PSIyMCIgeT0iMzAiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPlRvZGF5OiBvbmUgcm9hZCwgb25lIHRlbXBsYXRlPC90ZXh0PjxyZWN0IHg9IjIwIiB5PSI0NCIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI2NCIgcng9IjEwIiBmaWxsPSIjM2I3ZGQ4IiBmaWxsLW9wYWNpdHk9IjAuMSIgc3Ryb2tlPSIjM2I3ZGQ4Ii8+PHRleHQgeD0iMzIiIHk9IjcwIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2I3ZGQ4Ij5jb250ZW50Lmpzb248L3RleHQ+PHRleHQgeD0iMzIiIHk9IjkwIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij53aGF0IEkgd3JpdGU8L3RleHQ+PGxpbmUgeDE9IjE3MCIgeTE9Ijc2IiB4Mj0iMTk0IiB5Mj0iNzYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBvbHlnb24gcG9pbnRzPSIyMDAsNzYgMTkyLDcxIDE5Miw4MSIgZmlsbD0iIzdkODM4YyIvPjxyZWN0IHg9IjIwMCIgeT0iNDQiIHdpZHRoPSIxNTAiIGhlaWdodD0iNjQiIHJ4PSIxMCIgZmlsbD0iIzNiN2RkOCIgZmlsbC1vcGFjaXR5PSIwLjEiIHN0cm9rZT0iIzNiN2RkOCIvPjx0ZXh0IHg9IjIxMiIgeT0iNzAiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMzYjdkZDgiPkJ1aWxkZXI8L3RleHQ+PHRleHQgeD0iMjEyIiB5PSI5MCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+bWFrZV9wYWdlLnB5PC90ZXh0PjxsaW5lIHgxPSIzNTAiIHkxPSI3NiIgeDI9IjM3NCIgeTI9Ijc2IiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS13aWR0aD0iMiIvPjxwb2x5Z29uIHBvaW50cz0iMzgwLDc2IDM3Miw3MSAzNzIsODEiIGZpbGw9IiM3ZDgzOGMiLz48cmVjdCB4PSIzODAiIHk9IjQ0IiB3aWR0aD0iMjMwIiBoZWlnaHQ9IjY0IiByeD0iMTAiIGZpbGw9IiMzYjdkZDgiIGZpbGwtb3BhY2l0eT0iMC4xIiBzdHJva2U9IiMzYjdkZDgiLz48dGV4dCB4PSIzOTIiIHk9IjcwIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjM2I3ZGQ4Ij5PbmUgdGVtcGxhdGU8L3RleHQ+PHRleHQgeD0iMzkyIiB5PSI5MCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+NCBmaXhlZCBwYXJ0czwvdGV4dD48bGluZSB4MT0iNjEwIiB5MT0iNzYiIHgyPSI2MzQiIHkyPSI3NiIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiLz48cG9seWdvbiBwb2ludHM9IjY0MCw3NiA2MzIsNzEgNjMyLDgxIiBmaWxsPSIjN2Q4MzhjIi8+PHJlY3QgeD0iNjQwIiB5PSI0NCIgd2lkdGg9IjIyMCIgaGVpZ2h0PSI2NCIgcng9IjEwIiBmaWxsPSIjM2I3ZGQ4IiBmaWxsLW9wYWNpdHk9IjAuMSIgc3Ryb2tlPSIjM2I3ZGQ4Ii8+PHRleHQgeD0iNjUyIiB5PSI3MCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzNiN2RkOCI+UGFnZSBjaGVjazwvdGV4dD48dGV4dCB4PSI2NTIiIHk9IjkwIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5ubyBtYXJrID0gcmVmdXNlZDwvdGV4dD48dGV4dCB4PSIyMCIgeT0iMTUwIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjN2Q4MzhjIj5Qcm9wb3NlZDogYW55IHJvYWQsIG9uZSB0ZXN0PC90ZXh0PjxyZWN0IHg9IjIwIiB5PSIxNjQiIHdpZHRoPSIxNTAiIGhlaWdodD0iNjQiIHJ4PSIxMCIgZmlsbD0iIzJmOGY1YiIgZmlsbC1vcGFjaXR5PSIwLjEiIHN0cm9rZT0iIzJmOGY1YiIvPjx0ZXh0IHg9IjMyIiB5PSIxOTAiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjhmNWIiPkFueSBwYWdlPC90ZXh0Pjx0ZXh0IHg9IjMyIiB5PSIyMTAiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPmFueSB0b29sLCBhbnkgZm9ybWF0PC90ZXh0PjxsaW5lIHgxPSIxNzAiIHkxPSIxOTYiIHgyPSIxOTQiIHkyPSIxOTYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBvbHlnb24gcG9pbnRzPSIyMDAsMTk2IDE5MiwxOTEgMTkyLDIwMSIgZmlsbD0iIzdkODM4YyIvPjxyZWN0IHg9IjIwMCIgeT0iMTY0IiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjY0IiByeD0iMTAiIGZpbGw9IiMyZjhmNWIiIGZpbGwtb3BhY2l0eT0iMC4xIiBzdHJva2U9IiMyZjhmNWIiLz48dGV4dCB4PSIyMTIiIHk9IjE5MCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOGY1YiI+QmFzaWNzIGNoZWNrZXI8L3RleHQ+PHRleHQgeD0iMjEyIiB5PSIyMTAiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPnJlYWRzIHRoZSBwYWdlPC90ZXh0PjxsaW5lIHgxPSIzNTAiIHkxPSIxOTYiIHgyPSIzNzQiIHkyPSIxOTYiIHN0cm9rZT0iIzdkODM4YyIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBvbHlnb24gcG9pbnRzPSIzODAsMTk2IDM3MiwxOTEgMzcyLDIwMSIgZmlsbD0iIzdkODM4YyIvPjxyZWN0IHg9IjM4MCIgeT0iMTY0IiB3aWR0aD0iMjMwIiBoZWlnaHQ9IjY0IiByeD0iMTAiIGZpbGw9IiMyZjhmNWIiIGZpbGwtb3BhY2l0eT0iMC4xIiBzdHJva2U9IiMyZjhmNWIiLz48dGV4dCB4PSIzOTIiIHk9IjE5MCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOGY1YiI+QmFzaWNzIG1ldD88L3RleHQ+PHRleHQgeD0iMzkyIiB5PSIyMTAiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPjcgc2hvcnQgdGVzdHM8L3RleHQ+PGxpbmUgeDE9IjYxMCIgeTE9IjE5NiIgeDI9IjYzNCIgeTI9IjE5NiIgc3Ryb2tlPSIjN2Q4MzhjIiBzdHJva2Utd2lkdGg9IjIiLz48cG9seWdvbiBwb2ludHM9IjY0MCwxOTYgNjMyLDE5MSA2MzIsMjAxIiBmaWxsPSIjN2Q4MzhjIi8+PHJlY3QgeD0iNjQwIiB5PSIxNjQiIHdpZHRoPSIyMjAiIGhlaWdodD0iNjQiIHJ4PSIxMCIgZmlsbD0iIzJmOGY1YiIgZmlsbC1vcGFjaXR5PSIwLjEiIHN0cm9rZT0iIzJmOGY1YiIvPjx0ZXh0IHg9IjY1MiIgeT0iMTkwIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMmY4ZjViIj5QYXNzZXM8L3RleHQ+PHRleHQgeD0iNjUyIiB5PSIyMTAiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPm5hbWVzIGFueSBtaXNzPC90ZXh0Pjx0ZXh0IHg9IjIwIiB5PSIyNjIiIGZvbnQtc2l6ZT0iMTMiICBmaWxsPSIjMmIyZjM1Ij5UaGUgYnVpbGRlciBzdGF5cyBhcyBhbiBvcHRpb25hbCBzdGFydGVyLiBJdHMgcGFnZXMgc3RpbGwgcGFzcy48L3RleHQ+PHRleHQgeD0iMjAiIHk9IjI4NCIgZm9udC1zaXplPSIxMiIgIGZpbGw9IiM3ZDgzOGMiPkJsdWUgPSBleGlzdHMgdG9kYXkuIEdyZWVuID0gbmV3LjwvdGV4dD48L3N2Zz4=",
+     "alt": "Today a page goes content file, builder, one template, page check. Proposed: any page goes to a basics checker and passes if the basics are met.",
+     "caption": "Blue is what exists today. Green is new. A plain diagram, not a screenshot."
+    }
+   ],
+   [
+    "check",
+    "The basics",
+    "Seven things every page has",
+    "",
+    "1. A one-sentence summary at the top. 2. A Your-next-step box that stays on screen. 3. A picture or diagram for every idea. 4. No block over about 60 words; long detail folds away. 5. Steps numbered, one action each. 6. A tick-box checklist whenever you have something to do. 7. Fits a phone, in light and dark.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NDAgNDMwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48dGV4dCB4PSIyMCIgeT0iMjgiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPkV2ZXJ5IHBhZ2UsIHBob25lIHdpZHRoPC90ZXh0PjxyZWN0IHg9IjQwIiB5PSI0NCIgd2lkdGg9IjM2MCIgaGVpZ2h0PSI1NiIgcng9IjEwIiBmaWxsPSIjMmY4ZjViIiBmaWxsLW9wYWNpdHk9IjAuMSIgc3Ryb2tlPSIjMmY4ZjViIi8+PHRleHQgeD0iNTIiIHk9IjcwIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMmY4ZjViIj4xICBPbmUtc2VudGVuY2Ugc3VtbWFyeTwvdGV4dD48dGV4dCB4PSI1MiIgeT0iOTAiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPndoYXQgdGhpcyBwYWdlIGlzLCBpbiBwbGFpbiB3b3JkczwvdGV4dD48cmVjdCB4PSI0MCIgeT0iMTEwIiB3aWR0aD0iMzYwIiBoZWlnaHQ9IjU2IiByeD0iMTAiIGZpbGw9IiMyZjhmNWIiIGZpbGwtb3BhY2l0eT0iMC4xIiBzdHJva2U9IiMyZjhmNWIiLz48dGV4dCB4PSI1MiIgeT0iMTM2IiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMmY4ZjViIj4yICBZb3VyIG5leHQgc3RlcCAoYWx3YXlzIHZpc2libGUpPC90ZXh0Pjx0ZXh0IHg9IjUyIiB5PSIxNTYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPm9uZSBhY3Rpb24sIG5ldmVyIHNjcm9sbGVkIGF3YXk8L3RleHQ+PHJlY3QgeD0iNDAiIHk9IjE3NiIgd2lkdGg9IjM2MCIgaGVpZ2h0PSI1NiIgcng9IjEwIiBmaWxsPSIjMmY4ZjViIiBmaWxsLW9wYWNpdHk9IjAuMSIgc3Ryb2tlPSIjMmY4ZjViIi8+PHRleHQgeD0iNTIiIHk9IjIwMiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOGY1YiI+MyAgQSBwaWN0dXJlIGZvciBlYWNoIGlkZWE8L3RleHQ+PHRleHQgeD0iNTIiIHk9IjIyMiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+ZGlhZ3JhbSwgc2NyZWVuc2hvdCBvciBkZW1vPC90ZXh0PjxyZWN0IHg9IjQwIiB5PSIyNDIiIHdpZHRoPSIzNjAiIGhlaWdodD0iNTYiIHJ4PSIxMCIgZmlsbD0iIzJmOGY1YiIgZmlsbC1vcGFjaXR5PSIwLjEiIHN0cm9rZT0iIzJmOGY1YiIvPjx0ZXh0IHg9IjUyIiB5PSIyNjgiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjhmNWIiPjQgIFN0ZXBzLCBvbmUgYWN0aW9uIGVhY2g8L3RleHQ+PHRleHQgeD0iNTIiIHk9IjI4OCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+bnVtYmVyZWQsIG5vIGJsb2NrIG92ZXIgfjYwIHdvcmRzPC90ZXh0PjxyZWN0IHg9IjQwIiB5PSIzMDgiIHdpZHRoPSIzNjAiIGhlaWdodD0iNTYiIHJ4PSIxMCIgZmlsbD0iIzJmOGY1YiIgZmlsbC1vcGFjaXR5PSIwLjEiIHN0cm9rZT0iIzJmOGY1YiIvPjx0ZXh0IHg9IjUyIiB5PSIzMzQiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjhmNWIiPjUgIFRpY2stYm94IGNoZWNrbGlzdDwvdGV4dD48dGV4dCB4PSI1MiIgeT0iMzU0IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij53aGVuZXZlciB5b3UgaGF2ZSBzb21ldGhpbmcgdG8gZG88L3RleHQ+PHJlY3QgeD0iNDAiIHk9IjM3NCIgd2lkdGg9IjM2MCIgaGVpZ2h0PSIzNiIgcng9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IiM3ZDgzOGMiIHN0cm9rZS1kYXNoYXJyYXk9IjUgNCIvPjx0ZXh0IHg9IjU0IiB5PSIzOTciIGZvbnQtc2l6ZT0iMTIiICBmaWxsPSIjN2Q4MzhjIj5Mb25nIGRldGFpbCBmb2xkcyBhd2F5LiBUYXAgdG8gb3Blbi48L3RleHQ+PC9zdmc+",
+     "alt": "A phone-width page with five zones: summary, next step, picture, numbered steps, checklist, and a folded detail area.",
+     "caption": "The five zones every page shows; basics 4 and 7 apply to the whole page. A plain diagram."
+    }
+   ],
+   [
+    "search",
+    "By type",
+    "Each type adds only what it needs",
+    "",
+    "Proposal: what exists first, options with one marked. Build plan: steps, each with a done-when. QA: tick-box steps for you, the expected result, and what was not verified. Review: findings ranked, each with where, why and the fix. Art: the picture first, variants side by side, almost no words.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4ODAgMjMwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiNmYmZhZjciLz48dGV4dCB4PSIyMCIgeT0iMzAiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM3ZDgzOGMiPkJhc2ljcyBmb3IgYWxsLCBwbHVzIGEgbGl0dGxlIGZvciBlYWNoIHR5cGU8L3RleHQ+PHJlY3QgeD0iMjAiIHk9IjQ0IiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE1MCIgcng9IjEwIiBmaWxsPSIjMmY4ZjViIiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzJmOGY1YiIvPjx0ZXh0IHg9IjMwIiB5PSI3MCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOGY1YiI+UHJvcG9zYWw8L3RleHQ+PHRleHQgeD0iMzAiIHk9Ijk0IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5XaGF0IGV4aXN0cyBmaXJzdDwvdGV4dD48dGV4dCB4PSIzMCIgeT0iMTE0IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5PcHRpb25zLCBvbmUgbWFya2VkPC90ZXh0Pjx0ZXh0IHg9IjMwIiB5PSIxMzQiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPkFwcHJvdmFsIHBocmFzZTwvdGV4dD48cmVjdCB4PSIxOTYiIHk9IjQ0IiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE1MCIgcng9IjEwIiBmaWxsPSIjMmY4ZjViIiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzJmOGY1YiIvPjx0ZXh0IHg9IjIwNiIgeT0iNzAiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjhmNWIiPkJ1aWxkIHBsYW48L3RleHQ+PHRleHQgeD0iMjA2IiB5PSI5NCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+U3RlcHMgaW4gb3JkZXI8L3RleHQ+PHRleHQgeD0iMjA2IiB5PSIxMTQiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPkEgZG9uZS13aGVuIGVhY2g8L3RleHQ+PHRleHQgeD0iMjA2IiB5PSIxMzQiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPkNvZGUgZWFjaCB0b3VjaGVzPC90ZXh0PjxyZWN0IHg9IjM3MiIgeT0iNDQiIHdpZHRoPSIxNjAiIGhlaWdodD0iMTUwIiByeD0iMTAiIGZpbGw9IiMyZjhmNWIiIGZpbGwtb3BhY2l0eT0iMC4xMCIgc3Ryb2tlPSIjMmY4ZjViIi8+PHRleHQgeD0iMzgyIiB5PSI3MCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOGY1YiI+UUE8L3RleHQ+PHRleHQgeD0iMzgyIiB5PSI5NCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+VGljay1ib3ggc3RlcHM8L3RleHQ+PHRleHQgeD0iMzgyIiB5PSIxMTQiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPkV4cGVjdGVkIHJlc3VsdDwvdGV4dD48dGV4dCB4PSIzODIiIHk9IjEzNCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+V2hhdCBpcyB1bnZlcmlmaWVkPC90ZXh0PjxyZWN0IHg9IjU0OCIgeT0iNDQiIHdpZHRoPSIxNjAiIGhlaWdodD0iMTUwIiByeD0iMTAiIGZpbGw9IiMyZjhmNWIiIGZpbGwtb3BhY2l0eT0iMC4xMCIgc3Ryb2tlPSIjMmY4ZjViIi8+PHRleHQgeD0iNTU4IiB5PSI3MCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzJmOGY1YiI+UmV2aWV3PC90ZXh0Pjx0ZXh0IHg9IjU1OCIgeT0iOTQiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPkZpbmRpbmdzIHJhbmtlZDwvdGV4dD48dGV4dCB4PSI1NTgiIHk9IjExNCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+V2hlcmUgYW5kIHdoeTwvdGV4dD48dGV4dCB4PSI1NTgiIHk9IjEzNCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzJiMmYzNSI+VGhlIGZpeDwvdGV4dD48cmVjdCB4PSI3MjQiIHk9IjQ0IiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE1MCIgcng9IjEwIiBmaWxsPSIjMmY4ZjViIiBmaWxsLW9wYWNpdHk9IjAuMTAiIHN0cm9rZT0iIzJmOGY1YiIvPjx0ZXh0IHg9IjczNCIgeT0iNzAiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMyZjhmNWIiPkFydDwvdGV4dD48dGV4dCB4PSI3MzQiIHk9Ijk0IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5QaWN0dXJlIGZpcnN0PC90ZXh0Pjx0ZXh0IHg9IjczNCIgeT0iMTE0IiBmb250LXNpemU9IjEyIiBmaWxsPSIjMmIyZjM1Ij5WYXJpYW50cyBzaWRlIGJ5IHNpZGU8L3RleHQ+PHRleHQgeD0iNzM0IiB5PSIxMzQiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMyYjJmMzUiPkFsbW9zdCBubyB3b3JkczwvdGV4dD48dGV4dCB4PSIyMCIgeT0iMjE2IiBmb250LXNpemU9IjEyIiAgZmlsbD0iIzdkODM4YyI+RWFjaCB0eXBlIGFkZHMgb25seSB3aGF0IGl0cyBqb2IgbmVlZHMuPC90ZXh0Pjwvc3ZnPg==",
+     "alt": "Five page types, each with the few extra things it needs on top of the basics.",
+     "caption": "Proposal, build plan, QA, review and art. A plain diagram."
+    }
+   ],
+   [
+    "flask",
+    "Your pick",
+    "Three choices below",
+    "",
+    "Each choice has my suggestion marked. Pick one in each, or tell me what to change.",
+    "Answer the three choices."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "A page can be any format",
+   "The test is the basics, not the builder's mark",
+   null,
+   "A page passes when it meets the seven basics and says what type it is. The builder's mark still passes, so every existing page keeps working.",
+   [
+    "A good hand-made page is refused today.",
+    "Any format passes if it meets the basics.",
+    "The page can be shaped like the thing it shows."
+   ]
+  ],
+  [
+   "new",
+   "A checker that reads the page",
+   "One new script, run once per page",
+   null,
+   "page_criteria.py reads the page: words per block, the picture, the next-step box, the steps and the checklist. It reuses the existing phone-width check. A miss is named in plain words, with the fix.",
+   [
+    "Nothing checks a page's content today, only its mark.",
+    "Each miss is named once, then the reply goes through.",
+    "Nobody has to count words by hand."
+   ]
+  ],
+  [
+   "chg",
+   "The builder becomes starters",
+   "One optional starter per type",
+   null,
+   "The builder and its four-part template stay, and gain starters for proposal, build plan, QA, review and art. Using one is a shortcut, not a requirement.",
+   [
+    "Every page has the same four parts, whatever it is for.",
+    "A starter per type, or a page built another way.",
+    "Less to read when the format fits the job."
+   ]
+  ],
+  [
+   "keep",
+   "The gate and the approval phrase",
+   "Stages, issues, QA numbers",
+   null,
+   "The design loop's stages, the approval phrases (\"Design approved: ...\"), the issue labels and the QA page's measured line counts all stay as they are.",
+   [
+    "Your words still move the stage.",
+    "Unchanged.",
+    "Nothing about how you approve changes."
+   ]
+  ]
+ ],
+ "choices": [
+  [
+   "q1",
+   "How is a page checked?",
+   [
+    [
+     "A",
+     "The checker blocks once on a miss, then lets the retry through (as the other end-of-reply checks do)",
+     1,
+     "A miss is named and fixed in the same reply; it cannot loop."
+    ],
+    [
+     "B",
+     "The checker only reports, never blocks",
+     0,
+     "Gentler, but a page that misses the basics can still reach you."
+    ]
+   ],
+   "A, because a page that is hard to read is the exact problem you are trying to remove."
+  ],
+  [
+   "q2",
+   "Do the type starters exist?",
+   [
+    [
+     "A",
+     "Yes: five optional starters, one per type, built on the basics",
+     1,
+     "Fast to use and consistent, and nothing forces them."
+    ],
+    [
+     "B",
+     "No starters: the basics only",
+     0,
+     "Smallest change; every page is made by hand, so it costs more each time."
+    ]
+   ],
+   "A, so a good page is the quick path while a different format stays allowed."
+  ],
+  [
+   "q3",
+   "Where do the basics live?",
+   [
+    [
+     "A",
+     "In the plugin's page rule, so every project gets them; a project's page-style.json can tighten them",
+     1,
+     "One copy, follows every device."
+    ],
+    [
+     "B",
+     "Per project only, in page-style.json",
+     0,
+     "Each project can differ, but a new project starts with none."
+    ]
+   ],
+   "A, so they follow you into every repo without setup."
+  ]
+ ],
+ "wrapup": {
+  "summary": "A design for pages that fit what they show: any format, as long as seven short basics are met, with an optional starter per page type.",
+  "changing": "Nothing yet. After approval I write a build plan page and the step issues, then build.",
+  "blocking": "Your pick in each of the three choices, or any change you want.",
+  "next": "I write the build plan page and the step issues, then build after you approve it.",
+  "todo": [
+   "Pick one option in each choice.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it. It starts \"Design approved: flexible pages\"."
+  ]
+ }
+}
