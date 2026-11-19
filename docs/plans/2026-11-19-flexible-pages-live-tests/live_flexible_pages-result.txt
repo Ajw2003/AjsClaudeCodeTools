@@ -1,0 +1,1 @@
+plugin under test: /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules version 2.82.0
