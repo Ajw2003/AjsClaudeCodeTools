@@ -110,10 +110,10 @@ def check(html_text, page_type=None, max_block_words=None):
     p.feed(html_text)
     p.close()
     t = page_type or p.meta_type
-    if t not in TYPES:
-        return ["This page has no known type (got %r); say which it is with <meta name=\"house-rules-page\" "
-                "content=\"...\"> or --type, using one of: %s." % (t, ", ".join(TYPES))]
     out = []
+    if t not in TYPES:
+        out.append("This page has no known type (got %r); say which it is with <meta name=\"house-rules-page\" "
+                "content=\"...\"> or --type, using one of: %s." % (t, ", ".join(TYPES)))
     summary = p.basic.get("summary")
     if not summary:
         out.append("Basic 1 (summary): the page has no summary of 40 words or fewer; add a short element marked "
@@ -132,7 +132,7 @@ def check(html_text, page_type=None, max_block_words=None):
                    "inside a details element." % (p.long, p.max_words))
     if t != "art" and not (p.has_ol or "steps" in p.basic):
         out.append("Basic 5 (steps): the page has no numbered steps; add an ol, or mark the steps data-basic=\"steps\".")
-    need_list = t in ("proposal", "build-plan", "qa") or "you-act" in p.basic
+    need_list = t not in TYPES or t in ("proposal", "build-plan", "qa") or "you-act" in p.basic
     if need_list and not (p.has_checkbox or "checklist" in p.basic):
         out.append("Basic 6 (checklist): the page asks aj to act but has no checklist; add checkboxes "
                    "(input type=checkbox) or mark the list data-basic=\"checklist\".")
