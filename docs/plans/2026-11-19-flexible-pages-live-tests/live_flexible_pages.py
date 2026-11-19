@@ -55,7 +55,7 @@ def page_refusals(hooks):
     return [h for h in hooks if "page check" in h and '"deny"' in h]
 
 
-def show(lines, n=300):
+def show(lines, n=3000):
     for h in lines:
         print("    " + h.replace("\n", " ")[:n])
 
