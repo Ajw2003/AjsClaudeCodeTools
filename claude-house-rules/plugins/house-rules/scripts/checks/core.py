@@ -2643,6 +2643,12 @@ with open(os.path.join(_fs_o, ".claude", "house-rules-mode.json"), "w") as _f:
     json.dump({"design": "off"}, _f)
 report("PASS" if _fs_env_seen(_fs_o, "HOUSE_RULES_LOOP") == "off" else "FAIL",
        "feature switches (f): an old file {\"design\": \"off\"} still turns the loop off")
+os.environ["HOUSE_RULES_MODE_IGNORE"] = os.path.join(_fs_o, ".claude", "house-rules-mode.json")
+try:
+    report("PASS" if _fs_env_seen(_fs_o, "HOUSE_RULES_LOOP") != "off" else "FAIL",
+           "feature switches (g): a file listed in HOUSE_RULES_MODE_IGNORE is read as no switches")
+finally:
+    del os.environ["HOUSE_RULES_MODE_IGNORE"]
 
 
 finish()

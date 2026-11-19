@@ -79,6 +79,7 @@ typing one line, in any folder, git repository or not. Page: `docs/plans/2026-11
 - **How it reaches every check.** `hook.py`'s `main()` already keeps the payload first (`core.keep_payload()`). Right
   after it, the switch layer reads the two files and sets each mapped `HOUSE_RULES_*` value for that hook call, so
   every existing check obeys without being edited. A typed "on" wins over an "off" in settings.json.
+- **Test isolation (#546).** `HOUSE_RULES_MODE_IGNORE` (os.pathsep-separated paths) makes `_mode_read` treat those files as absent; `verify.py` sets it to the repo's and the everywhere file.
 - **Never switchable (3A).** The destructive-command guard, the main-branch guard and the credit check have no setting
   in any group, so no typed line can turn them off.
 - **Where it is built.** The files, groups and hook layer: `core.py:2625` (`_MODE_GROUPS`), `core.py:2652` (`_mode_files`),

@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+- 2026-11-19: verify.py no longer picks up switches typed in the repo it tests (#546).
+
 Plugin 2.82.0: flexible pages (#542 to #545). A page can now take any format as long as it meets seven basics; waiting on aj's QA.
 
 - 2026-11-19: aj's QA failed because the desktop app loaded the claude.ai account's plugin copy (following main), not the branch build `use_branch.py` installs. QA now runs in the agent's own headless sessions on the branch code: `docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py`.
