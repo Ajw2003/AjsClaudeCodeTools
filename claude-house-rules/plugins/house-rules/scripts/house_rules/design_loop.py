@@ -915,6 +915,12 @@ _LOOP_NP_PAIR_RE = re.compile(r"(?:([\w.-]+/[\w.-]+))?#(\d+)\s+replaced\s+by\s+(
                               re.IGNORECASE)
 
 
+_LOOP_CLOSEAPPR_RE = re.compile(r"\bclose\s+approved\s*:[ \t]*([^\n]*)", re.IGNORECASE)
+
+
+_LOOP_CA_REF_RE = re.compile(r"(?:([\w.-]+/[\w.-]+))?#(\d+)")
+
+
 def _loop_sweep_apply(state, text):
     """#364: aj's sweep approvals. "Sweep approved: issues [keep #N ...]" moves sweep_proposed into sweep;
     "Close as not planned: #N replaced by #M[, ...]" appends not_planned entries. Returns notes ("" if none)."""
@@ -952,6 +958,25 @@ def _loop_sweep_apply(state, text):
             notes.append('Design loop: aj wrote "Close as not planned:". Recorded %d not-planned close(s) for the '
                          "close guard: %s." % (len(pairs), ", ".join("#%s replaced by #%s" % (n, b)
                                                                       for _r, n, b in pairs)))
+    m = _LOOP_CLOSEAPPR_RE.search(text)  # #551: "Close approved: #N[, #M]" or "Close approved: milestone N[, M]"
+    if m:
+        body = m.group(1)
+        mm = re.match(r"\s*(?:([\w.-]+/[\w.-]+)\s+)?milestones?\s+#?(\d+(?:[\s,]+(?:and\s+)?#?\d+)*)", body,
+                      re.IGNORECASE)
+        if mm:
+            new = [{"repo": mm.group(1) or "", "milestone": int(n)} for n in re.findall(r"\d+", mm.group(2))]
+        else:
+            new = [{"repo": r, "number": int(n)} for r, n in _LOOP_CA_REF_RE.findall(body)]
+        if not new:
+            notes.append('Design loop: aj wrote "Close approved:", but no "#N" issue or "milestone N" was found, '
+                         "so nothing was recorded.")
+        else:
+            if not isinstance(state.get("close_approved"), list):
+                state["close_approved"] = []
+            state["close_approved"].extend(x for x in new if x not in state["close_approved"])
+            notes.append('Design loop: aj wrote "Close approved:". Recorded %d close approval(s): %s. No stage '
+                         "moved." % (len(new), ", ".join(("milestone %s" % x["milestone"]) if "milestone" in x
+                                                         else "#%s" % x["number"] for x in new)))
     return " ".join(notes)
 
 
@@ -2063,6 +2088,11 @@ def _close_records(repo, number, reason, state):
     records do not allow it and `git_dir` is given, a completed close is also allowed by the issue's own
     GitHub labels (#550): needs review / in review, or a completed label a person set; never in a milestone."""
     reason = (reason or "completed").strip().lower().replace(" ", "_")
+    if isinstance(state, dict) and any(isinstance(x, dict) and x.get("number") == number
+                                       and _close_repo_match(repo, x.get("repo", ""))
+                                       for x in state.get("close_approved") or []):
+        return True, "aj wrote \"Close approved: #%d\", so #%d may close whatever its labels or milestone" % (
+            number, number)  # #551: before any GitHub lookup
     if not _loop_enabled():  # #515: never demand evidence only a switched-off loop can record
         return True, "the design loop is off, so the QA and sweep records it keeps are not required"
     if not isinstance(state, dict):
@@ -2144,6 +2174,10 @@ def _close_forget(git_dir, repo, number):
         n = len(state["sweep"])
         state["sweep"] = [x for x in state["sweep"] if not hit(x)]
         changed = changed or len(state["sweep"]) != n
+    if isinstance(state.get("close_approved"), list):
+        n = len(state["close_approved"])
+        state["close_approved"] = [x for x in state["close_approved"] if not hit(x)]
+        changed = changed or len(state["close_approved"]) != n
     if changed:
         _loop_write(git_dir, state)
 
@@ -2204,6 +2238,30 @@ def _close_gh_decision(cmd, payload):
     return ("allow", text, ctx) if ok else ("deny", text, None)
 
 
+_GH_MILESTONE_CLOSE_RE = re.compile(
+    _GH_PREFIX + r"api\b(?=[^\n]*(?:-X|--method)[=\s]+[\"']?PATCH)(?=[^\n]*milestones/\d+)"
+    r"(?=[^\n]*state\W{0,4}closed)", re.IGNORECASE)
+
+
+def _milestone_close_decision(cmd, payload):
+    """#551: a milestone close needs aj's "Close approved: milestone N"."""
+    m = re.search(r"(?:repos/([\w.-]+/[\w.-]+)/)?milestones/(\d+)", cmd)
+    repo, n = m.group(1) or "", int(m.group(2))
+    ask = 'Ask aj to write "Close approved: milestone %d".' % n
+    _, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return ("deny", "House rules, close guard: could not find the project's stage file, so closing "
+                "milestone %d is refused. %s" % (n, ask), None)
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return ("deny", "%s Closing milestone %d is refused. %s" % (problem, n, ask), None)
+    for x in (state.get("close_approved") or []) if isinstance(state, dict) else []:
+        if isinstance(x, dict) and x.get("milestone") == n and _close_repo_match(repo, x.get("repo", "")):
+            return ("allow", 'aj wrote "Close approved: milestone %d"' % n, None)
+    return ("deny", "House rules, close guard: refused to close milestone %d: aj has not approved it. %s" % (n, ask),
+            None)
+
+
 def _issues_guard(subject, payload):
     """None when the issue rules have nothing to say about this command, else
     (kind, reason, context) with kind "deny" or "ask"."""
@@ -2257,6 +2315,8 @@ def _issues_guard(subject, payload):
         missing = clarity.missing_issue_sections(body)
         if missing:
             return ("deny", ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing), None)
+    if _GH_MILESTONE_CLOSE_RE.search(cmd):
+        return _milestone_close_decision(cmd, payload)
     if any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
         return _close_gh_decision(cmd, payload)
     return None
