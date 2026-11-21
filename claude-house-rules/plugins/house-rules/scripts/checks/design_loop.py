@@ -1588,7 +1588,7 @@ _fl_env = dict(_cl_env, HOUSE_RULES_CLOSE_ISSUES_FILE=_fl_file)
 _fl_mc = lambda n: {"method": "update", "owner": "o", "repo": "r", "issue_number": n, "state": "closed", "state_reason": "completed"}
 _cl_set({"stage": "done", "self_completed": [{"repo": "o/r", "number": 36}]})
 _fl = {n: (_cg_gh("gh issue close %d -R o/r" % n, env=_fl_env), _cg_mcp(_fl_mc(n), env=_fl_env)) for n in (31, 32, 33, 34, 35, 36, 37)}
-open("/tmp/dbg.txt","w").write(repr(_fl[31][0])+repr(_cl_dir)); _fl_cases = [
+open("/tmp/dbg.txt","w").write(repr(run_hook("guard", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "cg", "cwd": _cl_dir, "tool_input": {"command": "gh issue close 31 -R o/r"}}), env=_fl_env))); _fl_cases = [
     ("needs review closes", _iss_decision(_fl[31][0]) == "allow"),
     ("in review closes, whatever the capitals", _iss_decision(_fl[32][0]) == "allow"),
     ("in progress only is refused, naming the labels and Close approved",
