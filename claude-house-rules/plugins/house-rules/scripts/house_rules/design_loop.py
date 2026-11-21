@@ -915,6 +915,12 @@ _LOOP_NP_PAIR_RE = re.compile(r"(?:([\w.-]+/[\w.-]+))?#(\d+)\s+replaced\s+by\s+(
                               re.IGNORECASE)
 
 
+_LOOP_CLOSEAPPR_RE = re.compile(r"\bclose\s+approved\s*:[ \t]*([^\n]*)", re.IGNORECASE)
+
+
+_LOOP_CA_REF_RE = re.compile(r"(?:([\w.-]+/[\w.-]+))?#(\d+)")
+
+
 def _loop_sweep_apply(state, text):
     """#364: aj's sweep approvals. "Sweep approved: issues [keep #N ...]" moves sweep_proposed into sweep;
     "Close as not planned: #N replaced by #M[, ...]" appends not_planned entries. Returns notes ("" if none)."""
@@ -952,6 +958,25 @@ def _loop_sweep_apply(state, text):
             notes.append('Design loop: aj wrote "Close as not planned:". Recorded %d not-planned close(s) for the '
                          "close guard: %s." % (len(pairs), ", ".join("#%s replaced by #%s" % (n, b)
                                                                       for _r, n, b in pairs)))
+    m = _LOOP_CLOSEAPPR_RE.search(text)  # #551: "Close approved: #N[, #M]" or "Close approved: milestone N[, M]"
+    if m:
+        body = m.group(1)
+        mm = re.match(r"\s*(?:([\w.-]+/[\w.-]+)\s+)?milestones?\s+#?(\d+(?:[\s,]+(?:and\s+)?#?\d+)*)", body,
+                      re.IGNORECASE)
+        if mm:
+            new = [{"repo": mm.group(1) or "", "milestone": int(n)} for n in re.findall(r"\d+", mm.group(2))]
+        else:
+            new = [{"repo": r, "number": int(n)} for r, n in _LOOP_CA_REF_RE.findall(body)]
+        if not new:
+            notes.append('Design loop: aj wrote "Close approved:", but no "#N" issue or "milestone N" was found, '
+                         "so nothing was recorded.")
+        else:
+            if not isinstance(state.get("close_approved"), list):
+                state["close_approved"] = []
+            state["close_approved"].extend(x for x in new if x not in state["close_approved"])
+            notes.append('Design loop: aj wrote "Close approved:". Recorded %d close approval(s): %s. No stage '
+                         "moved." % (len(new), ", ".join(("milestone %s" % x["milestone"]) if "milestone" in x
+                                                         else "#%s" % x["number"] for x in new)))
     return " ".join(notes)
 
 
@@ -1788,6 +1813,10 @@ def _loop_record_labels(payload):
             now = [l for l in now if l.lower() not in {r.lower() for r in remove}]
             now += [a for a in add if a.lower() not in {l.lower() for l in now}]
             recorded[key] = now
+            if any(a.lower() in COMPLETED_LABELS for a in list(add) + list(set_to or [])):
+                mine = state.setdefault("self_completed", [])
+                if not any(x.get("repo", "").lower() == repo.lower() and x.get("number") == number for x in mine):
+                    mine.append({"repo": repo, "number": number})
         if pr:  # A2: what this pull request links, so its merge stamps only those issues
             resp = data.get("tool_response")
             url = re.search(r"github\.com/([\w.-]+/[\w.-]+)/pull/(\d+)", resp if isinstance(resp, str) else json.dumps(resp))
@@ -1959,8 +1988,8 @@ def _guardgithub_issue_checks(payload, raw):
 # --- #363: the close guard. A close goes through only on recorded evidence or an approved list. ---
 CLOSE_COMMENT_NOTE = (
     "House rules, this close is allowed: %s. Before or right after it, comment on issue #%d with that "
-    "evidence (the QA message and the merged pull request link, or the sweep approval and the replacing "
-    "issue), add the label `AjsAgent completed this` (`gh api repos/%s/issues/%d/labels -f "
+    "evidence (the label that allowed it, or the QA message and the merged pull request link, or the sweep "
+    "approval and the replacing issue), add the label `AjsAgent completed this` (`gh api repos/%s/issues/%d/labels -f "
     "\"labels[]=AjsAgent completed this\"`) and remove `in progress` (`gh api -X DELETE "
     "repos/%s/issues/%d/labels/in%%20progress`)."
 )
@@ -1970,10 +1999,100 @@ def _close_repo_match(a, b):
     return not a or not b or a.lower() == b.lower()
 
 
-def _close_check(repo, number, reason, state):
+CLOSE_CACHE_SECONDS = 60  # how long one read of a repo's open issues serves every close
+CLOSE_ISSUES_FILE_ENV = "HOUSE_RULES_CLOSE_ISSUES_FILE"  # tests: JSON {"owner/repo#n": {"labels": [...], "milestone": null}}
+_CLOSE_FACTS_JQ = "{labels: [.labels[].name], milestone: .milestone.number}"
+
+
+def _close_gh(args):
+    """The stdout of `gh <args>`; raises RuntimeError saying why when it fails."""
+    import subprocess
+    if not shutil.which("gh"):
+        raise RuntimeError("gh is not installed")
+    try:
+        proc = subprocess.run(["gh"] + args, capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("gh took longer than %d seconds" % LOOP_GH_SECONDS)
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip().splitlines()
+        raise RuntimeError(detail[0] if detail else "gh exited %d" % proc.returncode)
+    return proc.stdout
+
+
+def _close_issue_facts(repo, number, git_dir):
+    """(facts, problem): facts is {"labels": [names], "milestone": number or None} for issue `number` of `repo`
+    (the checkout's own repo when empty); problem is "" on success, else a sentence saying why GitHub could not
+    be read (facts None). One REST call lists the repo's open issues and is cached in
+    <git_dir>/house-rules-issue-cache.json for CLOSE_CACHE_SECONDS; an issue not in a fresh list is read alone."""
+    number = int(number)
+    if not repo:
+        repo, why = _origin_slug(os.path.dirname(os.path.abspath(git_dir)))
+        if not repo:
+            return None, why or "House rules could not tell which GitHub repo this is: the checkout has no GitHub origin."
+    stand_in = os.environ.get(CLOSE_ISSUES_FILE_ENV)
+    if stand_in:
+        try:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                row = json.load(f)["%s#%d" % (repo, number)]
+            return {"labels": [str(n) for n in row["labels"]], "milestone": row.get("milestone")}, ""
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            return None, "House rules could not read issue %s#%d from %s (%s)." % (repo, number, stand_in, exc)
+    path = os.path.join(git_dir, "house-rules-issue-cache.json")
+    key = repo.lower()
+    try:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+            if not isinstance(cache, dict):
+                cache = {}
+        except FileNotFoundError:
+            cache = {}
+        except ValueError:
+            cache = {}  # a damaged cache is replaced by the read below
+        entry = cache.get(key)
+        fresh = (isinstance(entry, dict) and isinstance(entry.get("issues"), dict)
+                 and 0 <= time.time() - float(entry.get("at", 0)) < CLOSE_CACHE_SECONDS)
+        if not fresh:
+            out = _close_gh(["api", "repos/%s/issues?state=open&per_page=100" % repo, "--paginate", "--jq",
+                             ".[] | {number, labels: [.labels[].name], milestone: .milestone.number}"])
+            issues = {}
+            for line in out.splitlines():
+                if line.strip():
+                    r = json.loads(line)
+                    issues[str(r["number"])] = {"labels": r["labels"], "milestone": r.get("milestone")}
+            entry = cache[key] = {"at": time.time(), "issues": issues}
+        if str(number) not in entry["issues"]:
+            one = json.loads(_close_gh(["api", "repos/%s/issues/%d" % (repo, number), "--jq", _CLOSE_FACTS_JQ]))
+            entry["issues"][str(number)] = {"labels": one["labels"], "milestone": one.get("milestone")}
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(cache, f)
+        row = entry["issues"][str(number)]
+        return {"labels": list(row["labels"]), "milestone": row["milestone"]}, ""
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
+        return None, "House rules could not read issue %s#%d from GitHub (%s)." % (repo, number, exc)
+
+
+COMPLETED_LABELS = ("ajsagent completed this", "claude completed this")
+
+
+def _close_check(repo, number, reason, state, git_dir=None):
+    ok, why = _close_records(repo, number, reason, state)
+    if ok or git_dir is None or (reason or "completed").strip().lower().replace(" ", "_") != "completed":
+        return ok, why
+    return _close_by_labels(repo, number, state, git_dir, why)
+
+
+def _close_records(repo, number, reason, state):
     """(allowed, reason_text) for closing issue `number` of `repo` with state reason `reason`
-    ("completed", "not_planned" or "" for none), from the design-loop `state` (#363)."""
+    ("completed", "not_planned" or "" for none), from the design-loop `state` (#363). When the QA and sweep
+    records do not allow it and `git_dir` is given, a completed close is also allowed by the issue's own
+    GitHub labels (#550): needs review / in review, or a completed label a person set; never in a milestone."""
     reason = (reason or "completed").strip().lower().replace(" ", "_")
+    if isinstance(state, dict) and any(isinstance(x, dict) and x.get("number") == number
+                                       and _close_repo_match(repo, x.get("repo", ""))
+                                       for x in state.get("close_approved") or []):
+        return True, "aj wrote \"Close approved: #%d\", so #%d may close whatever its labels or milestone" % (
+            number, number)  # #551: before any GitHub lookup
     if not _loop_enabled():  # #515: never demand evidence only a switched-off loop can record
         return True, "the design loop is off, so the QA and sweep records it keeps are not required"
     if not isinstance(state, dict):
@@ -2009,6 +2128,31 @@ def _close_check(repo, number, reason, state):
                    "named list" % number)
 
 
+def _close_by_labels(repo, number, state, git_dir, why):
+    """(allowed, text) from the issue's GitHub labels (#550), `why` being the QA/sweep refusal to keep in the text."""
+    facts, problem = _close_issue_facts(repo, number, git_dir)
+    if problem:
+        return False, "%s; and the labels could not be checked: %s" % (why, problem.rstrip("."))
+    if facts["milestone"]:
+        return False, ("%s; and #%d is in milestone %s, so it needs aj's \"Close approved: #%d\"" % (
+            why, number, facts["milestone"], number))
+    labels = facts["labels"]
+    low = {l.lower() for l in labels}
+    for want in ("needs review", "in review"):
+        if want in low:
+            return True, "#%d has the label `%s` and is in no milestone" % (number, want)
+    mine = any(isinstance(x, dict) and x.get("number") == number and _close_repo_match(repo, x.get("repo", ""))
+               for x in (state.get("self_completed") if isinstance(state, dict) else None) or [])
+    done = [l for l in labels if l.lower() in COMPLETED_LABELS]
+    if done and not mine:
+        return True, "#%d has the label `%s`, set by a person, and is in no milestone" % (number, done[0])
+    note = " (the completed label on it was added by the agent itself, which does not count)" if done else ""
+    return False, ("%s; and #%d has the labels %s%s, but a close needs `needs review`, `in review`, or `AjsAgent "
+                   "completed this` / `Claude completed this` set by a person, and no milestone. aj can write "
+                   "\"Close approved: #%d\"" % (why, number, ", ".join("`%s`" % l for l in labels) or "none",
+                                                note, number))
+
+
 def _close_forget(git_dir, repo, number):
     """Take `number` out of its closable entry (the entry goes once empty) and out of sweep."""
     state, problem = _loop_read(git_dir)
@@ -2030,6 +2174,10 @@ def _close_forget(git_dir, repo, number):
         n = len(state["sweep"])
         state["sweep"] = [x for x in state["sweep"] if not hit(x)]
         changed = changed or len(state["sweep"]) != n
+    if isinstance(state.get("close_approved"), list):
+        n = len(state["close_approved"])
+        state["close_approved"] = [x for x in state["close_approved"] if not hit(x)]
+        changed = changed or len(state["close_approved"]) != n
     if changed:
         _loop_write(git_dir, state)
 
@@ -2047,7 +2195,7 @@ def _close_decide(repo, number, reason, cwd):
     state, problem = _loop_read(git_dir)
     if problem:
         return False, "%s The close of #%d is refused." % (problem, number), None
-    ok, why = _close_check(repo, number, reason, state)
+    ok, why = _close_check(repo, number, reason, state, git_dir)
     if not ok:
         return False, "House rules, close guard: refused to close #%d: %s." % (number, why), None
     slug = repo or "<owner>/<repo>"
@@ -2088,6 +2236,31 @@ def _close_gh_decision(cmd, payload):
     repo, number, reason = _close_gh_parse(cmd)
     ok, text, ctx = _close_decide(repo, number, reason, _payload_cwd(payload))
     return ("allow", text, ctx) if ok else ("deny", text, None)
+
+
+_GH_MILESTONE_CLOSE_RE = re.compile(
+    _GH_PREFIX + r"api\b(?=[^\n]*(?:-X|--method)[=\s]+[\"']?PATCH)(?=[^\n]*milestones/\d+)"
+    r"(?=[^\n]*state\W{0,4}closed)", re.IGNORECASE)
+
+
+def _milestone_close_decision(cmd, payload):
+    """#551: a milestone close needs aj's "Close approved: milestone N"."""
+    m = re.search(r"(?:repos/([\w.-]+/[\w.-]+)/)?milestones/(\d+)", cmd)
+    repo, n = m.group(1) or "", int(m.group(2))
+    ask = 'Ask aj to write "Close approved: milestone %d".' % n
+    _, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return ("deny", "House rules, close guard: could not find the project's stage file, so closing "
+                "milestone %d is refused. %s" % (n, ask), None)
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return ("deny", "%s Closing milestone %d is refused. %s" % (problem, n, ask), None)
+    for x in (state.get("close_approved") or []) if isinstance(state, dict) else []:
+        if isinstance(x, dict) and x.get("milestone") == n and _close_repo_match(repo, x.get("repo", "")):
+            note = 'aj wrote "Close approved: milestone %d", so this milestone close is allowed.' % n
+            return ("allow", note, note)
+    return ("deny", "House rules, close guard: refused to close milestone %d: aj has not approved it. %s" % (n, ask),
+            None)
 
 
 def _issues_guard(subject, payload):
@@ -2143,6 +2316,8 @@ def _issues_guard(subject, payload):
         missing = clarity.missing_issue_sections(body)
         if missing:
             return ("deny", ISSUE_SECTIONS_DENY % ", ".join("\"%s\"" % m for m in missing), None)
+    if _GH_MILESTONE_CLOSE_RE.search(cmd):
+        return _milestone_close_decision(cmd, payload)
     if any(r.search(cmd) for r in _GH_ISSUE_CLOSE_RES):
         return _close_gh_decision(cmd, payload)
     return None

@@ -467,10 +467,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.82.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.83.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.82.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.83.0",
     "rules section + detail file + version",
 )
 
@@ -1575,6 +1575,44 @@ _cg_cases.append(("a wrapped GitHub tool close reply removes the issue from the 
 for _t, _ok in _cg_cases:
     report("PASS" if _ok else "FAIL", "close guard: " + _t)
 
+# --- #550: with no QA record, a close is allowed by the issue's own GitHub labels ---
+_fl_file = os.path.join(_FIXTURE_ROOT, "close-facts.json")
+_fl_rows = {"o/r#31": {"labels": ["needs review"], "milestone": None},
+            "o/r#32": {"labels": ["In Review"], "milestone": None},
+            "o/r#33": {"labels": ["in progress"], "milestone": None},
+            "o/r#34": {"labels": ["needs review"], "milestone": 3},
+            "o/r#35": {"labels": ["AjsAgent completed this"], "milestone": None},
+            "o/r#36": {"labels": ["AjsAgent completed this"], "milestone": None}}
+json.dump(_fl_rows, open(_fl_file, "w", encoding="utf-8"))
+_fl_env = _iss_env(HOUSE_RULES_LOOP="on", HOUSE_RULES_CLOSE_ISSUES_FILE=_fl_file)
+_fl_mc = lambda n: {"method": "update", "owner": "o", "repo": "r", "issue_number": n, "state": "closed", "state_reason": "completed"}
+_cl_set({"stage": "done", "self_completed": [{"repo": "o/r", "number": 36}]})
+_fl = {n: (_cg_gh("gh issue close %d -R o/r" % n, env=_fl_env), _cg_mcp(_fl_mc(n), env=_fl_env)) for n in (31, 32, 33, 34, 35, 36, 37)}
+_fl_cases = [
+    ("needs review closes", _iss_decision(_fl[31][0]) == "allow"),
+    ("in review closes, whatever the capitals", _iss_decision(_fl[32][0]) == "allow"),
+    ("in progress only is refused, naming the labels and Close approved",
+     _iss_decision(_fl[33][0]) == "deny" and "`in progress`" in _iss_reason(_fl[33][0]) and "Close approved: #33" in _iss_reason(_fl[33][0])),
+    ("a milestone issue with needs review is refused, naming the milestone",
+     _iss_decision(_fl[34][0]) == "deny" and "milestone 3" in _iss_reason(_fl[34][0])),
+    ("a completed label set by a person closes", _iss_decision(_fl[35][0]) == "allow"),
+    ("a completed label the agent added itself is refused", _iss_decision(_fl[36][0]) == "deny"
+     and "added by the agent" in _iss_reason(_fl[36][0])),
+    ("a GitHub read failure is refused with the reason",
+     _iss_decision(_fl[37][0]) == "deny" and "could not read issue o/r#37" in _iss_reason(_fl[37][0])),
+    ("the gh route and the MCP route give the same answer",
+     all(_iss_decision(a) == _iss_decision(b) for a, b in _fl.values())),
+    ("an allowed label close carries the comment and label instruction",
+     "AjsAgent completed this" in _cg_ctx(_fl[31][0]) and "needs review" in _cg_ctx(_fl[31][0])),
+]
+_fl_post = run_hook("autosave", json.dumps({"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "cg",
+    "cwd": _cl_dir, "tool_input": {"command": "gh issue edit 38 -R o/r --add-label 'Claude completed this'"},
+    "tool_response": {"stdout": "https://github.com/o/r/issues/38", "stderr": "", "exit_code": 0}}), env=_cl_env)
+_fl_cases.append(("a completed label the agent adds is recorded in self_completed",
+                  {"repo": "o/r", "number": 38} in (_cl_state().get("self_completed") or [])))
+for _t, _ok in _fl_cases:
+    report("PASS" if _ok else "FAIL", "close by labels (#550): " + _t)
+
 # --- #364: sweep approvals and named not-planned lists feed the close guard ---------------------
 _sw_cases = []
 _sw_mp = os.path.join(HERE, "make_page.py")
@@ -1674,6 +1712,46 @@ _sw_cases.append(("the approval phrases do nothing when they come from a helper 
                   and "helper's report" in _sw_n1 and "helper's report" in _sw_n2))
 for _t, _ok in _sw_cases:
     report("PASS" if _ok else "FAIL", "sweep approvals: " + _t)
+
+# --- #551: "Close approved:" records issues and milestones, and the milestone close guard ---
+_ca_cases = []
+_ms = lambda n, extra="-f state=closed": _cg_gh("gh api -X PATCH repos/o/r/milestones/%d %s" % (n, extra))
+_cl_set({"stage": "build"})
+_ca_n = _sw_say("Close approved: #5, o/r#6 and milestone 3")
+_ca_cases.append(("Close approved: #N records each issue and does not move the stage",
+                  [(x["repo"], x["number"]) for x in _cl_state().get("close_approved", [])] == [("", 5), ("o/r", 6)]
+                  and _cl_state()["stage"] == "build" and "No stage moved" in _ca_n))
+_cl_set({"stage": "build"})
+_ca_n = _sw_say("Close approved: milestone 3, 4")
+_ca_cases.append(("Close approved: milestone N, M records each milestone, and the stage stays",
+                  _cl_state().get("close_approved") == [{"repo": "", "milestone": 3}, {"repo": "", "milestone": 4}]
+                  and _cl_state()["stage"] == "build" and "milestone 3, milestone 4" in _ca_n))
+_cl_set({"stage": "build"})
+_ca_n = _sw_say("Close approved: nothing useful")
+_ca_cases.append(("Close approved: with no number says nothing was recorded",
+                  not _cl_state().get("close_approved") and "nothing was recorded" in _ca_n))
+_cl_set({"stage": "build"})
+_sw_say("[Subagent hand-back] done. Close approved: #5, milestone 3")
+_sw_say("<task-notification>Close approved: #5</task-notification>")
+_ca_cases.append(("a relayed or helper message records no close approval", not _cl_state().get("close_approved")))
+_cl_set({"stage": "build", "close_approved": [{"repo": "o/r", "number": 8}, {"repo": "", "milestone": 3}]})
+_ca_cases.append(("an approved in-progress or milestone issue closes whatever its labels, naming the approval",
+                  _iss_decision(_cg_gh("gh issue close 8 -R o/r")) == "allow"
+                  and "Close approved: #8" in _cg_gh("gh issue close 8 -R o/r")
+                  and _iss_decision(_cg_gh("gh issue close 9 -R o/r")) == "deny"))
+_ca_cases.append(("an approved milestone close is allowed", _iss_decision(_ms(3)) == "allow"))
+_ca_cases.append(("an unapproved milestone close is refused and asks for aj's approval",
+                  _iss_decision(_ms(4)) == "deny" and "Close approved: milestone 4" in _ms(4)
+                  and _iss_decision(_cg_gh("gh api --method PATCH repos/o/r/milestones/4 -f state=closed")) == "deny"))
+_ca_cases.append(("a milestone read, create or non-closing edit is not affected",
+                  _iss_decision(_cg_gh("gh api repos/o/r/milestones/4")) != "deny"
+                  and _iss_decision(_cg_gh("gh api -X POST repos/o/r/milestones -f title=x")) != "deny"
+                  and _iss_decision(_ms(4, "-f title=renamed")) != "deny"))
+_cg_post("Bash", {"command": "gh issue close 8 -R o/r"}, {"stdout": "Closed issue #8", "stderr": ""})
+_ca_cases.append(("after a successful close the issue leaves close_approved, the milestone stays",
+                  _cl_state().get("close_approved") == [{"repo": "", "milestone": 3}]))
+for _t, _ok in _ca_cases:
+    report("PASS" if _ok else "FAIL", "close approved: " + _t)
 
 # --- #307: every approval in one message is read, in stage order -------------------------------
 # Replays incidents 1 and 2 of #303: aj sent "Design approved: importer.  Build plan approved: Importer" and
@@ -3567,6 +3645,67 @@ finally:
         os.environ["HOUSE_RULES_LOOP"] = _ss_env_was
 report("PASS" if _ss_close[0] and "loop is off" in _ss_close[1] else "FAIL",
        "speed switches (#515): with the design loop off, closing an issue needs no QA record")
+
+
+# #549: one lookup per group of closes. A fake gh logs each call and prints a canned list.
+import json as _cf_json  # noqa: E402
+import tempfile as _cf_tmp  # noqa: E402
+import time as _cf_time  # noqa: E402
+_cf_dir = _cf_tmp.mkdtemp()
+_cf_bin = os.path.join(_cf_dir, "bin")
+os.makedirs(_cf_bin)
+_cf_log = os.path.join(_cf_dir, "gh.log")
+with open(os.path.join(_cf_bin, "gh"), "w", encoding="utf-8") as _f:
+    _f.write("#!/bin/sh\necho \"$*\" >> \"%s\"\n[ -n \"$FAKE_GH_FAIL\" ] && { echo boom >&2; exit 1; }\n"
+             "case \"$2\" in\n*issues/99) echo '{\"labels\":[\"needs review\"],\"milestone\":7}';;\n"
+             "*) for n in 1 2 3 4 5 6 7 8 9 10; do echo \"{\\\"number\\\":$n,\\\"labels\\\":[\\\"bug\\\"],"
+             "\\\"milestone\\\":null}\"; done;;\nesac\n" % _cf_log)
+os.chmod(os.path.join(_cf_bin, "gh"), 0o755)
+_cf_git = os.path.join(_cf_dir, "git")
+os.makedirs(_cf_git)
+_cf_cache = os.path.join(_cf_git, "house-rules-issue-cache.json")
+_cf_path, _cf_stand = os.environ["PATH"], os.environ.pop("HOUSE_RULES_CLOSE_ISSUES_FILE", None)
+os.environ["PATH"] = _cf_bin + os.pathsep + _cf_path
+
+
+def _cf_calls():
+    return len(open(_cf_log, encoding="utf-8").read().splitlines()) if os.path.exists(_cf_log) else 0
+
+
+try:
+    _cf_res = [_u2b_dl._close_issue_facts("O/R", n, _cf_git) for n in range(1, 11)]
+    report("PASS" if _cf_calls() == 1 and all(r[0] == {"labels": ["bug"], "milestone": None} and r[1] == "" for r in _cf_res)
+           else "FAIL", "close facts (#549): ten lookups inside 60 seconds make exactly one gh call")
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+    _cf_data["o/r"]["at"] -= 61
+    _cf_json.dump(_cf_data, open(_cf_cache, "w", encoding="utf-8"))
+    _u2b_dl._close_issue_facts("O/R", 3, _cf_git)
+    report("PASS" if _cf_calls() == 2 else "FAIL", "close facts (#549): a cache older than 60 seconds makes a new call")
+    _cf_one = _u2b_dl._close_issue_facts("O/R", 99, _cf_git)
+    report("PASS" if _cf_calls() == 3 and _cf_one == ({"labels": ["needs review"], "milestone": 7}, "") else "FAIL",
+           "close facts (#549): an issue missing from the list is read alone, once")
+    _u2b_dl._close_issue_facts("O/R", 99, _cf_git)
+    report("PASS" if _cf_calls() == 3 else "FAIL", "close facts (#549): the single-issue read is cached")
+    os.remove(_cf_cache)
+    os.environ["FAKE_GH_FAIL"] = "1"
+    _cf_bad = _u2b_dl._close_issue_facts("O/R", 1, _cf_git)
+    report("PASS" if _cf_bad[0] is None and "boom" in _cf_bad[1] else "FAIL",
+           "close facts (#549): a failing gh gives a problem sentence and no facts")
+finally:
+    os.environ.pop("FAKE_GH_FAIL", None)
+    os.environ["PATH"] = _cf_path
+_cf_file = os.path.join(_cf_dir, "issues.json")
+_cf_json.dump({"o/r#5": {"labels": ["in review"], "milestone": None}}, open(_cf_file, "w", encoding="utf-8"))
+os.environ["HOUSE_RULES_CLOSE_ISSUES_FILE"] = _cf_file
+try:
+    _cf_hit = _u2b_dl._close_issue_facts("o/r", 5, _cf_git)
+    _cf_miss = _u2b_dl._close_issue_facts("o/r", 6, _cf_git)
+finally:
+    os.environ.pop("HOUSE_RULES_CLOSE_ISSUES_FILE", None)
+    if _cf_stand is not None:
+        os.environ["HOUSE_RULES_CLOSE_ISSUES_FILE"] = _cf_stand
+report("PASS" if _cf_hit == ({"labels": ["in review"], "milestone": None}, "") and _cf_miss[0] is None and _cf_miss[1]
+       else "FAIL", "close facts (#549): the stand-in file answers, and a missing key reads as a failed read")
 
 
 finish()

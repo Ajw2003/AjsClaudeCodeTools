@@ -1,0 +1,146 @@
+{
+  "title": "Free Issue Closing",
+  "eyebrow": "Proposal · the agent closes reviewed or completed issues on its own, except milestone ones",
+  "pageType": "proposal",
+  "replyPrefix": "Free issue closing answers",
+  "reply": "",
+  "short": {
+    "lead": "Today the close guard refuses to close an issue unless you wrote \"QA passed\" for its feature and a pull request merged after, or you approved it on a sweep page. This change lets the agent close an issue on its own when it carries one of the labels \"needs review\", \"in review\" or a completed label (\"AjsAgent completed this\" or \"Claude completed this\"). Every close adds \"AjsAgent completed this\" to mark it as closed by an agent. An issue with none of those labels, an issue in a GitHub milestone, or a milestone itself still needs your written approval.",
+    "hint": "Tap a row to see what changes and what it needs from you.",
+    "key": [
+      [
+        "Changes on its own",
+        ""
+      ],
+      [
+        "Still needs you",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "check",
+        "Reviewed issue",
+        "Closes freely",
+        "",
+        "An issue labelled \"needs review\", \"in review\" or a completed label closes without asking. The close adds \"AjsAgent completed this\".",
+        "Nothing from you."
+      ],
+      [
+        "lock",
+        "Other issue",
+        "Needs \"Close approved: #N\"",
+        "you",
+        "An issue with none of those labels (for example one still \"in progress\") is refused until you write \"Close approved: #N\".",
+        "One message; several numbers can share it."
+      ],
+      [
+        "lock",
+        "Milestone issue",
+        "Needs \"Close approved: #N\"",
+        "you",
+        "An issue attached to any GitHub milestone is refused until you approve it, whatever its labels.",
+        "One message."
+      ],
+      [
+        "lock",
+        "Milestone itself",
+        "Needs \"Close approved: milestone N\"",
+        "you",
+        "Closing a milestone (gh api ... milestones/N with state closed) is refused until you write \"Close approved: milestone N\".",
+        "One message."
+      ],
+      [
+        "file",
+        "Sweep page",
+        "No longer required",
+        "",
+        "The sweep page and \"Close as not planned\" still work if you use them, but nothing needs them any more.",
+        "Nothing from you."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "chg",
+      "Close guard (scripts/house_rules/design_loop.py, _close_check and _close_decide)",
+      "Decides whether a close goes through.",
+      [
+        "Allows a close only with a QA pass plus a merge, or an approved sweep or named list.",
+        "Allows a close of an issue labelled needs review, in review or completed, with no milestone. Anything else, a milestone issue or a milestone needs your \"Close approved\" message."
+      ],
+      "The existing QA, merge and sweep records stay in the stage file; they simply stop being required."
+    ],
+    [
+      "chg",
+      "Rule text (rules/house-rules.md and rules/detail/issue-workflow.md rule 6, docs/4-systems/issue-closing.md)",
+      "What the rule tells the agent.",
+      [
+        "\"I close an issue only after the user's QA pass and a merge, or on a list they approved.\"",
+        "\"I close an issue freely when it is labelled needs review, in review or completed, and label it AjsAgent completed this; any other issue, an issue in a GitHub milestone, or the milestone itself needs the user's Close approved message.\""
+      ],
+      "The pull request rule stays: a body still says Refs #N, never Closes #N, so GitHub cannot close a milestone issue behind your back at merge."
+    ],
+    [
+      "chg",
+      "Checks (scripts/checks/design_loop.py) and CHANGELOG.md",
+      "Proves the new behaviour.",
+      [
+        "Cases prove a close without QA is refused.",
+        "Cases prove a needs-review, in-review or completed issue closes, an in-progress or unlabelled one is refused until approved, a milestone issue is refused until approved, and a milestone close is refused until approved."
+      ],
+      "verify.py must still exit 0."
+    ]
+  ],
+  "choices": [
+    [
+      "lookup",
+      "How should the guard read an issue's labels and milestone?",
+      [
+        [
+          "A",
+          "Ask GitHub once per close (gh api, 5 second limit); refuse the close if GitHub cannot be reached",
+          1,
+          "Always current. Breaks today's promise that the guard makes no network call."
+        ],
+        [
+          "B",
+          "Remember labels and milestone when the agent creates or edits an issue, and read only that record",
+          0,
+          "No network call, but misses labels or milestones you change on the GitHub website."
+        ]
+      ],
+      "With B, a milestone you add on the website would not be seen, so that issue could close without asking you."
+    ],
+    [
+      "selfmark",
+      "Should a completed label the agent added itself count?",
+      [
+        [
+          "A",
+          "No: a completed label counts only if it was on the issue before this session added it",
+          1,
+          "Stops the agent labelling an unfinished issue completed just to close it. Needs one more GitHub lookup (the issue's label history)."
+        ],
+        [
+          "B",
+          "Yes: any completed label counts",
+          0,
+          "Simpler, but the agent could add the label and then close straight away."
+        ]
+      ],
+      "\"needs review\" and \"in review\" are set by the design loop when work is handed to you, so they are not affected by this choice."
+    ]
+  ],
+  "wrapup": {
+    "summary": "The agent closes needs-review, in-review or completed issues on its own and labels them AjsAgent completed this; everything else, milestone issues and milestones still need your approval.",
+    "changing": "The close guard, the closing rule text in three docs, new checks and a changelog line.",
+    "blocking": "Your answers to the two choices.",
+    "next": "Pick an answer for each of the two choices, then send \"Design approved: free issue closing\" with your picks (for example 1A 2A).",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
+  },
+  "approval": "Design approved: free issue closing"
+}
