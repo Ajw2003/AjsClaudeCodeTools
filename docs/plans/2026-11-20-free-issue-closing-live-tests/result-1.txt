@@ -1,0 +1,8 @@
+plugin under test: /tmp/livefic/repo/claude-house-rules/plugins/house-rules version 2.83.0
+session plugins: [{"name": "house-rules", "path": "/tmp/livefic/repo/claude-house-rules/plugins/house-rules", "source": "house-rules@inline", "version": "2.83.0"}]
+FAIL reviewed-closes: #520 before {"labels": ["bug", "AjsAgent created this", "needs review"], "state": "open"}, after {"labels": ["bug", "AjsAgent created this", "needs review"], "state": "open"} (exit 1)
+    reply: Not logged in · Please run /login
+FAIL in-progress-refused: #548 after {"labels": ["Feature", "AjsAgent created this", "needs review"], "state": "open"}, 0 refusal(s) naming in progress (exit 1)
+    reply: Not logged in · Please run /login
+RESULT: FAIL - 0 of 2 live tests passed
+exit 1
