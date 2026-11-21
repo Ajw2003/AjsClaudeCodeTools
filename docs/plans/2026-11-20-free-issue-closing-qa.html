@@ -256,7 +256,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> On your PC, in the repo folder, run: python tools/use_branch.py AjsAgent/free-issue-closing</label></li><li><label><input type="checkbox"> Start a new Claude Code session in the repo and type: Close issue #520 if the house rules allow it. Expect it to close without asking.</label></li><li><label><input type="checkbox"> Type: Close issue #548. Expect a refusal naming its in progress label.</label></li><li><label><input type="checkbox"> Run python tools/use_branch.py main to go back.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: free issue closing", or send "QA failed: free issue closing" with what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><p data-basic="unverified">Your test in a real session: my own session runs the installed 2.82.0 guard, not the branch build, so I tested the branch hook directly instead.</p></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><p data-basic="unverified">An agent actually closing #520 and labelling it: headless sessions cannot sign in inside this cloud sandbox, and this session's installed 2.82.0 guard refuses the close, which I will not get around.</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -311,6 +311,14 @@ const PAGE = {
         "Nothing from you."
       ],
       [
+        "flask",
+        "Blocked",
+        "Session test could not sign in",
+        "",
+        "Headless Claude Code sessions started inside this cloud sandbox cannot sign in (\"Not logged in\", and \"Authentication error\" for a one-line session), so the agent-closes-#520 test did not run. Nothing on GitHub changed. Script and result: docs/plans/2026-11-20-free-issue-closing-live-tests/.",
+        "Nothing from you."
+      ],
+      [
         "hand",
         "Your test",
         "Ask a branch session to close a reviewed issue",
@@ -333,7 +341,7 @@ const PAGE = {
     [
       "chg",
       "Rule text and docs",
-      "rules/house-rules.md, rule 6 in issue-workflow.md, docs/4-systems/issue-closing.md, CHANGELOG.md, plugin 2.83.0.",
+      "rules/house-rules.md, rule 6 in issue-workflow.md, docs/4-systems/issue-closing.md, CHANGELOG.md, plugin 2.83.0. Pull request #553 is already open.",
       null,
       "Pull request #553 to main, body says Refs #548 to #552.",
       null,
@@ -342,14 +350,14 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "16 files, +1797 −22",
+      "20 files, +5397 −22",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          1,
+          2698,
           1,
           [
             [
@@ -492,6 +500,30 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/2026-11-20-free-issue-closing-live-tests/live_free_issue_closing.py",
+          94,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-20-free-issue-closing-live-tests/result-1.txt",
+          13,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/2026-11-20-free-issue-closing-plan.html",
           522,
           0,
@@ -506,6 +538,30 @@ const PAGE = {
         [
           "docs/plans/2026-11-20-free-issue-closing-plan.page.json",
           110,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-20-free-issue-closing-qa.html",
+          710,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-20-free-issue-closing-qa.page.json",
+          86,
           0,
           [
             [
@@ -546,7 +602,7 @@ const PAGE = {
       "Still unverified",
       "1 things not yet proven",
       null,
-      "Your test in a real session: my own session runs the installed 2.82.0 guard, not the branch build, so I tested the branch hook directly instead.",
+      "An agent actually closing #520 and labelling it: headless sessions cannot sign in inside this cloud sandbox, and this session's installed 2.82.0 guard refuses the close, which I will not get around.",
       null,
       null
     ]
@@ -555,7 +611,7 @@ const PAGE = {
     "feature": "free issue closing",
     "base": "origin/main",
     "unverified": [
-      "Your test in a real session: my own session runs the installed 2.82.0 guard, not the branch build, so I tested the branch hook directly instead."
+      "An agent actually closing #520 and labelling it: headless sessions cannot sign in inside this cloud sandbox, and this session's installed 2.82.0 guard refuses the close, which I will not get around."
     ],
     "files": {}
   },

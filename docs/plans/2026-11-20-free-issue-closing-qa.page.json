@@ -33,6 +33,14 @@
     "Nothing from you."
    ],
    [
+    "flask",
+    "Blocked",
+    "Session test could not sign in",
+    "",
+    "Headless Claude Code sessions started inside this cloud sandbox cannot sign in (\"Not logged in\", and \"Authentication error\" for a one-line session), so the agent-closes-#520 test did not run. Nothing on GitHub changed. Script and result: docs/plans/2026-11-20-free-issue-closing-live-tests/.",
+    "Nothing from you."
+   ],
+   [
     "hand",
     "Your test",
     "Ask a branch session to close a reviewed issue",
@@ -55,7 +63,7 @@
   [
    "chg",
    "Rule text and docs",
-   "rules/house-rules.md, rule 6 in issue-workflow.md, docs/4-systems/issue-closing.md, CHANGELOG.md, plugin 2.83.0.",
+   "rules/house-rules.md, rule 6 in issue-workflow.md, docs/4-systems/issue-closing.md, CHANGELOG.md, plugin 2.83.0. Pull request #553 is already open.",
    null,
    "Pull request #553 to main, body says Refs #548 to #552.",
    null,
@@ -66,7 +74,7 @@
   "feature": "free issue closing",
   "base": "origin/main",
   "unverified": [
-   "Your test in a real session: my own session runs the installed 2.82.0 guard, not the branch build, so I tested the branch hook directly instead."
+   "An agent actually closing #520 and labelling it: headless sessions cannot sign in inside this cloud sandbox, and this session's installed 2.82.0 guard refuses the close, which I will not get around."
   ],
   "files": {}
  },

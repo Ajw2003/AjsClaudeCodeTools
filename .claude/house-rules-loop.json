@@ -2693,6 +2693,6 @@
       ]
     ]
   },
-  "held": false,
+  "held": true,
   "qa_page": "docs/plans/2026-11-20-free-issue-closing-qa.html"
 }
