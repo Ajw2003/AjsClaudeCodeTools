@@ -3525,3 +3525,23 @@ turn of a Fable session in full mode; a typed switch is saved per repo, so it is
 
 **Status.** Standing. Supersedes choice 2 ("light by default only for Fable") of
 "Design approved: Speed switches 1A 2* 3A 4* 5A 6A" above.
+
+## 2026-11-20 — Free issue closing
+
+**Context.** The close guard (`docs/4-systems/issue-closing.md`) let the agent close an issue only
+after aj's "QA passed" and a merge, or on an approved sweep page. aj found that too slow for
+clearing finished work in bulk.
+
+**Decision.** aj wrote "Design approved: free issue closing 1* 2A" on the proposal page
+`docs/plans/2026-11-20-free-issue-closing.html`. The agent closes an issue on its own when the
+issue carries `needs review`, `in review` or a completed label, and marks it `AjsAgent completed
+this`. Any other issue, any issue in a GitHub milestone, and a milestone itself need aj's "Close
+approved" message. 1, aj's own answer: the guard asks GitHub, but once per group of closes, so a
+mass close costs one lookup, not one per issue. 2A: a completed label the agent added itself does
+not count.
+
+**Why.** Issues that already say they are reviewed or done need no second sign-off; milestones mark
+larger goals aj wants to sign off personally.
+
+**Status.** Standing once built. Supersedes rule 6's "QA pass and a merge, or an approved list"
+requirement in `rules/detail/issue-workflow.md`.

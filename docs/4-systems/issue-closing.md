@@ -89,3 +89,28 @@ no conversion is needed. Checks: "per-feature issues" in `scripts/checks/design_
 
 Step 2's issues (#340, #357 to #360) close through the next sweep page (answer 2A).
 
+
+## Planned: free issue closing
+
+Approved 2026-11-20 ("Design approved: free issue closing 1* 2A"; `docs/6-decisions/Decisions.md`).
+Proposal page `docs/plans/2026-11-20-free-issue-closing.html`.
+
+**The new close rule.** `_close_check` (`scripts/house_rules/design_loop.py`) allows a close when
+the issue is in no GitHub milestone and carries `needs review`, `in review`, `AjsAgent completed
+this` or `Claude completed this`. A completed label the agent added in this repo (recorded by the
+existing label-change hook into the stage file as `self_completed`) does not count. Anything else is
+refused unless aj wrote "Close approved: #N" for it, recorded in the stage file as `close_approved`.
+The QA-and-merge and sweep records still allow a close when present; they are no longer required.
+
+**One lookup per group (aj's answer to choice 1).** The guard reads the repo's open issues with one
+`gh api repos/O/R/issues?state=open --paginate` call (5 second limit) and keeps the labels and
+milestone of each in `.git/house-rules-issue-cache.json` for 60 seconds. Every close in that window
+reads the cache, so a mass close makes one call. An issue missing from the list is read alone. When
+GitHub cannot be read, the close is refused and the refusal says why. Tests point
+`HOUSE_RULES_CLOSE_ISSUES_FILE` at a JSON file standing in for GitHub.
+
+**Milestones.** A close of a milestone (`gh api -X PATCH repos/O/R/milestones/N` with state closed)
+is refused unless aj wrote "Close approved: milestone N".
+
+**After a close.** The allowed close tells the agent to add `AjsAgent completed this` and remove
+`in progress`, as today.
