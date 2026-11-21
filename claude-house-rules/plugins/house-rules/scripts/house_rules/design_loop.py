@@ -1970,6 +1970,79 @@ def _close_repo_match(a, b):
     return not a or not b or a.lower() == b.lower()
 
 
+CLOSE_CACHE_SECONDS = 60  # how long one read of a repo's open issues serves every close
+CLOSE_ISSUES_FILE_ENV = "HOUSE_RULES_CLOSE_ISSUES_FILE"  # tests: JSON {"owner/repo#n": {"labels": [...], "milestone": null}}
+_CLOSE_FACTS_JQ = "{labels: [.labels[].name], milestone: .milestone.number}"
+
+
+def _close_gh(args):
+    """The stdout of `gh <args>`; raises RuntimeError saying why when it fails."""
+    import subprocess
+    if not shutil.which("gh"):
+        raise RuntimeError("gh is not installed")
+    try:
+        proc = subprocess.run(["gh"] + args, capture_output=True, text=True, timeout=LOOP_GH_SECONDS)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("gh took longer than %d seconds" % LOOP_GH_SECONDS)
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip().splitlines()
+        raise RuntimeError(detail[0] if detail else "gh exited %d" % proc.returncode)
+    return proc.stdout
+
+
+def _close_issue_facts(repo, number, git_dir):
+    """(facts, problem): facts is {"labels": [names], "milestone": number or None} for issue `number` of `repo`
+    (the checkout's own repo when empty); problem is "" on success, else a sentence saying why GitHub could not
+    be read (facts None). One REST call lists the repo's open issues and is cached in
+    <git_dir>/house-rules-issue-cache.json for CLOSE_CACHE_SECONDS; an issue not in a fresh list is read alone."""
+    number = int(number)
+    if not repo:
+        repo, why = _origin_slug(os.path.dirname(os.path.abspath(git_dir)))
+        if not repo:
+            return None, why or "House rules could not tell which GitHub repo this is: the checkout has no GitHub origin."
+    stand_in = os.environ.get(CLOSE_ISSUES_FILE_ENV)
+    if stand_in:
+        try:
+            with open(stand_in, "r", encoding="utf-8") as f:
+                row = json.load(f)["%s#%d" % (repo, number)]
+            return {"labels": [str(n) for n in row["labels"]], "milestone": row.get("milestone")}, ""
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            return None, "House rules could not read issue %s#%d from %s (%s)." % (repo, number, stand_in, exc)
+    path = os.path.join(git_dir, "house-rules-issue-cache.json")
+    key = repo.lower()
+    try:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+            if not isinstance(cache, dict):
+                cache = {}
+        except FileNotFoundError:
+            cache = {}
+        except ValueError:
+            cache = {}  # a damaged cache is replaced by the read below
+        entry = cache.get(key)
+        fresh = (isinstance(entry, dict) and isinstance(entry.get("issues"), dict)
+                 and 0 <= time.time() - float(entry.get("at", 0)) < CLOSE_CACHE_SECONDS)
+        if not fresh:
+            out = _close_gh(["api", "repos/%s/issues?state=open&per_page=100" % repo, "--paginate", "--jq",
+                             ".[] | {number, labels: [.labels[].name], milestone: .milestone.number}"])
+            issues = {}
+            for line in out.splitlines():
+                if line.strip():
+                    r = json.loads(line)
+                    issues[str(r["number"])] = {"labels": r["labels"], "milestone": r.get("milestone")}
+            entry = cache[key] = {"at": time.time(), "issues": issues}
+        if str(number) not in entry["issues"]:
+            one = json.loads(_close_gh(["api", "repos/%s/issues/%d" % (repo, number), "--jq", _CLOSE_FACTS_JQ]))
+            entry["issues"][str(number)] = {"labels": one["labels"], "milestone": one.get("milestone")}
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(cache, f)
+        row = entry["issues"][str(number)]
+        return {"labels": list(row["labels"]), "milestone": row["milestone"]}, ""
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
+        return None, "House rules could not read issue %s#%d from GitHub (%s)." % (repo, number, exc)
+
+
 def _close_check(repo, number, reason, state):
     """(allowed, reason_text) for closing issue `number` of `repo` with state reason `reason`
     ("completed", "not_planned" or "" for none), from the design-loop `state` (#363)."""

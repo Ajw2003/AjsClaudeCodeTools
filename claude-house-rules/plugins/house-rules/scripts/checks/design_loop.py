@@ -3569,4 +3569,65 @@ report("PASS" if _ss_close[0] and "loop is off" in _ss_close[1] else "FAIL",
        "speed switches (#515): with the design loop off, closing an issue needs no QA record")
 
 
+# #549: one lookup per group of closes. A fake gh logs each call and prints a canned list.
+import json as _cf_json  # noqa: E402
+import tempfile as _cf_tmp  # noqa: E402
+import time as _cf_time  # noqa: E402
+_cf_dir = _cf_tmp.mkdtemp()
+_cf_bin = os.path.join(_cf_dir, "bin")
+os.makedirs(_cf_bin)
+_cf_log = os.path.join(_cf_dir, "gh.log")
+with open(os.path.join(_cf_bin, "gh"), "w", encoding="utf-8") as _f:
+    _f.write("#!/bin/sh\necho \"$*\" >> \"%s\"\n[ -n \"$FAKE_GH_FAIL\" ] && { echo boom >&2; exit 1; }\n"
+             "case \"$2\" in\n*issues/99) echo '{\"labels\":[\"needs review\"],\"milestone\":7}';;\n"
+             "*) for n in 1 2 3 4 5 6 7 8 9 10; do echo \"{\\\"number\\\":$n,\\\"labels\\\":[\\\"bug\\\"],"
+             "\\\"milestone\\\":null}\"; done;;\nesac\n" % _cf_log)
+os.chmod(os.path.join(_cf_bin, "gh"), 0o755)
+_cf_git = os.path.join(_cf_dir, "git")
+os.makedirs(_cf_git)
+_cf_cache = os.path.join(_cf_git, "house-rules-issue-cache.json")
+_cf_path, _cf_stand = os.environ["PATH"], os.environ.pop("HOUSE_RULES_CLOSE_ISSUES_FILE", None)
+os.environ["PATH"] = _cf_bin + os.pathsep + _cf_path
+
+
+def _cf_calls():
+    return len(open(_cf_log, encoding="utf-8").read().splitlines()) if os.path.exists(_cf_log) else 0
+
+
+try:
+    _cf_res = [_u2b_dl._close_issue_facts("O/R", n, _cf_git) for n in range(1, 11)]
+    report("PASS" if _cf_calls() == 1 and all(r[0] == {"labels": ["bug"], "milestone": None} and r[1] == "" for r in _cf_res)
+           else "FAIL", "close facts (#549): ten lookups inside 60 seconds make exactly one gh call")
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+    _cf_data["o/r"]["at"] -= 61
+    _cf_json.dump(_cf_data, open(_cf_cache, "w", encoding="utf-8"))
+    _u2b_dl._close_issue_facts("O/R", 3, _cf_git)
+    report("PASS" if _cf_calls() == 2 else "FAIL", "close facts (#549): a cache older than 60 seconds makes a new call")
+    _cf_one = _u2b_dl._close_issue_facts("O/R", 99, _cf_git)
+    report("PASS" if _cf_calls() == 3 and _cf_one == ({"labels": ["needs review"], "milestone": 7}, "") else "FAIL",
+           "close facts (#549): an issue missing from the list is read alone, once")
+    _u2b_dl._close_issue_facts("O/R", 99, _cf_git)
+    report("PASS" if _cf_calls() == 3 else "FAIL", "close facts (#549): the single-issue read is cached")
+    os.remove(_cf_cache)
+    os.environ["FAKE_GH_FAIL"] = "1"
+    _cf_bad = _u2b_dl._close_issue_facts("O/R", 1, _cf_git)
+    report("PASS" if _cf_bad[0] is None and "boom" in _cf_bad[1] else "FAIL",
+           "close facts (#549): a failing gh gives a problem sentence and no facts")
+finally:
+    os.environ.pop("FAKE_GH_FAIL", None)
+    os.environ["PATH"] = _cf_path
+_cf_file = os.path.join(_cf_dir, "issues.json")
+_cf_json.dump({"o/r#5": {"labels": ["in review"], "milestone": None}}, open(_cf_file, "w", encoding="utf-8"))
+os.environ["HOUSE_RULES_CLOSE_ISSUES_FILE"] = _cf_file
+try:
+    _cf_hit = _u2b_dl._close_issue_facts("o/r", 5, _cf_git)
+    _cf_miss = _u2b_dl._close_issue_facts("o/r", 6, _cf_git)
+finally:
+    os.environ.pop("HOUSE_RULES_CLOSE_ISSUES_FILE", None)
+    if _cf_stand is not None:
+        os.environ["HOUSE_RULES_CLOSE_ISSUES_FILE"] = _cf_stand
+report("PASS" if _cf_hit == ({"labels": ["in review"], "milestone": None}, "") and _cf_miss[0] is None and _cf_miss[1]
+       else "FAIL", "close facts (#549): the stand-in file answers, and a missing key reads as a failed read")
+
+
 finish()
