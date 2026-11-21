@@ -6,3 +6,8 @@ FAIL in-progress-refused: #548 after {"labels": ["Feature", "AjsAgent created th
     reply: Not logged in · Please run /login
 RESULT: FAIL - 0 of 2 live tests passed
 exit 1
+
+Note (2026-11-20): both sessions stopped at sign-in ("Not logged in"). A plain `claude -p` with the full cloud
+environment also fails ("Authentication error"), so nested headless sessions cannot sign in inside this cloud
+sandbox. #520 and #548 were not changed. The guard's decisions were checked directly against GitHub instead:
+docs/plans/2026-11-20-free-issue-closing-live-check.py, 4 of 4 twice.
