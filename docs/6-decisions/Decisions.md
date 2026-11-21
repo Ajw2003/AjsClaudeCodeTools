@@ -3545,3 +3545,17 @@ larger goals aj wants to sign off personally.
 
 **Status.** Standing once built. Supersedes rule 6's "QA pass and a merge, or an approved list"
 requirement in `rules/detail/issue-workflow.md`.
+
+## 2026-11-20 — Free issue closing: QA passed
+
+**Context.** Free issue closing (plugin 2.83.0, issues #548 to #552) was built on
+`AjsAgent/free-issue-closing`. verify.py passed all 1321 checks, and the guard's verdicts were checked
+twice against GitHub (`docs/plans/2026-11-20-free-issue-closing-live-check.py`, 4 of 4). The headless
+session test could not sign in inside the cloud sandbox.
+
+**Decision.** aj wrote "QA passed: free issue closing". Pull request #553 carries it to main.
+
+**Why.** aj's own QA is the sign-off the design loop requires.
+
+**Status.** Standing. The label rule covers completed closes only; a not-planned close still needs an
+approval (`docs/4-systems/issue-closing.md`, "As built").

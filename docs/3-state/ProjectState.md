@@ -427,4 +427,4 @@ Plugin 2.82.0. State: built, waiting on aj's QA. Any page format passes if it me
 
 ## Free issue closing (#548 to #552)
 
-Plugin 2.83.0. State: built, waiting on aj's QA. The close guard allows a close of an issue labelled `needs review`, `in review` or completed by someone other than the agent, with no milestone, after one cached GitHub read per 60 seconds; everything else needs aj's "Close approved". Detail: [`docs/4-systems/issue-closing.md`](../4-systems/issue-closing.md).
+Plugin 2.83.0. State: QA passed 2026-11-20; pull request #553 to main open. The close guard allows a close of an issue labelled `needs review`, `in review` or completed by someone other than the agent, with no milestone, after one cached GitHub read per 60 seconds; everything else needs aj's "Close approved". Detail: [`docs/4-systems/issue-closing.md`](../4-systems/issue-closing.md).
