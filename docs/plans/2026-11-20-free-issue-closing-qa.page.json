@@ -1,0 +1,86 @@
+{
+ "title": "Free Issue Closing QA",
+ "eyebrow": "QA \u00b7 one short test for you",
+ "pageType": "qa",
+ "short": {
+  "lead": "The close guard now lets the agent close issues labelled needs review, in review or completed by someone else, with no milestone, and asks you about everything else. I tested it against the real GitHub; your test is one prompt in a session on the branch build.",
+  "hint": "Tap a step to see what to do.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Checked",
+    "verify.py: all 1321 checks pass",
+    "",
+    "RESULT: PASS - all 1321 checks passed, exit 0, including 25 new checks for the lookup, the label rule and Close approved.",
+    "Nothing from you."
+   ],
+   [
+    "flask",
+    "Checked",
+    "Live against GitHub, twice",
+    "",
+    "#548 (in progress) refused; #520 and #521 (needs review) allowed; closing milestone 1 refused. 4 of 4 both runs. The first close read GitHub in 1.1 seconds, the next ones used the saved answer in 0.1 seconds. Nothing was closed.",
+    "Nothing from you."
+   ],
+   [
+    "hand",
+    "Your test",
+    "Ask a branch session to close a reviewed issue",
+    "you",
+    "In a Claude Code session running the branch build (python tools/use_branch.py AjsAgent/free-issue-closing on your PC, then a new session in this repo), type: Close issue #520 if the house rules allow it. Expect it to close #520 without asking you, comment the evidence and add AjsAgent completed this. Then type: Close issue #548. Expect a refusal saying it is labelled in progress, or needs review, and how to approve it.",
+    "Follow the steps in Wrap-up."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Close guard (scripts/house_rules/design_loop.py)",
+   "Label rule, one cached GitHub read, Close approved, milestone guard.",
+   null,
+   "A not-planned close still needs a sweep approval, \"Close as not planned\" or \"Close approved\"; the label rule applies to completed closes only.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Rule text and docs",
+   "rules/house-rules.md, rule 6 in issue-workflow.md, docs/4-systems/issue-closing.md, CHANGELOG.md, plugin 2.83.0.",
+   null,
+   "Pull request #553 to main, body says Refs #548 to #552.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "free issue closing",
+  "base": "origin/main",
+  "unverified": [
+   "Your test in a real session: my own session runs the installed 2.82.0 guard, not the branch build, so I tested the branch hook directly instead."
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "The agent closes reviewed or completed issues on its own; milestone issues, milestones and everything else wait for your Close approved.",
+  "changing": "The close guard, its checks, the rule text and the issue-closing docs, in pull request #553.",
+  "blocking": "Your QA verdict.",
+  "next": "Run your test, then send \"QA passed: free issue closing\" or \"QA failed: free issue closing\" with what went wrong.",
+  "todo": [
+   "On your PC, in the repo folder, run: python tools/use_branch.py AjsAgent/free-issue-closing",
+   "Start a new Claude Code session in the repo and type: Close issue #520 if the house rules allow it. Expect it to close without asking.",
+   "Type: Close issue #548. Expect a refusal naming its in progress label.",
+   "Run python tools/use_branch.py main to go back.",
+   "Send \"QA passed: free issue closing\" or \"QA failed: free issue closing\" with what went wrong."
+  ]
+ }
+}
