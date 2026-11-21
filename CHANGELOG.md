@@ -9,6 +9,7 @@ Plugin 2.83.0: free issue closing (#548 to #552). The agent closes an issue on i
 - The guard reads every open issue's labels and milestone in one GitHub call and reuses it for 60 seconds, so a mass close makes one call; a failed read refuses the close (#549).
 - A completed label the agent added itself does not count (#550, aj's choice 2A).
 - `gh api -X PATCH .../milestones/N` to closed is refused until approved (#551).
+- 2026-11-20: the closing rule sentence in `rules/house-rules.md` was shortened by 68 characters; CI measured the injected rules at 9709 characters against a 9700 margin.
 
 - 2026-11-19: verify.py no longer picks up switches typed in the repo it tests (#546). Its new check (g) handed the ignore list to the wrong environment copy and failed everywhere; fixed when merged.
 - 2026-11-19: live test run 3 passed 3 of 3 on the branch code (`live_flexible_pages-result-3.txt`).
