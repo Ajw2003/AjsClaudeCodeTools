@@ -1,4 +1,8 @@
-# Today — 2026-11-19
+# Today — 2026-11-20
+
+Free issue closing, plugin 2.83.0, built on `AjsAgent/free-issue-closing` (issues #548 to #552). The agent closes an issue on its own when it is labelled `needs review`, `in review` or completed by someone else and is in no GitHub milestone; anything else, milestone issues and milestones need aj's "Close approved". The five issues were made with a command that printed only numbers, so the design loop recorded none of them; aj's "Issues for free issue closing" came after the stage had moved to Build and also recorded nothing. Design: `docs/4-systems/issue-closing.md`, "Free issue closing (2.83.0)".
+
+## 2026-11-19
 
 Flexible pages, plugin 2.82.0, built and waiting on aj's QA (issues #541 to #545, all `needs review`). The cut-off Windows session's step 4 was recovered from its autosave onto `ajsagent/sharp-edison-y4xjzv`; verify.py passes 1294 of 1294 and verify_tools 54 of 54. QA page: `docs/plans/flexible-pages-qa.html`.
 

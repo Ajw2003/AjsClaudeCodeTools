@@ -53,10 +53,13 @@ the sweep. A not-planned close never comes from a QA pass.
 
 ## Invariants
 
-- Nothing closes before aj's QA pass and a merge to the default branch, or aj's approval on a sweep
-  page or a named list.
+- Since 2.83.0 (free issue closing): an issue closes on its own only when it is in no GitHub milestone
+  and carries `needs review`, `in review` or a completed label someone other than the agent set. Every
+  other close, any milestone issue and any milestone need aj's "Close approved", a sweep approval or a
+  QA pass plus a merge.
 - Every close comments with its evidence.
-- The guard reads only the local stage file; it makes no network call on a tool call.
+- The guard reads the stage file first; only when no record allows the close does it read GitHub, once
+  per repo per 60 seconds, and a failed read refuses the close.
 
 ## Traps that have already cost time
 
@@ -90,7 +93,7 @@ no conversion is needed. Checks: "per-feature issues" in `scripts/checks/design_
 Step 2's issues (#340, #357 to #360) close through the next sweep page (answer 2A).
 
 
-## Planned: free issue closing
+## Free issue closing (2.83.0)
 
 Approved 2026-11-20 ("Design approved: free issue closing 1* 2A"; `docs/6-decisions/Decisions.md`).
 Proposal page `docs/plans/2026-11-20-free-issue-closing.html`.
@@ -114,3 +117,14 @@ is refused unless aj wrote "Close approved: milestone N".
 
 **After a close.** The allowed close tells the agent to add `AjsAgent completed this` and remove
 `in progress`, as today.
+
+**As built (#549 to #552).** `_close_issue_facts` does the cached lookup; `_close_records` holds the old
+record checks, now preceded by `close_approved`; `_close_by_labels` applies the label rule;
+`_close_check(..., git_dir)` runs records first and the lookup only when they refuse. `self_completed`
+is written by `_loop_record_labels`. `_GH_MILESTONE_CLOSE_RE` and `_milestone_close_decision` guard
+milestone closes. "Close approved:" is parsed in `_loop_sweep_apply`. One difference from the plan:
+the label rule applies to completed closes only; a not-planned close still needs a sweep approval,
+"Close as not planned" or "Close approved", so a `needs review` label never closes work as not planned.
+An MCP `issue_write` that sets a full label list containing a completed label is recorded as
+self-added even if a person set the label first; that errs toward asking. Checks: "close facts (#549)",
+"close by labels (#550)" and "close approved:" in `scripts/checks/design_loop.py`.

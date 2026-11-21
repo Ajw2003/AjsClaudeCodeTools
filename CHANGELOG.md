@@ -4,6 +4,12 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Plugin 2.83.0: free issue closing (#548 to #552). The agent closes an issue on its own when it is labelled `needs review`, `in review` or completed by someone else and is in no GitHub milestone, then labels it `AjsAgent completed this`. Other issues, milestone issues and milestones need aj's "Close approved: #N" or "Close approved: milestone N". The sweep page is no longer required.
+
+- The guard reads every open issue's labels and milestone in one GitHub call and reuses it for 60 seconds, so a mass close makes one call; a failed read refuses the close (#549).
+- A completed label the agent added itself does not count (#550, aj's choice 2A).
+- `gh api -X PATCH .../milestones/N` to closed is refused until approved (#551).
+
 - 2026-11-19: verify.py no longer picks up switches typed in the repo it tests (#546). Its new check (g) handed the ignore list to the wrong environment copy and failed everywhere; fixed when merged.
 - 2026-11-19: live test run 3 passed 3 of 3 on the branch code (`live_flexible_pages-result-3.txt`).
 - 2026-11-19: the QA page now reports the three live runs instead of asking aj to test in the desktop app: `docs/qa/flexible-pages-qa.html`, two steps (read run 3's result, send the verdict). aj chose to skip a fourth run. Editor pass applied (plainer wording, issue numbers named).
