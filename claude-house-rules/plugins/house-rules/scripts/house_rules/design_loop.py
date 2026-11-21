@@ -1788,6 +1788,10 @@ def _loop_record_labels(payload):
             now = [l for l in now if l.lower() not in {r.lower() for r in remove}]
             now += [a for a in add if a.lower() not in {l.lower() for l in now}]
             recorded[key] = now
+            if any(a.lower() in COMPLETED_LABELS for a in list(add) + list(set_to or [])):
+                mine = state.setdefault("self_completed", [])
+                if not any(x.get("repo", "").lower() == repo.lower() and x.get("number") == number for x in mine):
+                    mine.append({"repo": repo, "number": number})
         if pr:  # A2: what this pull request links, so its merge stamps only those issues
             resp = data.get("tool_response")
             url = re.search(r"github\.com/([\w.-]+/[\w.-]+)/pull/(\d+)", resp if isinstance(resp, str) else json.dumps(resp))
@@ -1959,8 +1963,8 @@ def _guardgithub_issue_checks(payload, raw):
 # --- #363: the close guard. A close goes through only on recorded evidence or an approved list. ---
 CLOSE_COMMENT_NOTE = (
     "House rules, this close is allowed: %s. Before or right after it, comment on issue #%d with that "
-    "evidence (the QA message and the merged pull request link, or the sweep approval and the replacing "
-    "issue), add the label `AjsAgent completed this` (`gh api repos/%s/issues/%d/labels -f "
+    "evidence (the label that allowed it, or the QA message and the merged pull request link, or the sweep "
+    "approval and the replacing issue), add the label `AjsAgent completed this` (`gh api repos/%s/issues/%d/labels -f "
     "\"labels[]=AjsAgent completed this\"`) and remove `in progress` (`gh api -X DELETE "
     "repos/%s/issues/%d/labels/in%%20progress`)."
 )
@@ -2043,9 +2047,21 @@ def _close_issue_facts(repo, number, git_dir):
         return None, "House rules could not read issue %s#%d from GitHub (%s)." % (repo, number, exc)
 
 
-def _close_check(repo, number, reason, state):
+COMPLETED_LABELS = ("ajsagent completed this", "claude completed this")
+
+
+def _close_check(repo, number, reason, state, git_dir=None):
+    ok, why = _close_records(repo, number, reason, state)
+    if ok or git_dir is None or (reason or "completed").strip().lower().replace(" ", "_") != "completed":
+        return ok, why
+    return _close_by_labels(repo, number, state, git_dir, why)
+
+
+def _close_records(repo, number, reason, state):
     """(allowed, reason_text) for closing issue `number` of `repo` with state reason `reason`
-    ("completed", "not_planned" or "" for none), from the design-loop `state` (#363)."""
+    ("completed", "not_planned" or "" for none), from the design-loop `state` (#363). When the QA and sweep
+    records do not allow it and `git_dir` is given, a completed close is also allowed by the issue's own
+    GitHub labels (#550): needs review / in review, or a completed label a person set; never in a milestone."""
     reason = (reason or "completed").strip().lower().replace(" ", "_")
     if not _loop_enabled():  # #515: never demand evidence only a switched-off loop can record
         return True, "the design loop is off, so the QA and sweep records it keeps are not required"
@@ -2080,6 +2096,31 @@ def _close_check(repo, number, reason, state):
         return False, "#%d is on the approved sweep list with a different action than completed" % number
     return False, ("no QA pass is recorded for a feature that holds #%d, and it is on no approved sweep or "
                    "named list" % number)
+
+
+def _close_by_labels(repo, number, state, git_dir, why):
+    """(allowed, text) from the issue's GitHub labels (#550), `why` being the QA/sweep refusal to keep in the text."""
+    facts, problem = _close_issue_facts(repo, number, git_dir)
+    if problem:
+        return False, "%s; and the labels could not be checked: %s" % (why, problem.rstrip("."))
+    if facts["milestone"]:
+        return False, ("%s; and #%d is in milestone %s, so it needs aj's \"Close approved: #%d\"" % (
+            why, number, facts["milestone"], number))
+    labels = facts["labels"]
+    low = {l.lower() for l in labels}
+    for want in ("needs review", "in review"):
+        if want in low:
+            return True, "#%d has the label `%s` and is in no milestone" % (number, want)
+    mine = any(isinstance(x, dict) and x.get("number") == number and _close_repo_match(repo, x.get("repo", ""))
+               for x in (state.get("self_completed") if isinstance(state, dict) else None) or [])
+    done = [l for l in labels if l.lower() in COMPLETED_LABELS]
+    if done and not mine:
+        return True, "#%d has the label `%s`, set by a person, and is in no milestone" % (number, done[0])
+    note = " (the completed label on it was added by the agent itself, which does not count)" if done else ""
+    return False, ("%s; and #%d has the labels %s%s, but a close needs `needs review`, `in review`, or `AjsAgent "
+                   "completed this` / `Claude completed this` set by a person, and no milestone. aj can write "
+                   "\"Close approved: #%d\"" % (why, number, ", ".join("`%s`" % l for l in labels) or "none",
+                                                note, number))
 
 
 def _close_forget(git_dir, repo, number):
@@ -2120,7 +2161,7 @@ def _close_decide(repo, number, reason, cwd):
     state, problem = _loop_read(git_dir)
     if problem:
         return False, "%s The close of #%d is refused." % (problem, number), None
-    ok, why = _close_check(repo, number, reason, state)
+    ok, why = _close_check(repo, number, reason, state, git_dir)
     if not ok:
         return False, "House rules, close guard: refused to close #%d: %s." % (number, why), None
     slug = repo or "<owner>/<repo>"

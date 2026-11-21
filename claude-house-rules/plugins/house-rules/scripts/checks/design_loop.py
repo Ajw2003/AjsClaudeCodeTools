@@ -1575,6 +1575,44 @@ _cg_cases.append(("a wrapped GitHub tool close reply removes the issue from the 
 for _t, _ok in _cg_cases:
     report("PASS" if _ok else "FAIL", "close guard: " + _t)
 
+# --- #550: with no QA record, a close is allowed by the issue's own GitHub labels ---
+_fl_file = os.path.join(_FIXTURE_ROOT, "close-facts.json")
+_fl_rows = {"o/r#31": {"labels": ["needs review"], "milestone": None},
+            "o/r#32": {"labels": ["In Review"], "milestone": None},
+            "o/r#33": {"labels": ["in progress"], "milestone": None},
+            "o/r#34": {"labels": ["needs review"], "milestone": 3},
+            "o/r#35": {"labels": ["AjsAgent completed this"], "milestone": None},
+            "o/r#36": {"labels": ["AjsAgent completed this"], "milestone": None}}
+json.dump(_fl_rows, open(_fl_file, "w", encoding="utf-8"))
+_fl_env = dict(_cl_env, HOUSE_RULES_CLOSE_ISSUES_FILE=_fl_file)
+_fl_mc = lambda n: {"method": "update", "owner": "o", "repo": "r", "issue_number": n, "state": "closed", "state_reason": "completed"}
+_cl_set({"stage": "done", "self_completed": [{"repo": "o/r", "number": 36}]})
+_fl = {n: (_cg_gh("gh issue close %d -R o/r" % n, env=_fl_env), _cg_mcp(_fl_mc(n), env=_fl_env)) for n in (31, 32, 33, 34, 35, 36, 37)}
+_fl_cases = [
+    ("needs review closes", _iss_decision(_fl[31][0]) == "allow"),
+    ("in review closes, whatever the capitals", _iss_decision(_fl[32][0]) == "allow"),
+    ("in progress only is refused, naming the labels and Close approved",
+     _iss_decision(_fl[33][0]) == "deny" and "`in progress`" in _iss_reason(_fl[33][0]) and "Close approved: #33" in _iss_reason(_fl[33][0])),
+    ("a milestone issue with needs review is refused, naming the milestone",
+     _iss_decision(_fl[34][0]) == "deny" and "milestone 3" in _iss_reason(_fl[34][0])),
+    ("a completed label set by a person closes", _iss_decision(_fl[35][0]) == "allow"),
+    ("a completed label the agent added itself is refused", _iss_decision(_fl[36][0]) == "deny"
+     and "added by the agent" in _iss_reason(_fl[36][0])),
+    ("a GitHub read failure is refused with the reason",
+     _iss_decision(_fl[37][0]) == "deny" and "could not read issue o/r#37" in _iss_reason(_fl[37][0])),
+    ("the gh route and the MCP route give the same answer",
+     all(_iss_decision(a) == _iss_decision(b) for a, b in _fl.values())),
+    ("an allowed label close carries the comment and label instruction",
+     "AjsAgent completed this" in _cg_ctx(_fl[31][0]) and "needs review" in _cg_ctx(_fl[31][0])),
+]
+_fl_post = run_hook("autosave", json.dumps({"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "cg",
+    "cwd": _cl_dir, "tool_input": {"command": "gh issue edit 38 -R o/r --add-label 'Claude completed this'"},
+    "tool_response": {"stdout": "https://github.com/o/r/issues/38", "stderr": "", "exit_code": 0}}), env=_cl_env)
+_fl_cases.append(("a completed label the agent adds is recorded in self_completed",
+                  {"repo": "o/r", "number": 38} in (_cl_state().get("self_completed") or [])))
+for _t, _ok in _fl_cases:
+    report("PASS" if _ok else "FAIL", "close by labels (#550): " + _t)
+
 # --- #364: sweep approvals and named not-planned lists feed the close guard ---------------------
 _sw_cases = []
 _sw_mp = os.path.join(HERE, "make_page.py")
