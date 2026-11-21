@@ -2257,7 +2257,8 @@ def _milestone_close_decision(cmd, payload):
         return ("deny", "%s Closing milestone %d is refused. %s" % (problem, n, ask), None)
     for x in (state.get("close_approved") or []) if isinstance(state, dict) else []:
         if isinstance(x, dict) and x.get("milestone") == n and _close_repo_match(repo, x.get("repo", "")):
-            return ("allow", 'aj wrote "Close approved: milestone %d"' % n, None)
+            note = 'aj wrote "Close approved: milestone %d", so this milestone close is allowed.' % n
+            return ("allow", note, note)
     return ("deny", "House rules, close guard: refused to close milestone %d: aj has not approved it. %s" % (n, ask),
             None)
 
