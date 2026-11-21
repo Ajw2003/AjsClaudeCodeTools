@@ -1,0 +1,110 @@
+{
+ "title": "Free Issue Closing Build Plan",
+ "eyebrow": "Build plan · nothing built yet",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: free issue closing",
+ "short": {
+  "lead": "The close guard changes in four steps, one GitHub issue each, under parent #548 (Free issue closing). All work is on the branch AjsAgent/free-issue-closing.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "search",
+    "Step 1",
+    "#549: one GitHub lookup per group of closes",
+    "",
+    "Reads every open issue's labels and milestone in one call and keeps them for 60 seconds, so a mass close makes one call. If GitHub cannot be reached, the close is refused.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Step 2",
+    "#550: the new close rule",
+    "",
+    "An issue with no milestone closes when it carries needs review, in review or a completed label the agent did not add itself. Anything else is refused, naming why.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Step 3",
+    "#551: Close approved messages and milestone closes",
+    "",
+    "Your \"Close approved: #N\" lets that issue close. Your \"Close approved: milestone N\" lets that milestone close. Without them, both are refused.",
+    "Nothing from you."
+   ],
+   [
+    "file",
+    "Step 4",
+    "#552: rule text, docs and changelog",
+    "",
+    "The rule the agent reads, rule 6 in issue-workflow.md, the systems doc and CHANGELOG.md describe the new behaviour.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the plan",
+    "you",
+    "The build starts.",
+    "Send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "#549: issue lookup in scripts/house_rules/design_loop.py",
+   "One paginated gh api read, cached in .git/house-rules-issue-cache.json for 60 seconds.",
+   null,
+   "Done when: a verify.py case shows ten closes in a row make one GitHub read, and a failed read refuses the close.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "#550: _close_check in scripts/house_rules/design_loop.py",
+   "Allows reviewed or completed issues with no milestone; ignores completed labels the agent added.",
+   null,
+   "Done when: verify.py cases pass for needs review (allowed), in progress (refused), a milestone issue (refused) and a self-added completed label (refused), on both the gh and GitHub-tool routes.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "#551: approval messages and the milestone guard",
+   "Records \"Close approved\" messages and refuses an unapproved milestone close.",
+   null,
+   "Done when: verify.py cases show an approved issue and milestone close, and an unapproved milestone close is refused.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "#552: rules/house-rules.md, rules/detail/issue-workflow.md, docs/4-systems/issue-closing.md, CHANGELOG.md",
+   "The written rule matches the new guard; the plugin version goes up.",
+   null,
+   "Done when: verify.py passes in full.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "Four steps that let the agent close reviewed or completed issues on its own, while milestone issues and milestones wait for you.",
+  "changing": "The close guard in design_loop.py, its checks, the rule text and three docs.",
+  "blocking": "Your approval of this plan.",
+  "next": "Send \"Build plan approved: free issue closing\", or tell me what to change.",
+  "todo": [
+   "Read the four steps.",
+   "Tap <b>Copy my reply</b> and send it, or tell me what to change."
+  ]
+ }
+}
