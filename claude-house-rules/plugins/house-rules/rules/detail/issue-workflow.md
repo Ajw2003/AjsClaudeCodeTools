@@ -15,13 +15,17 @@ The loop, in order:
 5. The pull request body says `Refs #N` (or `Refs owner/repo#N`, or `Part of #N`, or a line
    `No-issue: <reason>`). A closing word (close, fix, resolve in any tense) followed by an issue
    reference is refused, because GitHub would close the issue at merge, before the user has tested.
-6. I close an issue myself, but only with evidence on record, and a guard checks it first
-   (`docs/4-systems/issue-closing.md`). A completed close needs the user's "QA passed: <feature>" for
-   the issue's feature and a merge to the default branch after it. A not-planned close (a duplicate,
-   or work replaced by other work) needs an approved sweep page ("Sweep approved: issues") or the
-   user's "Close as not planned: #N replaced by #M". Any other close is refused, naming what is
-   missing. On a close I comment with the evidence (the QA message and the merged pull request, or
-   the approval and the replacing issue), add `AjsAgent completed this` (`gh api repos/<owner>/<repo>/issues/N/labels -f "labels[]=AjsAgent completed this"`) and remove `in progress` (`gh api -X DELETE repos/<owner>/<repo>/issues/N/labels/in%20progress`). Commenting on or creating issues is never gated.
+6. I close an issue myself, and a guard checks it first (`docs/4-systems/issue-closing.md`). A
+   completed close goes through on its own when the issue is in no GitHub milestone and is labelled
+   `needs review`, `in review`, or `AjsAgent completed this` / `Claude completed this` set by someone
+   other than me. The guard reads the labels and milestones from GitHub once per group of closes (one
+   read serves 60 seconds), and refuses when GitHub cannot be read. Any other issue, an issue in a
+   milestone, and a milestone itself (`gh api -X PATCH repos/O/R/milestones/N` to closed) need the
+   user's "Close approved: #N" or "Close approved: milestone N". A not-planned close (a duplicate, or
+   work replaced by other work) still needs an approved sweep page ("Sweep approved: issues") or the
+   user's "Close as not planned: #N replaced by #M"; a "QA passed" plus a merge still allows a
+   completed close. Any other close is refused, naming what is missing. On a close I comment with the
+   evidence (the label, the approval, or the QA message and the merged pull request), add `AjsAgent completed this` (`gh api repos/<owner>/<repo>/issues/N/labels -f "labels[]=AjsAgent completed this"`) and remove `in progress` (`gh api -X DELETE repos/<owner>/<repo>/issues/N/labels/in%20progress`). Commenting on or creating issues is never gated.
 
 Label rules: every issue I create carries at least one category label and `AjsAgent created this`.
 If the repo lacks that label I create it first with `gh label create`. An issue created without it
