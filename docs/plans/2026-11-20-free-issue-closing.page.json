@@ -136,7 +136,7 @@
     "summary": "The agent closes needs-review, in-review or completed issues on its own and labels them AjsAgent completed this; everything else, milestone issues and milestones still need your approval.",
     "changing": "The close guard, the closing rule text in three docs, new checks and a changelog line.",
     "blocking": "Your answers to the two choices.",
-    "next": "I build it on a new AjsAgent branch, run verify.py, and open a pull request for you.",
+    "next": "Pick an answer for each of the two choices, then send \"Design approved: free issue closing\" with your picks (for example 1A 2A).",
     "todo": [
       "Pick your answers under Choices.",
       "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
