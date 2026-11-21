@@ -235,7 +235,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">Today the close guard refuses to close an issue unless you wrote "QA passed" for its feature and a pull request merged after, or you approved it on a sweep page. This change lets the agent close any issue on its own, as long as the issue carries the "AjsAgent completed this" label. The one exception is GitHub milestones: an issue attached to a milestone, or the milestone itself, still needs your written approval.</p>
+      <p class="lead" id="lead" data-basic="summary">Today the close guard refuses to close an issue unless you wrote "QA passed" for its feature and a pull request merged after, or you approved it on a sweep page. This change lets the agent close an issue on its own when it carries one of the labels "needs review", "in review" or a completed label ("AjsAgent completed this" or "Claude completed this"). Every close adds "AjsAgent completed this" to mark it as closed by an agent. An issue with none of those labels, an issue in a GitHub milestone, or a milestone itself still needs your written approval.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -278,12 +278,12 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Free Issue Closing",
-  "eyebrow": "Proposal · the agent closes issues on its own, except milestone ones",
+  "eyebrow": "Proposal · the agent closes reviewed or completed issues on its own, except milestone ones",
   "pageType": "proposal",
   "replyPrefix": "Free issue closing answers",
   "reply": "",
   "short": {
-    "lead": "Today the close guard refuses to close an issue unless you wrote \"QA passed\" for its feature and a pull request merged after, or you approved it on a sweep page. This change lets the agent close any issue on its own, as long as the issue carries the \"AjsAgent completed this\" label. The one exception is GitHub milestones: an issue attached to a milestone, or the milestone itself, still needs your written approval.",
+    "lead": "Today the close guard refuses to close an issue unless you wrote \"QA passed\" for its feature and a pull request merged after, or you approved it on a sweep page. This change lets the agent close an issue on its own when it carries one of the labels \"needs review\", \"in review\" or a completed label (\"AjsAgent completed this\" or \"Claude completed this\"). Every close adds \"AjsAgent completed this\" to mark it as closed by an agent. An issue with none of those labels, an issue in a GitHub milestone, or a milestone itself still needs your written approval.",
     "hint": "Tap a row to see what changes and what it needs from you.",
     "key": [
       [
@@ -298,19 +298,27 @@ const PAGE = {
     "items": [
       [
         "check",
-        "Ordinary issue",
-        "Closes freely once labelled",
+        "Reviewed issue",
+        "Closes freely",
         "",
-        "The guard lets the close through when the issue carries \"AjsAgent completed this\". No QA pass, merge or sweep page is needed.",
+        "An issue labelled \"needs review\", \"in review\" or a completed label closes without asking. The close adds \"AjsAgent completed this\".",
         "Nothing from you."
+      ],
+      [
+        "lock",
+        "Other issue",
+        "Needs \"Close approved: #N\"",
+        "you",
+        "An issue with none of those labels (for example one still \"in progress\") is refused until you write \"Close approved: #N\".",
+        "One message; several numbers can share it."
       ],
       [
         "lock",
         "Milestone issue",
         "Needs \"Close approved: #N\"",
         "you",
-        "An issue attached to any GitHub milestone is refused until you write \"Close approved: #N\" in the chat.",
-        "One message per issue, or several numbers in one message."
+        "An issue attached to any GitHub milestone is refused until you approve it, whatever its labels.",
+        "One message."
       ],
       [
         "lock",
@@ -337,7 +345,7 @@ const PAGE = {
       "Decides whether a close goes through.",
       [
         "Allows a close only with a QA pass plus a merge, or an approved sweep or named list.",
-        "Allows any close of a labelled issue with no milestone. A milestone issue or a milestone needs your \"Close approved\" message."
+        "Allows a close of an issue labelled needs review, in review or completed, with no milestone. Anything else, a milestone issue or a milestone needs your \"Close approved\" message."
       ],
       "The existing QA, merge and sweep records stay in the stage file; they simply stop being required."
     ],
@@ -347,7 +355,7 @@ const PAGE = {
       "What the rule tells the agent.",
       [
         "\"I close an issue only after the user's QA pass and a merge, or on a list they approved.\"",
-        "\"I close an issue freely once it is labelled AjsAgent completed this; an issue in a GitHub milestone, or the milestone itself, needs the user's Close approved message.\""
+        "\"I close an issue freely when it is labelled needs review, in review or completed, and label it AjsAgent completed this; any other issue, an issue in a GitHub milestone, or the milestone itself needs the user's Close approved message.\""
       ],
       "The pull request rule stays: a body still says Refs #N, never Closes #N, so GitHub cannot close a milestone issue behind your back at merge."
     ],
@@ -357,7 +365,7 @@ const PAGE = {
       "Proves the new behaviour.",
       [
         "Cases prove a close without QA is refused.",
-        "Cases prove a labelled close goes through, an unlabelled one is refused, a milestone issue is refused until approved, and a milestone close is refused until approved."
+        "Cases prove a needs-review, in-review or completed issue closes, an in-progress or unlabelled one is refused until approved, a milestone issue is refused until approved, and a milestone close is refused until approved."
       ],
       "verify.py must still exit 0."
     ]
@@ -365,7 +373,7 @@ const PAGE = {
   "choices": [
     [
       "lookup",
-      "How should the guard find out whether an issue is in a milestone and carries the label?",
+      "How should the guard read an issue's labels and milestone?",
       [
         [
           "A",
@@ -375,35 +383,35 @@ const PAGE = {
         ],
         [
           "B",
-          "Remember the milestone when the agent creates or edits an issue, and read only that record",
+          "Remember labels and milestone when the agent creates or edits an issue, and read only that record",
           0,
-          "No network call, but misses an issue you put in a milestone on the GitHub website."
+          "No network call, but misses labels or milestones you change on the GitHub website."
         ]
       ],
       "With B, a milestone you add on the website would not be seen, so that issue could close without asking you."
     ],
     [
-      "label",
-      "How strictly should \"marked as closed by an agent\" be enforced?",
+      "selfmark",
+      "Should a completed label the agent added itself count?",
       [
         [
           "A",
-          "Refuse the close until the issue already carries \"AjsAgent completed this\"",
+          "No: a completed label counts only if it was on the issue before this session added it",
           1,
-          "The label is guaranteed. Uses the same GitHub lookup as choice 1A."
+          "Stops the agent labelling an unfinished issue completed just to close it. Needs one more GitHub lookup (the issue's label history)."
         ],
         [
           "B",
-          "Let the close through and remind the agent to add the label, as today",
+          "Yes: any completed label counts",
           0,
-          "Simpler, but the label can be forgotten."
+          "Simpler, but the agent could add the label and then close straight away."
         ]
       ],
-      "1B with 2A cannot work, because the record would not know the label; pick 2B if you pick 1B."
+      "\"needs review\" and \"in review\" are set by the design loop when work is handed to you, so they are not affected by this choice."
     ]
   ],
   "wrapup": {
-    "summary": "The agent closes issues on its own once they carry the AjsAgent completed this label; milestone issues and milestones still need your approval.",
+    "summary": "The agent closes needs-review, in-review or completed issues on its own and labels them AjsAgent completed this; everything else, milestone issues and milestones still need your approval.",
     "changing": "The close guard, the closing rule text in three docs, new checks and a changelog line.",
     "blocking": "Your answers to the two choices.",
     "next": "I build it on a new AjsAgent branch, run verify.py, and open a pull request for you.",
