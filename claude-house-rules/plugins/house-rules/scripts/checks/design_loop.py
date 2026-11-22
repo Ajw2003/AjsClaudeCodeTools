@@ -2149,7 +2149,7 @@ _cw_cases.append(("page text: a template page's PAGE strings are what gets read"
                   "about 43 tests" in _cw.page_text('<p>Hi there all</p><script>const PAGE = {\n lead: "It adds about 43 tests in all."\n};</script>')))
 _B64 = "data:image/png;base64," + "iVBORw0KGgo" * 20
 _PG = '<p>Hi there all</p><img src="%s"><script>const PAGE = {\n pic: "%s"\n};</script>' % (_B64, _B64)
-_LONG = " ".join(["word"] * 45) + "."
+_LONG = " ".join("w%s" % chr(97 + i % 26) + chr(97 + i // 26) for i in range(45)) + "."
 _cw_cases.append(("page text: data: addresses give no finding; one long sentence still gives exactly one",
                   not _cw.findings(_cw.page_text(_PG)) and len(_cw.findings(_cw.page_text(_PG + "<p>%s</p>" % _LONG))) == 1))
 _cw_cases.append(("page text: a 100-character blob outside a data address is ignored; a short URL stays",
