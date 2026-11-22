@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Phase 1 is built (#559 and #562 added on `ajsagent/eloquent-mayer-0ayp82`, #555): a made or changed page that was not sent is caught at turn end (blocks once), the new `sendcheck` hook repairs a page whose pictures are in a folder before it is sent, and the guard refuses a background launch with no timeout. Full `verify.py` 1377 of 1377. Not released: no version bump until #568.
+
 Phase 1 and the start of the wait clock are built and merged on `ajsagent/eloquent-mayer-0ayp82` (#555): pictures are built into the page file (#556), a copy of the page opened alone is checked for broken pictures (#557), the send rule and the builder's send line exist (#558), the wait numbers live in `rules/waits.json` (#560), and `scripts/waitfor.py` gives every wait a clock and a deadline (#561). Full `verify.py` 1361 of 1361. Not yet released: no version bump until the docs step (#568).
 
 Build started on the wait clocks, visual checks, page sending and pictures work (#555): aj approved the build plan with an early check after phase 1, and builders began #556 and #558. Nothing is merged yet.
