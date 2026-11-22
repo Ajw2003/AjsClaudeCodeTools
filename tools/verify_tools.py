@@ -806,6 +806,23 @@ def _use_branch_case():
         shutil.rmtree(cfg, True)
 _use_branch_case()
 
+def _overnight_case():
+    d = tempfile.mkdtemp()
+    try:
+        with open(os.path.join(d, "claude"), "w") as f:
+            f.write('#!/bin/sh\necho "$HOUSE_RULES_UNATTENDED $ART_PIPELINE $*"\n')
+        os.chmod(os.path.join(d, "claude"), 0o755)
+        env = dict(os.environ, PATH=d + os.pathsep + os.environ["PATH"])
+        p = subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "-p", "hi"], env=env,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        check(p.returncode == 0 and p.stdout.strip() == "on unattended --dangerously-skip-permissions -p hi"
+              and os.access(os.path.join(HERE, "overnight.sh"), os.X_OK),
+              "overnight.sh exports both variables and runs claude with the permission flag and its arguments",
+              "got %r %r" % (p.stdout, p.stderr))
+    finally:
+        shutil.rmtree(d, True)
+_overnight_case()
+
 print()
 print("-" * 32)
 if FAILURES:

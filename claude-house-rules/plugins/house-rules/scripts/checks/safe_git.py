@@ -2003,5 +2003,32 @@ report("PASS" if _u7_name == "Edens Agent" else "FAIL", "U7: session start sets 
 _u7_o = _nb_bash(_u7, 'git commit --allow-empty -m "x\n\nCo-Authored-By: ' + 'Claude <noreply@anthropic.com>"')
 report("PASS" if "Remove every `Co-Authored-By:`" in _u7_o else "FAIL", "U7: the credit refusal names the lines to remove")
 
+# --- unattended mode: a guard ask is refused outright; noask denies questions; off changes nothing ---
+_un_on = {"HOUSE_RULES_UNATTENDED": "on"}
+_un1 = _ua_guard("verify-un1", env_extra=_un_on)
+_un2 = _ua_guard("verify-un2", env_extra={"HOUSE_RULES_UNATTENDED": "ON"})
+_un3 = _ua_guard("verify-un3")
+report("PASS" if _ua_dec(_un1) == "deny" and "Refused, not asked" in _un1 and "unattended run" in _un1
+       and _ua_dec(_un2) == "deny" and _ua_dec(_un3) == "ask" else "FAIL",
+       "unattended: a guard ask becomes a refusal naming the unattended run; not unattended it is still an ask")
+print("          on %s, ON %s, off %s" % (_ua_dec(_un1), _ua_dec(_un2), _ua_dec(_un3)))
+
+
+def _un_noask(tool, on):
+    e = dict(os.environ)
+    e.pop("HOUSE_RULES_UNATTENDED", None)
+    e.update(_un_on if on else {})
+    return run_hook("noask", _pt_tool(tool, {}, event="PreToolUse"), env=e)
+
+
+_un_n = [_un_noask(t, on) for t in ("AskUserQuestion", "ExitPlanMode") for on in (True, False)]
+report("PASS" if all(_ua_dec(o[1]) == "deny" and "nobody is there to answer" in o[1] for o in _un_n[0::2])
+       and all(o[0] == 0 and o[1] == "" for o in _un_n[1::2]) else "FAIL",
+       "noask: AskUserQuestion and ExitPlanMode are denied when unattended; silent and exit 0 when not")
+
+_un_h = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]["PreToolUse"]
+report("PASS" if any(m["matcher"] == "AskUserQuestion|ExitPlanMode" and "run.sh\\\" noask" in json.dumps(m["hooks"])
+                     for m in _un_h) else "FAIL", "hooks.json registers noask on AskUserQuestion|ExitPlanMode")
+
 
 finish()

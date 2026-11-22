@@ -2714,10 +2714,30 @@ def _mode_typed(cwd):
     return dict(_mode_read(everywhere), **_mode_read(folder))
 
 
+def unattended():
+    """True when HOUSE_RULES_UNATTENDED=on: nobody is present to answer a prompt (tools/overnight.sh)."""
+    return os.environ.get("HOUSE_RULES_UNATTENDED", "").strip().lower() == "on"
+
+
+def event_noask():
+    """PreToolUse on AskUserQuestion|ExitPlanMode: unattended, deny so the agent decides itself. Else silent."""
+    if not unattended():
+        return 0
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+          "permissionDecisionReason": "This is an unattended run (HOUSE_RULES_UNATTENDED=on): nobody is there to "
+          "answer. Choose the safest option yourself, record the question and your choice in the final report, "
+          "and carry on."}})
+    return 0
+
+
 def apply_switches():
     """Set the mapped HOUSE_RULES_ values for this hook call from the typed groups (typed beats settings.json).
     "house rules" goes first so a more specific group typed beside it wins. Nothing typed: environment untouched."""
     raw = _PAYLOAD_CACHE
+    if unattended():  # everything off but autosave; a typed switch below still wins
+        for var in _MODE_GROUPS["house"]:
+            if var not in _MODE_GROUPS["autosave"]:
+                os.environ[var] = "off"
     typed = _mode_typed(_payload_cwd(raw)) if raw else {}
     for group in sorted(typed, key=lambda g: g != "house"):
         for var in _MODE_GROUPS[group]:
@@ -2816,6 +2836,9 @@ def _mode_note(payload=None):
         if typed.get(g) == "off" or (var and g != "issues" and sj(g, var)) or (g == "issues" and "design" not in typed and sj(g, var)):
             parts.append(text % ((("you typed \"%s off\"" % {"writing": "writing checks", "house": "house rules"}.get(g, g)) + _mode_where(g, raw))
                                  if g in typed else "%s=off in settings.json" % var))
+    if unattended():
+        parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): nobody can approve or answer; guard prompts are "
+                     "refused instead of asked and listed under \"Waiting on you\"; decide and keep going.")
     if parts:
         parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules) to switch back; add \"everywhere\" for all folders.")
     return " ".join(parts)

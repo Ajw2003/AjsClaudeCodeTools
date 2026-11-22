@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-22 - Unattended mode: guard asks are refused outright
+
+**Decision.** With `HOUSE_RULES_UNATTENDED=on`, a guard `ask` is always a refusal (deny, "Refused, not asked", listed under "Waiting on you"), not an ask that is refused after `HOUSE_RULES_PROMPT_TIMEOUT`.
+**Why.** prompttimer only times prompts a guard raised, and a 5 minute wait per prompt overnight is a stall. Nobody is there to answer, so waiting gains nothing.
+**Also.** Every switch group except autosave goes off (a typed switch still wins); `noask` denies `AskUserQuestion` and `ExitPlanMode`; `tools/overnight.sh` starts it. The destructive, main-branch and credit guards are untouched. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
+**Status.** Current.
+
+---
+
 ## 2026-11-19 - Flexible pages: QA passed on live headless runs
 
 **Context.** aj's first QA on the desktop app failed because the app loads the claude.ai account's plugin copy, which

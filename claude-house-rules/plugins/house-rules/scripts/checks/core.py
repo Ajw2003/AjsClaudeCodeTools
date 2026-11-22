@@ -1226,10 +1226,10 @@ _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # so is guardgithub (#178), which runs only on a GitHub MCP write; and pagecheck (#257), which
 # exits at once unless the call is an .html page Write or an Artifact call; and closablemerge (#362), which
 # exits at once unless the call is a merge; and rclink (#383), which runs only on the one
-# start_remote_control MCP tool.
+# start_remote_control MCP tool. And noask (unattended mode), which runs only on AskUserQuestion and ExitPlanMode.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] or "noask" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -2649,6 +2649,19 @@ try:
            "feature switches (g): a file listed in HOUSE_RULES_MODE_IGNORE is read as no switches")
 finally:
     del _fs_env["HOUSE_RULES_MODE_IGNORE"]
+
+# --- unattended mode: every switch group off except autosave; a typed line still wins ---
+_un_d = _fs_dir("unattended")
+_fs_env["HOUSE_RULES_UNATTENDED"] = "on"
+try:
+    _un_ok = (_fs_env_seen(_un_d, "HOUSE_RULES_PAGES") == "off" and _fs_env_seen(_un_d, "HOUSE_RULES_DELEGATION") == "off"
+              and _fs_env_seen(_un_d, "HOUSE_RULES_AUTOSAVE") == "unset" and _fs_env_seen(_un_d, "HOUSE_RULES_HANDOFF") == "off")  # HANDOFF is preset off by this section; unattended must not touch it
+    _fs_type(_un_d, "pages on")
+    _un_ok = _un_ok and _fs_env_seen(_un_d, "HOUSE_RULES_PAGES") == "on" and _fs_env_seen(_un_d, "HOUSE_RULES_VOICE") == "off"
+finally:
+    del _fs_env["HOUSE_RULES_UNATTENDED"]
+report("PASS" if _un_ok else "FAIL",
+       "unattended: apply_switches sets PAGES off, leaves AUTOSAVE alone (HANDOFF too), and a typed 'pages on' still wins")
 
 
 finish()

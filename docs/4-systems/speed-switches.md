@@ -88,3 +88,14 @@ typing one line, in any folder, git repository or not. Page: `docs/plans/2026-11
   design loop leaves out `show-dont-tell.md` (`event_showrule`) and builders leave out their section (`event_inject`);
   "house rules off" sets both off. The page rule is one block inside `show-dont-tell.md`, so "pages off" keeps it
   loaded and relies on the note. Command: `commands/mode.md`. Checks: `scripts/checks/design_loop.py`, "feature switches".
+
+## Unattended mode (2.84.0)
+
+For a run with nobody present. `HOUSE_RULES_UNATTENDED=on` (case-insensitive) turns it on; `core.unattended()` reads it.
+
+- **Turns off:** every group in `_MODE_GROUPS` except autosave (design loop, pages, builders, issues, writing checks, and the rest of "house rules"). `apply_switches()` does this first, so a typed switch such as `pages on` still wins.
+- **Stays:** autosave and handoff (work stays committed overnight) and the destructive-command guard, main-branch guard and credit check, which have no switch.
+- **Refuse, not ask:** `_ask_or_refuse` in `safe_git.py` always denies, with "Refused, not asked: this is an unattended run (HOUSE_RULES_UNATTENDED=on), so nobody can answer a prompt", and adds the action to "Waiting on you". Before, an ask was refused only after the prompt timeout, and prompttimer ignores prompts no guard raised.
+- **`noask`:** a PreToolUse hook on `AskUserQuestion|ExitPlanMode`. Unattended it denies, telling the agent to choose the safest option, record the question and choice in the final report, and carry on. Otherwise silent.
+- **Session start** adds one note saying the run is unattended.
+- **Launcher:** `tools/overnight.sh` sets `HOUSE_RULES_UNATTENDED=on` and `ART_PIPELINE=unattended`, then runs `claude --dangerously-skip-permissions "$@"`. Use a throwaway branch or clone.

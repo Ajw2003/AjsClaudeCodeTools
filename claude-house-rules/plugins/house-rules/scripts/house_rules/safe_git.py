@@ -1564,6 +1564,8 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
     session_id = str(data.get("session_id") or "")
     if secs is not None and data.get("agent_id"):
         why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
+    if core.unattended():
+        why = "this is an unattended run (HOUSE_RULES_UNATTENDED=on), so nobody can answer a prompt"
     if not why:
         _record_ask(session_id, _waiting_key(str(data.get("tool_name") or "?"), data.get("tool_input")))
         out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",

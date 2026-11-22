@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Plugin 2.84.0: unattended mode. `HOUSE_RULES_UNATTENDED=on` turns every switch off except autosave, refuses guard prompts outright (listed under "Waiting on you"), and the new `noask` hook denies `AskUserQuestion` and `ExitPlanMode`; `tools/overnight.sh` starts a run with it and `ART_PIPELINE=unattended`.
+
 Plugin 2.83.0: free issue closing (#548 to #552). The agent closes an issue on its own when it is labelled `needs review`, `in review` or completed by someone else and is in no GitHub milestone, then labels it `AjsAgent completed this`. Other issues, milestone issues and milestones need aj's "Close approved: #N" or "Close approved: milestone N". The sweep page is no longer required.
 
 - The guard reads every open issue's labels and milestone in one GitHub call and reuses it for 60 seconds, so a mass close makes one call; a failed read refuses the close (#549).

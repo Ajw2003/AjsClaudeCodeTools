@@ -275,6 +275,7 @@ EVENTS = {
     "diskreport": event_diskreport,
     "versioncheck": event_versioncheck,
     "scope": event_scope,
+    "noask": event_noask,
     "guard": event_guard,
     "guardwrite": event_guardwrite,
     "guardgithub": event_guardgithub,
