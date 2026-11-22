@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+QA failed on the wait clocks work (#555) with one item to fix: the end-of-turn visual reminder fired after ordinary pages in both real test sessions. It is being changed to skip pages that carry the page builder's mark or the handover-page meta tag; everything else visual is checked as before. Not released.
+
 Reworded the QA page for the wait clocks, visual checks, page sending and pictures work after a final editor pass, and sent it to aj again (`docs/plans/2026-11-22-wait-and-visual-checks-qa.html`). No code changed.
 
 Ran the Linux equivalent of the QA steps for wait clocks, visual checks, page sending and pictures (#555): the branch installs as 2.88.0, `waitfor.py` times out with exit 3, and two real headless sessions showed the send reminder, a re-send after an edit, and the send hook repairing an old page in place (results in `docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt`). Found: the end-of-turn visual reminder fires after ordinary docs pages; the fix waits for aj's decision.
