@@ -4,7 +4,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-Docs only: a proposal page for three workflow fixes: a one-minute clock and deadline for every wait, an unattended capture-critique-fix loop for visual work, and every made or changed page sent to aj at the end of the turn. Nothing is built; it waits on aj's five choices. See `docs/plans/2026-11-22-wait-and-visual-checks.html`.
+Docs only: a proposal page for four workflow fixes: a one-minute clock and deadline for every wait, an unattended capture-critique-fix loop for visual work, and every made or changed page sent to aj at the end of the turn, and pictures built into each page so they always show. Nothing is built; it waits on aj's six choices. See `docs/plans/2026-11-22-wait-and-visual-checks.html`.
 
 Plugin 2.87.0: unattended mode on one typed line. Type `unattended on` (or `unattended off`, add `everywhere` for all folders) at any point; it turns every other switch off except autosave, refuses questions and prompts, tells the agent to use its own judgment and push only to its own `AjsAgent/` branch, never `main`, and the art-pipeline plugin follows the same line. The switch file is not to be committed while it is on.
 

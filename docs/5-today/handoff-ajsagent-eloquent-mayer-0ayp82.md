@@ -1,8 +1,8 @@
-# Handoff: ajsagent/eloquent-mayer-0ayp82 (2026-11-22, proposal page, three fixes, waiting on aj's five choices)
+# Handoff: ajsagent/eloquent-mayer-0ayp82 (2026-11-22, proposal page, four fixes, waiting on aj's six choices)
 
 ## What the work is for
 
-Three workflow fixes aj asked for. First, no wait may run unchecked or for ever: a one-minute first check, a check every minute after that, and a stated done-test and deadline for every wait. Second, a visual check for everything that can be seen (video of a feature, a frame sheet for animation, phone and desktop screenshots of a flow), so the agent can capture, critique and fix its own visual work without aj in the middle. Third, pages always reach aj: any page made or updated in a turn is sent (and sent again after a change) before the turn ends, so aj never has to ask. Today's end-of-turn page check (`scripts/house_rules/core.py:3261`, `design_loop.py:2466`) only wants a link in the reply, so a page can be linked but never sent.
+Four workflow fixes aj asked for. First, no wait may run unchecked or for ever: a one-minute first check, a check every minute after that, and a stated done-test and deadline for every wait. Second, a visual check for everything that can be seen (video of a feature, a frame sheet for animation, phone and desktop screenshots of a flow), so the agent can capture, critique and fix its own visual work without aj in the middle. Third, pages always reach aj: any page made or updated in a turn is sent (and sent again after a change) before the turn ends, so aj never has to ask. Today's end-of-turn page check (`scripts/house_rules/core.py:3261`, `design_loop.py:2466`) only wants a link in the reply, so a page can be linked but never sent. Fourth, pictures on pages must always show: `make_page.py:156` copies each picture into a `<page>-pics/` folder and links it by relative path, so a page sent on its own loses its pictures. Measured on a lone copy of the proposal page: 5 of 5 pictures broken, against 0 of 5 in the repo; six other pages in `docs/plans/` use the same folder pattern.
 
 ## Where it stands
 
@@ -13,13 +13,14 @@ Three workflow fixes aj asked for. First, no wait may run unchecked or for ever:
 
 ## The next step
 
-aj answers the five choices on the page (deadline behaviour, guard strictness, capture tools, who critiques, how firm the page-sending check is) and sends the approval line "Design approved: wait clocks, visual checks and page sending". Then open one parent issue with a child per step, build page sending first (smallest, fixes the most repeated complaint), then the wait clock (the visual loop reuses its deadlines), and prove each fix on seeded failures: a hanging process, a stalled process, and a deliberately broken page the loop must catch and repair on its own.
+aj answers the six choices on the page (deadline behaviour, guard strictness, capture tools, who critiques, how firm the page-sending check is, how the six old pages with folder pictures are fixed) and sends the approval line "Design approved: wait clocks, visual checks, page sending and pictures". Then open one parent issue with a child per step, build page sending and the picture fix first (smallest, answer the most repeated complaints), then the wait clock (the visual loop reuses its deadlines), and prove each fix on seeded failures: a hanging process, a stalled process, and a deliberately broken page the loop must catch and repair on its own.
 
 ## What is unverified
 
-- `visualcheck.py`, `waitfor.py` and the page-sending check do not exist yet; nothing about their behaviour is tested.
+- `visualcheck.py`, `waitfor.py`, the page-sending check and the picture embedding do not exist yet; nothing about their behaviour is tested.
 - Playwright for Node and ffmpeg ran in this cloud container only. aj's own machine is untested and not recorded in `rules/handover-target.md`.
 - Unity and game capture is only planned, not tried.
+- The proposal page's own pictures were put into its source as inline data by hand, as an interim fix; after that a lone copy showed 0 of 6 broken pictures. I did not capture a clean image of them drawn in the lone copy (a sticky box covered it); the pictures loaded with a real width. I have not seen how aj's side panel renders the page.
 - The false-alarm rate of a widened visual-file list is unmeasured; it must be measured on this repo's real sessions before shipping.
 
 ## Issue numbers
