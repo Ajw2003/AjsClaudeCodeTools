@@ -258,7 +258,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.</label></li><li><label><input type="checkbox"> Check the machine details I am using: Windows 11, PowerShell 5.1, folder <code>C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools</code> (an old example from 2026-08-25, not confirmed). If any is wrong, put the right one in your reply.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Open PowerShell in that folder and run <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py ajsagent/eloquent-mayer-0ayp82</code>. Expect the last lines <code>plugin version  : 2.88.0</code> and <code>OK: installed build matches the request.</code>, then restart Claude Code. (I ran it on Linux in a throwaway config and it printed exactly that shape.)</label></li><li><label><input type="checkbox"> In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.</code> Expect the page to appear in your window without you asking, with its picture showing if it has one.</label></li><li><label><input type="checkbox"> Say: <code>Send me docs/plans/2026-10-19-restructure-step-1-qa.html</code>. Expect a note that the page was repaired by embedding 2 pictures, and its before and after pictures to show.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Run <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\waitfor.py --kind command --check "exit 1" --first-check 1 --interval 1 --deadline 4</code>. Expect four <code>not yet</code> lines, then <code>timed out: gave up after 4s</code>.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Switch back with <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py main</code>. Expect <code>plugin version  : 2.87.0</code> and <code>OK</code>, then restart.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: wait clocks", or send "QA failed: wait clocks" with what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows. Two real sessions on Linux exercised the send reminder, the send hook and the in-place repair. The "block once if a made page was never sent" path only ran on recorded transcripts and made-up payloads, because the test agent always sent its pages. The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available. Video and frames were proven for the phone in light only; Unity and game capture is only written down. The injected rules are 6 characters under their size limit, so the next rule added must make room first.</p></details></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows. Real sessions on Linux exercised the send reminder, the send hook, the in-place repair, the block-once check for a page never sent, the guard refusal and the unchecked-wait note. The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available. Video and frames were proven for the phone in light only; Unity and game capture is only written down. The injected rules are 6 characters under their size limit, so the next rule added must make room first.</p></details></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -450,15 +450,33 @@ const PAGE = {
     ],
     [
       "chg",
+      "Found while testing for the pull request",
+      "Four test checks fail on a stock runner with no browser; the product works.",
+      null,
+      "Run like GitHub's runner (Python 3.12, no browser), three repair tests that assume a browser fail, and one check that reads this branch's loop state needs GitHub. By hand, the repair works without a browser. Fixing the tests needs your go-ahead, because code edits are closed in QA.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Also found: two false alarms in the wait checks",
+      "Real sessions showed both; the guard's refusal and the real notes work.",
+      null,
+      "The turn-end note listed a launch the guard had refused, though it never started. The guard also misread quoted text containing the word timeout and a big number as a real foreground wait. The same go-ahead covers fixing both.",
+      null,
+      null
+    ],
+    [
+      "chg",
       "Files changed, counted from git against origin/main",
-      "78 files, +9206 −107",
+      "78 files, +6342 −107",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          2867,
+          1,
           1,
           [
             [
@@ -470,7 +488,7 @@ const PAGE = {
         ],
         [
           "CHANGELOG.md",
-          28,
+          30,
           0,
           [
             [
@@ -1399,7 +1417,7 @@ const PAGE = {
       "Still unverified",
       "5 things not yet proven",
       null,
-      "Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows. Two real sessions on Linux exercised the send reminder, the send hook and the in-place repair. The \"block once if a made page was never sent\" path only ran on recorded transcripts and made-up payloads, because the test agent always sent its pages. The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available. Video and frames were proven for the phone in light only; Unity and game capture is only written down. The injected rules are 6 characters under their size limit, so the next rule added must make room first.",
+      "Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows. Real sessions on Linux exercised the send reminder, the send hook, the in-place repair, the block-once check for a page never sent, the guard refusal and the unchecked-wait note. The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available. Video and frames were proven for the phone in light only; Unity and game capture is only written down. The injected rules are 6 characters under their size limit, so the next rule added must make room first.",
       null,
       null
     ]
@@ -1409,7 +1427,7 @@ const PAGE = {
     "base": "origin/main",
     "unverified": [
       "Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows.",
-      "Two real sessions on Linux exercised the send reminder, the send hook and the in-place repair. The \"block once if a made page was never sent\" path only ran on recorded transcripts and made-up payloads, because the test agent always sent its pages.",
+      "Real sessions on Linux exercised the send reminder, the send hook, the in-place repair, the block-once check for a page never sent, the guard refusal and the unchecked-wait note.",
       "The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available.",
       "Video and frames were proven for the phone in light only; Unity and game capture is only written down.",
       "The injected rules are 6 characters under their size limit, so the next rule added must make room first."

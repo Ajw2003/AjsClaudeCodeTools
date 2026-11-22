@@ -167,6 +167,24 @@
    "Pages that carry the page builder's mark, or the handover-page meta tag, are no longer treated as visual files. Replaying your two real sessions gave 1 reminder before the fix and 0 after, in each. Fresh runs on the fixed build also gave 0 and 0. A plain test page is still checked.",
    null,
    null
+  ],
+  [
+   "chg",
+   "Found while testing for the pull request",
+   "Four test checks fail on a stock runner with no browser; the product works.",
+   null,
+   "Run like GitHub's runner (Python 3.12, no browser), three repair tests that assume a browser fail, and one check that reads this branch's loop state needs GitHub. By hand, the repair works without a browser. Fixing the tests needs your go-ahead, because code edits are closed in QA.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Also found: two false alarms in the wait checks",
+   "Real sessions showed both; the guard's refusal and the real notes work.",
+   null,
+   "The turn-end note listed a launch the guard had refused, though it never started. The guard also misread quoted text containing the word timeout and a big number as a real foreground wait. The same go-ahead covers fixing both.",
+   null,
+   null
   ]
  ],
  "qa": {
@@ -174,7 +192,7 @@
   "base": "origin/main",
   "unverified": [
    "Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows.",
-   "Two real sessions on Linux exercised the send reminder, the send hook and the in-place repair. The \"block once if a made page was never sent\" path only ran on recorded transcripts and made-up payloads, because the test agent always sent its pages.",
+   "Real sessions on Linux exercised the send reminder, the send hook, the in-place repair, the block-once check for a page never sent, the guard refusal and the unchecked-wait note.",
    "The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available.",
    "Video and frames were proven for the phone in light only; Unity and game capture is only written down.",
    "The injected rules are 6 characters under their size limit, so the next rule added must make room first."
