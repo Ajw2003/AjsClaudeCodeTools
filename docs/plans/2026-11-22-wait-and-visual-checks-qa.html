@@ -257,7 +257,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.</label></li><li><label><input type="checkbox"> Check the machine details I am using: Windows 11, PowerShell 5.1, folder <code>C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools</code> (an old example from 2026-08-25, not confirmed). If any is wrong, put the right one in your reply.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Open PowerShell in that folder and run <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py ajsagent/eloquent-mayer-0ayp82</code>. Expect the last lines <code>plugin version  : 2.88.0</code> and <code>OK: installed build matches the request.</code>, then restart Claude Code. (I ran it on Linux in a throwaway config and it printed exactly that shape.)</label></li><li><label><input type="checkbox"> In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.</code> Expect the page to appear in your window without you asking, (and with its picture showing, if it has one).</label></li><li><label><input type="checkbox"> Say: <code>Send me docs/plans/2026-10-19-restructure-step-1-qa.html</code>. Expect a note that the page was repaired by embedding 2 pictures, and its before and after pictures to show.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Run <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\waitfor.py --kind command --check "exit 1" --first-check 1 --interval 1 --deadline 4</code>. Expect four <code>not yet</code> lines, then <code>timed out: gave up after 4s</code>.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Switch back with <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py main</code>. Expect <code>plugin version  : 2.87.0</code> and <code>OK</code>, then restart.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: wait clocks", or send "QA failed: wait clocks" with what to change.</label></li></ol></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.</label></li><li><label><input type="checkbox"> Check the machine details I am using: Windows 11, PowerShell 5.1, folder <code>C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools</code> (an old example from 2026-08-25, not confirmed). If any is wrong, put the right one in your reply.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Open PowerShell in that folder and run <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py ajsagent/eloquent-mayer-0ayp82</code>. Expect the last lines <code>plugin version  : 2.88.0</code> and <code>OK: installed build matches the request.</code>, then restart Claude Code. (I ran it on Linux in a throwaway config and it printed exactly that shape.)</label></li><li><label><input type="checkbox"> In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.</code> Expect the page to appear in your window without you asking, with its picture showing if it has one.</label></li><li><label><input type="checkbox"> Say: <code>Send me docs/plans/2026-10-19-restructure-step-1-qa.html</code>. Expect a note that the page was repaired by embedding 2 pictures, and its before and after pictures to show.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Run <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\waitfor.py --kind command --check "exit 1" --first-check 1 --interval 1 --deadline 4</code>. Expect four <code>not yet</code> lines, then <code>timed out: gave up after 4s</code>.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Switch back with <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py main</code>. Expect <code>plugin version  : 2.87.0</code> and <code>OK</code>, then restart.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: wait clocks", or send "QA failed: wait clocks" with what to change.</label></li></ol></div></div></div>
     <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows. Two real sessions on Linux exercised the send reminder, the send hook and the in-place repair. The "block once if a made page was never sent" path only ran on recorded transcripts and made-up payloads, because the test agent always sent its pages. The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available. Video and frames were proven for the phone in light only; Unity and game capture is only written down. The injected rules are 6 characters under their size limit, so the next rule added must make room first.</p></details></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
@@ -366,7 +366,7 @@ const PAGE = {
         "Checked",
         "Your steps 3 to 7, run on Linux in real sessions",
         "",
-        "I ran the Linux form of steps 3 to 7. The install says 2.88.0; waitfor ends in a timeout, exit 3; a real session sent its page unasked, and again after an edit; the send hook repaired an old page in place. Full output: docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt.",
+        "I ran the Linux form of steps 3 to 7. The install says 2.88.0; the waitfor.py wait script ends in a timeout, exit 3; a real session sent its page unasked, and again after an edit; the send hook repaired an old page in place. Full output: docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjcwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlBhZ2Ugc2VuZGluZzogYSBwYWdlIGlzIG1hZGUsIHNlbnQgdG8geW91LCBhbmQgc2VudCBhZ2FpbiBhZnRlciBldmVyeSBjaGFuZ2UsIGJlZm9yZSB0aGUgdHVybiBlbmRzIj4KPHN0eWxlPnRleHR7Zm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7Zm9udC1zaXplOjE0cHg7ZmlsbDojMTcyMDJlfS5ieHtmaWxsOiNmZmY7c3Ryb2tlOiMyZjViZDM7c3Ryb2tlLXdpZHRoOjJ9LmFye3N0cm9rZTojNTY2MTc0O3N0cm9rZS13aWR0aDoyO2ZpbGw6bm9uZX0uYntmaWxsOiNlM2VhZmN9Lm9re2ZpbGw6I2RmZjNlODtzdHJva2U6IzFmN2E0ZDtzdHJva2Utd2lkdGg6Mn0udHtmb250LXdlaWdodDo3MDB9PC9zdHlsZT4KPHJlY3Qgd2lkdGg9IjM2MCIgaGVpZ2h0PSIyNzAiIGNsYXNzPSJiIi8+Cjx0ZXh0IHg9IjE2IiB5PSIyNiIgY2xhc3M9InQiPkEgcGFnZSBuZXZlciBzdGF5cyB1bnNlbnQ8L3RleHQ+CjxyZWN0IHg9IjE2IiB5PSI0MiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjI4IiB5PSI2NiI+UGFnZSBtYWRlIG9yPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSI4NCI+cmVidWlsdDwvdGV4dD4KPHJlY3QgeD0iMTk0IiB5PSI0MiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJvayIvPjx0ZXh0IHg9IjIwNiIgeT0iNjYiPlNlbnQgdG8geW91LDwvdGV4dD48dGV4dCB4PSIyMDYiIHk9Ijg0Ij5zaG93biBpbiB0aGUgYXBwPC90ZXh0Pgo8cGF0aCBkPSJNMTY2IDY4SDE5NCIgY2xhc3M9ImFyIi8+CjxyZWN0IHg9IjE2IiB5PSIxMjQiIHdpZHRoPSIxNTAiIGhlaWdodD0iNTIiIHJ4PSI4IiBjbGFzcz0iYngiLz48dGV4dCB4PSIyOCIgeT0iMTQ4Ij5QYWdlIGNoYW5nZWQ8L3RleHQ+PHRleHQgeD0iMjgiIHk9IjE2NiI+YWZ0ZXIgc2VuZGluZzwvdGV4dD4KPHJlY3QgeD0iMTk0IiB5PSIxMjQiIHdpZHRoPSIxNTAiIGhlaWdodD0iNTIiIHJ4PSI4IiBjbGFzcz0ib2siLz48dGV4dCB4PSIyMDYiIHk9IjE0OCI+U2VudCBhZ2Fpbiw8L3RleHQ+PHRleHQgeD0iMjA2IiB5PSIxNjYiPm5vIHJlcXVlc3QgbmVlZGVkPC90ZXh0Pgo8cGF0aCBkPSJNMTY2IDE1MEgxOTRNMjY5IDk0VjEyNCIgY2xhc3M9ImFyIi8+Cjx0ZXh0IHg9IjE2IiB5PSIyMTIiPlRoZSB0dXJuIGNhbm5vdCBlbmQgd2l0aCBhIG1hZGU8L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIyMzIiPm9yIGNoYW5nZWQgcGFnZSB0aGF0IHdhcyBub3Qgc2VudC48L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIyNTQiPkNoZWNrZWQgZnJvbSB0aGUgdHVybidzIG93biByZWNvcmQuPC90ZXh0Pgo8L3N2Zz4K",
@@ -390,7 +390,7 @@ const PAGE = {
       "Wait clocks (#560 to #563)",
       "Every wait has a test for when it is finished, a deadline and a check every minute.",
       null,
-      "A settings file for the numbers, waitfor.py, a guard refusal for background launches with no timeout, a reminder for waits nobody checked, and the rule in \"Nothing fails silently\". A switch group named waits turns off the parts that block you.",
+      "A settings file for the numbers, waitfor.py (the script that runs a wait), a guard refusal for background launches with no timeout, a reminder for waits nobody checked, and the rule in \"Nothing fails silently\". A switch group named waits turns off the parts that block you.",
       null,
       null
     ],
@@ -417,7 +417,7 @@ const PAGE = {
       "Visual capture and loop (#564 to #567)",
       "Screenshots, video, frame sheets, a written record and a reviewer each round.",
       null,
-      "visualcheck.py captures phone and desktop in light and dark, records video and builds a sheet of timestamped video frames, with measures of how much moved between them. A skill (a saved set of instructions for Claude) runs up to four review rounds. A turn that changes a visual file must now show a real capture, a record check and an image read.",
+      "visualcheck.py captures phone and desktop in light and dark, records video and builds a sheet of timestamped frames, measuring how much moved between them. A skill (a saved set of instructions for Claude) runs up to four review rounds. A turn that changes a visual file must now show a real capture, a record check and an image read.",
       null,
       null
     ],
@@ -426,7 +426,7 @@ const PAGE = {
       "Faults found by running real data",
       "Six faults that only real pages and real transcripts showed.",
       null,
-      "The picture check missed pictures that appear only when a row is tapped. The repair rebuilt QA pages from git. The reminder about unchecked waits fired wrongly when a prompt merely mentioned a tool. Test runs collided. The injected rules went over their size limit. Long commands in these QA steps were squeezed into a one-character column on a phone. All fixed.",
+      "The picture check missed pictures that appear only when a row is tapped. The repair rebuilt QA pages from git. The reminder about unchecked waits fired wrongly when a prompt merely mentioned a tool. Test runs collided. The injected rules went over their size limit. Long commands were squeezed into a one-character column on a phone. All fixed.",
       null,
       null
     ],
@@ -444,21 +444,21 @@ const PAGE = {
       "Found by the live runs: the visual reminder is noisy",
       "It fired after ordinary docs pages in both live runs.",
       null,
-      "At the end of each live turn the new visual check asked for a capture, a ledger check and an image read after an ordinary page was written (once, then twice). It only reminds. Proposed fix: count a page build, or the page checker's visual run, as the capture for docs pages. Code edits are closed during QA, so this waits for your word.",
+      "After ordinary pages were written, the visual check asked for a capture, a record check and an image read at the turn's end (once in step 4, twice in step 5). It only reminds. Proposed fix: count a page build, or the page checker's visual run, as the capture for docs pages. Code edits are closed in QA, so this waits for your word.",
       null,
       null
     ],
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "78 files, +6176 −105",
+      "78 files, +9106 −105",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          1,
+          2863,
           1,
           [
             [
@@ -470,7 +470,7 @@ const PAGE = {
         ],
         [
           "CHANGELOG.md",
-          20,
+          22,
           0,
           [
             [
@@ -926,7 +926,7 @@ const PAGE = {
         ],
         [
           "docs/3-state/ProjectState.md",
-          8,
+          9,
           0,
           [
             [
@@ -950,7 +950,7 @@ const PAGE = {
         ],
         [
           "docs/4-systems/wait-and-visual-checks.md",
-          146,
+          147,
           0,
           [
             [
@@ -974,7 +974,7 @@ const PAGE = {
         ],
         [
           "docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md",
-          43,
+          51,
           0,
           [
             [
@@ -1166,7 +1166,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-22-wait-and-visual-checks-qa.html",
-          1536,
+          1570,
           0,
           [
             [
@@ -1178,7 +1178,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-22-wait-and-visual-checks-qa.page.json",
-          178,
+          200,
           0,
           [
             [
@@ -1425,7 +1425,7 @@ const PAGE = {
       "Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.",
       "Check the machine details I am using: Windows 11, PowerShell 5.1, folder <code>C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools<\/code> (an old example from 2026-08-25, not confirmed). If any is wrong, put the right one in your reply.",
       "UNTESTED on Windows. Open PowerShell in that folder and run <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py ajsagent/eloquent-mayer-0ayp82<\/code>. Expect the last lines <code>plugin version  : 2.88.0<\/code> and <code>OK: installed build matches the request.<\/code>, then restart Claude Code. (I ran it on Linux in a throwaway config and it printed exactly that shape.)",
-      "In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.<\/code> Expect the page to appear in your window without you asking, (and with its picture showing, if it has one).",
+      "In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.<\/code> Expect the page to appear in your window without you asking, with its picture showing if it has one.",
       "Say: <code>Send me docs/plans/2026-10-19-restructure-step-1-qa.html<\/code>. Expect a note that the page was repaired by embedding 2 pictures, and its before and after pictures to show.",
       "UNTESTED on Windows. Run <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\claude-house-rules\\plugins\\house-rules\\scripts\\waitfor.py --kind command --check \"exit 1\" --first-check 1 --interval 1 --deadline 4<\/code>. Expect four <code>not yet<\/code> lines, then <code>timed out: gave up after 4s<\/code>.",
       "UNTESTED on Windows. Switch back with <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py main<\/code>. Expect <code>plugin version  : 2.87.0<\/code> and <code>OK<\/code>, then restart.",
