@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Reworded the QA page for the wait clocks, visual checks, page sending and pictures work after a final editor pass, and sent it to aj again (`docs/plans/2026-11-22-wait-and-visual-checks-qa.html`). No code changed.
+
 Ran the Linux equivalent of the QA steps for wait clocks, visual checks, page sending and pictures (#555): the branch installs as 2.88.0, `waitfor.py` times out with exit 3, and two real headless sessions showed the send reminder, a re-send after an edit, and the send hook repairing an old page in place (results in `docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt`). Found: the end-of-turn visual reminder fires after ordinary docs pages; the fix waits for aj's decision.
 
 Plugin 2.88.0, ready for QA (#555, steps #556 to #568): wait clocks with a deadline and `waitfor.py`, a guard refusal for background launches with no timeout (switch group `waits`), pictures built into pages with a check and in-place repair before a page is sent, a turn-end check that a made or changed page was sent, `visualcheck.py`, `ledger.py` and the `visual-loop` skill, and an end-of-turn visual check that needs a real capture. Also fixed: the writing check no longer reads inline picture data as prose, and long commands in a page's numbered steps wrap on a phone. Full `verify.py` 1422 of 1422.
