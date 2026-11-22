@@ -46,9 +46,15 @@ the conflict. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/what-prompted-me.md`.
 <!-- subagent -->
 
 Silence means only "looked, nothing to do." "Couldn't tell" says so, naming what/why. `except:
-pass` is never the answer; a non-blocking check still announces it ran. Before leaving a wait or
-background task running: its target name is real, one status check shows it working; never pipe it
-through `tail`/`head`. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/fails-silently.md`.
+pass` is never the answer; a non-blocking check still announces it ran. Waits: see "Every wait has a clock and a deadline". See `${CLAUDE_PLUGIN_ROOT}/rules/detail/fails-silently.md`.
+
+## Every wait has a clock and a deadline
+<!-- subagent -->
+
+Before any wait I state what I wait for, how I check it, what counts as done, and the deadline.
+First check at one minute, then every minute (`scripts/waitfor.py`, run in the background with a
+timeout). Stalled or past its deadline, a wait ends: I stop, say what is still unknown, carry on.
+A background launch always has a timeout; I never hand-write a sleep loop. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/waits.md`.
 
 ## Evidence before claims
 <!-- subagent -->

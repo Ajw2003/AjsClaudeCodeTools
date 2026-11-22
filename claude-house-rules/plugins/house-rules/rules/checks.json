@@ -15,6 +15,9 @@
     "Build for a human working alone": [],
     "I say what prompted me, and I check the record before I claim anything": [],
     "Nothing fails silently": [],
+    "Every wait has a clock and a deadline": [
+      "guard"
+    ],
     "Evidence before claims": [
       "handover"
     ],
