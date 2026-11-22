@@ -2035,5 +2035,22 @@ _un_h = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]["PreToolUse"]
 report("PASS" if any(m["matcher"] == "AskUserQuestion|ExitPlanMode" and "run.sh\\\" noask" in json.dumps(m["hooks"])
                      for m in _un_h) else "FAIL", "hooks.json registers noask on AskUserQuestion|ExitPlanMode")
 
+# --- unattended relaxations (the user approved them 2026-11-22): allowed with a note, strict when attended ---
+_un_gw_on = run_hook("guardwrite", guardwrite_payload(_gw_existing), env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))[1]
+_un_gw_off = run_hook("guardwrite", guardwrite_payload(_gw_existing),
+                      env={k: v for k, v in os.environ.items() if k != "HOUSE_RULES_UNATTENDED"})[1]
+report("PASS" if '"permissionDecision"' not in _un_gw_on and "UNATTENDED run" in _un_gw_on
+       and os.path.basename(_gw_existing) in _un_gw_on and '"permissionDecision":"deny"' in _un_gw_off else "FAIL",
+       "unattended: a whole-file Write is allowed with a note naming the file; attended it is still refused")
+
+_un_cr_cmd = 'git commit --allow-empty -m "x\n\nCo-Authored-By: ' + 'Claude <noreply@anthropic.com>"'
+_un_cr_pl = json.dumps({"session_id": "verify", "cwd": _u7, "tool_name": "Bash", "tool_input": {"command": _un_cr_cmd}})
+_un_cr_on = run_hook("guard", _un_cr_pl, env=dict(_project_env(_u7), HOUSE_RULES_UNATTENDED="on"))[1]
+_un_cr_off = run_hook("guard", _un_cr_pl, env=_project_env(_u7))[1]
+report("PASS" if '"permissionDecision":"deny"' not in _un_cr_on and "credit rule was relaxed" in _un_cr_on
+       and '"permissionDecision":"deny"' in _un_cr_off and "Remove every `Co-Authored-By:`" in _un_cr_off else "FAIL",
+       "unattended: a Claude credit line is allowed with a note; attended the commit is still refused")
+print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
+
 
 finish()

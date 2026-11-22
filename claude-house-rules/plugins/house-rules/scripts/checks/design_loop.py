@@ -3707,5 +3707,16 @@ finally:
 report("PASS" if _cf_hit == ({"labels": ["in review"], "milestone": None}, "") and _cf_miss[0] is None and _cf_miss[1]
        else "FAIL", "close facts (#549): the stand-in file answers, and a missing key reads as a failed read")
 
+# --- unattended: a big-file commit is allowed with a note naming the files; attended it is still refused ---
+_ubf = _bf_repo()
+_bf_big(_ubf, "huge.bin")
+_ubf_off = _bf_commit(_ubf)
+_ubf_on = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _ubf, command="git add -A && git commit -m x"), _ubf,
+                    HOUSE_RULES_UNATTENDED="on")[1]
+report("PASS" if _ubf_off[0] == "deny" and "huge.bin" in _ubf_off[1] and _iss_decision(_ubf_on) != "deny"
+       and "UNATTENDED run" in _ubf_on and "huge.bin" in _ubf_on else "FAIL",
+       "unattended: a big-file commit is allowed with a note naming the file; attended it is still refused")
+print("DBGBF off=%r | on=%r" % (_ubf_off[:2], _ubf_on[:600]))
+
 
 finish()

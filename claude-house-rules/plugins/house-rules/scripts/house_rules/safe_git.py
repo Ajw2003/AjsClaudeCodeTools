@@ -1305,6 +1305,10 @@ def event_guardwrite():
         "Fix: edit it in place with the Edit tool, changing only the lines that need to change. A whole-file "
         "rewrite needs aj's approval by name first, with what it discards and why an in-place edit will not do."
     )
+    if core.unattended():  # nobody can approve a whole-file rewrite by name: allow it and say so for the morning
+        emit({"systemMessage": "House rules, UNATTENDED run (HOUSE_RULES_UNATTENDED=on): whole-file Write to `%s` "
+                               "was allowed instead of refused. Review it in the morning." % file_path})
+        return 0
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                  "permissionDecisionReason": "\n".join(lines)}})
     return 0
@@ -1861,6 +1865,9 @@ def _attribution_guard(subject, payload):
         m = rx.search(text)
         if m:
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
+            if core.unattended():  # allowed so the run does not stall; the credit line is fixed in the morning
+                return ("note", "", "House rules, UNATTENDED run: the credit rule was relaxed for this %s (it carries \"%s\"). "
+                        "Remove that line in the morning." % (kind, m.group(0).strip()[:60]))
             return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)
     if _GIT_COMMIT_RE.search(cmd):
         where, unclear = _command_dir(payload)
