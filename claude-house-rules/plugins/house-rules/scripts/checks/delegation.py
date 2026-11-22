@@ -1593,6 +1593,27 @@ _cap_case("waitfor: a check exiting 2 reports failed, exit 1, with its output",
 _c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "1")
 _cap_case("waitfor: with no overrides the first line shows the 60 s clock",
           "first check at 60s, then every 60s" in _o.splitlines()[0] and _c == 3, "exit %d out %r" % (_c, _o[:200]))
+_c, _o, _t = _wf_run("--check", "sleep 30", "--deadline", "3", "--first-check", "1", "--interval", "1")
+_cap_case("waitfor: a hung check is cut off at the deadline, timed out, exit 3, in under 8 s",
+          _c == 3 and _t < 8 and "still running at the deadline" in _o, "exit %d in %.1f s out %r" % (_c, _t, _o[-200:]))
+_wf_sd = os.path.join(_home, ".claude", "projects", "p", "wfsess", "subagents")
+os.makedirs(_wf_sd, exist_ok=True)
+_wf_ag = os.path.join(_wf_sd, "agent-wfag.jsonl")
+open(_wf_ag, "w").write('{"type":"assistant"}\n')
+os.utime(_wf_ag, (time.time() - 600, time.time() - 600))
+_wf_args = ["--check", "exit 1", "--agent", "wfag", "--session", "wfsess", "--first-check", "1", "--interval", "1"]
+_pr = subprocess.run([sys.executable, _wf, "--kind", "agent", "--stalled-after", "2", "--deadline", "20"] + _wf_args,
+                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=_henv, timeout=30)
+_o = _pr.stdout.decode("utf-8", "replace")
+_cap_case("waitfor: an agent transcript silent across 2 checks reports stalled, exit 2",
+          _pr.returncode == 2 and "STALLED" in _o.splitlines()[-1] and "wfag" in _o, "exit %d out %r" % (_pr.returncode, _o[-250:]))
+_toucher = subprocess.Popen([sys.executable, "-c", "import os,time\nfor _ in range(12):\n os.utime(%r);time.sleep(0.5)" % _wf_ag])
+_pr = subprocess.run([sys.executable, _wf, "--kind", "agent", "--stalled-after", "2", "--deadline", "4"] + _wf_args,
+                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=_henv, timeout=30)
+_toucher.wait()
+_o = _pr.stdout.decode("utf-8", "replace")
+_cap_case("waitfor: an agent transcript touched every second is not stalled, ends timed out, exit 3",
+          _pr.returncode == 3 and "timed out" in _o, "exit %d out %r" % (_pr.returncode, _o[-250:]))
 _c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "0")
 _cap_case("waitfor: a missing deadline is a usage error, exit 4, never an endless wait",
           _c == 4 and "bad usage" in _o, "exit %d out %r" % (_c, _o[:200]))

@@ -30,13 +30,19 @@ def header(name, first, interval, deadline, kind):
     return "%s: first check at %ss, then every %ss, deadline %ss (kind %s)" % (name, first, interval, deadline, kind)
 
 
-def run_check(cmd):
-    """(code, output); a command that cannot start is code -1 with the error text."""
+def run_check(cmd, timeout):
+    """(code, output); a command that cannot start is code -1 with the error text; code None = still running at the cap."""
     try:
-        pr = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
-        return pr.returncode, pr.stdout.decode("utf-8", "replace").strip()
-    except (OSError, subprocess.SubprocessError) as exc:
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
+    except OSError as exc:
         return -1, "%s: %s" % (type(exc).__name__, exc)
+    try:
+        out, _ = proc.communicate(timeout=timeout)
+        return proc.returncode, out.decode("utf-8", "replace").strip()
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, 9)  # the whole group, or a child holding the pipe would hang us
+        proc.communicate()
+        return None, ""
 
 
 def main(argv=None):
@@ -81,7 +87,10 @@ def main(argv=None):
         delay = interval
         n += 1
         at = time.time() - start
-        code, out = run_check(args.check)
+        code, out = run_check(args.check, max(1, deadline - (time.time() - start)))
+        if code is None:
+            say("timed out: gave up after %ds; still unknown: the check command was still running at the deadline" % deadline)
+            return 3
         if code == 0:
             say("check %d at %ds: done. DONE after %ds." % (n, at, at))
             return 0
