@@ -489,6 +489,39 @@ else:
                       _ln_ok.returncode == 0 and "broken pictures 0" in _ln_ok.stdout))
     _mp_cases.append(("page_criteria (#557): a page with an img that has no src passes the lone-copy check",
                       _ln_none.returncode == 0 and "broken pictures 0" in _ln_none.stdout))
+
+# ---- #559: sendcheck repairs a page's broken pictures from its .page.json, never denies ----
+def _sp_send(page):
+    return run_hook("sendcheck", json.dumps({"tool_name": "SendUserFile", "tool_input": {"file_path": page}}), env=dict(os.environ))[1]
+
+
+_sp_proj = _mp_proj("sendfix", {"use": "defaults"})
+_sp_plans = os.path.join(_sp_proj, "docs", "plans")
+os.makedirs(os.path.join(_sp_plans, "fix-pics"), exist_ok=True)
+with open(os.path.join(_sp_plans, "fix-pics", "a.svg"), "w") as _f:
+    _f.write("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><rect width='4' height='4'/></svg>")
+_sp_src = _mp_content("fix", [["chg", "Pic", "Looks new.", None, "Detail.", None, None, {"visual": True},
+                               {"src": "fix-pics/a.svg", "alt": "a", "caption": "c"}]])
+shutil.copyfile(_sp_src, os.path.join(_sp_plans, "fix.page.json"))
+_sp_fix = os.path.join(_sp_plans, "fix.html")
+with open(_sp_fix, "w", encoding="utf-8") as _f:
+    _f.write(_pcp("art", add='<img src="fix-pics/a.svg" alt="x">'))
+_sp_nosrc = os.path.join(_sp_plans, "nosrc.html")
+with open(_sp_nosrc, "w", encoding="utf-8") as _f:
+    _f.write(_pcp("art", add='<img src="gone-pics/a.svg" alt="x">'))
+_sp_o1 = _sp_send(_sp_nosrc)
+if "picture check did not run" in _sp_o1:
+    report("SKIP", "sendcheck (#559): no usable browser: %s" % _sp_o1[:200])
+else:
+    _sp_o2 = _sp_send(_sp_fix)
+    _sp_after = open(_sp_fix, encoding="utf-8").read()
+    _mp_cases.append(("sendcheck (#559): a page with a -pics/ link and a .page.json beside it is rebuilt with the picture embedded, allowed with a note",
+                      "rebuilt it from fix.page.json" in _sp_o2 and "deny" not in _sp_o2 and "data:image/svg" in _sp_after
+                      and "fix-pics/a.svg" not in _sp_after))
+    _mp_cases.append(("sendcheck (#559): with no .page.json the send is allowed with a note naming the broken picture, page untouched",
+                      "gone-pics/a.svg" in _sp_o1 and "no nosrc.page.json" in _sp_o1 and "deny" not in _sp_o1))
+    _mp_cases.append(("sendcheck (#559): a clean page and a non-page file get no note and no denial",
+                      _sp_send(_sp_fix) == "" and _sp_send(os.path.join(_sp_plans, "x.txt")) == ""))
 # ---- starters: one optional content skeleton per page type (#544) ----
 _mp_cases.append(("starters (#544): make_page's type list equals page_criteria's", tuple(__import__("make_page").PAGE_TYPES) == tuple(_pc.TYPES)))
 _sp = _mp_proj("starts", {"use": "defaults"})

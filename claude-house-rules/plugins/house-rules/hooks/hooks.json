@@ -148,6 +148,16 @@
         ]
       },
       {
+        "matcher": "SendUserFile",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" sendcheck",
+            "timeout": 300
+          }
+        ]
+      },
+      {
         "matcher": "Write|Artifact",
         "hooks": [
           {

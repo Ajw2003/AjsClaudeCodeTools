@@ -3734,4 +3734,50 @@ report("PASS" if _ubf_off[0] == "deny" and "huge.bin" in _ubf_off[1] and _iss_de
        and "UNATTENDED run" in _ubf_on and "huge.bin" in _ubf_on else "FAIL",
        "unattended: a big-file commit is allowed with a note naming the file; attended it is still refused")
 
+# -- #559: the send-page checkpoint (Stop) and sendcheck (PreToolUse on SendUserFile) -------------
+_sp_dir = tempfile.mkdtemp(prefix="sendpage-", dir=_FIXTURE_ROOT)
+_sp_page = os.path.join(_sp_dir, "docs", "plans", "p.html")
+os.makedirs(os.path.dirname(_sp_page), exist_ok=True)
+_sp_env = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_CLEAR_WRITING="off", HOUSE_RULES_HANDOFF="off")
+_sp_n = [0]
+
+
+def _sp_run(steps, reply="Done.", retry=False):
+    """steps: (tool, input, result text or None); a prior send of other.txt makes the send tool exist."""
+    _sp_n[0] += 1
+    lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "do it"}})]
+    for i, (tool, inp, res) in enumerate(steps):
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "s%d" % i, "name": tool, "input": inp}]}}))
+        if res is not None:
+            lines.append(json.dumps({"type": "user", "message": {"content": [
+                {"type": "tool_result", "tool_use_id": "s%d" % i, "content": res}]}}))
+    t = os.path.join(_FIXTURE_ROOT, "sendpage-%d.jsonl" % _sp_n[0])
+    open(t, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+    return run_hook("handover", stop_payload(transcript_path=t, last_assistant_message=reply, cwd=_sp_dir,
+                                             stop_hook_active=retry, session_id="verify-send"), env=_sp_env)[1]
+
+
+_sp_other = ("SendUserFile", {"file_path": "/x/other.txt"}, "ok")
+_sp_w = ("Write", {"file_path": _sp_page}, "ok")
+_sp_s = ("SendUserFile", {"file_path": _sp_page}, "ok")
+_sp_b1 = _sp_run([_sp_other, _sp_w])
+_loop_cases.append(("#559: a page written and never sent blocks, naming the page and the file-send tool",
+                    "send page" in _sp_b1 and "p.html" in _sp_b1 and "SendUserFile" not in _sp_b1 and "file-send tool" in _sp_b1))
+_loop_cases.append(("#559: the retry of that blocked turn passes", "send page" not in _sp_run([_sp_other, _sp_w], retry=True)))
+_loop_cases.append(("#559: a page edited after it was sent blocks",
+                    "send page" in _sp_run([_sp_other, _sp_w, _sp_s, ("Edit", {"file_path": _sp_page}, "ok")])))
+_loop_cases.append(("#559: a page sent after its last write passes", "send page" not in _sp_run([_sp_other, _sp_w, _sp_s])))
+_sp_mk = ("Bash", {"command": "python3 make_page.py build c.json"}, "make_page: wrote %s (0 picture(s) embedded)" % _sp_page)
+_loop_cases.append(("#559: a Bash make_page build of a page counts the same: blocks unsent, passes once sent",
+                    "send page" in _sp_run([_sp_other, _sp_mk]) and "send page" not in _sp_run([_sp_other, _sp_mk, _sp_s])))
+_loop_cases.append(("#559: with no file-send tool in the session a link to the page counts, and no link blocks",
+                    "send page" not in _sp_run([_sp_w], reply="See [p](docs/plans/p.html)") and "send page" in _sp_run([_sp_w])))
+_loop_cases.append(("#559: HOUSE_RULES_PAGES=off turns the send check off",
+                    "send page" not in run_hook("handover", stop_payload(
+                        transcript_path=os.path.join(_FIXTURE_ROOT, "sendpage-%d.jsonl" % (_sp_n[0] - 1)),
+                        last_assistant_message="Done.", cwd=_sp_dir, session_id="verify-send"),
+                        env=dict(_sp_env, HOUSE_RULES_PAGES="off"))[1]))
+
+
 finish()

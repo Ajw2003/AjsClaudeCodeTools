@@ -1229,7 +1229,7 @@ _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # start_remote_control MCP tool. And noask (unattended mode), which runs only on AskUserQuestion and ExitPlanMode.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] or "noask" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] or "noask" in h["command"] or "sendcheck" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(

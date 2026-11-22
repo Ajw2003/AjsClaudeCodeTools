@@ -311,6 +311,7 @@ EVENTS = {
     "handover": event_handover,
     "harvest": event_harvest,
     "pagecheck": event_pagecheck,
+    "sendcheck": event_sendcheck,
     "closablemerge": event_closablemerge,
 }
 
