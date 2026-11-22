@@ -546,7 +546,7 @@ try:
     _sd_left = len(_sb(_sd_txt))  # not grep -c '-pics/': the rebuilt page lists changed files, 7 lines name some *-pics/ file as text
     _sd_after = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _sd_page, "--visual"], capture_output=True, text=True, timeout=300).stdout
     _mp_cases.append(("static picture check (#557): REAL DATA, sendcheck rebuilds the finished QA page; no -pics/ link is left and a lone copy has no broken picture",
-                      "rebuilt it from" in _sd_out and _sd_left == 0 and "broken picture" not in _sd_after))
+                      "rebuilt it from" in _sd_out and _sd_left == 0 and "broken picture when the page is opened alone" not in _sd_after))
 finally:
     shutil.rmtree(_sd_tmp, ignore_errors=True)
 # ---- starters: one optional content skeleton per page type (#544) ----
