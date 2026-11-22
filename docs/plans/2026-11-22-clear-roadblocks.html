@@ -235,7 +235,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">A new rule would make me test every "I can't" claim, install missing tools myself, and never hand you a blocker I could clear; you pick how strongly it is enforced.</p>
+      <p class="lead" id="lead" data-basic="summary">A new rule would make me test every "I can't" claim, install missing tools myself, and never hand you a blocker I could clear; you chose a Stop check that blocks twice, then warns.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -256,7 +256,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read my suggestion under each choice.</label></li><li><label><input type="checkbox"> Pick an option under Your choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: clear roadblocks", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today: a claim needs a test. A Stop check (it runs when I finish a reply) flags "can't" when no tool ran. A separate rule says I must not hand my labour to you.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">B · Rule plus a Stop check that blocks roadblock claims with no probe (my suggestion)</p></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today: a claim needs a test. A Stop check (it runs when I finish a reply) flags "can't" when no tool ran. A separate rule says I must not hand my labour to you.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">C · Rule plus a Stop check that blocks twice, then lets the reply through with a visible warning line (your pick)</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -282,7 +282,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: clear roadblocks",
   "short": {
-    "lead": "A new rule would make me test every \"I can't\" claim, install missing tools myself, and never hand you a blocker I could clear; you pick how strongly it is enforced.",
+    "lead": "A new rule would make me test every \"I can't\" claim, install missing tools myself, and never hand you a blocker I could clear; you chose a Stop check that blocks twice, then warns.",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -361,13 +361,13 @@ const PAGE = {
     [
       "new",
       "Stop check: roadblock phrases",
-      "Included only if you pick option B or C under \"How firmly should this be enforced?\"",
+      "Included if you pick option B or C under \"How firmly should this be enforced?\"",
       null,
       "Flags replies that say \"I can't\", \"not installed\", \"not on your machine\", or \"you need to install\" when no probe or install ran this turn.",
       [
         "Today: the evidence check catches \"can't\" claims with no tool run at all.",
         "New: it also catches the same claims after an unrelated tool ran, and \"you need to install\" hand-offs.",
-        "It blocks a reply once and names the check I should have run."
+        "Option B blocks a reply once; option C blocks it twice, then lets it through with a warning line. Either way it names the check I should have run."
       ],
       null
     ]
@@ -385,18 +385,18 @@ const PAGE = {
         ],
         [
           "B",
-          "Rule plus a Stop check that blocks roadblock claims with no probe (my suggestion)",
-          1,
-          "Catches the exact failure, reuses the existing evidence check, and needs one new test case in verify.py."
+          "Rule plus a Stop check that blocks a roadblock claim once",
+          0,
+          "Catches the exact failure and never stalls, but a repeated claim goes through on the retry."
         ],
         [
           "C",
-          "B, plus a line at session start in bypass mode saying installs are pre-approved",
-          0,
-          "Strongest; adds text to every bypass session and depends on the hook being told which permission mode is active."
+          "Rule plus a Stop check that blocks twice, then lets the reply through with a visible warning line (your pick)",
+          1,
+          "Strictest that cannot loop: two forced corrections, then a warning you can see. Needs one new test case in verify.py."
         ]
       ],
-      "B closes the gap the rule alone leaves, without adding to every session's context."
+      "C is the option you chose: it enforces the rule twice over and still cannot hang a session. The earlier bypass-mode session line is dropped from this proposal."
     ],
     [
       "second",
@@ -419,9 +419,9 @@ const PAGE = {
     ]
   ],
   "wrapup": {
-    "summary": "This proposal adds a rule so I probe before claiming a blocker, install missing tools, and try other routes before stopping.",
+    "summary": "This proposal adds a rule so I probe before claiming a blocker, install missing tools, and try other routes, enforced by a Stop check that blocks twice and then warns.",
     "changing": "rules/house-rules.md, a new rules/detail/roadblocks.md, and in B or C the Stop check plus one verify.py case.",
-    "blocking": "Your pick of A, B or C on how firmly to enforce this, and your pick of A or B on what counts as yours.",
+    "blocking": "Your approval of option C (or another pick) on how firmly to enforce this, and your pick of A or B on what counts as yours.",
     "next": "After you approve, I turn this into a build plan.",
     "todo": [
       "Read my suggestion under each choice.",
