@@ -4,7 +4,7 @@
  "pageType": "proposal",
  "approval": "Design approved: clear roadblocks",
  "short": {
-  "lead": "A new rule would make me test every \"I can't\" claim, install missing tools myself, and never hand you a blocker I could clear; you chose a Stop check that blocks twice, then warns.",
+  "lead": "A new rule would make me test every \"I can't\" claim, install missing tools myself, and never hand you a blocker I could clear. You chose option C: a check that runs when I finish a reply, blocks it twice, then warns.",
   "hint": "Tap a step to see it.",
   "key": [
    [
@@ -88,8 +88,8 @@
    "Flags replies that say \"I can't\", \"not installed\", \"not on your machine\", or \"you need to install\" when no probe or install ran this turn.",
    [
     "Today: the evidence check catches \"can't\" claims with no tool run at all.",
-    "New: it also catches the same claims after an unrelated tool ran, and \"you need to install\" hand-offs.",
-    "Option B blocks a reply once; option C blocks it twice, then lets it through with a warning line. Either way it names the check I should have run."
+    "New: it also catches those claims when the only tool that ran was unrelated to the claim, and \"you need to install\" hand-offs.",
+    "Option B blocks a reply once. Option C blocks it twice, then lets it through with a warning line. Either way, the block message names the check I should have run."
    ],
    null
   ]
@@ -115,10 +115,10 @@
      "C",
      "Rule plus a Stop check that blocks twice, then lets the reply through with a visible warning line (your pick)",
      1,
-     "Strictest that cannot loop: two forced corrections, then a warning you can see. Needs one new test case in verify.py."
+     "The strictest option that cannot loop forever: two forced corrections, then a warning you can see. Needs one new test case in verify.py, the script that checks the hooks."
     ]
    ],
-   "C is the option you chose: it enforces the rule twice over and still cannot hang a session. The earlier bypass-mode session line is dropped from this proposal."
+   "You chose C: it forces two corrections and still cannot hang a session. The line an earlier draft had, telling every bypass-mode session at start that installs are pre-approved, is dropped."
   ],
   [
    "second",
@@ -141,9 +141,9 @@
   ]
  ],
  "wrapup": {
-  "summary": "This proposal adds a rule so I probe before claiming a blocker, install missing tools, and try other routes, enforced by a Stop check that blocks twice and then warns.",
-  "changing": "rules/house-rules.md, a new rules/detail/roadblocks.md, and in B or C the Stop check plus one verify.py case.",
-  "blocking": "Your approval of option C (or another pick) on how firmly to enforce this, and your pick of A or B on what counts as yours.",
+  "summary": "This proposal adds a rule so I probe before claiming a blocker, install missing tools, and try other routes. A check that runs when I finish a reply enforces it: it blocks twice, then warns.",
+  "changing": "The file rules/house-rules.md and a new file, rules/detail/roadblocks.md. With option B or C, also the Stop check and one new test case in verify.py.",
+  "blocking": "Your pick of A, B or C on how firmly to enforce this (you chose C), and your pick of A or B on what counts as yours.",
   "next": "After you approve, I turn this into a build plan.",
   "todo": [
    "Read my suggestion under each choice.",
