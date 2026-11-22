@@ -137,7 +137,7 @@ def _pic_src(name):
 with open(os.path.join(_pp, "a.svg"), "w") as _f:
     _f.write('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')
 with open(os.path.join(_pp, "b.png"), "wb") as _f:
-    _f.write(b"\x89PNG\r\n\x1a\n" + b"0" * 20)
+    _f.write(__import__("base64").b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="))
 with open(os.path.join(_pp, "big.png"), "wb") as _f:
     _f.write(b"0" * 1000001)
 _rc, _o = _mp("build", _pic_page("psvg", os.path.join(_pp, "a.svg")), "--project", _pd)
@@ -151,8 +151,8 @@ _mp_cases.append(("make_page: a picture over 1,000,000 bytes is refused, naming 
                   _rc == 2 and "big.png" in _o and "1000001" in _o))
 _rc, _o = _mp("build", _pic_page("pweb", "https://example.com/x.png"), "--project", _pd)
 _mp_cases.append(("make_page: a picture linked from the web is refused", _rc == 2 and "linked from the web" in _o))
-_rc, _o = _mp("build", _pic_page("pdata", "data:image/png;base64,AAAA"), "--project", _pd)
-_mp_cases.append(("make_page: an existing data: picture is left unchanged", _rc == 0 and _pic_src("pdata") == "data:image/png;base64,AAAA"))
+_rc, _o = _mp("build", _pic_page("pdata", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="), "--project", _pd)
+_mp_cases.append(("make_page: an existing data: picture is left unchanged", _rc == 0 and _pic_src("pdata") == "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="))
 
 _tk = os.path.join(_mp_tmp, "tokens.json")
 with open(_tk, "w", encoding="utf-8") as f:
