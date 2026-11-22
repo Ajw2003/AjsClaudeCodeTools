@@ -2147,6 +2147,14 @@ _cw_cases.append(("issue sections: all three found, or each missing one named",
                   and _cw.missing_issue_sections("## Depends on\nx") == ["Depended on by", "Done when"]))
 _cw_cases.append(("page text: a template page's PAGE strings are what gets read",
                   "about 43 tests" in _cw.page_text('<p>Hi there all</p><script>const PAGE = {\n lead: "It adds about 43 tests in all."\n};</script>')))
+_B64 = "data:image/png;base64," + "iVBORw0KGgo" * 20
+_PG = '<p>Hi there all</p><img src="%s"><script>const PAGE = {\n pic: "%s"\n};</script>' % (_B64, _B64)
+_LONG = " ".join(["word"] * 45) + "."
+_cw_cases.append(("page text: data: addresses give no finding; one long sentence still gives exactly one",
+                  not _cw.findings(_cw.page_text(_PG)) and len(_cw.findings(_cw.page_text(_PG + "<p>%s</p>" % _LONG))) == 1))
+_cw_cases.append(("page text: a 100-character blob outside a data address is ignored; a short URL stays",
+                  "x" * 100 not in _cw.page_text("<p>See the table here now %s ok</p>" % ("x" * 100))
+                  and "https://example.com/a/b" in _cw.page_text("<p>See https://example.com/a/b for more</p>")))
 
 # The reply check: one note, quiet on a clean reply, off with its switch.
 def _cw_stop(text, env=None):
