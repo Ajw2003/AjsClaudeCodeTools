@@ -11,6 +11,8 @@ QA on this machine found main already shipped a different 2.88.0 (#573). Main wa
 
 Live test on the branch build passed (blocked once, then the agent probed and answered with evidence). Pull request #574 is open. The QA page's final editor pass is applied; issue #89 on that page is named from a code comment, not from the issue itself.
 
+CI on #574 failed the inject-size check at the runner's longer path (9717 > 9700); fixed by dropping the roadblocks pointer from house-rules.md (9674 at a runner-like path). Check size at a runner-like path, not only locally: a copy of the repo at `/home/runner/work/AjsClaudeCodeTools/AjsClaudeCodeTools` reproduces CI.
+
 ## The next step
 Wait for aj's review and merge of pull request #574, or aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
 
