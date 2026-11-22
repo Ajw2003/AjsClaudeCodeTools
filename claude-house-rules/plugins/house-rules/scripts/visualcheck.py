@@ -3,6 +3,12 @@
 
   visualcheck.py doctor
   visualcheck.py shots --steps FILE --out DIR [--viewports phone,desktop] [--themes light,dark]
+  visualcheck.py video --steps FILE --out DIR [--viewport phone|desktop] [--theme light|dark]
+  visualcheck.py frames --video FILE --out DIR [--every SECONDS] [--columns N] [--expect-motion]
+
+UNTESTED (#565, not tried here): Unity and game projects. The intended route is to capture the Game view with the
+unity-cli skill (its Game view screenshot, or the Unity Recorder for a video), then run the same `frames` command on
+the resulting video file. Nothing in this script talks to Unity.
 
 Exit codes: 0 ok, 1 something wrong on a page, 3 tools missing, 4 bad usage. Playwright and Pillow are imported
 only inside the commands that need them, so `doctor` and `--help` run on plain Python 3.8+. It never installs anything.
@@ -13,6 +19,7 @@ import glob
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 
@@ -157,6 +164,8 @@ def shots(args):
                                 per_image[name] = dict({k2: list(v2) for k2, v2 in errs.items()},
                                                        overflow_x=bool(w == 375 and page.evaluate("document.documentElement.scrollWidth") > w),
                                                        blank=is_blank(os.path.join(args.out, name)))
+                                for v2 in errs.values():  # per image: the next shot reports only what happens after this one
+                                    del v2[:]
                     except Exception as exc:  # a failed action is a finding on this page, reported in words
                         errs["page_errors"].append("step failed: %s: %s" % (type(exc).__name__, str(exc)[:200]))
                         name = "FAILED-%s-%s.png" % (vp, th)
@@ -187,6 +196,152 @@ def shots(args):
     return 0 if ok else 1
 
 
+def video(args):
+    try:
+        url, steps = load_steps(args.steps)
+        if args.viewport not in VIEWPORTS or args.theme not in THEMES:
+            raise ValueError("unknown viewport/theme %s-%s (viewports: phone, desktop; themes: light, dark)" % (args.viewport, args.theme))
+    except ValueError as exc:
+        print("bad usage: %s" % exc)
+        return 4
+    if doctor_quiet():
+        print("tools missing; run `visualcheck.py doctor` for the install commands.")
+        return 3
+    from playwright.sync_api import sync_playwright
+    from house_rules.waits import load_waits
+    deadline_s = load_waits()["deadline_seconds"]["command"]
+    t_end = time.time() + deadline_s
+    os.makedirs(args.out, exist_ok=True)
+    w, h = VIEWPORTS[args.viewport]
+    final = os.path.join(args.out, "video-%s-%s.webm" % (args.viewport, args.theme))
+    tmp = os.path.join(args.out, "_recording")
+    shutil.rmtree(tmp, ignore_errors=True)
+    problem = None
+    with sync_playwright() as p:
+        browser = p.chromium.launch(executable_path=find_browser(), args=["--no-sandbox"])
+        try:
+            ctx = browser.new_context(viewport={"width": w, "height": h}, color_scheme=args.theme,
+                                      record_video_dir=tmp, record_video_size={"width": w, "height": h})
+            page = ctx.new_page()
+            page.set_default_timeout(ACTION_TIMEOUT_MS)
+            try:
+                page.goto(url)
+                for s in steps:
+                    if time.time() > t_end:
+                        problem = "deadline of %ss reached during the steps" % deadline_s
+                        break
+                    (k, v), = s.items()
+                    if k == "goto":
+                        page.goto(to_url(v))
+                    elif k == "click":
+                        page.click(v)
+                    elif k == "fill":
+                        page.fill(v[0], v[1])
+                    elif k == "wait":
+                        page.wait_for_timeout(v)
+            except Exception as exc:  # a failed step is reported in words
+                problem = "step failed: %s: %s" % (type(exc).__name__, str(exc)[:200])
+            vid = page.video
+            ctx.close()  # flushes the file
+            if vid is not None and not problem:
+                try:
+                    vid.save_as(final)
+                except Exception as exc:
+                    problem = "the video was not saved: %s" % str(exc)[:200]
+        finally:
+            browser.close()
+            shutil.rmtree(tmp, ignore_errors=True)
+    if problem:
+        print("video problem: " + problem)
+        return 1
+    if not os.path.isfile(final) or os.path.getsize(final) == 0:
+        print("video problem: %s is missing or empty" % final)
+        return 1
+    print("video %s (%d bytes)" % (final, os.path.getsize(final)))
+    return 0
+
+
+def measure(deltas, every):
+    """The motion measures from consecutive-frame deltas (percent of full scale)."""
+    runs, i = [], 0
+    while i < len(deltas):
+        if deltas[i] < 0.05:
+            j = i
+            while j + 1 < len(deltas) and deltas[j + 1] < 0.05:
+                j += 1
+            if j - i + 1 >= 3:
+                runs.append([round(i * every, 3), round((j + 1) * every, 3)])
+            i = j + 1
+        else:
+            i += 1
+    nz = sorted(d for d in deltas if d > 0)
+    jumps = []
+    if len(nz) >= 3:
+        med = nz[len(nz) // 2] if len(nz) % 2 else (nz[len(nz) // 2 - 1] + nz[len(nz) // 2]) / 2
+        jumps = [i for i, d in enumerate(deltas) if d > 5 * med and d >= 5]
+    mx = max(deltas) if deltas else 0.0
+    return {"deltas": deltas, "max_delta": mx, "frozen_runs": runs, "jumps": jumps, "static": mx < 0.05}
+
+
+def frames(args):
+    if args.every <= 0 or args.columns < 1:
+        print("bad usage: --every must be above 0 and --columns at least 1")
+        return 4
+    if not os.path.isfile(args.video):
+        print("bad usage: video file not found: %s" % args.video)
+        return 4
+    if not shutil.which("ffmpeg"):
+        print("tools missing: ffmpeg (install it with your package manager); `visualcheck.py doctor` shows the rest.")
+        return 3
+    if not _have("PIL"):
+        print("tools missing: Pillow (pip install pillow)")
+        return 3
+    from PIL import Image, ImageChops, ImageDraw, ImageStat
+    from house_rules.waits import load_waits
+    deadline_s = load_waits()["deadline_seconds"]["command"]
+    fdir = os.path.join(args.out, "frames")
+    shutil.rmtree(fdir, ignore_errors=True)
+    os.makedirs(fdir)
+    try:
+        pr = subprocess.run(["ffmpeg", "-v", "error", "-i", args.video, "-vf", "fps=1/%s" % args.every,
+                             os.path.join(fdir, "f%04d.png")], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=deadline_s)
+    except subprocess.TimeoutExpired:
+        print("ffmpeg did not finish within the %ss command deadline" % deadline_s)
+        return 1
+    files = sorted(glob.glob(os.path.join(fdir, "f*.png")))
+    if pr.returncode != 0 or not files:
+        print("ffmpeg could not read frames from %s (exit %d): %s" % (args.video, pr.returncode, pr.stdout.decode("utf-8", "replace")[:300]))
+        return 4
+    ims = [Image.open(f).convert("RGB") for f in files]
+    deltas = [round(sum(ImageStat.Stat(ImageChops.difference(a, b)).mean) / 3 / 255 * 100, 4) for a, b in zip(ims, ims[1:])]
+    m = measure(deltas, args.every)
+    tw = min(320, ims[0].width)
+    th = round(ims[0].height * tw / ims[0].width)
+    cols = min(args.columns, len(ims))
+    rows = -(-len(ims) // cols)
+    sheet = Image.new("RGB", (cols * tw, rows * (th + 16)), "white")
+    d = ImageDraw.Draw(sheet)
+    names = []
+    for n, im in enumerate(ims):
+        x, y = (n % cols) * tw, (n // cols) * (th + 16)
+        sheet.paste(im.resize((tw, th)), (x, y + 16))
+        d.text((x + 3, y + 2), "%.2fs" % (n * args.every), fill="black")
+        names.append({"file": os.path.relpath(files[n], args.out), "t": round(n * args.every, 3)})
+    sheet.save(os.path.join(args.out, "sheet.png"))
+    bad = m["static"] or bool(m["frozen_runs"]) or bool(m["jumps"])
+    ok = not (args.expect_motion and bad)
+    with open(os.path.join(args.out, "frames.json"), "w", encoding="utf-8") as fh:
+        json.dump(dict(m, ok=ok, expect_motion=args.expect_motion, every=args.every, frames=names), fh, indent=2)
+    print("%d frame(s), max delta %.3f%%; sheet %s" % (len(ims), m["max_delta"], os.path.join(args.out, "sheet.png")))
+    if m["static"]:
+        print("  static: nothing moved between frames")
+    for a, b in m["frozen_runs"]:
+        print("  frozen from %.2fs to %.2fs" % (a, b))
+    for j in m["jumps"]:
+        print("  jump at %.2fs (delta %.2f%%)" % ((j + 1) * args.every, deltas[j]))
+    return 0 if ok else 1
+
+
 def doctor_quiet():
     return not (_have("playwright") and _have("PIL") and find_browser())
 
@@ -200,6 +355,17 @@ def main(argv):
     sp.add_argument("--out", required=True)
     sp.add_argument("--viewports", default="phone,desktop")
     sp.add_argument("--themes", default="light,dark")
+    vp = sub.add_parser("video", help="record a video of the steps")
+    vp.add_argument("--steps", required=True)
+    vp.add_argument("--out", required=True)
+    vp.add_argument("--viewport", default="phone")
+    vp.add_argument("--theme", default="light")
+    fp = sub.add_parser("frames", help="frame sheet and motion measures from a video")
+    fp.add_argument("--video", required=True)
+    fp.add_argument("--out", required=True)
+    fp.add_argument("--every", type=float, default=0.5)
+    fp.add_argument("--columns", type=int, default=4)
+    fp.add_argument("--expect-motion", action="store_true")
     try:
         args = ap.parse_args(argv)
     except SystemExit as e:
@@ -208,6 +374,10 @@ def main(argv):
         return doctor()
     if args.cmd == "shots":
         return shots(args)
+    if args.cmd == "video":
+        return video(args)
+    if args.cmd == "frames":
+        return frames(args)
     ap.print_usage()
     return 4
 
