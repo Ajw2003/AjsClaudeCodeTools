@@ -1,0 +1,71 @@
+{
+ "title": "<replace: QA title>",
+ "eyebrow": "QA · steps for you to follow",
+ "pageType": "qa",
+ "short": {
+  "lead": "<replace: one sentence: what was built and what you check>",
+  "hint": "Tap a step to see what to do.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Checked",
+    "<replace: what I checked>",
+    "",
+    "<replace: how it was checked>",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
+     "alt": "<replace: what the picture shows>",
+     "caption": "<replace: what the picture shows>"
+    }
+   ],
+   [
+    "hand",
+    "Your test",
+    "<replace: what you try>",
+    "you",
+    "<replace: step by step, with the result to expect>",
+    "Follow the steps in Wrap-up."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "<replace: area checked>",
+   "<replace: one line>",
+   null,
+   "<replace: detail, shown on tap>",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "<replace: feature name>",
+  "base": "<replace: base branch, such as origin/main>",
+  "unverified": [
+   "<replace: what was not checked, and why>"
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "<replace: what was built>",
+  "changing": "<replace: what changes, named>",
+  "blocking": "<replace: what waits on aj, named>",
+  "next": "On a pass, a pull request is opened.",
+  "todo": [
+   "Do step 1: open the page. Expect it to load.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

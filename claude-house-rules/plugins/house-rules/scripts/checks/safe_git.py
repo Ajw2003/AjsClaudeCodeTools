@@ -2121,6 +2121,18 @@ _bg_u = _bg_lines("bg-unchecked", False)
 _bg_first, _bg_again = _bg_stop(_bg_u, _bg_sid), _bg_stop(_bg_u, _bg_sid)
 report("PASS" if "never checked" in _bg_first and "decision" not in _bg_first and "never checked" not in _bg_again
        else "FAIL", "bg note: an unchecked background task is reported once, not blocking, and not again")
+_bg_w_env = env_in(_rr_dir, HOUSE_RULES_RERUNS="off", HOUSE_RULES_WAITS="off")
+_bg_w_pl = json.dumps({"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash",
+                       "tool_input": {"command": "make", "run_in_background": True}})
+report("PASS" if _bgd not in run_hook("guard", _bg_w_pl, env=_bg_w_env)[1] else "FAIL",
+       "bg switch: with HOUSE_RULES_WAITS=off a background launch with no timeout is allowed")
+os.environ["HOUSE_RULES_WAITS"] = "off"
+try:
+    _bg_off_note = _bg_stop(_bg_lines("bg-unchecked-off", False), _bg_sid + "w")
+finally:
+    os.environ.pop("HOUSE_RULES_WAITS", None)
+report("PASS" if "never checked" not in _bg_off_note else "FAIL",
+       "bg switch: with HOUSE_RULES_WAITS=off no unchecked-wait note appears (unset: the cases above)")
 report("PASS" if "never checked" not in _bg_stop(_bg_lines("bg-checked", True), _bg_sid + "c") else "FAIL",
        "bg note: a task whose output file was read is not reported")
 

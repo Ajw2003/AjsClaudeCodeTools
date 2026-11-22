@@ -2635,6 +2635,11 @@ _fs_type(_fs_c, "builders on")
 report("PASS" if _fs_env_seen(_fs_c, "HOUSE_RULES_DELEGATION") == "on"
        and _fs_env_seen(_fs_b, "HOUSE_RULES_DELEGATION") == "off" else "FAIL",
        "feature switches (c): a folder 'builders on' beats an everywhere 'builders off'")
+_fs_w = _fs_dir("waits")
+_fs_type(_fs_w, "waits off")
+report("PASS" if _fs_json(os.path.join(_fs_w, ".claude", "house-rules-mode.json")) == {"waits": "off"}
+       and _fs_env_seen(_fs_w, "HOUSE_RULES_WAITS") == "off" else "FAIL",
+       "feature switches (waits): 'waits off' is saved and a later hook call sees WAITS=off")
 _fs_g = _fs_dir("repo", git=True)
 _fs_type(_fs_g, "house rules off")
 _fs_deny = run_hook("guard", json.dumps({"session_id": "fs", "cwd": _fs_g, "tool_name": "Bash",

@@ -432,3 +432,11 @@ State: built, verified by verify.py and verify_tools.py; not yet run overnight. 
 ## Free issue closing (#548 to #552)
 
 Plugin 2.83.0. State: QA passed 2026-11-20; pull request #553 to main open. The close guard allows a close of an issue labelled `needs review`, `in review` or completed by someone other than the agent, with no milestone, after one cached GitHub read per 60 seconds; everything else needs aj's "Close approved". Detail: [`docs/4-systems/issue-closing.md`](../4-systems/issue-closing.md).
+
+## Wait clocks, visual checks, page sending and working pictures (#555, steps #556 to #568)
+
+Plugin 2.88.0. State: built on `ajsagent/eloquent-mayer-0ayp82`, waiting on aj's QA. Full `verify.py` 1417 of 1417 and `tools/verify_tools.py` passed on the merged code (2026-11-22); run on aj's machine: not yet (the cloud session could not attach to it). Design: `docs/4-systems/wait-and-visual-checks.md`, including where the build differs from the approved design (in-place picture repair instead of rebuild from source; the reviewer helper returns verdict lines instead of writing the round file; the wait rule sits inside "Nothing fails silently").
+- Waits: `rules/waits.json`, `scripts/waitfor.py`, the guard refusing background launches with no timeout, a non-blocking unchecked-wait note, a `waits` switch group.
+- Pictures and pages: pictures are built into the page file, checked alone and by a static scan; `sendcheck` repairs old pages in place before they are sent; the turn blocks once if a made or changed page was not sent.
+- Visual loop: `scripts/visualcheck.py` (doctor, shots, video, frames), `scripts/ledger.py`, the `visual-loop` skill, a 4-round cap, a reviewer helper per round, and an end-of-turn check that needs a real capture, a ledger check and an image read. Proven live and unattended in `docs/qa/loop-proof/`.
+- Known limits: the injected rules are at 9,694 of 9,700 characters; the visual gate's false-alarm rate is unmeasured (one transcript of 15 turns); video proven for one viewport and theme; Unity capture only written down.
