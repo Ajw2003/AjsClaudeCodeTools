@@ -1226,10 +1226,10 @@ _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # so is guardgithub (#178), which runs only on a GitHub MCP write; and pagecheck (#257), which
 # exits at once unless the call is an .html page Write or an Artifact call; and closablemerge (#362), which
 # exits at once unless the call is a merge; and rclink (#383), which runs only on the one
-# start_remote_control MCP tool.
+# start_remote_control MCP tool. And noask (unattended mode), which runs only on AskUserQuestion and ExitPlanMode.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] or "noask" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -2120,6 +2120,17 @@ else:
     report("FAIL", "versioncheck is quiet when installed, marketplace and GitHub all agree")
     print(f"          rc={rc} out={out[:200]!r}")
 
+# unattended: an out-of-date plugin gets one line, no wait/ask banner, no marker, no update run
+vc_clear("vc-un")
+rc, out, err = run_hook("versioncheck", vc_payload("vc-un"),
+                        vc_env("vc-un", HOUSE_RULES_UNATTENDED="on", HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"))
+report("PASS" if rc == 0 and "UNATTENDED run: a house-rules update is available and was not applied" in out
+       and "wait for the user" not in out and "OUT OF DATE" not in out and not os.path.isfile(vc_marker_path("vc-un"))
+       and not vc_fake_calls("vc-un") else "FAIL",
+       "unattended: versioncheck says one line, runs no update, writes no marker, never says wait or ask")
+rc, out, err = run_hook("inject", "{}", env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if "OVERRIDDEN" in out and "never stop or wait for the user" in out and "Waiting-on-you list" in out else "FAIL",
+       "unattended: the session note overrides the hand-over-then-wait and ask-before rule text")
 # #403: in a synced copy (claude.ai cloud) the update commands cannot work, so one plain line.
 _sy_root = "/root/.claude/plugins/synced/org_id/house-rules~g2"
 rc, out, err = run_hook("versioncheck", vc_payload("vc-sync-old"),
@@ -2649,6 +2660,51 @@ try:
            "feature switches (g): a file listed in HOUSE_RULES_MODE_IGNORE is read as no switches")
 finally:
     del _fs_env["HOUSE_RULES_MODE_IGNORE"]
+
+# --- unattended mode: every switch group off except autosave; a typed line still wins ---
+_un_d = _fs_dir("unattended")
+_fs_env["HOUSE_RULES_UNATTENDED"] = "on"
+try:
+    _un_ok = (_fs_env_seen(_un_d, "HOUSE_RULES_PAGES") == "off" and _fs_env_seen(_un_d, "HOUSE_RULES_DELEGATION") == "off"
+              and _fs_env_seen(_un_d, "HOUSE_RULES_AUTOSAVE") == "unset" and _fs_env_seen(_un_d, "HOUSE_RULES_HANDOFF") == "off")  # HANDOFF is preset off by this section; unattended must not touch it
+    _fs_type(_un_d, "pages on")
+    _un_ok = _un_ok and _fs_env_seen(_un_d, "HOUSE_RULES_PAGES") == "on" and _fs_env_seen(_un_d, "HOUSE_RULES_VOICE") == "off"
+finally:
+    del _fs_env["HOUSE_RULES_UNATTENDED"]
+report("PASS" if _un_ok else "FAIL",
+       "unattended: apply_switches sets PAGES off, leaves AUTOSAVE alone (HANDOFF too), and a typed 'pages on' still wins")
+
+# --- the one command: typing `unattended on` / `unattended off` ---
+_ut_d = _fs_dir("typed-unattended", git=True)
+_ut_out = run_hook("scope", json.dumps({"session_id": "fs", "cwd": _ut_d, "prompt": "unattended on"}), env=_fs_env)[1]
+_ut_ctx = ""
+try:
+    _ut_ctx = json.loads(_ut_out)["hookSpecificOutput"]["additionalContext"]
+except Exception:
+    pass
+report("PASS" if _fs_json(os.path.join(_ut_d, ".claude", "house-rules-mode.json")) == {"unattended": "on"}
+       and _fs_env_seen(_ut_d, "HOUSE_RULES_UNATTENDED") == "on" and _fs_env_seen(_ut_d, "HOUSE_RULES_PAGES") == "off"
+       and _fs_env_seen(_ut_d, "HOUSE_RULES_AUTOSAVE") == "unset" else "FAIL",
+       "typed unattended (a): 'unattended on' is saved, turns the other switches off and leaves autosave alone")
+report("PASS" if "UNATTENDED run" in _ut_ctx and "never to main" in _ut_ctx and "do NOT commit it" in _ut_ctx else "FAIL",
+       "typed unattended (b): the prompt that turns it on already carries the unattended note, the never-main line and 'do not commit the file'")
+_ut_q = run_hook("noask", json.dumps({"session_id": "fs", "cwd": _ut_d, "tool_name": "AskUserQuestion", "tool_input": {}}), env=_fs_env)[1]
+report("PASS" if '"permissionDecision":"deny"' in _ut_q and "nobody is there to answer" in _ut_q else "FAIL",
+       "typed unattended (c): once typed, AskUserQuestion is denied in later hook calls (no environment variable needed)")
+_ut_main = run_hook("guard", json.dumps({"session_id": "fs", "cwd": _ut_d, "tool_name": "Bash",
+                                         "tool_input": {"command": "git commit --allow-empty -m x"}}), env=_fs_env)[1]
+report("PASS" if '"permissionDecision":"deny"' in _ut_main else "FAIL",
+       "typed unattended (d): a commit on main is still refused while unattended")
+_fs_type(_ut_d, "unattended off")
+report("PASS" if _fs_json(os.path.join(_ut_d, ".claude", "house-rules-mode.json")) == {"unattended": "off"}
+       and _fs_env_seen(_ut_d, "HOUSE_RULES_UNATTENDED") == "off" and _fs_env_seen(_ut_d, "HOUSE_RULES_PAGES") == "unset"
+       and '"permissionDecision":"deny"' not in run_hook(
+           "noask", json.dumps({"session_id": "fs", "cwd": _ut_d, "tool_name": "AskUserQuestion", "tool_input": {}}),
+           env=_fs_env)[1] else "FAIL",
+       "typed unattended (e): 'unattended off' switches it back and leaves the other switches as they were")
+_fs_type(_ut_d, "house rules off")
+report("PASS" if _fs_env_seen(_ut_d, "HOUSE_RULES_UNATTENDED") == "off" else "FAIL",
+       "typed unattended (f): 'house rules off' does not switch unattended on or off")
 
 
 finish()

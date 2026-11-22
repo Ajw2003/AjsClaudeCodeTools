@@ -88,3 +88,20 @@ typing one line, in any folder, git repository or not. Page: `docs/plans/2026-11
   design loop leaves out `show-dont-tell.md` (`event_showrule`) and builders leave out their section (`event_inject`);
   "house rules off" sets both off. The page rule is one block inside `show-dont-tell.md`, so "pages off" keeps it
   loaded and relies on the note. Command: `commands/mode.md`. Checks: `scripts/checks/design_loop.py`, "feature switches".
+
+## Unattended mode (2.84.0)
+
+For a run with nobody present. `HOUSE_RULES_UNATTENDED=on` (case-insensitive) turns it on; `core.unattended()` reads it.
+
+- **Turns off:** every group in `_MODE_GROUPS` except autosave (design loop, pages, builders, issues, writing checks, and the rest of "house rules"). `apply_switches()` does this first, so a typed switch such as `pages on` still wins.
+- **Stays:** autosave and handoff (work stays committed overnight) and the destructive-command guard, main-branch guard and credit check, which have no switch.
+- **Refuse, not ask:** `_ask_or_refuse` in `safe_git.py` always denies, with "Refused, not asked: this is an unattended run (HOUSE_RULES_UNATTENDED=on), so nobody can answer a prompt", and adds the action to "Waiting on you". Before, an ask was refused only after the prompt timeout, and prompttimer ignores prompts no guard raised.
+- **`noask`:** a PreToolUse hook on `AskUserQuestion|ExitPlanMode`. Unattended it denies, telling the agent to choose the safest option, record the question and choice in the final report, and carry on. Otherwise silent.
+- **Session start** adds one note saying the run is unattended.
+- **Launcher:** `tools/overnight.sh` sets `HOUSE_RULES_UNATTENDED=on` and `ART_PIPELINE=unattended`, then runs `claude --dangerously-skip-permissions "$@"`. Use a throwaway branch or clone.
+- **Rule text (2.85.0):** the session note says that for this run "hand it over, then wait", "stop and wait for the user's answer" and the ask-before list (new dependency, deleting files, refactors over 3 files, public API changes) are overridden: report the command, take the conservative reversible option, log it. The rules files are not forked.
+- **versioncheck (2.85.0):** one line that an update is available and was not applied; no update run, no banner, no marker.
+- A guard ask is refused even with `HOUSE_RULES_PROMPT_TIMEOUT=off` (checked).
+- **Relaxed guards (2.86.0, aj approved 2026-11-22).** Three guards that would stop a run nobody can answer now let the action through with a note instead of refusing it, only when unattended; attended they refuse as before (each has a verify check for both): a whole-file Write over a file I did not create (`guardwrite`; a systemMessage names the file), a commit holding a file over 50 MB or inside a regenerated folder (`bigfiles`; the note lists the files), and a `Co-Authored-By: Claude`/Anthropic credit line (`_attribution_guard`; the note says the credit rule was relaxed so the line is removed in the morning). The destructive-command guard and the main-branch guard are unchanged.
+- The guard's allow paths (an exempted git write, a never-blocked routine commit) now carry a note instead of dropping it.
+- **The one command (2.87.0): type `unattended on`** (`unattended off` to undo; add `everywhere` for all folders). It is a typed switch group like `pages off`, saved in `.claude/house-rules-mode.json` (or the config folder's file), and every hook call then sets `HOUSE_RULES_UNATTENDED` from it, so no environment variable or restart is needed. It is not part of `house rules off`. The saved-switch note says not to commit the file while it is on (it would switch unattended on in other clones). The session note adds: use your own judgment, and commit and push only to your own `AjsAgent/` branch, never `main` (the main-branch guard enforces it). The art-pipeline plugin reads the same file. Quirk: on the prompt that types `unattended off`, the standing note can still show the old state; the next prompt is right.

@@ -7,6 +7,33 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-22 - Unattended mode is a typed switch, shared with art-pipeline
+
+**Decision.** `unattended on|off` is a typed switch group (saved in `house-rules-mode.json`), not only an environment variable, so aj can turn it on at any point in a session with one line. The art-pipeline plugin reads the same file instead of getting its own command. It is kept out of `house rules off`, and the agent is told not to commit the file while it is on.
+**Why.** aj asked for a single simple command to run at any point; an environment variable needs a restart and the launcher. One file means one line covers both plugins. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
+
+## 2026-11-22 - Unattended mode: three guards relax to a note
+
+**Decision.** When `HOUSE_RULES_UNATTENDED=on`, the whole-file Write guard, the big-file commit guard and the Claude-credit check allow the action and say so in a note, instead of refusing. Attended they refuse exactly as before. The destructive-command guard and main-branch guard do not change. aj approved this in the coordinator session on 2026-11-22, after Claude Code's auto-mode safety check refused the builder's edit; the edit was then made directly in the coordinator session.
+**Why.** Each refusal needs aj to answer ("approval by name", "LFS approved", the credit line), and nobody is there overnight, so the run would stop on it. The notes list what was allowed so the morning review can undo it. A note could be lost on the guard's two allow paths; they now carry it. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
+
+## 2026-11-22 - Unattended mode: rule text overridden by the session note, not forked
+
+**Decision.** The rules files are not forked for unattended runs. The unattended SessionStart note says the wait-for-the-user and ask-before instructions are overridden for this run, and versioncheck emits one line instead of the update-and-wait banner. aj approved these in the coordinator session on 2026-11-22.
+**Why.** One copy of the rules text; the note is injected last, so it wins. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
+**Status.** Current.
+
+---
+
+## 2026-11-22 - Unattended mode: guard asks are refused outright
+
+**Decision.** With `HOUSE_RULES_UNATTENDED=on`, a guard `ask` is always a refusal (deny, "Refused, not asked", listed under "Waiting on you"), not an ask that is refused after `HOUSE_RULES_PROMPT_TIMEOUT`.
+**Why.** prompttimer only times prompts a guard raised, and a 5 minute wait per prompt overnight is a stall. Nobody is there to answer, so waiting gains nothing.
+**Also.** Every switch group except autosave goes off (a typed switch still wins); `noask` denies `AskUserQuestion` and `ExitPlanMode`; `tools/overnight.sh` starts it. The destructive, main-branch and credit guards are untouched. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
+**Status.** Current.
+
+---
+
 ## 2026-11-19 - Flexible pages: QA passed on live headless runs
 
 **Context.** aj's first QA on the desktop app failed because the app loads the claude.ai account's plugin copy, which

@@ -932,6 +932,9 @@ def _event_guard_main():
             if allow_ctx:
                 _ac = out["hookSpecificOutput"].get("additionalContext")
                 out["hookSpecificOutput"]["additionalContext"] = (_ac + " " if _ac else "") + allow_ctx
+            if note_ctx:  # a note must not be lost because the command was also approved outright
+                _nc = out["hookSpecificOutput"].get("additionalContext")
+                out["hookSpecificOutput"]["additionalContext"] = (_nc + " " if _nc else "") + note_ctx
             if docs_status == "unknown" and trace_enabled():
                 out["systemMessage"] = "%s - docs check could not tell: %s." % (allow_trace, docs_detail)
             elif trace_verbose():
@@ -957,6 +960,9 @@ def _event_guard_main():
         if docs_note:
             _dc = out["hookSpecificOutput"].get("additionalContext")
             out["hookSpecificOutput"]["additionalContext"] = (_dc + " " if _dc else "") + docs_note
+        if note_ctx:  # a note must not be lost because the command was let through silently
+            _nc = out["hookSpecificOutput"].get("additionalContext")
+            out["hookSpecificOutput"]["additionalContext"] = (_nc + " " if _nc else "") + note_ctx
         emit(out)
         return 0
 
@@ -1305,6 +1311,10 @@ def event_guardwrite():
         "Fix: edit it in place with the Edit tool, changing only the lines that need to change. A whole-file "
         "rewrite needs aj's approval by name first, with what it discards and why an in-place edit will not do."
     )
+    if core.unattended():  # nobody can approve a whole-file rewrite by name: allow it and say so for the morning
+        emit({"systemMessage": "House rules, UNATTENDED run (HOUSE_RULES_UNATTENDED=on): whole-file Write to `%s` "
+                               "was allowed instead of refused. Review it in the morning." % file_path})
+        return 0
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                  "permissionDecisionReason": "\n".join(lines)}})
     return 0
@@ -1564,6 +1574,8 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
     session_id = str(data.get("session_id") or "")
     if secs is not None and data.get("agent_id"):
         why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
+    if core.unattended():
+        why = "this is an unattended run (HOUSE_RULES_UNATTENDED=on), so nobody can answer a prompt"
     if not why:
         _record_ask(session_id, _waiting_key(str(data.get("tool_name") or "?"), data.get("tool_input")))
         out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",
@@ -1859,6 +1871,9 @@ def _attribution_guard(subject, payload):
         m = rx.search(text)
         if m:
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
+            if core.unattended():  # allowed so the run does not stall; the credit line is fixed in the morning
+                return ("note", "", "House rules, UNATTENDED run: the credit rule was relaxed for this %s (it carries \"%s\"). "
+                        "Remove that line in the morning." % (kind, m.group(0).strip()[:60]))
             return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)
     if _GIT_COMMIT_RE.search(cmd):
         where, unclear = _command_dir(payload)

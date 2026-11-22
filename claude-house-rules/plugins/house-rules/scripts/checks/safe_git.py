@@ -2003,5 +2003,54 @@ report("PASS" if _u7_name == "Edens Agent" else "FAIL", "U7: session start sets 
 _u7_o = _nb_bash(_u7, 'git commit --allow-empty -m "x\n\nCo-Authored-By: ' + 'Claude <noreply@anthropic.com>"')
 report("PASS" if "Remove every `Co-Authored-By:`" in _u7_o else "FAIL", "U7: the credit refusal names the lines to remove")
 
+# --- unattended mode: a guard ask is refused outright; noask denies questions; off changes nothing ---
+_un_on = {"HOUSE_RULES_UNATTENDED": "on"}
+_un1 = _ua_guard("verify-un1", env_extra=_un_on)
+_un2 = _ua_guard("verify-un2", env_extra={"HOUSE_RULES_UNATTENDED": "ON"})
+_un3 = _ua_guard("verify-un3")
+report("PASS" if _ua_dec(_un1) == "deny" and "Refused, not asked" in _un1 and "unattended run" in _un1
+       and _ua_dec(_un2) == "deny" and _ua_dec(_un3) == "ask" else "FAIL",
+       "unattended: a guard ask becomes a refusal naming the unattended run; not unattended it is still an ask")
+print("          on %s, ON %s, off %s" % (_ua_dec(_un1), _ua_dec(_un2), _ua_dec(_un3)))
+
+_un4 = _ua_guard("verify-un4", env_extra=dict(_un_on, HOUSE_RULES_PROMPT_TIMEOUT="off"))
+_un5 = _ua_guard("verify-un5", env_extra={"HOUSE_RULES_PROMPT_TIMEOUT": "off"})
+report("PASS" if _ua_dec(_un4) == "deny" and "Refused, not asked" in _un4 and _ua_dec(_un5) == "ask" else "FAIL",
+       "unattended: a guard ask is refused even with HOUSE_RULES_PROMPT_TIMEOUT=off; attended it stays an ask")
+
+
+def _un_noask(tool, on):
+    e = dict(os.environ)
+    e.pop("HOUSE_RULES_UNATTENDED", None)
+    e.update(_un_on if on else {})
+    return run_hook("noask", _pt_tool(tool, {}, event="PreToolUse"), env=e)
+
+
+_un_n = [_un_noask(t, on) for t in ("AskUserQuestion", "ExitPlanMode") for on in (True, False)]
+report("PASS" if all(_ua_dec(o[1]) == "deny" and "nobody is there to answer" in o[1] for o in _un_n[0::2])
+       and all(o[0] == 0 and o[1] == "" for o in _un_n[1::2]) else "FAIL",
+       "noask: AskUserQuestion and ExitPlanMode are denied when unattended; silent and exit 0 when not")
+
+_un_h = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]["PreToolUse"]
+report("PASS" if any(m["matcher"] == "AskUserQuestion|ExitPlanMode" and "run.sh\\\" noask" in json.dumps(m["hooks"])
+                     for m in _un_h) else "FAIL", "hooks.json registers noask on AskUserQuestion|ExitPlanMode")
+
+# --- unattended relaxations (the user approved them 2026-11-22): allowed with a note, strict when attended ---
+_un_gw_on = run_hook("guardwrite", guardwrite_payload(_gw_existing), env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))[1]
+_un_gw_off = run_hook("guardwrite", guardwrite_payload(_gw_existing),
+                      env={k: v for k, v in os.environ.items() if k != "HOUSE_RULES_UNATTENDED"})[1]
+report("PASS" if '"permissionDecision"' not in _un_gw_on and "UNATTENDED run" in _un_gw_on
+       and os.path.basename(_gw_existing) in _un_gw_on and '"permissionDecision":"deny"' in _un_gw_off else "FAIL",
+       "unattended: a whole-file Write is allowed with a note naming the file; attended it is still refused")
+
+_un_cr_cmd = 'git commit --allow-empty -m "x\n\nCo-Authored-By: ' + 'Claude <noreply@anthropic.com>"'
+_un_cr_pl = json.dumps({"session_id": "verify", "cwd": _u7, "tool_name": "Bash", "tool_input": {"command": _un_cr_cmd}})
+_un_cr_on = run_hook("guard", _un_cr_pl, env=dict(_project_env(_u7), HOUSE_RULES_UNATTENDED="on"))[1]
+_un_cr_off = run_hook("guard", _un_cr_pl, env=_project_env(_u7))[1]
+report("PASS" if '"permissionDecision":"deny"' not in _un_cr_on and "credit rule was relaxed" in _un_cr_on
+       and '"permissionDecision":"deny"' in _un_cr_off and "Remove every `Co-Authored-By:`" in _un_cr_off else "FAIL",
+       "unattended: a Claude credit line is allowed with a note; attended the commit is still refused")
+print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
+
 
 finish()

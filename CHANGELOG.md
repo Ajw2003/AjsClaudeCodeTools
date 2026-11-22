@@ -4,6 +4,14 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Plugin 2.87.0: unattended mode on one typed line. Type `unattended on` (or `unattended off`, add `everywhere` for all folders) at any point; it turns every other switch off except autosave, refuses questions and prompts, tells the agent to use its own judgment and push only to its own `AjsAgent/` branch, never `main`, and the art-pipeline plugin follows the same line. The switch file is not to be committed while it is on.
+
+Plugin 2.86.0: unattended mode, stage 2. With `HOUSE_RULES_UNATTENDED=on`, a whole-file Write, a commit with a big file and a `Co-Authored-By: Claude` line are allowed with a note instead of refused, so an overnight run is not stopped on a question only aj can answer; attended they refuse as before. The guard's two allow paths now keep a note instead of dropping it. aj approved the relaxations on 2026-11-22.
+
+Plugin 2.85.0: unattended mode, stage 1. The unattended session note now says the "hand it over, then wait" and ask-before rule text is overridden (report the command, take the conservative reversible option); versioncheck says one line and updates nothing when unattended; a guard ask is refused even with `HOUSE_RULES_PROMPT_TIMEOUT=off`.
+
+Plugin 2.84.0: unattended mode. `HOUSE_RULES_UNATTENDED=on` turns every switch off except autosave, refuses guard prompts outright (listed under "Waiting on you"), and the new `noask` hook denies `AskUserQuestion` and `ExitPlanMode`; `tools/overnight.sh` starts a run with it and `ART_PIPELINE=unattended`.
+
 Plugin 2.83.0: free issue closing (#548 to #552). The agent closes an issue on its own when it is labelled `needs review`, `in review` or completed by someone else and is in no GitHub milestone, then labels it `AjsAgent completed this`. Other issues, milestone issues and milestones need aj's "Close approved: #N" or "Close approved: milestone N". The sweep page is no longer required.
 
 - The guard reads every open issue's labels and milestone in one GitHub call and reuses it for 60 seconds, so a mass close makes one call; a failed read refuses the close (#549).

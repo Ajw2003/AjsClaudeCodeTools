@@ -467,10 +467,10 @@ commit_case("issues: every new output parses as exactly one JSON object", not _m
 _rules_text = read(RULES_FILE)
 _detail = os.path.join(DETAIL_DIR, "issue-workflow.md")
 commit_case(
-    "issues: the rules section and its detail file exist, and the plugin is 2.83.0",
+    "issues: the rules section and its detail file exist, and the plugin is 2.87.0",
     "becomes issues" in _rules_text and "rules/detail/issue-workflow.md" in _rules_text and os.path.isfile(_detail)
     and "HOUSE_RULES_ISSUES=off" in read(_detail)
-    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.83.0",
+    and json.load(open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))["version"] == "2.87.0",
     "rules section + detail file + version",
 )
 
@@ -3707,5 +3707,14 @@ finally:
 report("PASS" if _cf_hit == ({"labels": ["in review"], "milestone": None}, "") and _cf_miss[0] is None and _cf_miss[1]
        else "FAIL", "close facts (#549): the stand-in file answers, and a missing key reads as a failed read")
 
+# --- unattended: a big-file commit is allowed with a note naming the files; attended it is still refused ---
+_ubf = _bf_repo()
+_bf_big(_ubf, "huge.bin")
+_ubf_off = _bf_commit(_ubf)
+_ubf_on = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _ubf, command="git add -A && git commit -m x"), _ubf,
+                    HOUSE_RULES_UNATTENDED="on")[1]
+report("PASS" if _ubf_off[0] == "deny" and "huge.bin" in _ubf_off[1] and _iss_decision(_ubf_on) != "deny"
+       and "UNATTENDED run" in _ubf_on and "huge.bin" in _ubf_on else "FAIL",
+       "unattended: a big-file commit is allowed with a note naming the file; attended it is still refused")
 
 finish()

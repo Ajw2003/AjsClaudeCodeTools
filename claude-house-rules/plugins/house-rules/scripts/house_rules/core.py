@@ -1436,6 +1436,11 @@ def event_versioncheck():
                 )
             return 0
 
+        if unattended():  # nobody to wait for: no update, no wait/ask banner, no first-command prompt marker
+            emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext":
+                  "UNATTENDED run: a house-rules update is available and was not applied."}})
+            return 0
+
         # Out of date: update it here rather than asking, then check the result on disk rather
         # than trusting the exit code (docs/6-decisions/Decisions.md, 2026-09-26).
         failure = "automatic updating is switched off (HOUSE_RULES_AUTO_UPDATE=off)"
@@ -2669,9 +2674,12 @@ _MODE_GROUPS = {
 _MODE_GROUPS["house"] = tuple(dict.fromkeys(v for g in _MODE_GROUPS.values() for v in g)) + (
     "HOUSE_RULES_HARVEST", "HOUSE_RULES_COMMIT_CHECK", "HOUSE_RULES_HANDOVER", "HOUSE_RULES_RERUNS",
     "HOUSE_RULES_DISKREPORT")
+# Added after "house" is built so "house rules off" never touches it: `unattended on` turns every other switch off
+# except autosave (apply_switches) and tells the agent nobody is there; `unattended off` undoes it.
+_MODE_GROUPS["unattended"] = ("HOUSE_RULES_UNATTENDED",)
 MODE_SWITCHES = tuple(_MODE_GROUPS)
 _MODE_NAMES = {"design loop": "design", "writing checks": "writing", "house rules": "house"}
-_MODE_NAME_RE = r"(?:design\s+loop|pages|builders|issues|writing\s+checks|autosave|house\s+rules)"
+_MODE_NAME_RE = r"(?:design\s+loop|pages|builders|issues|writing\s+checks|autosave|house\s+rules|unattended)"
 _MODE_ONE = _MODE_NAME_RE + r"\s+(?:on|off)(?:\s+everywhere)?"
 _MODE_SWITCH_RE = re.compile(r"\b(%s)\s+(on|off)(\s+everywhere)?\b" % _MODE_NAME_RE, re.IGNORECASE)
 # A switch counts only when its sentence or line holds nothing else, so a quoted mention does not flip it.
@@ -2714,12 +2722,36 @@ def _mode_typed(cwd):
     return dict(_mode_read(everywhere), **_mode_read(folder))
 
 
+def unattended():
+    """True when HOUSE_RULES_UNATTENDED=on: nobody is present to answer a prompt (tools/overnight.sh)."""
+    return os.environ.get("HOUSE_RULES_UNATTENDED", "").strip().lower() == "on"
+
+
+def event_noask():
+    """PreToolUse on AskUserQuestion|ExitPlanMode: unattended, deny so the agent decides itself. Else silent."""
+    if not unattended():
+        return 0
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+          "permissionDecisionReason": "This is an unattended run (HOUSE_RULES_UNATTENDED=on): nobody is there to "
+          "answer. Choose the safest option yourself, record the question and your choice in the final report, "
+          "and carry on."}})
+    return 0
+
+
 def apply_switches():
     """Set the mapped HOUSE_RULES_ values for this hook call from the typed groups (typed beats settings.json).
     "house rules" goes first so a more specific group typed beside it wins. Nothing typed: environment untouched."""
     raw = _PAYLOAD_CACHE
     typed = _mode_typed(_payload_cwd(raw)) if raw else {}
+    if "unattended" in typed:  # a typed `unattended on|off` decides before the presets below
+        os.environ["HOUSE_RULES_UNATTENDED"] = typed["unattended"]
+    if unattended():  # everything off but autosave; a typed switch below still wins
+        for var in _MODE_GROUPS["house"]:
+            if var not in _MODE_GROUPS["autosave"]:
+                os.environ[var] = "off"
     for group in sorted(typed, key=lambda g: g != "house"):
+        if group == "unattended":
+            continue
         for var in _MODE_GROUPS[group]:
             os.environ[var] = typed[group]
 
@@ -2786,8 +2818,11 @@ def _mode_apply(text, payload):
         notes.append("saved %s %s in %s%s." % (
             ", ".join("%s %s" % (k, v) for k, v in sorted(saved.items())),
             "everywhere" if wanted else "for this folder", path,
-            "; commit it with the next commit" if top and not wanted else ""))
+            ("; do NOT commit it while unattended is on (it would switch unattended on for other clones): type "
+             "\"unattended off\" when you are back" if saved.get("unattended") == "on"
+             else "; commit it with the next commit") if top and not wanted else ""))
     _MODE_CACHE.clear()
+    apply_switches()  # so this very prompt's note already reflects the line just typed
     return "House rules: %s %s" % (" ".join(notes), _mode_note(payload))
 
 
@@ -2816,8 +2851,19 @@ def _mode_note(payload=None):
         if typed.get(g) == "off" or (var and g != "issues" and sj(g, var)) or (g == "issues" and "design" not in typed and sj(g, var)):
             parts.append(text % ((("you typed \"%s off\"" % {"writing": "writing checks", "house": "house rules"}.get(g, g)) + _mode_where(g, raw))
                                  if g in typed else "%s=off in settings.json" % var))
+    if unattended():
+        parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): nobody can approve or answer; guard prompts are "
+                     "refused instead of asked and listed under \"Waiting on you\"; decide and keep going. For this run these "
+                     "instructions are OVERRIDDEN: never stop or wait for the user (\"hand it over, then wait\", "
+                     "\"stop and wait for the user's answer\"). For a command only the user can run, write it into the "
+                     "final report and the Waiting-on-you list and continue with other work. For ask-before items "
+                     "(new dependency, deleting files, refactors over 3 files, public API changes) take the most "
+                     "conservative reversible option and log the choice in the final report; the destructive-command "
+                     "guard still applies to deletes. Use your own judgment instead of asking. Commit and push only "
+                     "to your own AjsAgent/ branch, never to main or master (the main-branch guard refuses it); if "
+                     "you are on main, branch off first with `git switch -c AjsAgent/<topic>`.")
     if parts:
-        parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules) to switch back; add \"everywhere\" for all folders.")
+        parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules, unattended) to switch back; add \"everywhere\" for all folders.")
     return " ".join(parts)
 
 
