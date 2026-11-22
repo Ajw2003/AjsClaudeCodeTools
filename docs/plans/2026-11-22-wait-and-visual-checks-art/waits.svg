@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250" role="img" aria-label="A wait with a clock: first check at 1 minute, then every minute, ending at done, stalled or deadline">
+<style>text{font-family:Helvetica,Arial,sans-serif;font-size:14px;fill:#17202e}.l{stroke:#566174;stroke-width:2}.d{fill:#2f5bd3}.r{fill:#b4232f}.b{fill:#e3eafc}.t{font-weight:700}</style>
+<rect width="360" height="250" class="b"/>
+<text x="16" y="28" class="t">Every wait has a clock</text>
+<line x1="30" y1="90" x2="330" y2="90" class="l"/>
+<circle cx="30" cy="90" r="8" class="d"/><circle cx="100" cy="90" r="6" class="d"/><circle cx="160" cy="90" r="6" class="d"/><circle cx="220" cy="90" r="6" class="d"/><circle cx="330" cy="90" r="9" class="r"/>
+<text x="14" y="70">start</text><text x="82" y="70">1 min</text><text x="142" y="70">2 min</text><text x="202" y="70">3 min</text><text x="272" y="70">deadline</text>
+<text x="86" y="118">first check</text><text x="196" y="118">...every minute</text>
+<text x="16" y="165">Each check says one of three things:</text>
+<text x="16" y="190">done, still moving, or stalled.</text>
+<text x="16" y="222">Stalled or late ends the wait.</text>
+<text x="16" y="242">I report it and carry on.</text>
+</svg>
