@@ -427,7 +427,7 @@ Plugin 2.82.0. State: built, waiting on aj's QA. Any page format passes if it me
 
 ## Clear roadblocks (2.88.0)
 
-State: built (#570 rule text, #571 check, #572 docs and version). Reply-end check blocks an unprobed roadblock claim twice per user message, then warns; detail in [`docs/4-systems/roadblocks.md`](../4-systems/roadblocks.md). VERIFYCOUNTS
+State: built (#570 rule text, #571 check, #572 docs and version). Reply-end check blocks an unprobed roadblock claim twice per user message, then warns; detail in [`docs/4-systems/roadblocks.md`](../4-systems/roadblocks.md). Verified 2026-11-22: verify.py `RESULT: PASS - all 1345 checks passed` (exit 0), verify_tools.py `RESULT: PASS - all 55 checks passed` (exit 0).
 
 ## Unattended mode (2.87.0)
 
