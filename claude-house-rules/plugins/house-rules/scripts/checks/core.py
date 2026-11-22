@@ -1110,7 +1110,7 @@ hand_case(
     "an 'untested' that says in the same sentence why the check cannot run stays quiet (#89)",
     stop_payload(
         transcript_path=_HAND_NO_TOOL,
-        last_assistant_message="This is untested because the Unity editor is not installed here.",
+        last_assistant_message="This is untested because the full suite takes four hours to run.",
     ),
 )
 hand_case(
