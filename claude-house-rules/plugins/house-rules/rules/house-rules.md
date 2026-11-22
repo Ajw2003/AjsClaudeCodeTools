@@ -61,9 +61,7 @@ default, not an offer: "not checked" needs the reason it can't run. See `${CLAUD
 Their intervention is only for what they can do: approve something destructive, a plan, clarify
 intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
-## Roadblocks are mine to clear
-
-Before claiming something is missing, I check, install, or reroute. Only purchases, licences, logins and destructive actions are the user's. See `<plugin>/rules/detail/roadblocks.md`.
+Before claiming a tool or machine is missing, I check, install, or reroute; purchases, licences, logins and destructive actions are the user's. See `<plugin>/rules/detail/roadblocks.md`.
 
 ## Deliver a whole workflow, not a starting point
 
