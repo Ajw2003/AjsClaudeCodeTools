@@ -235,7 +235,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">The roadblocks rule is built in three steps under parent issue #569: the rule text, a reply check that blocks twice then warns, and the tests, docs and version.</p>
+      <p class="lead" id="lead" data-basic="summary">The roadblocks rule (a roadblock is any reason I give for stopping, such as a missing tool or the wrong machine) is built in three steps under parent issue #569: first the rule text, then a reply check that blocks twice and then warns, then the tests, docs and version number.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -256,7 +256,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the steps in order.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: clear roadblocks", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>rules/house-rules.md and rules/detail/roadblocks.md</h3><p data-basic="done-when">Done when: the section and detail file exist, verify.py passes its duplication and size checks, and CLAUDE.md carries no copy.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py (handover_evidence_check)</h3><p data-basic="done-when">Done when: a roadblock claim with no probe is blocked twice then passes with a warning, a probe-first reply is not blocked, and an unreadable state file is reported in words.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>verify.py, docs and version</h3><p data-basic="done-when">Done when: verify.py and verify_tools.py exit 0, the GitHub check is green, and the QA page is linked from #569.</p></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>rules/house-rules.md and rules/detail/roadblocks.md</h3><p data-basic="done-when">Done when: the section and detail file exist, verify.py passes its checks for duplicated text and file size, and CLAUDE.md contains no copy of the rule text.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py (handover_evidence_check)</h3><p data-basic="done-when">Done when: a roadblock claim made without a probe is blocked twice, then lets the reply through with a warning. A reply that runs a probe first is not blocked. A state file that can't be read is reported with a plain message.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>verify.py, docs and version</h3><p data-basic="done-when">Done when: verify.py and verify_tools.py exit 0, the GitHub verify check passes, and the QA page is linked from parent issue #569.</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -282,7 +282,7 @@ const PAGE = {
   "pageType": "build-plan",
   "approval": "Build plan approved: clear roadblocks",
   "short": {
-    "lead": "The roadblocks rule is built in three steps under parent issue #569: the rule text, a reply check that blocks twice then warns, and the tests, docs and version.",
+    "lead": "The roadblocks rule (a roadblock is any reason I give for stopping, such as a missing tool or the wrong machine) is built in three steps under parent issue #569: first the rule text, then a reply check that blocks twice and then warns, then the tests, docs and version number.",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -300,7 +300,7 @@ const PAGE = {
         "Step 1",
         "#570: the rule text and its detail file",
         "",
-        "Adds the section \"Roadblocks are mine to clear\" to the rules file and a detail file, linked from the evidence and users-hands rules.",
+        "Adds the section \"Roadblocks are mine to clear\" to the rules file and a detail file, linked from the existing \"Evidence before claims\" and users-hands rules.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Erules/house-rules.md%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20%2B%20new%20section%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Erules/detail/roadblocks.md%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20%2B%20new%20file%3C/text%3E%3C/svg%3E",
@@ -313,7 +313,7 @@ const PAGE = {
         "Step 2",
         "#571: the check that blocks twice, then warns",
         "",
-        "Extends the end-of-reply evidence check to flag roadblock claims with no probe. Two blocks, then a warning line. A state file holds the count and resets on each new message.",
+        "Extends the check that runs at the end of each reply so it flags a roadblock claim made without first testing it (a probe). It blocks the reply twice, then lets it through with a warning line. A small state file holds the block count and resets when a new message from you arrives.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim%2C%20no%20probe%20-%3E%20block%201%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim%2C%20no%20probe%20-%3E%20block%202%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim%2C%20no%20probe%20-%3E%20warning%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ENew%20message%20-%3E%20count%20resets%3C/text%3E%3C/svg%3E",
@@ -326,7 +326,7 @@ const PAGE = {
         "Step 3",
         "#572: tests, docs, version and QA page",
         "",
-        "Adds verify.py cases, updates the docs and changelog, bumps the plugin version, and posts a QA page.",
+        "Adds test cases to verify.py, updates the docs and changelog, raises the plugin version number, and posts a QA page for you to check the result.",
         "Nothing from you until the QA page.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Everify.py%20cases%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Edocs%20%2B%20CHANGELOG%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eversion%20bump%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EQA%20page%3C/text%3E%3C/svg%3E",
@@ -350,7 +350,7 @@ const PAGE = {
       "rules/house-rules.md and rules/detail/roadblocks.md",
       "Step 1 adds the rule.",
       "",
-      "Done when: the section and detail file exist, verify.py passes its duplication and size checks, and CLAUDE.md carries no copy.",
+      "Done when: the section and detail file exist, verify.py passes its checks for duplicated text and file size, and CLAUDE.md contains no copy of the rule text.",
       null,
       null
     ],
@@ -359,7 +359,7 @@ const PAGE = {
       "scripts/house_rules/core.py (handover_evidence_check)",
       "Step 2 adds the roadblock claim check.",
       "",
-      "Done when: a roadblock claim with no probe is blocked twice then passes with a warning, a probe-first reply is not blocked, and an unreadable state file is reported in words.",
+      "Done when: a roadblock claim made without a probe is blocked twice, then lets the reply through with a warning. A reply that runs a probe first is not blocked. A state file that can't be read is reported with a plain message.",
       null,
       null
     ],
@@ -368,7 +368,7 @@ const PAGE = {
       "verify.py, docs and version",
       "Step 3 proves and records it.",
       "",
-      "Done when: verify.py and verify_tools.py exit 0, the GitHub check is green, and the QA page is linked from #569.",
+      "Done when: verify.py and verify_tools.py exit 0, the GitHub verify check passes, and the QA page is linked from parent issue #569.",
       null,
       null
     ]

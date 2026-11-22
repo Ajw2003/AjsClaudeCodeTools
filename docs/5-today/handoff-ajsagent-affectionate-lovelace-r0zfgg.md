@@ -10,7 +10,7 @@ Design approved on 2026-11-22 as "Design approved: clear roadblocks 1C 2A" (a ru
 Wait for aj's "Build plan approved: clear roadblocks". Then a builder does step 1 (#570, the rule text), then step 2 (#571, the check), then step 3 (#572, tests, docs, version).
 
 ## What is unverified
-How the block count is kept between replies (the state file) is not designed or tested; step 2 decides it against how `hook.py` reads the transcript. The editor pass on the build plan page may still be pending.
+How the block count is kept between replies (the state file) is not designed or tested; step 2 decides it against how `hook.py` reads the transcript.
 
 ## Issue numbers
 #569 parent; #570, #571, #572 steps.
