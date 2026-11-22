@@ -34,7 +34,7 @@
     "Checked",
     "Round 2: fixed, with nobody steering",
     "",
-    "A builder fixed the causes, not the symptoms. A second, fresh reviewer marked all three criteria PASS, and the record check said done. Nobody asked you anything in between.",
+    "A builder fixed the causes, not the symptoms. A second, fresh reviewer marked all three criteria PASS, and the check of the written record said the work was done. Nobody asked you anything in between.",
     "Nothing from you.",
     {
      "src": "docs/qa/loop-proof/round-2/page-phone-light.png",
@@ -95,9 +95,9 @@
   [
    "new",
    "Wait clocks (#560 to #563)",
-   "Every wait has a done-test, a deadline and a check each minute.",
+   "Every wait has a test for when it is finished, a deadline and a check every minute.",
    null,
-   "A settings file for the numbers, waitfor.py, a guard refusal for background launches with no timeout, a reminder for waits nobody checked, and the rule in \"Nothing fails silently\". A switch group, waits, turns the obstructing parts off.",
+   "A settings file for the numbers, waitfor.py, a guard refusal for background launches with no timeout, a reminder for waits nobody checked, and the rule in \"Nothing fails silently\". A switch group named waits turns off the parts that block you.",
    null,
    null
   ],
@@ -115,7 +115,7 @@
    "Page sending (#558, #559)",
    "A made or changed page that was not sent blocks the turn once.",
    null,
-   "The builder ends with a line saying to send the page, and a page write is followed by a reminder. A hook before each send opens the page alone and repairs old folder pictures in place, never blocking the send.",
+   "The builder ends with a line saying to send the page, and a page write is followed by a reminder. A hook (an automatic step that runs before each send) opens the page alone and repairs old folder pictures in place, never blocking the send.",
    null,
    null
   ],
@@ -124,7 +124,7 @@
    "Visual capture and loop (#564 to #567)",
    "Screenshots, video, frame sheets, a written record and a reviewer each round.",
    null,
-   "visualcheck.py captures phone and desktop in light and dark, records video and builds a timestamped frame sheet with motion measures. A skill runs up to four rounds. A turn that changes a visual file must now show a real capture, a record check and an image read.",
+   "visualcheck.py captures phone and desktop in light and dark, records video and builds a sheet of timestamped video frames, with measures of how much moved between them. A skill (a saved set of instructions for Claude) runs up to four review rounds. A turn that changes a visual file must now show a real capture, a record check and an image read.",
    null,
    null
   ],
@@ -133,16 +133,16 @@
    "Faults found by running real data",
    "Six faults that only real pages and real transcripts showed.",
    null,
-   "The picture check missed pictures that appear only when a row is tapped. The repair rebuilt QA pages from git. The unchecked-wait note was fooled by a prompt mentioning a tool. Test runs collided. The injected rules went over their size limit. Long commands in these QA steps were squeezed into a one-character column on a phone. All fixed.",
+   "The picture check missed pictures that appear only when a row is tapped. The repair rebuilt QA pages from git. The reminder about unchecked waits fired wrongly when a prompt merely mentioned a tool. Test runs collided. The injected rules went over their size limit. Long commands in these QA steps were squeezed into a one-character column on a phone. All fixed.",
    null,
    null
   ],
   [
    "chg",
    "Where the build differs from your approved design",
-   "Three places, each with the reason.",
+   "Three places where the build differs; the reasons are in the decisions log.",
    null,
-   "Old pages are repaired by embedding pictures in place, not rebuilding from source. The wait rule sits inside \"Nothing fails silently\". The reviewer returns its verdict lines and the main session saves them. See the decisions log.",
+   "Old pages are repaired by embedding pictures in place, not rebuilding from source. The wait rule sits inside \"Nothing fails silently\". The reviewer returns its verdict lines and the main session saves them. See docs/6-decisions/Decisions.md.",
    null,
    null
   ]
