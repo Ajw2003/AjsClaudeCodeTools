@@ -3386,4 +3386,108 @@ def handover_evidence_check(payload):
     return reply_text, needs_evidence, evidence_words, impossible_words, not_checked, could_not_tell
 
 
+# --- roadblock claims (#571, docs/4-systems/roadblocks.md): blocked twice per user message, then a warning ---
+_ROADBLOCK_RE = re.compile(
+    r"\b(i can(?:'|no)t|i cannot|(?:is|isn't|is not|are|aren't|are not|not) installed|not on your machine|"
+    r"no access to|you(?:'ll| will)? (?:need|have) to install)\b",
+    re.IGNORECASE,
+)
+_PROBE_CMD_RE = re.compile(
+    r"\b(which|ls|uname|hostname|where|apt|apt-get|pip|pip3|npm|brew|winget|choco)\b|command\s+-v",
+    re.IGNORECASE,
+)
+_PROBE_TOOLS = ("list_computer_folders", "request_computer_folder")
+ROADBLOCK_BLOCKS = 2
+
+
+def _roadblocks_enabled():
+    return os.environ.get("HOUSE_RULES_ROADBLOCKS", "on").strip().lower() not in _TOGGLE_OFF
+
+
+def _roadblock_claims(text):
+    return [m.group(1).lower() for m in _ROADBLOCK_RE.finditer(text or "") if not _is_quoted(text, m.start())]
+
+
+def _probe_since_last_user_message(transcript_path):
+    """(True/False/None, detail): did a tool this turn probe or install? None = could not tell."""
+    records, detail = _records_since_last_user_message(transcript_path)
+    if records is None:
+        return None, detail
+    for block in _turn_tool_uses(records):
+        name = str(block.get("name") or "")
+        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+        if any(t in name for t in _PROBE_TOOLS):
+            return True, None
+        if name == "Bash" and _PROBE_CMD_RE.search(str(inp.get("command") or "")):
+            return True, None
+    return False, None
+
+
+def _user_message_count(transcript_path):
+    n = 0
+    with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            try:
+                n += _is_genuine_user_message(json.loads(line))
+            except ValueError:
+                pass
+    return n
+
+
+def _roadblock_state_path(transcript_path):
+    override = os.environ.get("HOUSE_RULES_ROADBLOCKS_STATE", "").strip()
+    if override:
+        return override
+    key = hashlib.sha1(transcript_path.encode("utf-8", "replace")).hexdigest()[:16]
+    return os.path.join(tempfile.gettempdir(), "house-rules-roadblocks-%s.json" % key)
+
+
+def _roadblock_advice(phrase):
+    if "install" in phrase:
+        return "run the install command yourself (apt, pip, npm, brew, winget or choco)"
+    if "machine" in phrase or "access" in phrase:
+        return "run hostname or list_computer_folders (or request_computer_folder)"
+    return "run which, ls or uname"
+
+
+def roadblock_check(payload, reply_text, retry):
+    """(block reason or None, systemMessage or None). Blocks an unchecked roadblock claim twice per
+    user message, then warns. Anything it cannot read: says so, never blocks."""
+    if not reply_text or not _roadblocks_enabled():
+        return None, None
+    claims = _roadblock_claims(reply_text)
+    if not claims:
+        return None, None
+    transcript_path = _field(_TRANSCRIPT_RE, payload)
+    if not transcript_path:
+        return None, "house-rules: roadblock check could not run (the Stop payload carried no transcript_path)."
+    probed, detail = _probe_since_last_user_message(transcript_path)
+    if probed is None:
+        return None, "house-rules: roadblock check could not tell whether this turn probed (%s)." % detail
+    if probed:
+        return None, None
+    warn = "house-rules: a roadblock claim (%s) went out unchecked." % claims[0]
+    if retry:
+        return None, warn  # #256: the retry never blocks
+    path = _roadblock_state_path(transcript_path)
+    try:
+        key = "%s|%d" % (transcript_path, _user_message_count(transcript_path))
+        state = {}
+        if os.path.isfile(path):
+            state = json.loads(_read_text(path))
+        done = state.get("count", 0) if state.get("key") == key else 0
+        if done >= ROADBLOCK_BLOCKS:
+            return None, warn
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"key": key, "count": done + 1}, f)
+    except (OSError, ValueError, AttributeError) as exc:
+        return None, ("house-rules: roadblock check could not read or write its block count (%s), "
+                      "so it did not block." % type(exc).__name__)
+    return ("House rules, roadblocks (rules/detail/roadblocks.md): this reply claims a roadblock (%s) but no "
+            "tool this turn probed or installed. Before ending, %s, install what is missing, and try "
+            "another route; list every attempt. (block %d of %d)"
+            % (claims[0], _roadblock_advice(claims[0]), done + 1, ROADBLOCK_BLOCKS)), None
+
+
 register_prompt(_scope_mode_link)
