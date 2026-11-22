@@ -117,6 +117,41 @@ _cv2 = _mp_content("visual2", [["chg", "Shiny button", "Looks new.", None, "Deta
 _rc, _o = _mp("build", _cv2, "--project", _d)
 _mp_cases.append(("make_page: the same visual item with a picture builds", _rc == 0))
 
+# pictures are embedded in the page file
+_pd = _mp_proj("pics", _PS_STYLE)
+_pp = os.path.join(_pd, "pic")
+os.makedirs(_pp, exist_ok=True)
+
+
+def _pic_page(name, src):
+    return _mp_content(name, [["chg", "Pic item", "L.", None, "D.", None, None, {"visual": True},
+                               {"src": src, "alt": "a", "caption": "c"}]])
+
+
+def _pic_src(name):
+    return _mp_page_of(os.path.join(_pd, "docs", "plans", name + ".html"))["changes"][1][8]["src"]
+
+
+with open(os.path.join(_pp, "a.svg"), "w") as _f:
+    _f.write('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')
+with open(os.path.join(_pp, "b.png"), "wb") as _f:
+    _f.write(b"\x89PNG\r\n\x1a\n" + b"0" * 20)
+with open(os.path.join(_pp, "big.png"), "wb") as _f:
+    _f.write(b"0" * 1000001)
+_rc, _o = _mp("build", _pic_page("psvg", os.path.join(_pp, "a.svg")), "--project", _pd)
+_mp_cases.append(("make_page: an SVG picture is embedded as a data: address and no -pics folder is written",
+                  _rc == 0 and _pic_src("psvg").startswith("data:image/svg+xml;base64,") and "embedded" in _o
+                  and not any(n.endswith("-pics") for n in os.listdir(os.path.join(_pd, "docs", "plans")))))
+_rc, _o = _mp("build", _pic_page("ppng", os.path.join(_pp, "b.png")), "--project", _pd)
+_mp_cases.append(("make_page: a PNG picture is embedded as image/png", _rc == 0 and _pic_src("ppng").startswith("data:image/png;base64,")))
+_rc, _o = _mp("build", _pic_page("pbig", os.path.join(_pp, "big.png")), "--project", _pd)
+_mp_cases.append(("make_page: a picture over 1,000,000 bytes is refused, naming file and size",
+                  _rc == 2 and "big.png" in _o and "1000001" in _o))
+_rc, _o = _mp("build", _pic_page("pweb", "https://example.com/x.png"), "--project", _pd)
+_mp_cases.append(("make_page: a picture linked from the web is refused", _rc == 2 and "linked from the web" in _o))
+_rc, _o = _mp("build", _pic_page("pdata", "data:image/png;base64,AAAA"), "--project", _pd)
+_mp_cases.append(("make_page: an existing data: picture is left unchanged", _rc == 0 and _pic_src("pdata") == "data:image/png;base64,AAAA"))
+
 _tk = os.path.join(_mp_tmp, "tokens.json")
 with open(_tk, "w", encoding="utf-8") as f:
     json.dump({"color": {"tokens": [{"name": "background", "value": {"dark": "#101010"}},

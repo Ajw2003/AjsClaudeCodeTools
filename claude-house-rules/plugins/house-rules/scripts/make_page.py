@@ -26,6 +26,7 @@ STDLIB ONLY, Python 3.8+. Never installs anything.
 """
 
 import argparse
+import base64
 import glob
 import json
 import os
@@ -153,14 +154,21 @@ def check_pictures(page, style):
                 "style file says pictures are required" % name)
 
 
-def copy_pictures(page, content_dir, project, out_html):
-    base = os.path.splitext(os.path.basename(out_html))[0]
-    pics_dir = os.path.join(os.path.dirname(out_html), base + "-pics")
-    used = {}
+MAX_PIC = 1000000
+PIC_MIME = {".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+            ".gif": "image/gif", ".webp": "image/webp"}
+
+
+def embed_pictures(page, content_dir, project):
+    """Set each local picture's src to a data: address, so the page is one self-contained file."""
+    n = 0
     for d in walk(page):
         src = d.get("src")
-        if not isinstance(src, str) or re.match(r"^(data:|https?:|//|#)", src):
+        if not isinstance(src, str) or re.match(r"^(data:|#)", src):
             continue
+        if re.match(r"^(https?:|//)", src):
+            die("picture %s is linked from the web; pictures linked from the web are not used - save it "
+                "as a local file" % src)
         found = None
         for root in (project, content_dir):
             p = src if os.path.isabs(src) else os.path.join(root, src)
@@ -169,19 +177,16 @@ def copy_pictures(page, content_dir, project, out_html):
                 break
         if not found:
             die("picture not found: %s (looked under %s and %s)" % (src, project, content_dir))
-        key = os.path.abspath(found)
-        if key not in used:
-            name = os.path.basename(found)
-            stem, ext = os.path.splitext(name)
-            n = 1
-            while name in used.values():
-                n += 1
-                name = "%s-%d%s" % (stem, n, ext)
-            os.makedirs(pics_dir, exist_ok=True)
-            shutil.copyfile(found, os.path.join(pics_dir, name))
-            used[key] = name
-        d["src"] = base + "-pics/" + used[key]
-    return len(used)
+        ext = os.path.splitext(found)[1].lower()
+        if ext not in PIC_MIME:
+            die("picture %s has the type %r, which is not supported (use svg, png, jpg, jpeg, gif or webp)" % (found, ext))
+        size = os.path.getsize(found)
+        if size > MAX_PIC:
+            die("picture %s is %d bytes, over the %d byte limit" % (found, size, MAX_PIC))
+        with open(found, "rb") as f:
+            d["src"] = "data:%s;base64,%s" % (PIC_MIME[ext], base64.b64encode(f.read()).decode("ascii"))
+        n += 1
+    return n
 
 
 def style_css(style):
@@ -495,7 +500,7 @@ def build(args):
             break
     out = os.path.abspath(args.out or os.path.join(project, "docs", "plans", stem + ".html"))
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    npics = copy_pictures(page, os.path.dirname(os.path.abspath(args.content)), project, out)
+    npics = embed_pictures(page, os.path.dirname(os.path.abspath(args.content)), project)
     with open(TEMPLATE, encoding="utf-8") as f:
         html = f.read()
     m = re.search(r"^const PAGE = \{.*?^\};\n", html, re.S | re.M)
@@ -526,7 +531,7 @@ def build(args):
     html = "<!doctype html>\n<!-- house-rules make_page %s -->\n" % plugin_version() + html
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
-    print("make_page: wrote %s (%d picture(s) copied)" % (out, npics))
+    print("make_page: wrote %s (%d picture(s) embedded)" % (out, npics))
     here = os.path.normcase(os.path.abspath(os.getcwd()))
     o = os.path.normcase(out)
     if o != here and not o.startswith(here + os.sep):
