@@ -3603,3 +3603,13 @@ session test could not sign in inside the cloud sandbox.
 
 **Status.** Standing. The label rule covers completed closes only; a not-planned close still needs an
 approval (`docs/4-systems/issue-closing.md`, "As built").
+
+## 2026-11-22 — Wait clocks: QA failed, four known issues to fix
+
+**Context.** Wait clocks, visual checks, page sending and pictures (plugin 2.88.0, issues #555 to #568, pull request #573) reached QA with four known issues: three picture-repair tests and one handover check fail when run without a browser or without GitHub access, and two wait checks raise false alarms.
+
+**Decision.** aj wrote "QA failed: wait clocks. fix the test issues and the two false alarms". The stage returns to Build. The fixes: the browser-dependent make_page cases skip when the re-check did not run; the core handover check runs in a scratch folder; the unchecked-wait note ignores a launch the guard refused; the foreground-wait pattern matches `timeout` only at command position.
+
+**Why.** CI runs without a browser and without GitHub access, so the failing cases would block the merge, and the two false alarms would teach aj to ignore the notes.
+
+**Status.** Standing once built. No change to the approved design.
