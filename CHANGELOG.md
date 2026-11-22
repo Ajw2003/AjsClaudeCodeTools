@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Reworded the two new rows on the wait clocks QA page after the editor pass (page `docs/plans/2026-11-22-wait-and-visual-checks-qa.html`, rebuilt with `make_page.py build`).
+
 Fixed the four known test-side issues on the wait clocks branch after aj's QA failed: three browser-dependent picture-repair tests now skip when no browser re-check ran, the handover stand-down check runs in a scratch folder, the unchecked-wait note ignores a launch the guard refused, and the foreground-wait pattern matches `timeout` only at command position. verify.py 1434 of 1434, also in a CI-like run without a browser.
 
 Opened draft pull request #573 for the wait clocks, visual checks, page sending and pictures work (plugin 2.88.0, refs #555 to #568). It stays a draft until four known test-side checks are fixed, which needs aj's go-ahead. No code changed in this step.

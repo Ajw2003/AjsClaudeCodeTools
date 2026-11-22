@@ -170,19 +170,19 @@
   ],
   [
    "chg",
-   "Fixed after your QA failed: the four test checks that failed on a GitHub-like run",
-   "Run like GitHub's runner (Python 3.12, no browser), all 1434 checks now pass.",
+   "Fixed after your QA failed: four tests that failed when run the way GitHub runs them",
+   "Run the way GitHub runs them (Python 3.12, no browser installed), all 1434 checks now pass.",
    null,
-   "Three repair tests that assumed a browser now skip with the hook's real output when no browser re-check ran, and still check the embedded pictures. The handover check now runs in a scratch folder, so it no longer reads this branch's loop state.",
+   "Three tests of the page repair assumed a browser was installed. When no browser is available, they now skip the browser re-check, print the hook's real output, and still check that the pictures are embedded. The fourth test, the handover check, now runs in a scratch folder, so it no longer reads the loop state saved on this branch.",
    null,
    null
   ],
   [
    "chg",
    "Fixed after your QA failed: two false alarms in the wait checks",
-   "Real sessions showed both; both are fixed, and the guard's refusal and the real notes still work.",
+   "Real sessions showed both false alarms. Both are fixed, and the guard still refuses a launch with no timeout and the turn-end note still appears for waits nobody checked.",
    null,
-   "The turn-end note no longer lists a launch the guard refused. The guard now counts the word timeout only where a command starts, so quoted text and heredoc bodies no longer trigger it. A timeout inside bash -c with quotes is not seen; that limit is noted in the code.",
+   "The note at the end of a turn no longer lists a background launch that the guard had already refused. The guard now looks for the word timeout only at the start of a command, so quoted text and heredoc bodies (blocks of text fed to a command) no longer trigger it. One limit remains: a timeout inside a quoted bash -c command is not seen. That limit is noted in a comment in scripts/house_rules/safe_git.py.",
    null,
    null
   ]
