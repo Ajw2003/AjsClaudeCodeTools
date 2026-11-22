@@ -1,10 +1,10 @@
 {
-  "title": "Wait Clocks And Visual Checks",
-  "eyebrow": "Proposal · two workflow fixes, nothing built yet",
+  "title": "Wait Clocks, Visual Checks And Page Sending",
+  "eyebrow": "Proposal · three workflow fixes, nothing built yet",
   "pageType": "proposal",
-  "approval": "Design approved: wait clocks and visual checks",
+  "approval": "Design approved: wait clocks, visual checks and page sending",
   "short": {
-    "lead": "Two changes: every wait gets a one-minute clock and a deadline, and every visual change is recorded, looked at and fixed by me in a loop; I need your answers to four choices.",
+    "lead": "Three changes: every wait gets a one-minute clock and a deadline, every visual change is recorded, looked at and fixed by me in a loop, and every page I make or change is sent to you at the end; I need your answers to five choices.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       ["What exists today", ""],
@@ -13,8 +13,10 @@
     "items": [
       ["stop", "Have", "A wait guard, but only for the foreground", "", "The guard refuses a foreground sleep loop, or a timeout over 60 seconds (safe_git.py:668). A background task, a helper agent or a scheduled wake-up has no limit, no rule says when to check, and stallcheck.py only runs if I remember it.", "Reused; the gaps are new.", {"src": "2026-11-22-wait-and-visual-checks-art/waits.svg", "alt": "A timeline: first check at one minute, then every minute, ending at done, stalled or deadline", "caption": "The wait clock this page proposes."}],
       ["eye", "Have", "A visual rule that only reminds", "", "The rule says to screenshot before and after. The end-of-turn hook counts any command containing the word \"browser\" or \"capture\" as a look, so it is easy to satisfy without looking. There is no video, no frame sheet, no phone-and-desktop flow and no loop.", "Reused; the loop and the tools are new.", {"src": "2026-11-22-wait-and-visual-checks-art/loop.svg", "alt": "The visual loop: write criteria, capture, critique, fix, repeat", "caption": "The visual loop this page proposes."}],
+      ["file", "Have", "A page check that wants a link, not a send", "", "The end-of-turn check passes any reply that mentions a page's path (core.py:3261, design_loop.py:2466). It does not look at whether the page was sent, or changed after it was sent. In this session I linked the page by path and you had to type \"show me the page\".", "Reused; the send check is new."],
       ["flask", "Need", "Wait clock, with a tool and a guard", "you", "A rule; a waitfor.py script that checks every minute and reports one of four outcomes (done, failed, stalled or timed out); and a guard that refuses background launches with no deadline. Your choices 1 and 2 set how strict it is.", "Your answers under Choices."],
-      ["loop", "Need", "Visual loop, with capture tools", "you", "A visualcheck.py tool that captures phone and desktop flows, video and frame sheets, plus a skill that runs capture, critique and fix by itself. Your choices 3 and 4 set the tools and the gate.", "Your answers under Choices.", {"src": "2026-11-22-wait-and-visual-checks-art/sheet.svg", "alt": "Phone and desktop screenshots, a video and a frame sheet", "caption": "What one check produces."}]
+      ["loop", "Need", "Visual loop, with capture tools", "you", "A visualcheck.py tool that captures phone and desktop flows, video and frame sheets, plus a skill that runs capture, critique and fix by itself. Your choices 3 and 4 set the tools and the gate.", "Your answers under Choices.", {"src": "2026-11-22-wait-and-visual-checks-art/sheet.svg", "alt": "Phone and desktop screenshots, a video and a frame sheet", "caption": "What one check produces."}],
+      ["hand", "Need", "Pages always sent at the end", "you", "A rule, a send step and an end-of-turn check, so every page I make or change reaches you without a request. Your choice 5 sets how firm the check is.", "Your answer under Choices.", {"src": "2026-11-22-wait-and-visual-checks-art/send.svg", "alt": "A page is made, sent to you, and sent again after every change", "caption": "A page never stays unsent."}]
     ]
   },
   "changes": [
@@ -58,6 +60,21 @@
       "A turn passes only with real captures and a ledger that cite its criteria.",
       "More turns are checked, so I will tune it against real sessions to keep false alarms low."
     ], null],
+    ["new", "Fix 3, pages always sent: the rule", "Any page I make or change is sent to you before the turn ends, without you asking.", null, "One sentence added to the page rule in rules/house-rules.md, with detail in rules/detail/show-dont-tell.md. A page made, rebuilt or edited this turn is sent with the file-send tool as the last action. A page changed after it was sent is sent again. A published artifact link counts as sent.", [
+      "The rule asks for a page and a link in the reply. Sending is not mentioned.",
+      "Sending is part of finishing a page, and sending again follows every change.",
+      "You stop having to ask to see a page, or to see it again."
+    ], {"src": "2026-11-22-wait-and-visual-checks-art/send.svg", "alt": "A page is made, sent, and sent again after every change", "caption": "A page never stays unsent."}],
+    ["chg", "Fix 3: the page builder says what to do next", "make_page.py ends its output with the exact send step.", null, "After a successful build, make_page.py prints one line naming the page file and saying to send it. A short reminder after each page write or build says the same once, so the step is hard to forget while working, not only at the end.", [
+      "The builder prints the built path and stops.",
+      "The last line says: send this page now.",
+      "Nothing for you to do. It is a prompt for me."
+    ], null],
+    ["chg", "Fix 3: the end-of-turn check", "The check looks for a real send, not a link in the text.", null, "The new check reads the turn. For each page written or rebuilt, it looks for a send or an artifact publish after the last change. If one is missing, it blocks once and names the files. Where no file-send tool exists, a link in the reply counts.", [
+      "Any reply that mentions a page's path passes.",
+      "A send after the last change is required; a link in the text is not enough.",
+      "No more resend requests. A false alarm costs me one extra send."
+    ], null],
     ["chg", "Everything else that each fix touches", "Every file and doc the two fixes touch, so nothing is left behind.", null, "All of these are updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.", [
       "The rules are in three places that must agree.",
       "If any one falls out of step, verify.py fails.",
@@ -83,13 +100,18 @@
       ["A", "I critique them myself against the written criteria, with the gate blocking once if captures or the ledger are missing", 1, "Cheapest, and the ledger makes each judgement checkable. A model can miss things in its own work, so every pass cites what the image shows."],
       ["B", "A separate reviewer helper critiques them with fresh eyes each round", 0, "Fewer blind spots. Costs a helper run per round, within your two-helper limit."],
       ["C", "Like A, but a reviewer helper checks only the final round", 0, "A middle path: one fresh-eyed pass at the end."]
-    ], "A is the smallest change that makes it unattended. You can move to C later by changing one setting."]
+    ], "A is the smallest change that makes it unattended. You can move to C later by changing one setting."],
+    ["send", "How firm should the page-sending check be?", [
+      ["A", "Block the end of the turn once if a made or changed page was not sent, naming the page", 1, "Fixes your repeated complaint at the moment it happens. It blocks once and then passes, so it cannot loop."],
+      ["B", "Only remind me, never block", 0, "Never obstructs. It is close to today's behaviour, which is what you are tired of."],
+      ["C", "Block every time until it is sent", 0, "Strictest. Risks the loop-on-block problem recorded on the 2026-10-18 docs context layer page."]
+    ], "A is the smallest change that makes sending automatic."]
   ],
   "wrapup": {
-    "summary": "Two workflow fixes: every wait gets a one-minute clock with a deadline, and every visual change is captured, critiqued and fixed in an unattended loop.",
-    "changing": "The rules file, two detail files, a settings file, two new scripts (waitfor.py and visualcheck.py), one new skill, the guard, the end-of-turn checks, the agent prompts, tests and docs.",
-    "blocking": "Your four answers under Choices: what happens at a deadline, how strict the guard is, which capture tools, and who critiques.",
-    "next": "After you approve, I open one parent issue and a child issue per step, then build the wait clock first, because the visual loop uses it. I prove each fix on seeded failures, not just a green test run.",
+    "summary": "Three workflow fixes: every wait gets a one-minute clock with a deadline, every visual change is captured, critiqued and fixed in an unattended loop, and every page I make or change is sent to you at the end of the turn.",
+    "changing": "The rules file, three detail files, a settings file, two new scripts (waitfor.py and visualcheck.py), one new skill, the guard, the page builder, the end-of-turn checks, the agent prompts, tests and docs.",
+    "blocking": "Your five answers under Choices: what happens at a deadline, how strict the guard is, which capture tools, who critiques, and how firm the page-sending check is.",
+    "next": "After you approve, I open one parent issue and a child issue per step, then build page sending first, because it is the smallest and fixes your most repeated complaint, then the wait clock, because the visual loop uses it. I prove each fix on seeded failures, not just a green test run.",
     "todo": [
       "Pick your answers under Choices.",
       "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."

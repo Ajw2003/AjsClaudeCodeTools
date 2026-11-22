@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 270" role="img" aria-label="Page sending: a page is made, sent to you, and sent again after every change, before the turn ends">
+<style>text{font-family:Helvetica,Arial,sans-serif;font-size:14px;fill:#17202e}.bx{fill:#fff;stroke:#2f5bd3;stroke-width:2}.ar{stroke:#566174;stroke-width:2;fill:none}.b{fill:#e3eafc}.ok{fill:#dff3e8;stroke:#1f7a4d;stroke-width:2}.t{font-weight:700}</style>
+<rect width="360" height="270" class="b"/>
+<text x="16" y="26" class="t">A page never stays unsent</text>
+<rect x="16" y="42" width="150" height="52" rx="8" class="bx"/><text x="28" y="66">Page made or</text><text x="28" y="84">rebuilt</text>
+<rect x="194" y="42" width="150" height="52" rx="8" class="ok"/><text x="206" y="66">Sent to you,</text><text x="206" y="84">shown in the app</text>
+<path d="M166 68H194" class="ar"/>
+<rect x="16" y="124" width="150" height="52" rx="8" class="bx"/><text x="28" y="148">Page changed</text><text x="28" y="166">after sending</text>
+<rect x="194" y="124" width="150" height="52" rx="8" class="ok"/><text x="206" y="148">Sent again,</text><text x="206" y="166">no request needed</text>
+<path d="M166 150H194M269 94V124" class="ar"/>
+<text x="16" y="212">The turn cannot end with a made</text>
+<text x="16" y="232">or changed page that was not sent.</text>
+<text x="16" y="254">Checked from the turn's own record.</text>
+</svg>

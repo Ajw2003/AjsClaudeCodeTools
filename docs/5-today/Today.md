@@ -1,6 +1,6 @@
 # Today — 2026-11-22
 
-Wait clocks and visual checks, proposed on `ajsagent/eloquent-mayer-0ayp82` and waiting on aj's four choices; nothing built. Page: `docs/plans/2026-11-22-wait-and-visual-checks.html`. Handoff: `docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md`.
+Wait clocks, visual checks and page sending (three fixes), proposed on `ajsagent/eloquent-mayer-0ayp82` and waiting on aj's five choices; nothing built. Page: `docs/plans/2026-11-22-wait-and-visual-checks.html`. Handoff: `docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md`.
 
 ## 2026-11-20
 

@@ -2,7 +2,7 @@
 <!-- house-rules make_page 2.87.0 -->
 <meta charset="utf-8">
 <meta name="house-rules-page" content="proposal">
-<title>Wait Clocks And Visual Checks</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<title>Wait Clocks, Visual Checks And Page Sending</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 /* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
@@ -235,7 +235,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">Two changes: every wait gets a one-minute clock and a deadline, and every visual change is recorded, looked at and fixed by me in a loop; I need your answers to four choices.</p>
+      <p class="lead" id="lead" data-basic="summary">Three changes: every wait gets a one-minute clock and a deadline, every visual change is recorded, looked at and fixed by me in a loop, and every page I make or change is sent to you at the end; I need your answers to five choices.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -255,7 +255,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Pick your answers under Choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: wait clocks and visual checks", or say what to change.</label></li></ol></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Pick your answers under Choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: wait clocks, visual checks and page sending", or say what to change.</label></li></ol></div></div></div>
     <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Only the foreground is covered, and the 60-second limit is a hard-coded number.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · I stop waiting, say plainly what is still unknown, and carry on with the next safe step</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
@@ -268,7 +268,7 @@ dialog.lightbox button{margin-top:10px}
     <button class="secondary" id="prev" type="button">‹ Back</button>
     <button class="primary" id="next" type="button">Next ›</button>
   </div>
-  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I open one parent issue and a child issue per step, then build the wait clock first, because the visual loop uses it. I prove each fix on seeded failures, not just a green test run.</span></aside>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I open one parent issue and a child issue per step, then build page sending first, because it is the smallest and fixes your most repeated complaint, then the wait clock, because the visual loop uses it. I prove each fix on seeded failures, not just a green test run.</span></aside>
 </div>
 
 <script>
@@ -277,12 +277,12 @@ dialog.lightbox button{margin-top:10px}
 const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
-  "title": "Wait Clocks And Visual Checks",
-  "eyebrow": "Proposal · two workflow fixes, nothing built yet",
+  "title": "Wait Clocks, Visual Checks And Page Sending",
+  "eyebrow": "Proposal · three workflow fixes, nothing built yet",
   "pageType": "proposal",
-  "approval": "Design approved: wait clocks and visual checks",
+  "approval": "Design approved: wait clocks, visual checks and page sending",
   "short": {
-    "lead": "Two changes: every wait gets a one-minute clock and a deadline, and every visual change is recorded, looked at and fixed by me in a loop; I need your answers to four choices.",
+    "lead": "Three changes: every wait gets a one-minute clock and a deadline, every visual change is recorded, looked at and fixed by me in a loop, and every page I make or change is sent to you at the end; I need your answers to five choices.",
     "hint": "Tap a row to see what it covers.",
     "key": [
       [
@@ -322,6 +322,14 @@ const PAGE = {
         }
       ],
       [
+        "file",
+        "Have",
+        "A page check that wants a link, not a send",
+        "",
+        "The end-of-turn check passes any reply that mentions a page's path (core.py:3261, design_loop.py:2466). It does not look at whether the page was sent, or changed after it was sent. In this session I linked the page by path and you had to type \"show me the page\".",
+        "Reused; the send check is new."
+      ],
+      [
         "flask",
         "Need",
         "Wait clock, with a tool and a guard",
@@ -340,6 +348,19 @@ const PAGE = {
           "src": "2026-11-22-wait-and-visual-checks-pics/sheet.svg",
           "alt": "Phone and desktop screenshots, a video and a frame sheet",
           "caption": "What one check produces."
+        }
+      ],
+      [
+        "hand",
+        "Need",
+        "Pages always sent at the end",
+        "you",
+        "A rule, a send step and an end-of-turn check, so every page I make or change reaches you without a request. Your choice 5 sets how firm the check is.",
+        "Your answer under Choices.",
+        {
+          "src": "2026-11-22-wait-and-visual-checks-pics/send.svg",
+          "alt": "A page is made, sent to you, and sent again after every change",
+          "caption": "A page never stays unsent."
         }
       ]
     ]
@@ -462,6 +483,49 @@ const PAGE = {
       null
     ],
     [
+      "new",
+      "Fix 3, pages always sent: the rule",
+      "Any page I make or change is sent to you before the turn ends, without you asking.",
+      null,
+      "One sentence added to the page rule in rules/house-rules.md, with detail in rules/detail/show-dont-tell.md. A page made, rebuilt or edited this turn is sent with the file-send tool as the last action. A page changed after it was sent is sent again. A published artifact link counts as sent.",
+      [
+        "The rule asks for a page and a link in the reply. Sending is not mentioned.",
+        "Sending is part of finishing a page, and sending again follows every change.",
+        "You stop having to ask to see a page, or to see it again."
+      ],
+      {
+        "src": "2026-11-22-wait-and-visual-checks-pics/send.svg",
+        "alt": "A page is made, sent, and sent again after every change",
+        "caption": "A page never stays unsent."
+      }
+    ],
+    [
+      "chg",
+      "Fix 3: the page builder says what to do next",
+      "make_page.py ends its output with the exact send step.",
+      null,
+      "After a successful build, make_page.py prints one line naming the page file and saying to send it. A short reminder after each page write or build says the same once, so the step is hard to forget while working, not only at the end.",
+      [
+        "The builder prints the built path and stops.",
+        "The last line says: send this page now.",
+        "Nothing for you to do. It is a prompt for me."
+      ],
+      null
+    ],
+    [
+      "chg",
+      "Fix 3: the end-of-turn check",
+      "The check looks for a real send, not a link in the text.",
+      null,
+      "The new check reads the turn. For each page written or rebuilt, it looks for a send or an artifact publish after the last change. If one is missing, it blocks once and names the files. Where no file-send tool exists, a link in the reply counts.",
+      [
+        "Any reply that mentions a page's path passes.",
+        "A send after the last change is required; a link in the text is not enough.",
+        "No more resend requests. A false alarm costs me one extra send."
+      ],
+      null
+    ],
+    [
       "chg",
       "Everything else that each fix touches",
       "Every file and doc the two fixes touch, so nothing is left behind.",
@@ -569,16 +633,41 @@ const PAGE = {
         ]
       ],
       "A is the smallest change that makes it unattended. You can move to C later by changing one setting."
+    ],
+    [
+      "send",
+      "How firm should the page-sending check be?",
+      [
+        [
+          "A",
+          "Block the end of the turn once if a made or changed page was not sent, naming the page",
+          1,
+          "Fixes your repeated complaint at the moment it happens. It blocks once and then passes, so it cannot loop."
+        ],
+        [
+          "B",
+          "Only remind me, never block",
+          0,
+          "Never obstructs. It is close to today's behaviour, which is what you are tired of."
+        ],
+        [
+          "C",
+          "Block every time until it is sent",
+          0,
+          "Strictest. Risks the loop-on-block problem recorded on the 2026-10-18 docs context layer page."
+        ]
+      ],
+      "A is the smallest change that makes sending automatic."
     ]
   ],
   "wrapup": {
-    "summary": "Two workflow fixes: every wait gets a one-minute clock with a deadline, and every visual change is captured, critiqued and fixed in an unattended loop.",
-    "changing": "The rules file, two detail files, a settings file, two new scripts (waitfor.py and visualcheck.py), one new skill, the guard, the end-of-turn checks, the agent prompts, tests and docs.",
-    "blocking": "Your four answers under Choices: what happens at a deadline, how strict the guard is, which capture tools, and who critiques.",
-    "next": "After you approve, I open one parent issue and a child issue per step, then build the wait clock first, because the visual loop uses it. I prove each fix on seeded failures, not just a green test run.",
+    "summary": "Three workflow fixes: every wait gets a one-minute clock with a deadline, every visual change is captured, critiqued and fixed in an unattended loop, and every page I make or change is sent to you at the end of the turn.",
+    "changing": "The rules file, three detail files, a settings file, two new scripts (waitfor.py and visualcheck.py), one new skill, the guard, the page builder, the end-of-turn checks, the agent prompts, tests and docs.",
+    "blocking": "Your five answers under Choices: what happens at a deadline, how strict the guard is, which capture tools, who critiques, and how firm the page-sending check is.",
+    "next": "After you approve, I open one parent issue and a child issue per step, then build page sending first, because it is the smallest and fixes your most repeated complaint, then the wait clock, because the visual loop uses it. I prove each fix on seeded failures, not just a green test run.",
     "todo": [
       "Pick your answers under Choices.",
-      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: wait clocks and visual checks\", or say what to change."
+      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: wait clocks, visual checks and page sending\", or say what to change."
     ]
   }
 };
