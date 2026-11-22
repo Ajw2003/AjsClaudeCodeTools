@@ -2227,6 +2227,7 @@ _BG_CHECK_TOOLS = {"TaskOutput", "BashOutput", "TaskStop", "KillShell", "SendMes
 _BG_ID_TOOLS = {"Bash", "PowerShell", "Read", "Grep", "Glob"} | _BG_CHECK_TOOLS - {"SendMessage"}
 _BG_CHECK_RE = re.compile(r"waitfor\.py|stallcheck\.py|notification", re.I)
 _BG_TOKEN_RE = re.compile(r"(?:ID|agentId|task_id|bash_id)[\"']?\s*[:=]\s*[\"']?([\w-]{4,})|(/[^\s\"']+\.output)")
+_BG_REDIR_RE = re.compile(r"\d*>>?\s*(?!&)([^\s;&|<>]+)")  # a launch's own `> file` also counts as its output file
 
 
 def handover_unchecked_waits(turn_records, session_id):
@@ -2247,6 +2248,10 @@ def handover_unchecked_waits(turn_records, session_id):
         if u.get("name") not in ("Bash", "PowerShell", "Agent", "Task") or ti.get("run_in_background") is not True:
             continue
         tokens = [a or b for a, b in _BG_TOKEN_RE.findall(results.get(u.get("id"), ""))]
+        for tgt in _BG_REDIR_RE.findall(str(ti.get("command", ""))) if u.get("name") in ("Bash", "PowerShell") else []:
+            tgt = tgt.strip("\"'")
+            if tgt and tgt != "/dev/null":
+                tokens += [tgt] + ([os.path.basename(tgt)] if len(os.path.basename(tgt)) >= 4 else [])
         for later in uses[i + 1:]:
             blob = json.dumps(later.get("input") or {})
             name = later.get("name")

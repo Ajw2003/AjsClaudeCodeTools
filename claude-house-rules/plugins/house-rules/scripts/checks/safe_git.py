@@ -2141,4 +2141,24 @@ report("PASS" if "never checked" not in _bg_stop(_bg_with("bg-bashwait", ("Bash"
 report("PASS" if "never checked" not in _bg_stop(_bg_with("bg-readout", ("Read", {"file_path": "/tmp/t/bk7x2.output"})), _bg_sid + "r") else "FAIL",
        "bg note: a later Read of the task's .output file clears it")
 
+def _bg_redir(name, cmd, later):
+    rows = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}}),
+            json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b1", "name": "Bash",
+                        "input": {"command": cmd, "run_in_background": True, "timeout": 600000}}]}}),
+            json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "b1",
+                        "content": "started"}]}})]
+    if later:
+        rows.append(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b2",
+                    "name": "Bash", "input": {"command": later}}]}}))
+    return _hand_transcript(name, rows)
+
+
+_bg_rcmd = 'python3 verify.py > part9.out 2>&1; echo "PRC=$?" >> part9.out'
+report("PASS" if "never checked" not in _bg_stop(_bg_redir("bg-redir-read", _bg_rcmd, "grep FAIL part9.out"), _bg_sid + "d") else "FAIL",
+       "bg note: a launch redirecting to a file that is later grep'd is not reported")
+report("PASS" if "never checked" in _bg_stop(_bg_redir("bg-redir-none", _bg_rcmd, "ls"), _bg_sid + "e") else "FAIL",
+       "bg note: a launch redirecting to a file that is never read is reported")
+report("PASS" if "never checked" in _bg_stop(_bg_redir("bg-devnull", "make > /dev/null 2>&1", "echo x > /dev/null"), _bg_sid + "f") else "FAIL",
+       "bg note: > /dev/null adds no token, so a later /dev/null mention does not clear a launch")
+
 finish()
