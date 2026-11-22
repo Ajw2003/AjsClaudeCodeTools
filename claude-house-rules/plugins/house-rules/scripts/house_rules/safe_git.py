@@ -668,7 +668,10 @@ def _rerun_check(payload, subject):
 
 # Speed switches choice 5: a foreground wait holds the whole turn, so it is refused with its background form.
 _WAIT_LOOP_RE = re.compile(r"\b(?:until|while)\b.*?\bdo\b.*?\bsleep\b|\bwhile\b.*?\bStart-Sleep\b", re.I | re.S)
-_WAIT_TIMEOUT_RE = re.compile(r"\btimeout\s+(?:-{1,2}\S+\s+)*(\d+(?:\.\d+)?)([smhd]?)\b")
+# shortcut: `timeout` counts only at command position; one inside `bash -c "..."` is not seen. Heredoc bodies are dropped first.
+_HEREDOC_RE = re.compile(r"(<<-?\s*(['\"]?)(\w+)\2[^\n]*\n).*?\n[ \t]*\3[ \t]*(?=\n|$)", re.S)
+_WAIT_TIMEOUT_RE = re.compile(r"(?:^|[;&|(`\n]|\bdo\b|\bthen\b)\s*(?:sudo\s+)?(?:\w+=\S*\s+)*"
+                              r"timeout\s+(?:-{1,2}\S+\s+)*(\d+(?:\.\d+)?)([smhd]?)\b")
 WAIT_DENY = (
     "This waits in the foreground (%s), which holds the turn until it ends. Run the same command with "
     "run_in_background set to true instead: the harness wakes you when it exits, so no polling loop is needed."
@@ -705,7 +708,7 @@ def _wait_check(payload, subject):
     limit = waits.load_waits()["foreground_limit_seconds"]
     if _WAIT_LOOP_RE.search(cmd):
         return WAIT_DENY % "a loop that sleeps until something happens"
-    for amount, unit in _WAIT_TIMEOUT_RE.findall(cmd):
+    for amount, unit in _WAIT_TIMEOUT_RE.findall(_HEREDOC_RE.sub(r"\1", cmd)):
         secs = float(amount) * {"": 1, "s": 1, "m": 60, "h": 3600, "d": 86400}[unit]
         if secs > limit:
             return WAIT_DENY % ("timeout %s%s, over %g seconds" % (amount, unit, limit))
@@ -2236,7 +2239,7 @@ def handover_unchecked_waits(turn_records, session_id):
     """A one-line note naming background tasks this turn started and never checked, not yet reported; else ''."""
     if os.environ.get("HOUSE_RULES_WAITS", "on").strip().lower() in core._TOGGLE_OFF:
         return ""
-    uses, results = [], {}
+    uses, results, refused = [], {}, set()
     for rec in turn_records or []:
         content = ((rec or {}).get("message") or {}).get("content") if isinstance(rec, dict) else None
         for b in content if isinstance(content, list) else []:
@@ -2246,10 +2249,14 @@ def handover_unchecked_waits(turn_records, session_id):
                 uses.append(b)
             elif b.get("type") == "tool_result":
                 results[b.get("tool_use_id")] = json.dumps(b.get("content"))
+                if b.get("is_error") is True or "This background command has" in results[b.get("tool_use_id")]:
+                    refused.add(b.get("tool_use_id"))  # the guard refused it: it never started
     owed = []
     for i, u in enumerate(uses):
         ti = u.get("input") or {}
         if u.get("name") not in ("Bash", "PowerShell", "Agent", "Task") or ti.get("run_in_background") is not True:
+            continue
+        if u.get("id") in refused:
             continue
         tokens = [a or b for a, b in _BG_TOKEN_RE.findall(results.get(u.get("id"), ""))]
         for tgt in _BG_REDIR_RE.findall(str(ti.get("command", ""))) if u.get("name") in ("Bash", "PowerShell") else []:

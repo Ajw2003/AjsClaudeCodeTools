@@ -2172,5 +2172,24 @@ report("PASS" if "never checked" in _bg_stop(_bg_redir("bg-redir-none", _bg_rcmd
        "bg note: a launch redirecting to a file that is never read is reported")
 report("PASS" if "never checked" in _bg_stop(_bg_redir("bg-devnull", "make > /dev/null 2>&1", "echo x > /dev/null"), _bg_sid + "f") else "FAIL",
        "bg note: > /dev/null adds no token, so a later /dev/null mention does not clear a launch")
+# wait-clocks false alarms: a refused background launch is not "unchecked"; `timeout N` counts only at command position
+_bg_ref = _bg_lines("bg-refused", False)
+with open(_bg_ref, encoding="utf-8") as _fh:
+    _bg_rows = _fh.read().split("\n")
+_bg_rows[2] = json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "b1", "is_error": True,
+                          "content": "This background command has no timeout, so nothing would stop it"}]}})
+with open(_bg_ref, "w", encoding="utf-8") as _fh:
+    _fh.write("\n".join(_bg_rows))
+report("PASS" if "never checked" not in _bg_stop(_bg_ref, _bg_sid + "x") else "FAIL",
+       "bg note: a launch the guard refused is not reported as unchecked")
+report("PASS" if "never checked" in _bg_stop(_bg_lines("bg-allowed", False), _bg_sid + "y") else "FAIL",
+       "bg note: an allowed unchecked launch is still reported")
+_wd = '"permissionDecision":"deny"'
+report("PASS" if _wd not in _wait_run('echo "raise timeout 20000 later"') and
+       _wd not in _wait_run("cat <<'EOF'\nset timeout 20000\nEOF") else "FAIL",
+       "wait guard: a mention of timeout 20000 in quoted text or a heredoc body is allowed")
+report("PASS" if _wd in _wait_run("cd /x && timeout 120 sleep 1") and _wd in _wait_run("timeout 90 x")
+       and _wd not in _wait_run("timeout 20 x") else "FAIL",
+       "wait guard: timeout 120 after && and timeout 90 are refused, timeout 20 is allowed")
 
 finish()
