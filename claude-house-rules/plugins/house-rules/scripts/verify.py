@@ -111,6 +111,7 @@ _SCRIPT_PARTS = {  # scripts/<file> -> parts
     "plain_docs_check.py": ["docs"],
     "harvest_scan.py": ["docs"],
     "stallcheck.py": ["delegation"],
+    "waitfor.py": ["delegation"],
     "labels.py": ["design_loop"],
 }
 

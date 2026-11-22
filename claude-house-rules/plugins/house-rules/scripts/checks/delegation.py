@@ -1563,6 +1563,40 @@ _c, _o = _sc_run()
 _cap_case("stallcheck: no-flag mode says it is watching all sessions",
           "watching ALL sessions" in _o and "aaa" in _o and "bbb" in _o, "exit %d out %r" % (_c, _o[:200]))
 
+# --- waitfor.py (#561): real processes, short numbers.
+_wf = os.path.join(HERE, "waitfor.py")
+_wf_flag = os.path.join(_home, "wf-flag")
+
+
+def _wf_run(*extra):
+    t0 = time.time()
+    pr = subprocess.run([sys.executable, _wf, "--kind", "command"] + list(extra), stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT, timeout=30)
+    return pr.returncode, pr.stdout.decode("utf-8", "replace"), time.time() - t0
+
+
+_c, _o, _t = _wf_run("--check", "test -e " + _wf_flag + " || { test -e " + _wf_flag + ".t || touch " + _wf_flag + ".t; "
+                     "test $(( $(date +%s) - $(stat -c %Y " + _wf_flag + ".t) )) -ge 2 && exit 0; exit 1; }",
+                     "--deadline", "10", "--first-check", "1", "--interval", "1")
+_cap_case("waitfor: a check that succeeds after about 2 s reports done, exit 0",
+          _c == 0 and "DONE" in _o.splitlines()[-1] and "first check at 1s" in _o.splitlines()[0], "exit %d out %r" % (_c, _o[:300]))
+_c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "4", "--first-check", "1", "--interval", "1")
+_cap_case("waitfor: a check that never succeeds times out, exit 3, in under 8 s",
+          _c == 3 and _t < 8 and "timed out" in _o and "gave up after 4s; still unknown" in _o, "exit %d in %.1f s out %r" % (_c, _t, _o[-200:]))
+_c, _o, _t = _wf_run("--check", "exit 1", "--watch-file", os.path.join(_home, "never-written"), "--stalled-after", "3",
+                     "--first-check", "1", "--interval", "1", "--deadline", "20")
+_cap_case("waitfor: a watched file never written reports stalled, exit 2",
+          _c == 2 and "STALLED" in _o.splitlines()[-1] and "never-written" in _o, "exit %d out %r" % (_c, _o[-250:]))
+_c, _o, _t = _wf_run("--check", "echo boom; exit 2", "--deadline", "5", "--first-check", "1")
+_cap_case("waitfor: a check exiting 2 reports failed, exit 1, with its output",
+          _c == 1 and "FAILED" in _o and "boom" in _o, "exit %d out %r" % (_c, _o[-200:]))
+_c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "1")
+_cap_case("waitfor: with no overrides the first line shows the 60 s clock",
+          "first check at 60s, then every 60s" in _o.splitlines()[0] and _c == 3, "exit %d out %r" % (_c, _o[:200]))
+_c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "0")
+_cap_case("waitfor: a missing deadline is a usage error, exit 4, never an endless wait",
+          _c == 4 and "bad usage" in _o, "exit %d out %r" % (_c, _o[:200]))
+
 audq = []
 code, out, err = run_hook("audit", "")
 if code != 0 or "systemMessage" not in out:
