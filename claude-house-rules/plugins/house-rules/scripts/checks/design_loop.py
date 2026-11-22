@@ -2366,7 +2366,10 @@ def _ck_triple(label, rule, transcript, bad, good, env=None, good_transcript=Non
 _ck_t_plain = _hand_transcript("ck-plain", _ck_user("what is up"))
 _ck_t_read = _hand_transcript("ck-read", _ck_user("check it", [json.dumps({"type": "assistant", "message": {"content": [
     {"type": "tool_use", "id": "r1", "name": "Bash", "input": {"command": "python3 t.py"}}]}})]))
-_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
+# #559: the edited page is then sent, as the send-page checkpoint requires; this fixture is about the editor rule
+_CK_SEND = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "SendUserFile",
+                       "input": {"file_path": os.path.join(_cw_pages, "plan.html")}}]}})
+_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR, _CK_SEND])
 
 # 1 page rule (long reply) - editor ran, so only the page rule is in play
 _ck_long = " ".join(["Words"] * 230) + "."
@@ -3740,6 +3743,7 @@ _sp_page = os.path.join(_sp_dir, "docs", "plans", "p.html")
 os.makedirs(os.path.dirname(_sp_page), exist_ok=True)
 _sp_env = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_CLEAR_WRITING="off", HOUSE_RULES_HANDOFF="off")
 _sp_n = [0]
+_sp_cases = []
 
 
 def _sp_run(steps, reply="Done.", retry=False):
@@ -3762,22 +3766,25 @@ _sp_other = ("SendUserFile", {"file_path": "/x/other.txt"}, "ok")
 _sp_w = ("Write", {"file_path": _sp_page}, "ok")
 _sp_s = ("SendUserFile", {"file_path": _sp_page}, "ok")
 _sp_b1 = _sp_run([_sp_other, _sp_w])
-_loop_cases.append(("#559: a page written and never sent blocks, naming the page and the file-send tool",
+_sp_cases.append(("#559: a page written and never sent blocks, naming the page and the file-send tool",
                     "send page" in _sp_b1 and "p.html" in _sp_b1 and "SendUserFile" not in _sp_b1 and "file-send tool" in _sp_b1))
-_loop_cases.append(("#559: the retry of that blocked turn passes", "send page" not in _sp_run([_sp_other, _sp_w], retry=True)))
-_loop_cases.append(("#559: a page edited after it was sent blocks",
+_sp_cases.append(("#559: the retry of that blocked turn passes", "send page" not in _sp_run([_sp_other, _sp_w], retry=True)))
+_sp_cases.append(("#559: a page edited after it was sent blocks",
                     "send page" in _sp_run([_sp_other, _sp_w, _sp_s, ("Edit", {"file_path": _sp_page}, "ok")])))
-_loop_cases.append(("#559: a page sent after its last write passes", "send page" not in _sp_run([_sp_other, _sp_w, _sp_s])))
+_sp_cases.append(("#559: a page sent after its last write passes", "send page" not in _sp_run([_sp_other, _sp_w, _sp_s])))
 _sp_mk = ("Bash", {"command": "python3 make_page.py build c.json"}, "make_page: wrote %s (0 picture(s) embedded)" % _sp_page)
-_loop_cases.append(("#559: a Bash make_page build of a page counts the same: blocks unsent, passes once sent",
+_sp_cases.append(("#559: a Bash make_page build of a page counts the same: blocks unsent, passes once sent",
                     "send page" in _sp_run([_sp_other, _sp_mk]) and "send page" not in _sp_run([_sp_other, _sp_mk, _sp_s])))
-_loop_cases.append(("#559: with no file-send tool in the session a link to the page counts, and no link blocks",
+_sp_cases.append(("#559: with no file-send tool in the session a link to the page counts, and no link blocks",
                     "send page" not in _sp_run([_sp_w], reply="See [p](docs/plans/p.html)") and "send page" in _sp_run([_sp_w])))
-_loop_cases.append(("#559: HOUSE_RULES_PAGES=off turns the send check off",
+_sp_cases.append(("#559: HOUSE_RULES_PAGES=off turns the send check off",
                     "send page" not in run_hook("handover", stop_payload(
                         transcript_path=os.path.join(_FIXTURE_ROOT, "sendpage-%d.jsonl" % (_sp_n[0] - 1)),
                         last_assistant_message="Done.", cwd=_sp_dir, session_id="verify-send"),
                         env=dict(_sp_env, HOUSE_RULES_PAGES="off"))[1]))
 
+
+for _t, _ok in _sp_cases:
+    report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
 finish()
