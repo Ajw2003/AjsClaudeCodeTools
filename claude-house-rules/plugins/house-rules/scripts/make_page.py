@@ -537,6 +537,7 @@ def build(args):
         record_qa_page(project, out)
     if "sweep" in page:
         record_sweep(project, page)
+    print("make_page: SEND THIS PAGE NOW: %s - send it to aj with the file-send tool (display render) as the last action of the turn." % out)
 
 
 def start_cmd(args):
