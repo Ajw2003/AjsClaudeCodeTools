@@ -255,8 +255,8 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the suggestion.</label></li><li><label><input type="checkbox"> Pick an option under Your choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: clear roadblocks", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today: a claim needs a test; a Stop check flags "can't" with no tool run, and the users-hands rule says not to hand over labour.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">B · Rule plus a Stop check that blocks roadblock claims with no probe (my suggestion)</p></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read my suggestion under each choice.</label></li><li><label><input type="checkbox"> Pick an option under Your choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: clear roadblocks", or say what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today: a claim needs a test. A Stop check (it runs when I finish a reply) flags "can't" when no tool ran. A separate rule says I must not hand my labour to you.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">B · Rule plus a Stop check that blocks roadblock claims with no probe (my suggestion)</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -268,7 +268,7 @@ dialog.lightbox button{margin-top:10px}
     <button class="secondary" id="prev" type="button">‹ Back</button>
     <button class="primary" id="next" type="button">Next ›</button>
   </div>
-  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, the work is planned in a build plan.</span></aside>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I turn this into a build plan.</span></aside>
 </div>
 
 <script>
@@ -300,7 +300,7 @@ const PAGE = {
         "Probe",
         "Check the claim before making it",
         "",
-        "Before I say a tool, engine or machine is missing, I run the probe: which, ls, uname, hostname, or list_computer_folders. A claim made from memory is what went wrong on your PC: the session said Unity was absent and it was not on your PC, and neither was true.",
+        "Before I say a tool, engine or machine is missing, I check. I use which (finds a program), ls (lists a folder), uname and hostname (name the machine), or list_computer_folders (lists folders on your PC). Claiming from memory is what went wrong on your PC. The session said Unity was not installed and that it was the wrong PC, and neither was true.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim:%20%22no%20Unity%2C%20wrong%20PC%22%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20-%3E%20run:%20which%20/%20ls%20/%20hostname%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20-%3E%20found%20it%2C%20or%20really%20absent%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EOnly%20then%20may%20I%20say%20so.%3C/text%3E%3C/svg%3E",
@@ -313,8 +313,8 @@ const PAGE = {
         "Install",
         "Missing tool: install it, then carry on",
         "",
-        "In bypass permission mode I install anything missing (apt, pip, npm, a download) without asking, then re-run the step. In other modes the normal permission prompt is the ask. Only a purchase, a licence or a login is yours.",
-        "Nothing from you, except a licence or login.",
+        "In bypass permission mode (where I run without asking you first), I install anything missing (apt, pip, npm or a download) and then re-run the step. In other modes I still install, and the usual permission prompt asks you. Only a purchase, a licence or a login is yours to do.",
+        "Nothing from you, except a purchase, a licence or a login.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ETool%20missing%3F%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20bypass%20mode%20-%3E%20install%2C%20retry%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20other%20mode%20%20-%3E%20install%2C%20prompt%20asks%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20needs%20licence/login%20-%3E%20you%3C/text%3E%3C/svg%3E",
           "alt": "Install decision by permission mode",
@@ -326,7 +326,7 @@ const PAGE = {
         "Go around",
         "Blocked route: take another one",
         "",
-        "If a route fails, I try the next one (another tool, an attached machine, a script, a different host) and list each attempt in the report. I stop only when every route is tried, and the report names them.",
+        "If a route fails, I try the next one: another tool, an attached machine, a script or a different host. I stop only when every route has been tried, and my report lists each attempt.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ERoute%201%20failed%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ERoute%202%20failed%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ERoute%203%20works%20-%3E%20continue%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReport%20lists%20all%20three.%3C/text%3E%3C/svg%3E",
@@ -337,10 +337,10 @@ const PAGE = {
       [
         "lock",
         "Approve",
-        "You approve it",
+        "You approve the proposal",
         "you",
-        "A line in the decisions log.",
-        "Pick an option, then send the approval line."
+        "Your approval is recorded as a line in the decisions log.",
+        "Pick an option under Your choices, then send the approval line with Copy my reply."
       ]
     ]
   },
@@ -348,12 +348,12 @@ const PAGE = {
     [
       "chg",
       "Rule: Evidence before claims",
-      "Gains the install-and-go-around duties.",
+      "Gains two duties: install what is missing, and try another route.",
       null,
       "The existing rule already says a \"can't be done\" claim needs a test. This extends it from claims to actions: a failed test is not the end, the next step is the fix.",
       [
-        "Today: a claim needs a test; a Stop check flags \"can't\" with no tool run, and the users-hands rule says not to hand over labour.",
-        "New: a short section plus a detail file, Roadblocks are mine to clear, linked from both.",
+        "Today: a claim needs a test. A Stop check (it runs when I finish a reply) flags \"can't\" when no tool ran. A separate rule says I must not hand my labour to you.",
+        "New: a short section, plus a detail file titled \"Roadblocks are mine to clear\", linked from both of those rules.",
         "You stop being asked to install or switch machines."
       ],
       null
@@ -361,13 +361,13 @@ const PAGE = {
     [
       "new",
       "Stop check: roadblock phrases",
-      "Only in options B and C.",
+      "Included only if you pick option B or C under \"How firmly should this be enforced?\"",
       null,
       "Flags replies that say \"I can't\", \"not installed\", \"not on your machine\", or \"you need to install\" when no probe or install ran this turn.",
       [
         "Today: the evidence check catches \"can't\" claims with no tool run at all.",
         "New: it also catches the same claims after an unrelated tool ran, and \"you need to install\" hand-offs.",
-        "One block per reply, naming the probe to run."
+        "It blocks a reply once and names the check I should have run."
       ],
       null
     ]
@@ -387,13 +387,13 @@ const PAGE = {
           "B",
           "Rule plus a Stop check that blocks roadblock claims with no probe (my suggestion)",
           1,
-          "Catches the exact failure, reuses the evidence-check machinery, and needs one verify.py case."
+          "Catches the exact failure, reuses the existing evidence check, and needs one new test case in verify.py."
         ],
         [
           "C",
-          "B plus a session-start line when in bypass mode saying installs are pre-approved",
+          "B, plus a line at session start in bypass mode saying installs are pre-approved",
           0,
-          "Strongest; adds text to every bypass session and depends on the hook being told the mode."
+          "Strongest; adds text to every bypass session and depends on the hook being told which permission mode is active."
         ]
       ],
       "B closes the gap the rule alone leaves, without adding to every session's context."
@@ -421,10 +421,10 @@ const PAGE = {
   "wrapup": {
     "summary": "This proposal adds a rule so I probe before claiming a blocker, install missing tools, and try other routes before stopping.",
     "changing": "rules/house-rules.md, a new rules/detail/roadblocks.md, and in B or C the Stop check plus one verify.py case.",
-    "blocking": "Your pick of A, B or C, and your answer to what stays yours.",
-    "next": "After you approve, the work is planned in a build plan.",
+    "blocking": "Your pick of A, B or C on how firmly to enforce this, and your pick of A or B on what counts as yours.",
+    "next": "After you approve, I turn this into a build plan.",
     "todo": [
-      "Read the suggestion.",
+      "Read my suggestion under each choice.",
       "Pick an option under Your choices.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: clear roadblocks\", or say what to change."
     ]
