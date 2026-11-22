@@ -225,12 +225,26 @@ _CAPTURE_RE = re.compile(r"visualcheck\.py[\"']?\s+(?:\S+\s+)*?(?:shots|video|fr
 _LEDGER_RE = re.compile(r"ledger\.py[\"']?\s+(?:check|status)\b")
 
 
+def _is_visual(path):
+    """A visual file, except a handover page: those were built or checked by the page pipeline."""
+    if not _VISUAL_EXT_RE.search(path or ""):
+        return False
+    if not re.search(r"\.html?$", path, re.IGNORECASE):
+        return True
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            head = f.read(4096)
+    except OSError:
+        return True  # unreadable or missing: not exempt, so it is still checked
+    return not ("house-rules make_page" in head or "house-rules-page" in head)
+
+
 def _visual_missing(tool_uses):
     """What the turn still owes after its last visual write: "capture", "ledger check", "image read"."""
     last_write = -1
     for i, block in enumerate(tool_uses):
         inp = block.get("input") if isinstance(block.get("input"), dict) else {}
-        if block.get("name") in _AUDIT_WRITE_TOOLS and _VISUAL_EXT_RE.search(inp.get("file_path") or ""):
+        if block.get("name") in _AUDIT_WRITE_TOOLS and _is_visual(inp.get("file_path") or ""):
             last_write = i
     cap = led = img = None
     for i, block in enumerate(tool_uses):
@@ -378,7 +392,7 @@ def handover_visual_check(written_now, turn_records):
     """The visual files written this turn that nothing looked at ([] when none)."""
     visual_files, missing = [], []
     if written_now and _visual_check_enabled():
-        visual = [os.path.basename(p) for p in written_now if _VISUAL_EXT_RE.search(p)]
+        visual = [os.path.basename(p) for p in written_now if _is_visual(p)]
         missing = _visual_missing(list(_turn_tool_uses(turn_records))) if visual else []
         if missing:
             visual_files = visual
