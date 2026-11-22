@@ -2234,7 +2234,7 @@ commit_case("pickup: another branch's recent save is named in one line",
 # --- the visual loop ledger (#566) ---------------------------------------------------------------
 import tempfile
 import shutil
-_LG = os.path.join(HERE, "scripts", "ledger.py")
+_LG = os.path.join(HERE, "ledger.py")
 
 
 def _lg(*a, **env):
@@ -2304,7 +2304,7 @@ try:
 finally:
     shutil.rmtree(_lg_tmp, ignore_errors=True)
 
-_sk = os.path.join(HERE, "skills", "visual-loop", "SKILL.md")
+_sk = os.path.join(HERE, "..", "skills", "visual-loop", "SKILL.md")
 _skt = open(_sk, encoding="utf-8").read() if os.path.isfile(_sk) else ""
 commit_case("visual-loop skill exists with frontmatter and names ledger.py, waitfor.py, visualcheck.py and the reviewer",
             _skt.startswith("---\nname: visual-loop\n") and "description:" in _skt
