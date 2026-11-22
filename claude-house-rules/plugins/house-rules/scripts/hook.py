@@ -132,6 +132,11 @@ def event_handover():
      could_not_tell) = handover_evidence_check(payload)
     have_reply = reply_text is not None
 
+    rb_block, rb_msg = roadblock_check(payload, reply_text, retry)
+    if rb_block:
+        emit({"decision": "block", "reason": rb_block})
+        return 0
+
     uncommitted, commit_could_not_tell = handover_commit_check(payload)
 
     # Parity, visual and plain-summary checks share the transcript the commit check already read.
@@ -163,6 +168,8 @@ def event_handover():
     issue_line, issue_problem, label_line, label_problem = handover_stop_lines(payload)
 
     trace_lines = list(trace_lines_early)
+    if rb_msg:
+        trace_lines.append(rb_msg)
     # #398: links the hooks told a project thread to post and that never went out.
     links_owed = []
     try:
