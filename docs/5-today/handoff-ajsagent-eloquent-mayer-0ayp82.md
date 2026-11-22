@@ -1,4 +1,4 @@
-# Handoff: ajsagent/eloquent-mayer-0ayp82 (2026-11-22, design approved, build plan page waiting on aj)
+# Handoff: ajsagent/eloquent-mayer-0ayp82 (2026-11-22, build plan approved, phase 1 building)
 
 ## What the work is for
 
@@ -7,15 +7,16 @@ Four workflow fixes aj asked for. First, no wait may run unchecked or for ever: 
 ## Where it stands
 
 - aj approved the design on 2026-11-22: "Design approved: wait clocks, visual checks, page sending and pictures 1A 2A 3B 4B 5A 6A". Choices 3B (Python Playwright and Pillow) and 4B (a separate reviewer helper critiques each round) differ from the suggested options. The stage file `.claude/house-rules-loop.json` says stage `plan`, feature `wait clocks`; the approval is committed. Code edits are still locked.
+- aj approved the build plan on 2026-11-22 as "Build plan approved: wait clocks 1B" (an early check after phase 1, while phases 2 to 4 keep building). The stage is Build; the approval is committed (`8d71568`). Phase 1 is under way: two builders, each in its own worktree, are building #556 (pictures into the page file) and #558 (the send rule and the builder's send line). Their work is not merged and not tested by me yet. #557 and #559 wait on them.
 - Planning is done: systems doc `docs/4-systems/wait-and-visual-checks.md`, a decisions entry, indexes updated, parent issue #555 and step issues #556 to #568 (labelled `Feature`, `AjsAgent created this`, `in progress`, each naming dependencies, dependants and done-criteria).
-- The build plan page `docs/plans/2026-11-22-wait-and-visual-checks-build-plan.html` (source `.page.json` beside it) has four phases and one choice (when aj checks: once at the end, or early after phase 1). It meets all basics by `page_criteria.py`, shows no sideways scroll at 375px, and its picture loads in a copy opened alone. It waits on aj's "Build plan approved: wait clocks".
+- The build plan page `docs/plans/2026-11-22-wait-and-visual-checks-build-plan.html` (source `.page.json` beside it) has four phases and one choice (when aj checks: once at the end, or early after phase 1). It meets all basics by `page_criteria.py`, shows no sideways scroll at 375px, and its picture loads in a copy opened alone. aj approved it.
 - The proposal page `docs/plans/2026-11-22-wait-and-visual-checks.html` had its pictures put into its source as inline data by hand, so they show when the page is sent alone.
 - Findings the design rests on: the guard refuses foreground sleep loops and timeouts over 60 seconds (`scripts/house_rules/safe_git.py:669,678`) but not background tasks; `scripts/stallcheck.py` is manual; the visual check (`scripts/house_rules/writing.py:227`) counts any command containing "browser" or "capture"; the page checks (`core.py:3261`, `design_loop.py:2461`) accept a link, not a send; `make_page.py:156` links pictures in a `-pics/` folder that does not travel with the page.
 - An unused starter file was moved to `docs/plans/_to_delete/` because the write guard blocked overwriting it.
 
 ## The next step
 
-aj answers the build plan's one choice and sends "Build plan approved: wait clocks". Then build phase 1 (#556 to #559: pictures, page sending), at most two builders at a time, each in its own worktree; then phase 2 (#560 to #563, the wait clock), phase 3 (#564 to #567, the visual loop), phase 4 (#568, docs, tests, version, QA page). Prove each fix by planting the failure it should catch: a hanging and a stalled process, a broken picture, an unsent page, and a page with seeded sideways scroll the loop must repair alone.
+Merge the two builders' branches for #556 and #558 into `ajsagent/eloquent-mayer-0ayp82` (both touch `make_page.py`, in different places), run the full `verify.py` and `tools/verify_tools.py` myself, then build #557 (depends on #556) and #559 (depends on #557 and #558). Then send aj the early-check page for phase 1 (choice 1B) while building phase 2 (#560 to #563, the wait clock), phase 3 (#564 to #567, the visual loop), phase 4 (#568, docs, tests, version, QA page). Prove each fix by planting the failure it should catch: a hanging and a stalled process, a broken picture, an unsent page, and a page with seeded sideways scroll the loop must repair alone.
 
 ## What is unverified
 

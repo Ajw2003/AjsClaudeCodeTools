@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Build started on the wait clocks, visual checks, page sending and pictures work (#555): aj approved the build plan with an early check after phase 1, and builders began #556 and #558. Nothing is merged yet.
+
 Docs only: the wait clocks, visual checks, page sending and pictures design was approved (1A 2A 3B 4B 5A 6A). Added the systems doc `docs/4-systems/wait-and-visual-checks.md`, a decisions entry, parent issue #555 with 13 step issues (#556 to #568), and a build plan page waiting on aj. Nothing is built.
 
 Docs only: measured why pictures on pages break. The page builder links each picture in a `<page>-pics/` folder that is not sent with the page, so a copy of the proposal page opened on its own showed 5 of 5 pictures broken, against 0 of 5 in the repo. Detail is in `docs/plans/2026-11-22-wait-and-visual-checks.html`, Fix 4.
