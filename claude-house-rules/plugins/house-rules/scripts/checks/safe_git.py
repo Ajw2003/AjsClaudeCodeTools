@@ -2125,4 +2125,20 @@ report("PASS" if "never checked" not in _bg_stop(_bg_lines("bg-checked", True), 
        "bg note: a task whose output file was read is not reported")
 
 
+def _bg_with(name, later):
+    p = _bg_lines(name, False)
+    with open(p, "a", encoding="utf-8") as fh:
+        fh.write("\n" + json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b9",
+                 "name": later[0], "input": later[1]}]}}))
+    return p
+
+
+# #562 defect: only an actual run or a lookup counts, not a prompt that merely mentions waitfor.py
+report("PASS" if "never checked" in _bg_stop(_bg_with("bg-agentprompt", ("Agent", {"prompt": "use scripts/waitfor.py"})), _bg_sid + "a") else "FAIL",
+       "bg note: a later Agent prompt that mentions waitfor.py does not clear an unchecked launch")
+report("PASS" if "never checked" not in _bg_stop(_bg_with("bg-bashwait", ("Bash", {"command": "python3 scripts/waitfor.py x"})), _bg_sid + "b") else "FAIL",
+       "bg note: a later Bash command that runs waitfor.py clears it")
+report("PASS" if "never checked" not in _bg_stop(_bg_with("bg-readout", ("Read", {"file_path": "/tmp/t/bk7x2.output"})), _bg_sid + "r") else "FAIL",
+       "bg note: a later Read of the task's .output file clears it")
+
 finish()

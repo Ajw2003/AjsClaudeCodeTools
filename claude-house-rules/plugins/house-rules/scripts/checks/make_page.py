@@ -490,7 +490,7 @@ else:
     _mp_cases.append(("page_criteria (#557): a page with an img that has no src passes the lone-copy check",
                       _ln_none.returncode == 0 and "broken pictures 0" in _ln_none.stdout))
 
-# ---- #559: sendcheck repairs a page's broken pictures from its .page.json, never denies ----
+# ---- #559: sendcheck embeds a page's broken pictures in place, never denies ----
 def _sp_send(page):
     return run_hook("sendcheck", json.dumps({"tool_name": "SendUserFile", "tool_input": {"file_path": page}}), env=dict(os.environ))[1]
 
@@ -502,7 +502,6 @@ with open(os.path.join(_sp_plans, "fix-pics", "a.svg"), "w") as _f:
     _f.write("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><rect width='4' height='4'/></svg>")
 _sp_src = _mp_content("fix", [["chg", "Pic", "Looks new.", None, "Detail.", None, None, {"visual": True},
                                {"src": "fix-pics/a.svg", "alt": "a", "caption": "c"}]])
-shutil.copyfile(_sp_src, os.path.join(_sp_plans, "fix.page.json"))
 _sp_fix = os.path.join(_sp_plans, "fix.html")
 with open(_sp_fix, "w", encoding="utf-8") as _f:
     _f.write(_pcp("art", add='<img src="fix-pics/a.svg" alt="x">'))
@@ -515,11 +514,11 @@ if "picture check did not run" in _sp_o1:
 else:
     _sp_o2 = _sp_send(_sp_fix)
     _sp_after = open(_sp_fix, encoding="utf-8").read()
-    _mp_cases.append(("sendcheck (#559): a page with a -pics/ link and a .page.json beside it is rebuilt with the picture embedded, allowed with a note",
-                      "rebuilt it from fix.page.json" in _sp_o2 and "deny" not in _sp_o2 and "data:image/svg" in _sp_after
+    _mp_cases.append(("sendcheck (#559): a page with a -pics/ link is repaired in place with the picture embedded, allowed with a note",
+                      "was repaired" in _sp_o2 and "deny" not in _sp_o2 and "data:image/svg" in _sp_after
                       and "fix-pics/a.svg" not in _sp_after))
-    _mp_cases.append(("sendcheck (#559): with no .page.json the send is allowed with a note naming the broken picture, page untouched",
-                      "gone-pics/a.svg" in _sp_o1 and "no nosrc.page.json" in _sp_o1 and "deny" not in _sp_o1))
+    _mp_cases.append(("sendcheck (#559): a picture whose file is missing is named with the reason, send allowed",
+                      "gone-pics/a.svg (file not found)" in _sp_o1 and "could not be repaired" in _sp_o1 and "deny" not in _sp_o1))
     _mp_cases.append(("sendcheck (#559): a clean page and a non-page file get no note and no denial",
                       _sp_send(_sp_fix) == "" and _sp_send(os.path.join(_sp_plans, "x.txt")) == ""))
 # ---- #557 static check: picture sources not built into the page are named, with no browser needed ----
@@ -532,23 +531,29 @@ _mp_cases.append(("static picture check (#557): an in-page # source, a font styl
                   _sb('<img src="#a"><link href="https://fonts.googleapis.com/css2?family=X" rel="stylesheet">'
                       '<style>@font-face{src:url(https://f.example/x.woff2)}b{background:url(/img/b.png)}</style>'
                       '<img src="https://e.com/p.jpg">') == ["https://e.com/p.jpg", "/img/b.png"]))
-_sd_src = os.path.join(ROOT, "docs", "plans")
-_sd_tmp = tempfile.mkdtemp(prefix="realqa-", dir=_sd_src)
+_sd_src = os.path.join(ROOT, "docs", "plans")  # read only; the copy lives in the OS temp dir, outside the repo
+_sd_root = tempfile.mkdtemp(prefix="realqa-")
 try:
     _sd_name = "2026-10-19-restructure-step-1-qa"
-    for _e in (".html", ".page.json"):
-        shutil.copyfile(os.path.join(_sd_src, _sd_name + _e), os.path.join(_sd_tmp, _sd_name + _e))
+    _sd_tmp = os.path.join(_sd_root, "docs", "plans")
+    os.makedirs(_sd_tmp)
+    shutil.copyfile(os.path.join(_sd_src, _sd_name + ".html"), os.path.join(_sd_tmp, _sd_name + ".html"))
     shutil.copytree(os.path.join(_sd_src, _sd_name + "-pics"), os.path.join(_sd_tmp, _sd_name + "-pics"))
-    shutil.copytree(os.path.join(_sd_src, "qa-339"), os.path.join(_sd_tmp, "qa-339"))  # where the .page.json's own src paths point
     _sd_page = os.path.join(_sd_tmp, _sd_name + ".html")
+    _sd_before = open(_sd_page, encoding="utf-8", newline="").read()
     _sd_out = _sp_send(_sd_page)
-    _sd_txt = open(_sd_page, encoding="utf-8").read()
-    _sd_left = len(_sb(_sd_txt))  # not grep -c '-pics/': the rebuilt page lists changed files, 7 lines name some *-pics/ file as text
+    _sd_txt = open(_sd_page, encoding="utf-8", newline="").read()
+    _sd_left = len(_sb(_sd_txt))
+    _sd_mask = lambda t: re.sub(r"data:[a-z/+]+;base64,[A-Za-z0-9+/=]+", "DATA", t)
+    _sd_masked_before = _sd_before
+    for _u in _sb(_sd_before):  # the source text itself is what changed
+        _sd_masked_before = _sd_masked_before.replace(_u, "DATA")
     _sd_after = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _sd_page, "--visual"], capture_output=True, text=True, timeout=300).stdout
-    _mp_cases.append(("static picture check (#557): REAL DATA, sendcheck rebuilds the finished QA page; no -pics/ link is left and a lone copy has no broken picture",
-                      "rebuilt it from" in _sd_out and _sd_left == 0 and "broken picture when the page is opened alone" not in _sd_after))
+    _mp_cases.append(("static picture check (#557): REAL DATA, sendcheck repairs a copy of the finished QA page in place; no unbuilt picture is left, only the sources changed",
+                      "was repaired" in _sd_out and _sd_left == 0 and "broken picture when the page is opened alone" not in _sd_after
+                      and _sd_mask(_sd_txt) == _sd_masked_before and len(_sd_txt.splitlines()) == len(_sd_before.splitlines())))
 finally:
-    shutil.rmtree(_sd_tmp, ignore_errors=True)
+    shutil.rmtree(_sd_root, ignore_errors=True)
 # ---- starters: one optional content skeleton per page type (#544) ----
 _mp_cases.append(("starters (#544): make_page's type list equals page_criteria's", tuple(__import__("make_page").PAGE_TYPES) == tuple(_pc.TYPES)))
 _sp = _mp_proj("starts", {"use": "defaults"})

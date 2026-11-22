@@ -2224,6 +2224,7 @@ core.register_post_tool("promptran", _promptran_waiting_link)
 # output file (Read, tail, TaskOutput...); or is a notification / agent tool (TaskOutput, BashOutput, TaskStop,
 # KillShell, SendMessage, TaskList, TaskGet, ListAgents). Said once per task: ids go in a per-session temp file.
 _BG_CHECK_TOOLS = {"TaskOutput", "BashOutput", "TaskStop", "KillShell", "SendMessage", "TaskList", "TaskGet", "ListAgents"}
+_BG_ID_TOOLS = {"Bash", "PowerShell", "Read", "Grep", "Glob"} | _BG_CHECK_TOOLS - {"SendMessage"}
 _BG_CHECK_RE = re.compile(r"waitfor\.py|stallcheck\.py|notification", re.I)
 _BG_TOKEN_RE = re.compile(r"(?:ID|agentId|task_id|bash_id)[\"']?\s*[:=]\s*[\"']?([\w-]{4,})|(/[^\s\"']+\.output)")
 
@@ -2248,7 +2249,10 @@ def handover_unchecked_waits(turn_records, session_id):
         tokens = [a or b for a, b in _BG_TOKEN_RE.findall(results.get(u.get("id"), ""))]
         for later in uses[i + 1:]:
             blob = json.dumps(later.get("input") or {})
-            if later.get("name") in _BG_CHECK_TOOLS or _BG_CHECK_RE.search(blob) or any(t in blob for t in tokens):
+            name = later.get("name")
+            ran = name in ("Bash", "PowerShell") and _BG_CHECK_RE.search(str((later.get("input") or {}).get("command", "")))
+            looked = name in _BG_ID_TOOLS and any(t in blob for t in tokens)  # never an Agent/Task/SendMessage prompt
+            if name in _BG_CHECK_TOOLS or ran or looked:
                 break
         else:
             owed.append((u.get("id"), (ti.get("description") or ti.get("command") or "an agent")[:60]))
