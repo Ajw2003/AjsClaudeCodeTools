@@ -692,6 +692,8 @@ def _wait_check(payload, subject):
     if not isinstance(ti, dict):
         return None
     if ti.get("run_in_background") is True:
+        if os.environ.get("HOUSE_RULES_WAITS", "on").strip().lower() in core._TOGGLE_OFF:
+            return None
         # #562: a hook cannot stop a hung tool, so the launch is the only point where a limit holds.
         top_ms = int(max(waits.load_waits()["deadline_seconds"].values()) * 1000)
         got = ti.get("timeout")
@@ -2232,6 +2234,8 @@ _BG_REDIR_RE = re.compile(r"\d*>>?\s*(?!&)([^\s;&|<>]+)")  # a launch's own `> f
 
 def handover_unchecked_waits(turn_records, session_id):
     """A one-line note naming background tasks this turn started and never checked, not yet reported; else ''."""
+    if os.environ.get("HOUSE_RULES_WAITS", "on").strip().lower() in core._TOGGLE_OFF:
+        return ""
     uses, results = [], {}
     for rec in turn_records or []:
         content = ((rec or {}).get("message") or {}).get("content") if isinstance(rec, dict) else None
