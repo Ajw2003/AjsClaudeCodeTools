@@ -73,7 +73,7 @@
     "Checked",
     "The full test suites",
     "",
-    "`verify.py` passed 1417 of 1417 and `tools/verify_tools.py` exited 0 on the merged code, run by me with nothing else running. Several real faults turned up on the way and were fixed; they are listed under Changes.",
+    "`verify.py` passed 1422 of 1422 and `tools/verify_tools.py` exited 0 on the merged code, run by me with nothing else running. Several real faults turned up on the way and were fixed; they are listed under Changes.",
     "Nothing from you.",
     {
      "src": "docs/plans/2026-11-22-wait-and-visual-checks-art/send.svg",

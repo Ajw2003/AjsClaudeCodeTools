@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Plugin 2.88.0, ready for QA (#555, steps #556 to #568): wait clocks with a deadline and `waitfor.py`, a guard refusal for background launches with no timeout (switch group `waits`), pictures built into pages with a check and in-place repair before a page is sent, a turn-end check that a made or changed page was sent, `visualcheck.py`, `ledger.py` and the `visual-loop` skill, and an end-of-turn visual check that needs a real capture. Also fixed: the writing check no longer reads inline picture data as prose, and long commands in a page's numbered steps wrap on a phone. Full `verify.py` 1422 of 1422.
+
 The visual loop is built and proven live (#555): `visualcheck.py` video, frame sheets and motion measures (#565), the `visual-loop` skill with `ledger.py` and a 4-round cap (#566), and an end-of-turn visual check that needs a real capture, a ledger check and an image read instead of a keyword (#567). The wait rule is folded into "Nothing fails silently" to keep the injected rules under their size limit. Full `verify.py` 1417 of 1417. Not released: no version bump until #568.
 
 Wait clock rule text and agent prompts (#563) and the first part of the visual capture tool, `visualcheck.py` doctor and screenshots (#564), are built on `ajsagent/eloquent-mayer-0ayp82` (#555). Running the new page-send check on a real old page showed that repairing a page by rebuilding it from its source is wrong for QA pages; it is being changed to embed the pictures into the page in place. Not released.
