@@ -336,8 +336,8 @@ art_case(
 )
 art_case(
     "trace",
-    "an .html report written inside the project is left alone",
-    r"C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\docs\architecture-review.html",
+    "an .html report written inside the project but outside docs/ is left alone",
+    r"C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\build\architecture-review.html",
 )
 for _ext in ("csv", "json", "svg", "pdf"):
     art_case(
