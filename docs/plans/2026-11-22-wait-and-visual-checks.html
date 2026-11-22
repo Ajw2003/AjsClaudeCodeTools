@@ -326,7 +326,7 @@ const PAGE = {
         "Need",
         "Wait clock, with a tool and a guard",
         "you",
-        "A rule, a waitfor.py script that checks every minute and reports one of three answers, and a guard that refuses background launches with no deadline. Your choices 1 and 2 set how strict it is.",
+        "A rule, a waitfor.py script that checks every minute and reports one of four outcomes: done, failed, stalled or timed out, and a guard that refuses background launches with no deadline. Your choices 1 and 2 set how strict it is.",
         "Your answers under Choices."
       ],
       [
@@ -350,7 +350,7 @@ const PAGE = {
       "Fix 1, the wait clock: the rule",
       "Every wait states what it waits for, how to check it, and when to give up.",
       null,
-      "A new section in rules/house-rules.md, with detail in rules/detail/waits.md. The first check is at one minute and then every minute. A wait with no stated done-test and no deadline is not allowed. The existing \"Verify a wait, then leave it\" text moves into it, so nothing is said twice.",
+      "A new section in rules/house-rules.md, with detail in rules/detail/waits.md. The first check is at one minute and then every minute. A wait with no stated test for when it is done, and no deadline, is not allowed. The existing \"Verify a wait, then leave it\" text moves into it, so nothing is said twice.",
       [
         "Only the foreground is covered, and the 60-second limit is a hard-coded number.",
         "One rule for every kind of wait: commands, tests, helper agents, builds, CI, deploys and scheduled wake-ups.",
@@ -380,7 +380,7 @@ const PAGE = {
       "Fix 1: waitfor.py, the one way to wait",
       "A script that polls every minute and prints a line each time.",
       null,
-      "It takes a check command and a done-test. It prints a line at each check, never hides output, and exits with a distinct code for done, failed, stalled or timed out. It reuses stallcheck.py for helper agents and background files. I run it in the background, so the harness wakes me when it ends.",
+      "It takes a check command and a done-test. It prints a line at each check, never hides output, and exits with a distinct code for done, failed, stalled or timed out. It reuses stallcheck.py for helper agents and background files. I run it in the background, so the tool that runs me wakes me when it ends.",
       [
         "I hand-write sleep loops, and stallcheck.py is a separate script I must remember.",
         "One tool that already does the checking, tested against a real hanging process.",
@@ -391,7 +391,7 @@ const PAGE = {
     [
       "chg",
       "Fix 1: the guard and the stop check",
-      "Un-budgeted background launches are refused; a forgotten wait is reported.",
+      "Background launches with no deadline are refused; a forgotten wait is reported.",
       null,
       "The guard (safe_git.py:668) also refuses a background command with no timeout, or one over its deadline, and says the exact fix. A hook cannot interrupt a tool that is already hung, so refusing the launch is the lever. At turn end, a background task or helper agent that was started and never checked is reported once.",
       [
@@ -466,7 +466,7 @@ const PAGE = {
       "Everything else that each fix touches",
       "Every place both fixes reach, so nothing is left behind.",
       null,
-      "Rule text and the two detail files; checks.json mapping; verify.py cases; the builder, scout and reviewer agent prompts; a waits and a visual group for the feature switches; footprint measurement; the hook table in docs/architecture.md; two systems docs; a decisions entry; project state; the changelog; the plain-English doc copies; the version number.",
+      "Each place both fixes reach is updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.",
       [
         "The rules are in three places that must agree.",
         "Each place updated in the same change, with verify.py failing if one drifts.",
@@ -497,13 +497,13 @@ const PAGE = {
     ],
     [
       "strength",
-      "How strict should the guard be about un-budgeted background launches?",
+      "How strict should the guard be about background launches that have no deadline?",
       [
         [
           "A",
-          "Refuse them with the exact fix, and report an unchecked wait once at turn end",
+          "Refuse those launches and give the exact fix, and report an unchecked wait once at the end of the turn",
           1,
-          "Works at the moment it matters: before a launch can hang. The turn-end report is one reminder, not a block, because blocking checks caused the loops in issues 303 and 322."
+          "Works at the moment it matters: before a launch can hang. The turn-end report is one reminder, not a block, because blocking checks have caused repeating loops before (recorded on the 2026-10-18 docs context layer page)."
         ],
         [
           "B",
@@ -513,7 +513,7 @@ const PAGE = {
         ],
         [
           "C",
-          "Refuse them, and also block the turn end until every wait is checked",
+          "Refuse those launches, and also block the end of the turn until every wait is checked",
           0,
           "Strictest. Risks the loop-on-block problem."
         ]
@@ -528,7 +528,7 @@ const PAGE = {
           "A",
           "Playwright for Node plus ffmpeg, both already installed in this cloud container",
           1,
-          "No new install here. ffmpeg builds frame sheets and measures motion on its own. visualcheck.py says exactly what to install anywhere else. Proven here; your own machine is untested until you run it."
+          "No new install here. ffmpeg builds frame sheets and measures motion on its own. visualcheck.py says exactly what to install anywhere else. Playwright already took this page's screenshots here; your own machine is untested until you run it."
         ],
         [
           "B",

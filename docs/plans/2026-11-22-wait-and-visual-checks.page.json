@@ -58,7 +58,7 @@
       "A turn passes only with real captures and a ledger that cite its criteria.",
       "More turns are checked, so I will tune it against real sessions to keep false alarms low."
     ], null],
-    ["chg", "Everything else that each fix touches", "Every place both fixes reach, so nothing is left behind.", null, "Rule text and the two detail files; checks.json mapping; verify.py cases; the builder, scout and reviewer agent prompts; a waits and a visual group for the feature switches; footprint measurement; the hook table in docs/architecture.md; two systems docs; a decisions entry; project state; the changelog; the plain-English doc copies; the version number.", [
+    ["chg", "Everything else that each fix touches", "Every place both fixes reach, so nothing is left behind.", null, "Each place both fixes reach is updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.", [
       "The rules are in three places that must agree.",
       "Each place updated in the same change, with verify.py failing if one drifts.",
       "The injected rules grow a little, so I measure the cost and keep the new text short."
@@ -75,7 +75,7 @@
       ["C", "Refuse those launches, and also block the end of the turn until every wait is checked", 0, "Strictest. Risks the loop-on-block problem."]
     ], "Hooks cannot stop a tool already hung, so the launch is the only point where a limit holds."],
     ["tools", "Which tools should capture the images and video?", [
-      ["A", "Playwright for Node plus ffmpeg, both already installed in this cloud container", 1, "No new install here. ffmpeg builds frame sheets and measures motion on its own. visualcheck.py says exactly what to install anywhere else. Proven here; your own machine is untested until you run it."],
+      ["A", "Playwright for Node plus ffmpeg, both already installed in this cloud container", 1, "No new install here. ffmpeg builds frame sheets and measures motion on its own. visualcheck.py says exactly what to install anywhere else. Playwright already took this page's screenshots here; your own machine is untested until you run it."],
       ["B", "Python Playwright plus Pillow", 0, "Nicer image handling, but neither is installed here and it needs a pip install first."],
       ["C", "The built-in browser tools only", 0, "Nothing to install. It cannot record video or run unattended on a schedule."]
     ], "A needs nothing new where this session runs, and keeps the script standard-library only."],
