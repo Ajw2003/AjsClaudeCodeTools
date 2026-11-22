@@ -131,9 +131,9 @@
   [
    "chg",
    "Faults found by running real data",
-   "Five faults that only real pages and real transcripts showed.",
+   "Six faults that only real pages and real transcripts showed.",
    null,
-   "The picture check missed pictures that appear only when a row is tapped. The repair rebuilt QA pages from git. The unchecked-wait note was fooled by a prompt mentioning a tool. Test runs collided. The injected rules went over their size limit. All fixed.",
+   "The picture check missed pictures that appear only when a row is tapped. The repair rebuilt QA pages from git. The unchecked-wait note was fooled by a prompt mentioning a tool. Test runs collided. The injected rules went over their size limit. Long commands in these QA steps were squeezed into a one-character column on a phone. All fixed.",
    null,
    null
   ],
