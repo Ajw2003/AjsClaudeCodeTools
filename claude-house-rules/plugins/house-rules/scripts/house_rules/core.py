@@ -2742,12 +2742,16 @@ def apply_switches():
     """Set the mapped HOUSE_RULES_ values for this hook call from the typed groups (typed beats settings.json).
     "house rules" goes first so a more specific group typed beside it wins. Nothing typed: environment untouched."""
     raw = _PAYLOAD_CACHE
+    typed = _mode_typed(_payload_cwd(raw)) if raw else {}
+    if "unattended" in typed:  # a typed `unattended on|off` decides before the presets below
+        os.environ["HOUSE_RULES_UNATTENDED"] = typed["unattended"]
     if unattended():  # everything off but autosave; a typed switch below still wins
         for var in _MODE_GROUPS["house"]:
             if var not in _MODE_GROUPS["autosave"]:
                 os.environ[var] = "off"
-    typed = _mode_typed(_payload_cwd(raw)) if raw else {}
     for group in sorted(typed, key=lambda g: g != "house"):
+        if group == "unattended":
+            continue
         for var in _MODE_GROUPS[group]:
             os.environ[var] = typed[group]
 
@@ -2814,8 +2818,11 @@ def _mode_apply(text, payload):
         notes.append("saved %s %s in %s%s." % (
             ", ".join("%s %s" % (k, v) for k, v in sorted(saved.items())),
             "everywhere" if wanted else "for this folder", path,
-            "; commit it with the next commit" if top and not wanted else ""))
+            ("; do NOT commit it while unattended is on (it would switch unattended on for other clones): type "
+             "\"unattended off\" when you are back" if saved.get("unattended") == "on"
+             else "; commit it with the next commit") if top and not wanted else ""))
     _MODE_CACHE.clear()
+    apply_switches()  # so this very prompt's note already reflects the line just typed
     return "House rules: %s %s" % (" ".join(notes), _mode_note(payload))
 
 
@@ -2852,9 +2859,11 @@ def _mode_note(payload=None):
                      "final report and the Waiting-on-you list and continue with other work. For ask-before items "
                      "(new dependency, deleting files, refactors over 3 files, public API changes) take the most "
                      "conservative reversible option and log the choice in the final report; the destructive-command "
-                     "guard still applies to deletes.")
+                     "guard still applies to deletes. Use your own judgment instead of asking. Commit and push only "
+                     "to your own AjsAgent/ branch, never to main or master (the main-branch guard refuses it); if "
+                     "you are on main, branch off first with `git switch -c AjsAgent/<topic>`.")
     if parts:
-        parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules) to switch back; add \"everywhere\" for all folders.")
+        parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules, unattended) to switch back; add \"everywhere\" for all folders.")
     return " ".join(parts)
 
 

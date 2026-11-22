@@ -2674,5 +2674,37 @@ finally:
 report("PASS" if _un_ok else "FAIL",
        "unattended: apply_switches sets PAGES off, leaves AUTOSAVE alone (HANDOFF too), and a typed 'pages on' still wins")
 
+# --- the one command: typing `unattended on` / `unattended off` ---
+_ut_d = _fs_dir("typed-unattended", git=True)
+_ut_out = run_hook("scope", json.dumps({"session_id": "fs", "cwd": _ut_d, "prompt": "unattended on"}), env=_fs_env)[1]
+_ut_ctx = ""
+try:
+    _ut_ctx = json.loads(_ut_out)["hookSpecificOutput"]["additionalContext"]
+except Exception:
+    pass
+report("PASS" if _fs_json(os.path.join(_ut_d, ".claude", "house-rules-mode.json")) == {"unattended": "on"}
+       and _fs_env_seen(_ut_d, "HOUSE_RULES_UNATTENDED") == "on" and _fs_env_seen(_ut_d, "HOUSE_RULES_PAGES") == "off"
+       and _fs_env_seen(_ut_d, "HOUSE_RULES_AUTOSAVE") == "unset" else "FAIL",
+       "typed unattended (a): 'unattended on' is saved, turns the other switches off and leaves autosave alone")
+report("PASS" if "UNATTENDED run" in _ut_ctx and "never to main" in _ut_ctx and "do NOT commit it" in _ut_ctx else "FAIL",
+       "typed unattended (b): the prompt that turns it on already carries the unattended note, the never-main line and 'do not commit the file'")
+_ut_q = run_hook("noask", json.dumps({"session_id": "fs", "cwd": _ut_d, "tool_name": "AskUserQuestion", "tool_input": {}}), env=_fs_env)[1]
+report("PASS" if '"permissionDecision":"deny"' in _ut_q and "nobody is there to answer" in _ut_q else "FAIL",
+       "typed unattended (c): once typed, AskUserQuestion is denied in later hook calls (no environment variable needed)")
+_ut_main = run_hook("guard", json.dumps({"session_id": "fs", "cwd": _ut_d, "tool_name": "Bash",
+                                         "tool_input": {"command": "git commit --allow-empty -m x"}}), env=_fs_env)[1]
+report("PASS" if '"permissionDecision":"deny"' in _ut_main else "FAIL",
+       "typed unattended (d): a commit on main is still refused while unattended")
+_fs_type(_ut_d, "unattended off")
+report("PASS" if _fs_json(os.path.join(_ut_d, ".claude", "house-rules-mode.json")) == {"unattended": "off"}
+       and _fs_env_seen(_ut_d, "HOUSE_RULES_UNATTENDED") == "off" and _fs_env_seen(_ut_d, "HOUSE_RULES_PAGES") == "unset"
+       and '"permissionDecision":"deny"' not in run_hook(
+           "noask", json.dumps({"session_id": "fs", "cwd": _ut_d, "tool_name": "AskUserQuestion", "tool_input": {}}),
+           env=_fs_env)[1] else "FAIL",
+       "typed unattended (e): 'unattended off' switches it back and leaves the other switches as they were")
+_fs_type(_ut_d, "house rules off")
+report("PASS" if _fs_env_seen(_ut_d, "HOUSE_RULES_UNATTENDED") == "off" else "FAIL",
+       "typed unattended (f): 'house rules off' does not switch unattended on or off")
+
 
 finish()
