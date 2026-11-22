@@ -2868,5 +2868,6 @@
   },
   "held": false,
   "parent": 555,
-  "qa_page": "docs/plans/2026-11-22-wait-and-visual-checks-qa.html"
+  "qa_page": "docs/plans/2026-11-22-wait-and-visual-checks-qa.html",
+  "qa_page_linked": true
 }
