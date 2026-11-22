@@ -1,6 +1,6 @@
 # Today — 2026-11-22
 
-Wait clocks, visual checks, page sending and working pictures (four fixes), proposed on `ajsagent/eloquent-mayer-0ayp82` and waiting on aj's six choices; nothing built. Fix 4 came from a measured failure: a lone copy of the page showed 5 of 5 pictures broken, because the builder links pictures in a folder that is not sent with the page. The page was sent to aj after Fix 3 (pages always sent) was added and again after the editor's last fixes. Page: `docs/plans/2026-11-22-wait-and-visual-checks.html`. Handoff: `docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md`.
+Wait clocks, visual checks, page sending and working pictures (four fixes), proposed on `ajsagent/eloquent-mayer-0ayp82` and waiting on aj's six choices; nothing built. The page was sent again after Fix 4. Fix 4 came from a measured failure: a lone copy of the page showed 5 of 5 pictures broken, because the builder links pictures in a folder that is not sent with the page. The page was sent to aj after Fix 3 (pages always sent) was added and again after the editor's last fixes. Page: `docs/plans/2026-11-22-wait-and-visual-checks.html`. Handoff: `docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md`.
 
 ## 2026-11-20
 
