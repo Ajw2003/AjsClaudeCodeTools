@@ -113,7 +113,7 @@ _mp_cases.append(("make_page: a required-pictures project refuses a visual Chang
                   _rc == 2 and "Shiny button" in _o))
 
 _cv2 = _mp_content("visual2", [["chg", "Shiny button", "Looks new.", None, "Detail.", None, None, {"visual": True},
-                                {"src": "data:image/png;base64,AAAA", "alt": "a", "caption": "c"}]])
+                                {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "alt": "a", "caption": "c"}]])
 _rc, _o = _mp("build", _cv2, "--project", _d)
 _mp_cases.append(("make_page: the same visual item with a picture builds", _rc == 0))
 
