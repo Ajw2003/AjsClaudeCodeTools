@@ -1,6 +1,6 @@
 # Today — 2026-11-22
 
-Wait clocks, visual checks, page sending and working pictures (four fixes), proposed on `ajsagent/eloquent-mayer-0ayp82` and waiting on aj's six choices; nothing built. The page was sent again after Fix 4. Fix 4 came from a measured failure: a lone copy of the page showed 5 of 5 pictures broken, because the builder links pictures in a folder that is not sent with the page. The page was sent to aj after Fix 3 (pages always sent) was added and again after the editor's last fixes. Page: `docs/plans/2026-11-22-wait-and-visual-checks.html`. Handoff: `docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md`.
+Wait clocks, visual checks, page sending and working pictures (four fixes) on `ajsagent/eloquent-mayer-0ayp82`. aj approved the design as "Design approved: wait clocks, visual checks, page sending and pictures 1A 2A 3B 4B 5A 6A"; the stage is Plan. Parent issue #555, steps #556 to #568, systems doc `docs/4-systems/wait-and-visual-checks.md`, decisions entry written. The build plan page `docs/plans/2026-11-22-wait-and-visual-checks-build-plan.html` waits on aj's answer to one choice and "Build plan approved: wait clocks". Nothing is built; code edits stay locked until then. A check on 2026-11-22 showed Python Playwright and Pillow (aj's choice 3B) work in this container when pointed at the installed browser. Handoff: `docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md`.
 
 ## 2026-11-20
 

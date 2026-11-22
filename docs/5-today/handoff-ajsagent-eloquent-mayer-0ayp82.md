@@ -1,4 +1,4 @@
-# Handoff: ajsagent/eloquent-mayer-0ayp82 (2026-11-22, proposal page, four fixes, waiting on aj's six choices)
+# Handoff: ajsagent/eloquent-mayer-0ayp82 (2026-11-22, design approved, build plan page waiting on aj)
 
 ## What the work is for
 
@@ -6,23 +6,25 @@ Four workflow fixes aj asked for. First, no wait may run unchecked or for ever: 
 
 ## Where it stands
 
-- Nothing is built. The design loop's code lock is still on, because aj has not approved.
-- The proposal page is `docs/plans/2026-11-22-wait-and-visual-checks.html` (source `docs/plans/2026-11-22-wait-and-visual-checks.page.json`, pictures in `docs/plans/2026-11-22-wait-and-visual-checks-art/`). It is committed and pushed, and has been sent to aj four times (after Fix 3 was added, after the editor's wording fixes, and after Fix 4 was added with the pictures built into the page file). It was checked at 375px in light and dark (steps In short, Changes and Choices; the Wrap-up step was checked before Fix 3 was added), and the text went through the editor helper three times.
-- Findings the page rests on: the guard already refuses foreground sleep loops and timeouts over 60 seconds (`scripts/house_rules/safe_git.py:668`) but not background tasks, helper agents or wake-ups; `scripts/stallcheck.py` is manual; the visual end-of-turn check (`scripts/house_rules/writing.py:229`) counts any command containing "browser" or "capture" as a look.
+- aj approved the design on 2026-11-22: "Design approved: wait clocks, visual checks, page sending and pictures 1A 2A 3B 4B 5A 6A". Choices 3B (Python Playwright and Pillow) and 4B (a separate reviewer helper critiques each round) differ from the suggested options. The stage file `.claude/house-rules-loop.json` says stage `plan`, feature `wait clocks`; the approval is committed. Code edits are still locked.
+- Planning is done: systems doc `docs/4-systems/wait-and-visual-checks.md`, a decisions entry, indexes updated, parent issue #555 and step issues #556 to #568 (labelled `Feature`, `AjsAgent created this`, `in progress`, each naming dependencies, dependants and done-criteria).
+- The build plan page `docs/plans/2026-11-22-wait-and-visual-checks-build-plan.html` (source `.page.json` beside it) has four phases and one choice (when aj checks: once at the end, or early after phase 1). It meets all basics by `page_criteria.py`, shows no sideways scroll at 375px, and its picture loads in a copy opened alone. It waits on aj's "Build plan approved: wait clocks".
+- The proposal page `docs/plans/2026-11-22-wait-and-visual-checks.html` had its pictures put into its source as inline data by hand, so they show when the page is sent alone.
+- Findings the design rests on: the guard refuses foreground sleep loops and timeouts over 60 seconds (`scripts/house_rules/safe_git.py:669,678`) but not background tasks; `scripts/stallcheck.py` is manual; the visual check (`scripts/house_rules/writing.py:227`) counts any command containing "browser" or "capture"; the page checks (`core.py:3261`, `design_loop.py:2461`) accept a link, not a send; `make_page.py:156` links pictures in a `-pics/` folder that does not travel with the page.
 - An unused starter file was moved to `docs/plans/_to_delete/` because the write guard blocked overwriting it.
 
 ## The next step
 
-aj answers the six choices on the page (deadline behaviour, guard strictness, capture tools, who critiques, how firm the page-sending check is, how the six old pages with folder pictures are fixed) and sends the approval line "Design approved: wait clocks, visual checks, page sending and pictures". Then open one parent issue with a child per step, build page sending and the picture fix first (smallest, answer the most repeated complaints), then the wait clock (the visual loop reuses its deadlines), and prove each fix on seeded failures: a hanging process, a stalled process, and a deliberately broken page the loop must catch and repair on its own.
+aj answers the build plan's one choice and sends "Build plan approved: wait clocks". Then build phase 1 (#556 to #559: pictures, page sending), at most two builders at a time, each in its own worktree; then phase 2 (#560 to #563, the wait clock), phase 3 (#564 to #567, the visual loop), phase 4 (#568, docs, tests, version, QA page). Prove each fix by planting the failure it should catch: a hanging and a stalled process, a broken picture, an unsent page, and a page with seeded sideways scroll the loop must repair alone.
 
 ## What is unverified
 
-- `visualcheck.py`, `waitfor.py`, the page-sending check and the picture embedding do not exist yet; nothing about their behaviour is tested.
-- Playwright for Node and ffmpeg ran in this cloud container only. aj's own machine is untested and not recorded in `rules/handover-target.md`.
-- Unity and game capture is only planned, not tried.
-- The proposal page's own pictures were put into its source as inline data by hand, as an interim fix; after that a lone copy showed 0 of 6 broken pictures. I did not capture a clean image of them drawn in the lone copy (a sticky box covered it); the pictures loaded with a real width. I have not seen how aj's side panel renders the page.
-- The false-alarm rate of a widened visual-file list is unmeasured; it must be measured on this repo's real sessions before shipping.
+- Nothing is built: `waitfor.py`, `visualcheck.py`, the `visual-loop` skill, the page-sending check and the picture embedding do not exist.
+- Python Playwright and Pillow worked in a scratch virtual environment here only; `visualcheck.py` must install nothing by itself and `doctor` must print the install commands. aj's own machine is untested and not recorded in `rules/handover-target.md`.
+- Unity and game capture is only planned. The false-alarm rate of a widened visual-file list is unmeasured until #567.
+- I have not seen how aj's side panel renders either page.
+- ProjectState was not updated: nothing about the product changed yet.
 
 ## Issue numbers
 
-None yet. They are opened after aj approves the page.
+Parent #555. Steps: #556, #557 (pictures); #558, #559 (page sending); #560, #561, #562, #563 (wait clock); #564, #565, #566, #567 (visual loop); #568 (docs, tests, version).
