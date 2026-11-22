@@ -33,6 +33,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGIN = os.path.abspath(os.path.join(HERE, ".."))
@@ -569,6 +570,12 @@ const { chromium } = require('playwright');
     clipped.forEach(c => console.log(`visual check ${t}: clipped card "${c}"`));
     if (errs.length || w[0] > w[1] || clipped.length) bad = 1;
   }
+  // Lone copy (#557): the page opened alone in an empty folder, as aj receives it; broken pictures fail it.
+  const q = await b.newPage({ viewport: { width: 375, height: 800 } });
+  await q.goto('file://' + process.argv[5]); await q.waitForTimeout(500);
+  const broken = await q.evaluate((() => [...document.images].filter(i => i.getAttribute('src') && i.complete && i.naturalWidth === 0).map(i => i.getAttribute('src'))));
+  console.log(`visual check alone: broken pictures ${broken.length}`);
+  broken.forEach(s => { console.log(`broken picture when the page is opened alone: ${s}`); bad = 1; });
   await b.close(); process.exit(bad);
 })().catch(e => { console.log('LAUNCHFAIL ' + e.message.split('\n')[0]); process.exit(9); });
 """
@@ -616,12 +623,29 @@ with sync_playwright() as pw:
         clipped = p.evaluate(sys.argv[3])
         for c in clipped: print('visual check %s: clipped card "%s"' % (t, c))
         if errs or w[0] > w[1] or clipped: bad = 1
+    q = b.new_page(viewport={"width": 375, "height": 800})
+    q.goto("file://" + sys.argv[4]); q.wait_for_timeout(500)
+    broken = q.evaluate("(() => [...document.images].filter(i => i.getAttribute('src') && i.complete && i.naturalWidth === 0).map(i => i.getAttribute('src')))()")
+    print("visual check alone: broken pictures %d" % len(broken))
+    for s in broken:
+        print("broken picture when the page is opened alone: " + s); bad = 1
     b.close()
 sys.exit(bad)
 """
 
 
 def visual_check(out, style):
+    # The lone copy sits in an otherwise empty folder, so a picture linked beside the page cannot load (#557).
+    lone = os.path.join(tempfile.mkdtemp(prefix="lone-page-"), os.path.basename(out))
+    if os.path.isfile(out):  # a missing page has nothing to copy; the browser run reports it
+        shutil.copyfile(out, lone)
+    try:
+        _visual_check(out, style, lone)
+    finally:
+        shutil.rmtree(os.path.dirname(lone), ignore_errors=True)
+
+
+def _visual_check(out, style, lone):
     themes = style.get("themes") or ["light", "dark"]
     arg = json.dumps(themes)
     reasons = []
@@ -629,7 +653,7 @@ def visual_check(out, style):
     try:
         import importlib.util
         if importlib.util.find_spec("playwright"):
-            runs.append(("python playwright", [sys.executable, "-c", PY_CHECK, out, arg, "(%s)()" % CLIP_JS]))
+            runs.append(("python playwright", [sys.executable, "-c", PY_CHECK, out, arg, "(%s)()" % CLIP_JS, lone]))
         else:
             reasons.append("python playwright is not installed")
     except (ImportError, ValueError) as e:
@@ -647,7 +671,7 @@ def visual_check(out, style):
             if r.returncode == 0:
                 # A14: run from the folder the probe ran in, so require finds the same playwright; "make_page"
                 # fills process.argv[1], keeping the page at argv[2] as NODE_JS expects. No temp file is left behind.
-                runs.append(("node playwright", [node, "-e", NODE_JS, "make_page", out, arg, "(%s)()" % CLIP_JS]))
+                runs.append(("node playwright", [node, "-e", NODE_JS, "make_page", out, arg, "(%s)()" % CLIP_JS, lone]))
             else:
                 reasons.append("node has no playwright module")
     for label, cmd in runs:

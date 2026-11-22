@@ -431,6 +431,27 @@ _pc_r = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), 
 _pc_u = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _pc_f + ".nope"], capture_output=True, text=True, timeout=60)
 _mp_cases.append(("page_criteria (#542): the command exits 1 naming the miss, and 2 for an unreadable file",
                   _pc_r.returncode == 1 and "Basic 3" in _pc_r.stdout and _pc_u.returncode == 2))
+# ---- the lone-copy picture check (#557): a page opened alone must not have broken pictures ----
+def _lone(name, pics):
+    f = os.path.join(_mp_tmp, name + ".html")
+    with open(f, "w", encoding="utf-8") as _f:
+        _f.write(_pcp("art", add=pics))
+    return subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), f, "--visual"], capture_output=True, text=True, timeout=300)
+
+
+_ln_bad = _lone("lone-bad", '<img src="gone-pics/a.svg" alt="x">')
+if "visual check did not run" in _ln_bad.stdout:
+    report("SKIP", "page_criteria (#557): the lone-copy picture check (no usable browser: %s)"
+           % _ln_bad.stdout.split("visual check did not run:", 1)[1].strip()[:200])
+else:
+    _ln_ok = _lone("lone-data", '<img alt="x" src="data:image/svg+xml;utf8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%272%27 height=%272%27%3E%3Crect width=%272%27 height=%272%27/%3E%3C/svg%3E">')
+    _ln_none = _lone("lone-nosrc", '<img alt="later">')
+    _mp_cases.append(("page_criteria (#557): a page with img src=gone-pics/a.svg and no such folder fails and names that src",
+                      _ln_bad.returncode == 2 and "gone-pics/a.svg" in _ln_bad.stdout))
+    _mp_cases.append(("page_criteria (#557): a page with an embedded data: picture passes the lone-copy check",
+                      _ln_ok.returncode == 0 and "broken pictures 0" in _ln_ok.stdout))
+    _mp_cases.append(("page_criteria (#557): a page with an img that has no src passes the lone-copy check",
+                      _ln_none.returncode == 0 and "broken pictures 0" in _ln_none.stdout))
 # ---- starters: one optional content skeleton per page type (#544) ----
 _mp_cases.append(("starters (#544): make_page's type list equals page_criteria's", tuple(__import__("make_page").PAGE_TYPES) == tuple(_pc.TYPES)))
 _sp = _mp_proj("starts", {"use": "defaults"})
