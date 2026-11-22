@@ -4,7 +4,7 @@
  "pageType": "build-plan",
  "approval": "Build plan approved: clear roadblocks",
  "short": {
-  "lead": "The roadblocks rule (a roadblock is any reason I give for stopping, such as a missing tool or the wrong machine) is built in three steps under parent issue #569: first the rule text, then a reply check that blocks twice and then warns, then the tests, docs and version number.",
+  "lead": "A roadblock is any reason I give for stopping, such as a missing tool or the wrong machine. The rule that clears them is built in three steps under parent issue #569: the rule text, a reply check that blocks twice and then warns, then the tests, docs and version number.",
   "hint": "Tap a step to see it.",
   "key": [
    [
