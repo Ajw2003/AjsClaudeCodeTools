@@ -47,6 +47,7 @@ that points back here.
 | [hook-engine](../4-systems/hook-engine.md) | Dispatching every `house-rules` hook event to the handler that enforces it |
 | [verify-suites](../4-systems/verify-suites.md) | Proving the three plugins' hook payloads produce the decisions the docs claim |
 | [plugin-distribution](../4-systems/plugin-distribution.md) | Getting the plugins onto a machine and upgrading them |
+| [wait-and-visual-checks](../4-systems/wait-and-visual-checks.md) | Wait clocks and deadlines, the visual capture-and-critique loop, sending every made or changed page, and pictures built into pages (planned) |
 | [offshoot-plugins](../4-systems/offshoot-plugins.md) | `prompt-workshop` and `agent-router` |
 
 ## Everything else worth reaching
