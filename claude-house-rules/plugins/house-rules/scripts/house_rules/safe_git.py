@@ -666,7 +666,6 @@ def _rerun_check(payload, subject):
 
 
 # Speed switches choice 5: a foreground wait holds the whole turn, so it is refused with its background form.
-WAIT_LIMIT_SECONDS = 60
 _WAIT_LOOP_RE = re.compile(r"\b(?:until|while)\b.*?\bdo\b.*?\bsleep\b|\bwhile\b.*?\bStart-Sleep\b", re.I | re.S)
 _WAIT_TIMEOUT_RE = re.compile(r"\btimeout\s+(?:-{1,2}\S+\s+)*(\d+(?:\.\d+)?)([smhd]?)\b")
 WAIT_DENY = (
