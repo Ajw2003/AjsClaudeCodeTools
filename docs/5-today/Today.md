@@ -249,3 +249,5 @@ overrun that `verify.py` had never measured. See the dated entry in
    `plugin-distribution.md`, `offshoot-plugins.md`) — still open.
 4. Everything still open in [`ProjectState.md`](../3-state/ProjectState.md)'s Cross-cutting
    section.
+
+**Later on 2026-11-22:** aj replied `QA failed: wait clocks. fix the test issues and the two false alarms`. The stage is Build; two builders are fixing the three browser-dependent tests, the loop-state check, and the two wait false alarms. Decision entry added to `docs/6-decisions/Decisions.md`.
