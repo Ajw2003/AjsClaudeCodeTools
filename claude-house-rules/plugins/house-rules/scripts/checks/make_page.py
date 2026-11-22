@@ -547,7 +547,7 @@ try:
     _sd_mask = lambda t: re.sub(r"data:[a-z/+]+;base64,[A-Za-z0-9+/=]+", "DATA", t)
     _sd_masked_before = _sd_before
     for _u in _sb(_sd_before):  # the source text itself is what changed
-        _sd_masked_before = _sd_masked_before.replace(_u, "DATA")
+        _sd_masked_before = re.sub(r"(?<![\w./-])" + re.escape(_u), "DATA", _sd_masked_before)  # same rule as the handler: a longer path naming it is text
     _sd_after = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _sd_page, "--visual"], capture_output=True, text=True, timeout=300).stdout
     _mp_cases.append(("static picture check (#557): REAL DATA, sendcheck repairs a copy of the finished QA page in place; no unbuilt picture is left, only the sources changed",
                       "was repaired" in _sd_out and _sd_left == 0 and "broken picture when the page is opened alone" not in _sd_after
