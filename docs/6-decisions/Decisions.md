@@ -12,6 +12,23 @@ pointer, when a later entry replaces it.
 **Decision.** aj approved "Design approved: clear roadblocks 1C 2A". The agent probes before claiming a blocker, installs missing tools itself (without asking in bypass mode), and tries other routes before stopping. An end-of-reply check blocks a roadblock claim made with no probe twice, then lets it through with a warning line. Only licences, logins, purchases and destructive actions stay aj's. The session-start line for bypass mode was dropped.
 **Why.** A session on aj's PC claimed Unity was missing and that it was on the wrong machine; both were false. Rule text alone was ignored, and a check that blocks without end would hang a session. Detail: [roadblocks.md](../4-systems/roadblocks.md).
 
+## 2026-11-22 - Wait clocks and visual checks: three places the build differs from the approved design
+
+**Decision.** (1) An old page whose pictures sit in a folder is repaired by embedding those pictures into the existing page (`_embed_in_place` in `house_rules/design_loop.py`), not by rebuilding it from its `.page.json` as the approved page said. (2) The wait rule is a sentence inside "Nothing fails silently" in `rules/house-rules.md`, not a section of its own. (3) The reviewer helper returns its verdict lines and the main session saves them as `round-N.md`; the reviewer has no write tool.
+**Why.** (1) Running the finished repair on a real old QA page showed a rebuild regenerates a QA page's content from git at build time, and fails outside a git repo; embedding in place changes nothing else, and also works for a page with no source file. Proven on a copy of `docs/plans/2026-10-19-restructure-step-1-qa.html`: 2 broken pictures to 0, page unchanged otherwise. aj's choice 6A (repair on first send) still holds; only the mechanism changed. (2) The new section pushed the injected rules to 9,979 characters against the 9,700 limit; the original wait text already lived under "Nothing fails silently", so the rule moved back there with no wording cut; the injected size is now 9,694. (3) Matches the reviewer's agent definition (read, search and run only).
+**Replaces.** Nothing reversed; refines the approved design. Detail: [wait-and-visual-checks.md](../4-systems/wait-and-visual-checks.md).
+**Status.** Current. Awaiting aj's QA.
+
+
+## 2026-11-22 - Wait clocks, visual checks, page sending and working pictures: design approved
+
+**Decision.** aj approved "Design approved: wait clocks, visual checks, page sending and pictures 1A 2A 3B 4B 5A 6A". At a wait deadline the agent stops waiting, reports what is unknown and carries on (1A). Background launches with no deadline are refused and an unchecked wait is reported once at turn end (2A). The visual capture tool uses Python Playwright and Pillow (3B) and a separate reviewer helper critiques the images each round (4B). The end-of-turn check blocks once when a made or changed page was not sent (5A). Old pages with folder pictures are repaired the first time they are sent (6A).
+**Why.** aj asked for waits that can never run on unchecked, a visual check the agent can run, critique and fix unattended, pages sent without being asked, and pictures that always show. Measured: a copy of the proposal page opened alone had 5 of 5 pictures broken, because the builder links pictures in a folder that is not sent with the page. 3B and 4B differ from the suggested options (Node Playwright with ffmpeg; the agent critiquing its own images); a check on 2026-11-22 showed Python Playwright and Pillow work here. Detail: [wait-and-visual-checks.md](../4-systems/wait-and-visual-checks.md); parent issue #555.
+**Replaces.** Nothing reversed; it extends the foreground-wait guard in [speed-switches.md](../4-systems/speed-switches.md) and the visual-check reminder in `rules/detail/visual-check.md`.
+**Status.** Current. Not built.
+
+---
+
 ## 2026-11-22 - Unattended mode is a typed switch, shared with art-pipeline
 
 **Decision.** `unattended on|off` is a typed switch group (saved in `house-rules-mode.json`), not only an environment variable, so aj can turn it on at any point in a session with one line. The art-pipeline plugin reads the same file instead of getting its own command. It is kept out of `house rules off`, and the agent is told not to commit the file while it is on.

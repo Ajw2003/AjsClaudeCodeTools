@@ -4,7 +4,57 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-Plugin 2.88.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
+Plugin 2.89.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
+
+GitHub's CI run passed on the CI-fix commit for pull request #573; it now waits for aj to merge.
+
+Checked the two CI fixes in a copy at a GitHub-like path with a bare PATH: 1426 of 1432 checks pass, 6 skipped, none fail; the injected rules measure 9696 of 9700 there. GitHub's own run on the pushed commit is being read next.
+
+Fixed the two failing CI checks on pull request #573: the clean-page send check now skips when there is no browser, and the injected rules are 33 characters shorter (9721 to 9688 on GitHub's path, limit 9700).
+
+Diagnosed the two failing CI checks on pull request #573 (injected rules 9721 of 9700 characters on the runner; a make_page send check with no browser); not fixed yet, waiting on aj to reopen code edits.
+
+aj passed QA on the wait clocks work; pull request #573 (plugin 2.88.0) is ready for review, waiting on aj's merge.
+
+Recorded that the wait clocks work is pushed and waiting on aj's QA verdict (handoff note and Today updated; no code change).
+
+Reworded the two new rows on the wait clocks QA page after the editor pass (page `docs/plans/2026-11-22-wait-and-visual-checks-qa.html`, rebuilt with `make_page.py build`).
+
+Fixed the four known test-side issues on the wait clocks branch after aj's QA failed: three browser-dependent picture-repair tests now skip when no browser re-check ran, the handover stand-down check runs in a scratch folder, the unchecked-wait note ignores a launch the guard refused, and the foreground-wait pattern matches `timeout` only at command position. verify.py 1434 of 1434, also in a CI-like run without a browser.
+
+Opened draft pull request #573 for the wait clocks, visual checks, page sending and pictures work (plugin 2.88.0, refs #555 to #568). It stays a draft until four known test-side checks are fixed, which needs aj's go-ahead. No code changed in this step.
+
+Tested the wait clocks, visual checks, page sending and pictures work (#555) for a pull request: three more real sessions confirmed the never-sent page block, the guard refusal for a launch with no timeout, and the unchecked-wait note. A CI-like run (Python 3.12, no browser) found 4 failing test checks and two false alarms in the wait checks, recorded in `docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt`; the fixes wait for aj's go-ahead. Pull request opened as a draft.
+
+QA for the wait clocks, visual checks, page sending and pictures work (#555) is open again after the visual reminder fix: all 14 issues say `needs review` and aj has the final QA page. No code changed in this step.
+
+Fixed the visual reminder noise from aj's QA of the wait clocks work (#555): pages that carry the page builder's mark or the handover-page meta tag no longer trigger the end-of-turn visual reminder; plain visual files are still checked. Proven by two real headless sessions on the fixed build (0 reminders, down from 1 and 2, repair still works) and a full `verify.py` 1428 of 1428.
+
+QA failed on the wait clocks work (#555) with one item to fix: the end-of-turn visual reminder fired after ordinary pages in both real test sessions. It is being changed to skip pages that carry the page builder's mark or the handover-page meta tag; everything else visual is checked as before. Not released.
+
+Reworded the QA page for the wait clocks, visual checks, page sending and pictures work after a final editor pass, and sent it to aj again (`docs/plans/2026-11-22-wait-and-visual-checks-qa.html`). No code changed.
+
+Ran the Linux equivalent of the QA steps for wait clocks, visual checks, page sending and pictures (#555): the branch installs as 2.88.0, `waitfor.py` times out with exit 3, and two real headless sessions showed the send reminder, a re-send after an edit, and the send hook repairing an old page in place (results in `docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt`). Found: the end-of-turn visual reminder fires after ordinary docs pages; the fix waits for aj's decision.
+
+Plugin 2.88.0, ready for QA (#555, steps #556 to #568): wait clocks with a deadline and `waitfor.py`, a guard refusal for background launches with no timeout (switch group `waits`), pictures built into pages with a check and in-place repair before a page is sent, a turn-end check that a made or changed page was sent, `visualcheck.py`, `ledger.py` and the `visual-loop` skill, and an end-of-turn visual check that needs a real capture. Also fixed: the writing check no longer reads inline picture data as prose, and long commands in a page's numbered steps wrap on a phone. Full `verify.py` 1422 of 1422.
+
+The visual loop is built and proven live (#555): `visualcheck.py` video, frame sheets and motion measures (#565), the `visual-loop` skill with `ledger.py` and a 4-round cap (#566), and an end-of-turn visual check that needs a real capture, a ledger check and an image read instead of a keyword (#567). The wait rule is folded into "Nothing fails silently" to keep the injected rules under their size limit. Full `verify.py` 1417 of 1417. Not released: no version bump until #568.
+
+Wait clock rule text and agent prompts (#563) and the first part of the visual capture tool, `visualcheck.py` doctor and screenshots (#564), are built on `ajsagent/eloquent-mayer-0ayp82` (#555). Running the new page-send check on a real old page showed that repairing a page by rebuilding it from its source is wrong for QA pages; it is being changed to embed the pictures into the page in place. Not released.
+
+Fixed a miss in the new picture check (#557): it reported no broken pictures for builder pages whose pictures only appear when a row is tapped, because nothing was rendered at page load. It now also scans the page for any picture source that is not built into the file, and `sendcheck` repairs such a page before it is sent. Found by running the check on a real old page. Full `verify.py` 1381 of 1381.
+
+Phase 1 is built (#559 and #562 added on `ajsagent/eloquent-mayer-0ayp82`, #555): a made or changed page that was not sent is caught at turn end (blocks once), the new `sendcheck` hook repairs a page whose pictures are in a folder before it is sent, and the guard refuses a background launch with no timeout. Full `verify.py` 1377 of 1377. Not released: no version bump until #568.
+
+Phase 1 and the start of the wait clock are built and merged on `ajsagent/eloquent-mayer-0ayp82` (#555): pictures are built into the page file (#556), a copy of the page opened alone is checked for broken pictures (#557), the send rule and the builder's send line exist (#558), the wait numbers live in `rules/waits.json` (#560), and `scripts/waitfor.py` gives every wait a clock and a deadline (#561). Full `verify.py` 1361 of 1361. Not yet released: no version bump until the docs step (#568).
+
+Build started on the wait clocks, visual checks, page sending and pictures work (#555): aj approved the build plan with an early check after phase 1, and builders began #556 and #558. Nothing is merged yet.
+
+Docs only: the wait clocks, visual checks, page sending and pictures design was approved (1A 2A 3B 4B 5A 6A). Added the systems doc `docs/4-systems/wait-and-visual-checks.md`, a decisions entry, parent issue #555 with 13 step issues (#556 to #568), and a build plan page waiting on aj. Nothing is built.
+
+Docs only: measured why pictures on pages break. The page builder links each picture in a `<page>-pics/` folder that is not sent with the page, so a copy of the proposal page opened on its own showed 5 of 5 pictures broken, against 0 of 5 in the repo. Detail is in `docs/plans/2026-11-22-wait-and-visual-checks.html`, Fix 4.
+
+Docs only: a proposal page for four workflow fixes: a one-minute clock and deadline for every wait, an unattended capture-critique-fix loop for visual work, and every made or changed page sent to aj at the end of the turn, and pictures built into each page so they always show. Nothing is built; it waits on aj's six choices. See `docs/plans/2026-11-22-wait-and-visual-checks.html`.
 
 Plugin 2.87.0: unattended mode on one typed line. Type `unattended on` (or `unattended off`, add `everywhere` for all folders) at any point; it turns every other switch off except autosave, refuses questions and prompts, tells the agent to use its own judgment and push only to its own `AjsAgent/` branch, never `main`, and the art-pipeline plugin follows the same line. The switch file is not to be committed while it is on.
 
