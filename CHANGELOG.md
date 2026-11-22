@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Wait clock rule text and agent prompts (#563) and the first part of the visual capture tool, `visualcheck.py` doctor and screenshots (#564), are built on `ajsagent/eloquent-mayer-0ayp82` (#555). Running the new page-send check on a real old page showed that repairing a page by rebuilding it from its source is wrong for QA pages; it is being changed to embed the pictures into the page in place. Not released.
+
 Fixed a miss in the new picture check (#557): it reported no broken pictures for builder pages whose pictures only appear when a row is tapped, because nothing was rendered at page load. It now also scans the page for any picture source that is not built into the file, and `sendcheck` repairs such a page before it is sent. Found by running the check on a real old page. Full `verify.py` 1381 of 1381.
 
 Phase 1 is built (#559 and #562 added on `ajsagent/eloquent-mayer-0ayp82`, #555): a made or changed page that was not sent is caught at turn end (blocks once), the new `sendcheck` hook repairs a page whose pictures are in a folder before it is sent, and the guard refuses a background launch with no timeout. Full `verify.py` 1377 of 1377. Not released: no version bump until #568.
