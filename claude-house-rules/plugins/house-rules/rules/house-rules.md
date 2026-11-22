@@ -63,7 +63,7 @@ intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
 ## Plain language and the voice
 
-Moved into "Write it so nothing is left to guess", loaded beside Show, don't tell. See
+Moved into "Write it so nothing is left to guess". See
 `${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`.
 
 ## Deliver a whole workflow, not a starting point

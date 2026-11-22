@@ -522,8 +522,13 @@ else:
         _mp_cases.append(("sendcheck (#559): the repair is announced with a 'was repaired' note", "was repaired" in _sp_o2))
     _mp_cases.append(("sendcheck (#559): a picture whose file is missing is named with the reason, send allowed",
                       "gone-pics/a.svg (file not found)" in _sp_o1 and "could not be repaired" in _sp_o1 and "deny" not in _sp_o1))
-    _mp_cases.append(("sendcheck (#559): a clean page and a non-page file get no note and no denial",
-                      _sp_send(_sp_fix) == "" and _sp_send(os.path.join(_sp_plans, "x.txt")) == ""))
+    _mp_cases.append(("sendcheck (#559): a non-page file gets no note and no denial",
+                      _sp_send(os.path.join(_sp_plans, "x.txt")) == ""))
+    _sp_clean = _sp_send(_sp_fix)
+    if "did not run" in _sp_clean:  # no browser at all: the hook says so on every send, even for a clean page
+        report("SKIP", "sendcheck (#559): a clean page gets no note (no browser): %s" % _sp_clean[:200])
+    else:
+        _mp_cases.append(("sendcheck (#559): a clean page gets no note and no denial", _sp_clean == ""))
 # ---- #557 static check: picture sources not built into the page are named, with no browser needed ----
 _sb = __import__("make_page").static_broken_pictures
 _mp_cases.append(("static picture check (#557): a PAGE data block holding a -pics/ src and no <img> at load is named",
