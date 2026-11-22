@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Tested the wait clocks, visual checks, page sending and pictures work (#555) for a pull request: three more real sessions confirmed the never-sent page block, the guard refusal for a launch with no timeout, and the unchecked-wait note. A CI-like run (Python 3.12, no browser) found 4 failing test checks and two false alarms in the wait checks, recorded in `docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt`; the fixes wait for aj's go-ahead. Pull request opened as a draft.
+
 QA for the wait clocks, visual checks, page sending and pictures work (#555) is open again after the visual reminder fix: all 14 issues say `needs review` and aj has the final QA page. No code changed in this step.
 
 Fixed the visual reminder noise from aj's QA of the wait clocks work (#555): pages that carry the page builder's mark or the handover-page meta tag no longer trigger the end-of-turn visual reminder; plain visual files are still checked. Proven by two real headless sessions on the fixed build (0 reminders, down from 1 and 2, repair still works) and a full `verify.py` 1428 of 1428.
