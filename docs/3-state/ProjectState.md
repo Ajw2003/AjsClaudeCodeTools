@@ -427,7 +427,7 @@ Plugin 2.82.0. State: built, waiting on aj's QA. Any page format passes if it me
 
 ## Unattended mode (2.87.0)
 
-State: built, verified by verify.py and verify_tools.py; not yet run overnight. `HOUSE_RULES_UNATTENDED=on` turns off every switch except autosave, refuses guard asks outright, denies `AskUserQuestion`/`ExitPlanMode` through the `noask` hook; `tools/overnight.sh` launches it. Stage 1 (2.85.0): the session note overrides the wait/ask rule text, versioncheck stays one line. Stage 2 (2.86.0): the whole-file Write, big-file commit and Claude-credit guards allow with a note instead of refusing. Detail: [`docs/4-systems/speed-switches.md`](../4-systems/speed-switches.md), "Unattended mode".
+State: built, verified by verify.py and verify_tools.py; not yet run overnight. `HOUSE_RULES_UNATTENDED=on` turns off every switch except autosave, refuses guard asks outright, denies `AskUserQuestion`/`ExitPlanMode` through the `noask` hook; `tools/overnight.sh` launches it. Stage 1 (2.85.0): the session note overrides the wait/ask rule text, versioncheck stays one line. Stage 2 (2.86.0): the whole-file Write, big-file commit and Claude-credit guards allow with a note instead of refusing. 2.87.0: typing `unattended on` / `unattended off` switches it at any point (art-pipeline reads the same file). Detail: [`docs/4-systems/speed-switches.md`](../4-systems/speed-switches.md), "Unattended mode".
 
 ## Free issue closing (#548 to #552)
 
