@@ -88,6 +88,8 @@ with open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="u
 _mp_cases.append(("make_page: style --quick then build succeeds and stamps the mark right after the doctype",
                   _rc1 == 0 and _rc2 == 0 and _txt.startswith("<!doctype html>\n<!-- house-rules make_page %s -->" % _ver)
                   and "visual check" in _o2 and "<title>T basic</title>" in _txt))
+_mp_cases.append(("make_page (#558): a successful build ends with the SEND THIS PAGE NOW line",
+                  _rc2 == 0 and _o2.rstrip().splitlines()[-1].startswith("make_page: SEND THIS PAGE NOW: ")))
 
 _d = _mp_proj("ps", _PS_STYLE)
 _rc, _o = _mp("build", _c1, "--project", _d)

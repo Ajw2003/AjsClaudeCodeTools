@@ -375,4 +375,13 @@ def handover_long_reply(payload, have_reply, reply_text):
     return _long_reply_words(reply_text, _payload_cwd(payload)) if (have_reply and _loop_enabled() and _pages_enabled()) else 0
 
 
+def _page_send_note(file_path):
+    """#558: a page under docs/ was written; it must be sent to aj before the turn ends."""
+    if not re.search(r"(^|/)docs/.+\.html$", file_path.replace("\\", "/"), re.IGNORECASE):
+        return ""
+    return ("House rules, send the page: %s must be sent to aj with the file-send tool before "
+            "the turn ends, and sent again after any later change." % os.path.basename(file_path))
+
+
 core.register_post_tool("artifact", _page_writing_note)
+core.register_post_tool("artifact", _page_send_note)
