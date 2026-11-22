@@ -640,13 +640,47 @@ sys.exit(bad)
 """
 
 
+_IMG_EXT = re.compile(r"\.(png|jpe?g|gif|svg|webp|avif|bmp|ico)$", re.I)
+_PIC_SRC = (re.compile(r"""<img\b[^>]*?\ssrc\s*=\s*["']([^"']+)["']""", re.I | re.S),  # any img src
+            re.compile(r"""\bsrcset\s*=\s*["']([^"']+)["']""", re.I),
+            re.compile(r"""["']?\bsrc["']?\s*:\s*["']([^"']+)["']"""),  # PAGE data / JS object src
+            re.compile(r"""url\(\s*["']?([^"')\s]+)"""))
+
+
+def static_broken_pictures(html):
+    """#557: picture sources a page opened alone cannot load (not data:, not an in-page #). Needs no browser.
+    shortcut: img src is trusted as a picture whatever its name; the other forms must end in an image extension."""
+    found = []
+    for i, rx in enumerate(_PIC_SRC):
+        for m in rx.findall(html):
+            parts = [p.split()[0] for p in m.split(",") if p.strip()] if i == 1 else [m]
+            for s in parts:
+                s = s.strip()
+                if not s or s.startswith(("data:", "#")) or s in found:
+                    continue
+                if i == 0 or _IMG_EXT.search(re.split(r"[?#]", s)[0]):
+                    found.append(s)
+    return found
+
+
 def visual_check(out, style):
     # The lone copy sits in an otherwise empty folder, so a picture linked beside the page cannot load (#557).
     lone = os.path.join(tempfile.mkdtemp(prefix="lone-page-"), os.path.basename(out))
     if os.path.isfile(out):  # a missing page has nothing to copy; the browser run reports it
         shutil.copyfile(out, lone)
     try:
-        _visual_check(out, style, lone)
+        static = []
+        if os.path.isfile(out):
+            with open(out, encoding="utf-8", errors="replace") as f:
+                static = static_broken_pictures(f.read())
+        for s in static:
+            print("broken picture when the page is opened alone: " + s)
+        try:
+            _visual_check(out, style, lone)
+        except SystemExit as e:  # the browser found problems; the static ones count too
+            sys.exit(e.code or (2 if static else 0))
+        if static:
+            sys.exit(2)
     finally:
         shutil.rmtree(os.path.dirname(lone), ignore_errors=True)
 
