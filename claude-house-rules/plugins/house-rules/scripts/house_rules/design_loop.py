@@ -2727,7 +2727,9 @@ def _embed_in_place(page, look):
             left.append("%s (over %d bytes)" % (s, mp.MAX_PIC))
         else:
             with open(full, "rb") as fh:
-                html = html.replace(s, "data:%s;base64,%s" % (mp.PIC_MIME[ext], base64.b64encode(fh.read()).decode("ascii")))
+                addr = "data:%s;base64,%s" % (mp.PIC_MIME[ext], base64.b64encode(fh.read()).decode("ascii"))
+                # not when it is the tail of a longer path (a file list naming docs/plans/<src> is text, not a source)
+                html = re.sub(r"(?<![\w./-])" + re.escape(s), lambda _m: addr, html)
             done.append(s)
     if done:
         with open(page, "w", encoding="utf-8", newline="") as fh:

@@ -1621,6 +1621,7 @@ _cap_case("waitfor: a missing deadline is a usage error, exit 4, never an endles
 # --- visualcheck.py (#564): the no-browser cases always run; the browser cases need HOUSE_RULES_VISUALCHECK_PYTHON.
 _vc = os.path.join(HERE, "visualcheck.py")
 _vc_dir = _cap_tf.mkdtemp(prefix="visualcheck-")  # OS temp dir, never the repo
+atexit.register(shutil.rmtree, _vc_dir, True)
 _vc_py = os.environ.get("HOUSE_RULES_VISUALCHECK_PYTHON")
 
 
@@ -1690,6 +1691,78 @@ else:
     _c, _o, _rep, _od = _runs["blank"]
     _cap_case("visualcheck: an all-white page is flagged blank, exit 1",
               _c == 1 and any(d.get("blank") for d in _rep.get("per_image", {}).values()), "exit %d out %r" % (_c, _o[:300]))
+
+    # --- #565: per-image errors, video, frames and motion measures
+    _pg = _vc_write("later.html", _body % "<button onclick=\"console.error('after-click-boom')\">go</button>")
+    _st = _vc_write("later.json", json.dumps({"url": _pg, "steps": [{"shot": "before"}, {"click": "button"}, {"shot": "after"}]}))
+    _od = os.path.join(_vc_dir, "out-later")
+    _c, _o = _vc_run(_vc_py, "shots", "--steps", _st, "--out", _od, "--viewports", "phone", "--themes", "light")
+    try:
+        _pi = json.load(open(os.path.join(_od, "report.json")))["per_image"]
+    except (OSError, ValueError, KeyError) as _e:
+        _pi = {}
+    _cap_case("visualcheck: a console error after a click is reported on the later shot only, not the earlier one",
+              _c == 1 and _pi.get("before-phone-light.png", {}).get("console_errors") == []
+              and any("after-click-boom" in m for m in _pi.get("after-phone-light.png", {}).get("console_errors", [])),
+              "exit %d per_image %r" % (_c, _pi))
+    _anim = "<div style='width:80px;height:80px;background:#c00;position:absolute;animation:m %s'></div><style>@keyframes m{from{left:0}to{left:280px}}</style>"
+    _vpages = {"moving": (_anim % "2s linear infinite alternate", 3000), "frozen": (_anim % "1s linear forwards", 3000), "static": ("<h1>still</h1>", 3000)}
+    _vres = {}
+    for _k, (_h, _ms) in _vpages.items():
+        _pg = _vc_write("v-" + _k + ".html", _body % _h)
+        _st = _vc_write("v-" + _k + ".json", json.dumps({"url": _pg, "steps": [{"wait": _ms}]}))
+        _od = os.path.join(_vc_dir, "vout-" + _k)
+        _c, _o = _vc_run(_vc_py, "video", "--steps", _st, "--out", _od)
+        _vres[_k] = (_c, _o, _od)
+    if any(r[0] == 3 for r in _vres.values()):
+        print("SKIP  visualcheck: video cases - Playwright cannot record here (%s)" % _vres["moving"][1].strip()[:150])
+    else:
+        _fr = {}
+        for _k, (_c0, _o0, _od) in _vres.items():
+            _vf = os.path.join(_od, "video-phone-light.webm")
+            _c, _o = _vc_run(_vc_py, "frames", "--video", _vf, "--out", _od, "--expect-motion")
+            try:
+                _fj = json.load(open(os.path.join(_od, "frames.json")))
+            except (OSError, ValueError):
+                _fj = {}
+            _fr[_k] = (_c0, _c, _o, _fj, _od)
+        _c0, _c, _o, _fj, _od = _fr["moving"]
+        _cap_case("visualcheck: an animated page gives a webm, a sheet, max_delta above 0.05 and exit 0 with --expect-motion",
+                  _c0 == 0 and _c == 0 and os.path.isfile(os.path.join(_od, "sheet.png")) and _fj.get("max_delta", 0) > 0.05 and _fj.get("ok") is True,
+                  "video exit %d frames exit %d out %r" % (_c0, _c, _o[:300]))
+        _c0, _c, _o, _fj, _od = _fr["frozen"]
+        _cap_case("visualcheck: an animation that stops after 1s reports a frozen run, exit 1 with --expect-motion",
+                  _c == 1 and bool(_fj.get("frozen_runs")) and _fj.get("ok") is False, "exit %d frozen %r out %r" % (_c, _fj.get("frozen_runs"), _o[:300]))
+        _c0, _c, _o, _fj, _od = _fr["static"]
+        _cap_case("visualcheck: a static page is static, exit 1 with --expect-motion",
+                  _c == 1 and _fj.get("static") is True, "exit %d static %r out %r" % (_c, _fj.get("static"), _o[:300]))
+
+# frames needs only Pillow and ffmpeg: a hand-made sequence with one abrupt change must flag a jump.
+if _vc_py and shutil.which("ffmpeg"):
+    _sq = os.path.join(_vc_dir, "seq")
+    os.makedirs(_sq, exist_ok=True)
+    _mk = ("from PIL import Image\nfor i in range(12):\n"
+           "    x = i * 4 if i < 8 else 120\n"
+           "    im = Image.new('RGB', (160, 120), 'white'); im.paste((200, 0, 0), (x, 10, x + 30, 110)); im.save(r'%s/%%03d.png' %% i)\n" % _sq.replace("\\", "/"))
+    subprocess.run([_vc_py, "-c", _mk], timeout=60)
+    _vj = os.path.join(_vc_dir, "jump.mp4")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-framerate", "2", "-i", os.path.join(_sq, "%03d.png"), "-pix_fmt", "yuv420p", _vj], timeout=60)
+    _od = os.path.join(_vc_dir, "jout")
+    _c, _o = _vc_run(_vc_py, "frames", "--video", _vj, "--out", _od, "--expect-motion")
+    try:
+        _fj = json.load(open(os.path.join(_od, "frames.json")))
+    except (OSError, ValueError):
+        _fj = {}
+    _cap_case("visualcheck: an abrupt change in a synthetic video is flagged in jumps, exit 1 with --expect-motion",
+              _c == 1 and bool(_fj.get("jumps")), "exit %d jumps %r deltas %r out %r" % (_c, _fj.get("jumps"), _fj.get("deltas"), _o[:200]))
+else:
+    print("SKIP  visualcheck: jump detection - needs HOUSE_RULES_VISUALCHECK_PYTHON and ffmpeg on PATH")
+
+_c, _o = _vc_run(sys.executable, "frames", "--video", os.path.join(_vc_dir, "nope.webm"), "--out", os.path.join(_vc_dir, "o"))
+_cap_case("visualcheck: frames on a missing video is bad usage in words, exit 4", _c == 4 and "not found" in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _vc_run(sys.executable, "frames", "--video", _vc_write("fake.webm", "x"), "--out", os.path.join(_vc_dir, "o"))
+_cap_case("visualcheck: frames on a file that is not a video is an error in words (exit 3 without ffmpeg or Pillow, else 4)",
+          _c in (3, 4) and ("tools missing" in _o or "could not read" in _o), "exit %d out %r" % (_c, _o[:200]))
 
 audq = []
 code, out, err = run_hook("audit", "")
