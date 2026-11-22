@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 
 from house_rules import core, waits
@@ -674,6 +675,13 @@ WAIT_DENY = (
 )
 
 
+BG_DENY = (
+    "This background command has %s, so nothing would stop it if it hung (the tool default is 30 minutes). "
+    "Run it again with the timeout parameter set to %d or less (milliseconds; the longest wait in rules/waits.json). "
+    "To check the wait every minute, run scripts/waitfor.py."
+)
+
+
 def _wait_check(payload, subject):
     """A deny reason for a foreground sleep loop or a timeout over the foreground limit (rules/waits.json); else None."""
     try:
@@ -681,8 +689,16 @@ def _wait_check(payload, subject):
     except (ValueError, AttributeError) as exc:
         sys.stderr.write("house-rules guard: the wait check could not read the payload (%s), so it was skipped.\n" % exc)
         return None
-    if not isinstance(ti, dict) or ti.get("run_in_background") is True:
+    if not isinstance(ti, dict):
         return None
+    if ti.get("run_in_background") is True:
+        # #562: a hook cannot stop a hung tool, so the launch is the only point where a limit holds.
+        top_ms = int(max(waits.load_waits()["deadline_seconds"].values()) * 1000)
+        got = ti.get("timeout")
+        if isinstance(got, (int, float)) and not isinstance(got, bool) and 0 < got <= top_ms:
+            return None
+        return BG_DENY % (("a timeout of %s ms, over the %d ms limit" % (got, top_ms)) if got is not None
+                          else "no timeout", top_ms)
     cmd = _rerun_command(payload, subject) or ""
     limit = waits.load_waits()["foreground_limit_seconds"]
     if _WAIT_LOOP_RE.search(cmd):
@@ -2201,3 +2217,56 @@ def handover_handoff_check(written_now, committed_now, cwd):
 
 core.register_prompt(_scope_waiting_link)
 core.register_post_tool("promptran", _promptran_waiting_link)
+
+
+# --- #562: a background task started this turn and never checked is listed once, never blocking ---
+# "Checked" = a later tool use in the same turn that: runs waitfor.py or stallcheck.py; mentions the task's id or
+# output file (Read, tail, TaskOutput...); or is a notification / agent tool (TaskOutput, BashOutput, TaskStop,
+# KillShell, SendMessage, TaskList, TaskGet, ListAgents). Said once per task: ids go in a per-session temp file.
+_BG_CHECK_TOOLS = {"TaskOutput", "BashOutput", "TaskStop", "KillShell", "SendMessage", "TaskList", "TaskGet", "ListAgents"}
+_BG_CHECK_RE = re.compile(r"waitfor\.py|stallcheck\.py|notification", re.I)
+_BG_TOKEN_RE = re.compile(r"(?:ID|agentId|task_id|bash_id)[\"']?\s*[:=]\s*[\"']?([\w-]{4,})|(/[^\s\"']+\.output)")
+
+
+def handover_unchecked_waits(turn_records, session_id):
+    """A one-line note naming background tasks this turn started and never checked, not yet reported; else ''."""
+    uses, results = [], {}
+    for rec in turn_records or []:
+        content = ((rec or {}).get("message") or {}).get("content") if isinstance(rec, dict) else None
+        for b in content if isinstance(content, list) else []:
+            if not isinstance(b, dict):
+                continue
+            if b.get("type") == "tool_use":
+                uses.append(b)
+            elif b.get("type") == "tool_result":
+                results[b.get("tool_use_id")] = json.dumps(b.get("content"))
+    owed = []
+    for i, u in enumerate(uses):
+        ti = u.get("input") or {}
+        if u.get("name") not in ("Bash", "PowerShell", "Agent", "Task") or ti.get("run_in_background") is not True:
+            continue
+        tokens = [a or b for a, b in _BG_TOKEN_RE.findall(results.get(u.get("id"), ""))]
+        for later in uses[i + 1:]:
+            blob = json.dumps(later.get("input") or {})
+            if later.get("name") in _BG_CHECK_TOOLS or _BG_CHECK_RE.search(blob) or any(t in blob for t in tokens):
+                break
+        else:
+            owed.append((u.get("id"), (ti.get("description") or ti.get("command") or "an agent")[:60]))
+    if not owed:
+        return ""
+    path = os.path.join(tempfile.gettempdir(), "house-rules-bgnote-%s.json" % re.sub(r"\W", "_", str(session_id)))
+    try:
+        with open(path, encoding="utf-8") as fh:
+            said = set(json.load(fh))
+    except (OSError, ValueError):
+        said = set()
+    new = [o for o in owed if o[0] not in said]
+    if not new:
+        return ""
+    try:
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(sorted(said | {o[0] for o in new}), fh)
+    except OSError as exc:
+        return "house-rules: the unchecked-wait note could not save what it already said (%s)." % type(exc).__name__
+    return ("house-rules: started this turn in the background and never checked: %s. Check with scripts/waitfor.py."
+            % "; ".join(d for _i, d in new))

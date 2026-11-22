@@ -160,6 +160,15 @@ def event_handover():
                 transcript_path, payload, written_now, turn_records, have_reply, reply_text)
             visual_files = handover_visual_check(written_now, turn_records)
 
+    try:  # #562: a note for aj only (systemMessage), never blocking
+        if transcript_path and not retry:
+            _bg = handover_unchecked_waits(_records_since_last_user_message(transcript_path)[0],
+                                           _field(re.compile(r'"session_id"\s*:\s*"([^"]*)"'), payload))
+            if _bg:
+                trace_lines_early.append(_bg)
+    except Exception as exc:
+        trace_lines_early.append("house-rules: unchecked-wait note could not run (%s)" % type(exc).__name__)
+
     issue_line, issue_problem, label_line, label_problem = handover_stop_lines(payload)
 
     trace_lines = list(trace_lines_early)
