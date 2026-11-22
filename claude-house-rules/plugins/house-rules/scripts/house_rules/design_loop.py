@@ -2704,9 +2704,48 @@ def event_pagecheck():
     return 0
 
 
+def _embed_in_place(page, look):
+    """#559: embed each relative picture beside `page` as a data: address, nothing else changes. Returns the note."""
+    import base64
+    if SCRIPTS_DIR not in sys.path:
+        sys.path.insert(0, SCRIPTS_DIR)
+    import make_page as mp  # the mime table and size limit live there
+    with open(page, encoding="utf-8", newline="") as fh:
+        html = fh.read()
+    done, left = [], []
+    for s in mp.static_broken_pictures(html):
+        path = re.split(r"[?#]", s)[0]
+        ext = os.path.splitext(path)[1].lower()
+        full = os.path.join(os.path.dirname(os.path.abspath(page)), path)
+        if re.match(r"(?i)^([a-z][a-z0-9+.-]*:|//|/|\\)", s) or os.path.isabs(path):
+            left.append("%s (not a relative path)" % s)
+        elif not os.path.isfile(full):
+            left.append("%s (file not found)" % s)
+        elif ext not in mp.PIC_MIME:
+            left.append("%s (type %s not supported)" % (s, ext or "none"))
+        elif os.path.getsize(full) > mp.MAX_PIC:
+            left.append("%s (over %d bytes)" % (s, mp.MAX_PIC))
+        else:
+            with open(full, "rb") as fh:
+                html = html.replace(s, "data:%s;base64,%s" % (mp.PIC_MIME[ext], base64.b64encode(fh.read()).decode("ascii")))
+            done.append(s)
+    if done:
+        with open(page, "w", encoding="utf-8", newline="") as fh:
+            fh.write(html)
+    again, why = look(page)
+    if again is None:
+        return "%s: embedded %d picture(s) but the re-check did not run (%s); not embedded: %s" % (
+            page, len(done), why, ", ".join(left) or "none")
+    if not again:
+        return "%s was repaired: embedded %s" % (page, ", ".join(done))
+    if done:
+        return "%s was partly repaired: embedded %s; still broken: %s" % (page, ", ".join(done), "; ".join(left) or ", ".join(again))
+    return "%s could not be repaired: %s" % (page, "; ".join(left) or ", ".join(again))
+
+
 def event_sendcheck():
-    """#559: before an .html page is sent, open a copy alone; rebuild from <stem>.page.json when pictures
-    are broken. Never blocks: every outcome is allow, with a note."""
+    """#559: before an .html page is sent, open a copy alone; embed pictures that sit beside it when they are
+    broken. Never blocks: every outcome is allow, with a note."""
     import subprocess
     try:
         data = json.loads(read_payload() or "{}")
@@ -2727,22 +2766,7 @@ def event_sendcheck():
             if broken is None:
                 notes.append("the picture check did not run for %s (%s), so its pictures are unchecked" % (page, why))
             elif broken:
-                src = os.path.splitext(page)[0] + ".page.json"
-                if os.path.isfile(src):
-                    proj = re.split(r"[\\/]docs[\\/]", os.path.abspath(page))[0]  # the folder holding docs/
-                    subprocess.run([sys.executable, os.path.join(SCRIPTS_DIR, "make_page.py"), "build", src,
-                                    "--out", page, "--project", proj], capture_output=True, text=True, timeout=120)
-                    again, _w = look(page)
-                    if again == []:
-                        notes.append("%s had broken pictures; rebuilt it from %s with the pictures embedded"
-                                     % (page, os.path.basename(src)))
-                        continue
-                    broken = again or broken
-                    notes.append("%s still has broken pictures after a rebuild from %s: %s"
-                                 % (page, os.path.basename(src), ", ".join(broken)))
-                else:
-                    notes.append("%s has broken pictures when opened alone (%s) and no %s.page.json exists to "
-                                 "rebuild it" % (page, ", ".join(broken), os.path.splitext(os.path.basename(page))[0]))
+                notes.append(_embed_in_place(page, look))
         if notes:
             emit({"systemMessage": "house-rules send check: " + "; ".join(notes) + ". The send goes ahead."})
     except Exception as exc:
