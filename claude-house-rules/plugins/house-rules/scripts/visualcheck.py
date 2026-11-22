@@ -222,7 +222,13 @@ def video(args):
         try:
             ctx = browser.new_context(viewport={"width": w, "height": h}, color_scheme=args.theme,
                                       record_video_dir=tmp, record_video_size={"width": w, "height": h})
-            page = ctx.new_page()
+            try:
+                page = ctx.new_page()
+            except Exception as exc:
+                if "ffmpeg" in str(exc):
+                    print("tools missing: Playwright's own video encoder (run: python3 -m playwright install ffmpeg)")
+                    return 3
+                raise
             page.set_default_timeout(ACTION_TIMEOUT_MS)
             try:
                 page.goto(url)
