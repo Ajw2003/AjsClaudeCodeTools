@@ -88,9 +88,8 @@ def load_steps(path):
 
 
 def to_url(u):
-    if "://" in u:
-        return u
-    return "file://" + os.path.abspath(u).replace(os.sep, "/").replace("//", "/") if not os.name == "nt" else "file:///" + os.path.abspath(u).replace(os.sep, "/")
+    import pathlib
+    return u if "://" in u else pathlib.Path(u).resolve().as_uri()
 
 
 def is_blank(path):

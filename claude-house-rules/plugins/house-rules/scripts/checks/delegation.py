@@ -1618,6 +1618,79 @@ _c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "0")
 _cap_case("waitfor: a missing deadline is a usage error, exit 4, never an endless wait",
           _c == 4 and "bad usage" in _o, "exit %d out %r" % (_c, _o[:200]))
 
+# --- visualcheck.py (#564): the no-browser cases always run; the browser cases need HOUSE_RULES_VISUALCHECK_PYTHON.
+_vc = os.path.join(HERE, "visualcheck.py")
+_vc_dir = _cap_tf.mkdtemp(prefix="visualcheck-")  # OS temp dir, never the repo
+_vc_py = os.environ.get("HOUSE_RULES_VISUALCHECK_PYTHON")
+
+
+def _vc_run(py, *a):
+    pr = subprocess.run([py, _vc] + list(a), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+    return pr.returncode, pr.stdout.decode("utf-8", "replace")
+
+
+def _vc_write(name, text):
+    p = os.path.join(_vc_dir, name)
+    open(p, "w", encoding="utf-8").write(text)
+    return p
+
+
+_c, _o = _vc_run(sys.executable, "doctor")
+_cap_case("visualcheck: doctor prints one line per tool and exits 0 or 3 with the install command when missing",
+          _c in (0, 3) and all(w in _o for w in ("playwright", "pillow", "chromium", "ffmpeg"))
+          and (_c == 0 or "MISSING" in _o), "exit %d out %r" % (_c, _o[:300]))
+for _nm, _txt in (("notjson.json", "{nope"), ("nourl.json", "{}"), ("badstep.json", '{"url":"x.html","steps":[{"hover":"a"}]}'),
+                  ("badfill.json", '{"url":"x.html","steps":[{"fill":["a"]}]}')):
+    _c, _o = _vc_run(sys.executable, "shots", "--steps", _vc_write(_nm, _txt), "--out", os.path.join(_vc_dir, "o"))
+    _cap_case("visualcheck: %s is bad usage, exit 4" % _nm, _c == 4 and "bad usage" in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _vc_run(sys.executable, "shots", "--steps", _vc_write("ok.json", '{"url":"x.html"}'), "--out", os.path.join(_vc_dir, "o"), "--themes", "sepia")
+_cap_case("visualcheck: an unknown theme is bad usage, exit 4", _c == 4 and "sepia" in _o, "exit %d out %r" % (_c, _o[:200]))
+try:
+    import PIL.Image
+    sys.path.insert(0, HERE)
+    import visualcheck as _vcm
+    _im_w, _im_n = os.path.join(_vc_dir, "w.png"), os.path.join(_vc_dir, "n.png")
+    PIL.Image.new("RGB", (40, 40), "white").save(_im_w)
+    _noisy = PIL.Image.new("RGB", (40, 40), "white")
+    _noisy.paste("black", (0, 0, 20, 20))
+    _noisy.save(_im_n)
+    _cap_case("visualcheck: the blank detector flags a one-colour image and not a two-colour one",
+              _vcm.is_blank(_im_w) and not _vcm.is_blank(_im_n), "white blank=%s, half-black blank=%s" % (_vcm.is_blank(_im_w), _vcm.is_blank(_im_n)))
+except ImportError as _e:
+    print("SKIP  visualcheck: blank detector - Pillow is not installed in this python (%s)" % _e)
+
+if not _vc_py:
+    print("SKIP  visualcheck: browser cases (clean page, sideways scroll plus console error, blank page) - "
+          "HOUSE_RULES_VISUALCHECK_PYTHON is not set to an interpreter that has playwright and Pillow")
+else:
+    _body = "<!doctype html><meta name=viewport content='width=device-width'><body style='background:#fff'>%s</body>"
+    _pages = {"clean": _body % "<h1>Hello</h1><p style='color:#036'>A fine page.</p>",
+              "bad": _body % "<div style='width:900px;background:#c00;height:50px'>wide</div><script>console.error('boom-on-purpose')</script>",
+              "blank": _body % ""}
+    _runs = {}
+    for _k, _html in _pages.items():
+        _pg = _vc_write(_k + ".html", _html)
+        _st = _vc_write(_k + ".json", json.dumps({"url": _pg, "steps": [{"shot": "p"}]}))
+        _od = os.path.join(_vc_dir, "out-" + _k)
+        _c, _o = _vc_run(_vc_py, "shots", "--steps", _st, "--out", _od)
+        try:
+            _rep = json.load(open(os.path.join(_od, "report.json")))
+        except (OSError, ValueError) as _e:
+            _rep = {"read_error": str(_e)}
+        _runs[_k] = (_c, _o, _rep, _od)
+    _c, _o, _rep, _od = _runs["clean"]
+    _cap_case("visualcheck: a clean page writes 4 screenshots and the report is ok, exit 0",
+              _c == 0 and _rep.get("ok") is True and len([f for f in os.listdir(_od) if f.endswith(".png")]) == 4,
+              "exit %d report %r out %r" % (_c, _rep.get("ok"), _o[:300]))
+    _c, _o, _rep, _od = _runs["bad"]
+    _ph = _rep.get("per_image", {}).get("p-phone-light.png", {})
+    _cap_case("visualcheck: sideways scroll plus console.error is reported, exit 1",
+              _c == 1 and _rep.get("ok") is False and _ph.get("overflow_x") is True and any("boom-on-purpose" in m for m in _ph.get("console_errors", [])),
+              "exit %d phone-light %r out %r" % (_c, _ph, _o[:300]))
+    _c, _o, _rep, _od = _runs["blank"]
+    _cap_case("visualcheck: an all-white page is flagged blank, exit 1",
+              _c == 1 and any(d.get("blank") for d in _rep.get("per_image", {}).values()), "exit %d out %r" % (_c, _o[:300]))
+
 audq = []
 code, out, err = run_hook("audit", "")
 if code != 0 or "systemMessage" not in out:

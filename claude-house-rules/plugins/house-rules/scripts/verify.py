@@ -112,6 +112,7 @@ _SCRIPT_PARTS = {  # scripts/<file> -> parts
     "harvest_scan.py": ["docs"],
     "stallcheck.py": ["delegation"],
     "waitfor.py": ["delegation"],
+    "visualcheck.py": ["delegation"],
     "labels.py": ["design_loop"],
 }
 
