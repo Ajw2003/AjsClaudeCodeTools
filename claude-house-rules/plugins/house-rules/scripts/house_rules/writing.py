@@ -235,7 +235,7 @@ def _is_visual(path):
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             head = f.read(4096)
     except OSError:
-        return True  # unreadable or missing: not exempt, so it is still checked
+        head = ""  # unreadable or missing: not exempt, so it is still checked (no mark found)
     return not ("house-rules make_page" in head or "house-rules-page" in head)
 
 
