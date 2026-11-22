@@ -82,6 +82,19 @@
     }
    ],
    [
+    "flask",
+    "Checked",
+    "Your steps 3 to 7, run on Linux in real sessions",
+    "",
+    "I ran the Linux form of steps 3 to 7. The install says 2.88.0; waitfor ends in a timeout, exit 3; a real session sent its page unasked, and again after an edit; the send hook repaired an old page in place. Full output: docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt.",
+    "Nothing from you.",
+    {
+     "src": "docs/plans/2026-11-22-wait-and-visual-checks-art/send.svg",
+     "alt": "A page is made, sent to you, and sent again after every change",
+     "caption": "Seen in a real session."
+    }
+   ],
+   [
     "hand",
     "Your test",
     "Eight steps on your PC",
@@ -145,6 +158,15 @@
    "Old pages are repaired by embedding pictures in place, not rebuilding from source. The wait rule sits inside \"Nothing fails silently\". The reviewer returns its verdict lines and the main session saves them. See docs/6-decisions/Decisions.md.",
    null,
    null
+  ],
+  [
+   "chg",
+   "Found by the live runs: the visual reminder is noisy",
+   "It fired after ordinary docs pages in both live runs.",
+   null,
+   "At the end of each live turn the new visual check asked for a capture, a ledger check and an image read after an ordinary page was written (once, then twice). It only reminds. Proposed fix: count a page build, or the page checker's visual run, as the capture for docs pages. Code edits are closed during QA, so this waits for your word.",
+   null,
+   null
   ]
  ],
  "qa": {
@@ -152,7 +174,7 @@
   "base": "origin/main",
   "unverified": [
    "Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows.",
-   "The page-sent check and the send hook ran on recorded transcripts and made-up payloads, not live in a session running this build. How the real send hook names the file field is unconfirmed.",
+   "Two real sessions on Linux exercised the send reminder, the send hook and the in-place repair. The \"block once if a made page was never sent\" path only ran on recorded transcripts and made-up payloads, because the test agent always sent its pages.",
    "The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available.",
    "Video and frames were proven for the phone in light only; Unity and game capture is only written down.",
    "The injected rules are 6 characters under their size limit, so the next rule added must make room first."
@@ -162,13 +184,13 @@
  "wrapup": {
   "summary": "All 13 steps (#556 to #568) of the approved plan are built, merged on one branch and tested; the page shows the evidence and eight steps for you.",
   "changing": "Plugin 2.88.0: the page builder, the guard, the end-of-turn checks, a send hook, three new scripts (waitfor.py, visualcheck.py, ledger.py), the visual-loop skill, rules, tests and docs.",
-  "blocking": "Your eight steps below, and whether the machine details in step 2 are right.",
+  "blocking": "Your eight steps below, whether the machine details in step 2 are right, and what to do about the noisy visual reminder (see Changes).",
   "next": "On a pass, I open a pull request to main for you to merge.",
   "todo": [
    "Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.",
    "Check the machine details I am using: Windows 11, PowerShell 5.1, folder <code>C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools</code> (an old example from 2026-08-25, not confirmed). If any is wrong, put the right one in your reply.",
    "UNTESTED on Windows. Open PowerShell in that folder and run <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py ajsagent/eloquent-mayer-0ayp82</code>. Expect the last lines <code>plugin version  : 2.88.0</code> and <code>OK: installed build matches the request.</code>, then restart Claude Code. (I ran it on Linux in a throwaway config and it printed exactly that shape.)",
-   "In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.</code> Expect the page to appear in your window without you asking, with its picture showing.",
+   "In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.</code> Expect the page to appear in your window without you asking, (and with its picture showing, if it has one).",
    "Say: <code>Send me docs/plans/2026-10-19-restructure-step-1-qa.html</code>. Expect a note that the page was repaired by embedding 2 pictures, and its before and after pictures to show.",
    "UNTESTED on Windows. Run <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\claude-house-rules\\plugins\\house-rules\\scripts\\waitfor.py --kind command --check \"exit 1\" --first-check 1 --interval 1 --deadline 4</code>. Expect four <code>not yet</code> lines, then <code>timed out: gave up after 4s</code>.",
    "UNTESTED on Windows. Switch back with <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py main</code>. Expect <code>plugin version  : 2.87.0</code> and <code>OK</code>, then restart.",

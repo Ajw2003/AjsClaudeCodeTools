@@ -134,9 +134,10 @@ with what each depends on, are on #555.
 ## What this design cannot show
 
 - **Not run on aj's machine.** The cloud container could not attach to it (his computer lists none of its folders to cloud sessions), so every command handed to him is labelled untested there; his OS and shell are unconfirmed.
-- **The new Stop-hook checks and `sendcheck` ran on made-up and recorded transcripts and payloads here, not live in a session running the branch build.** How the real `SendUserFile` hook payload names its path field is unconfirmed (the handler reads `file_path`, `path` and `files`).
+- **Live on Linux, 2026-11-22** (`docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt`): two real headless sessions with the branch build loaded exercised the send reminder, the send hook (the real `SendUserFile` payload names its file field `files`: confirmed) and the in-place repair of a real old page. The block-once-if-never-sent path has only run on recorded transcripts and made-up payloads, because the test agent always sent its pages.
+- **Known issue, found live:** the end-of-turn visual check fires after ordinary docs pages (1 and 2 times in the two runs) asking for a capture, a ledger check and an image read. It only reminds. Proposed fix, not made (code edits are closed during QA): count a page build, or `page_criteria.py --visual`, as the capture for docs pages.
 - **The injected rules are at 9,694 of 9,700 characters.** The next rule added has to make room first.
-- **The visual gate's false-alarm rate is unmeasured:** only one transcript of 15 turns was available.
+- **The visual gate's false-alarm rate on page-writing turns is high:** 2 of 2 live page-writing turns triggered it. Other kinds of visual change are unmeasured.
 - **Video and frames** were proven for one viewport and theme (phone, light); Unity and game capture is only written down.
 - A hook cannot stop a tool that has already hung; only the launch can carry a limit.
 - A reviewer helper checks the images with fresh eyes but is still a model; it can miss things, so
