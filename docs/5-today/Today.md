@@ -269,3 +269,5 @@ overrun that `verify.py` had never measured. See the dated entry in
 **Still 2026-11-22:** waiting on aj to reopen code edits for the two CI fixes.
 
 **Still 2026-11-22:** aj typed "skip design"; the two CI fixes are written (a make_page test skip, 33 characters off the injected rules) and being checked at a GitHub-like path.
+
+**Still 2026-11-22:** GitHub CI passed on the fix commit; PR 573 waits for aj to merge.

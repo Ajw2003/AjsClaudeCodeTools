@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+GitHub's CI run passed on the CI-fix commit for pull request #573; it now waits for aj to merge.
+
 Checked the two CI fixes in a copy at a GitHub-like path with a bare PATH: 1426 of 1432 checks pass, 6 skipped, none fail; the injected rules measure 9696 of 9700 there. GitHub's own run on the pushed commit is being read next.
 
 Fixed the two failing CI checks on pull request #573: the clean-page send check now skips when there is no browser, and the injected rules are 33 characters shorter (9721 to 9688 on GitHub's path, limit 9700).
