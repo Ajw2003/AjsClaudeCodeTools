@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "images": [
+    "page-phone-light.png",
+    "page-phone-dark.png",
+    "page-desktop-light.png",
+    "page-desktop-dark.png"
+  ],
+  "deadline_seconds": 600,
+  "per_image": {
+    "page-phone-light.png": {
+      "console_errors": [],
+      "page_errors": [],
+      "failed_requests": [],
+      "overflow_x": false,
+      "blank": false
+    },
+    "page-phone-dark.png": {
+      "console_errors": [],
+      "page_errors": [],
+      "failed_requests": [],
+      "overflow_x": false,
+      "blank": false
+    },
+    "page-desktop-light.png": {
+      "console_errors": [],
+      "page_errors": [],
+      "failed_requests": [],
+      "overflow_x": false,
+      "blank": false
+    },
+    "page-desktop-dark.png": {
+      "console_errors": [],
+      "page_errors": [],
+      "failed_requests": [],
+      "overflow_x": false,
+      "blank": false
+    }
+  }
+}
