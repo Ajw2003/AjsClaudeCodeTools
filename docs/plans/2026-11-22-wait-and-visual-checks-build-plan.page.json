@@ -23,7 +23,7 @@
     "Pictures and page sending",
     "",
     "Issues 556 to 559: pictures built into the page, a check of a copy opened alone, the send rule, and the end-of-turn check that a page was sent, which rebuilds old pages when they are sent.",
-    "Nothing from you until the early check.",
+    "Nothing from you, unless you choose the early check below.",
     {
      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkJ1aWxkIG9yZGVyOiBwaGFzZSAxIHBpY3R1cmVzIGFuZCBwYWdlIHNlbmRpbmcsIHBoYXNlIDIgdGhlIHdhaXQgY2xvY2ssIHBoYXNlIDMgdGhlIHZpc3VhbCBsb29wLCBwaGFzZSA0IGRvY3MgYW5kIHRlc3RzOyBwaGFzZSAxIGdvZXMgdG8geW91IGZvciBhbiBlYXJseSBjaGVjayI+CjxzdHlsZT50ZXh0e2ZvbnQtZmFtaWx5OkhlbHZldGljYSxBcmlhbCxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToxNHB4O2ZpbGw6IzE3MjAyZX0uYnh7ZmlsbDojZmZmO3N0cm9rZTojMmY1YmQzO3N0cm9rZS13aWR0aDoyfS5hcntzdHJva2U6IzU2NjE3NDtzdHJva2Utd2lkdGg6MjtmaWxsOm5vbmV9LmJ7ZmlsbDojZTNlYWZjfS55e2ZpbGw6I2ZkZWVkOTtzdHJva2U6I2IzNWYwMDtzdHJva2Utd2lkdGg6Mn08L3N0eWxlPgo8cmVjdCB3aWR0aD0iMzYwIiBoZWlnaHQ9IjI1MCIgY2xhc3M9ImIiLz4KPHJlY3QgeD0iMTYiIHk9IjE2IiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjUyIiByeD0iOCIgY2xhc3M9ImJ4Ii8+PHRleHQgeD0iMjgiIHk9IjQwIj4xIFBpY3R1cmVzIGFuZDwvdGV4dD48dGV4dCB4PSIyOCIgeT0iNTgiPnBhZ2Ugc2VuZGluZzwvdGV4dD4KPHJlY3QgeD0iMTk0IiB5PSIxNiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjIwNiIgeT0iNDAiPjIgV2FpdCBjbG9jazwvdGV4dD48dGV4dCB4PSIyMDYiIHk9IjU4Ij4oNCBzdGVwcyk8L3RleHQ+CjxyZWN0IHg9IjE5NCIgeT0iMTAwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjUyIiByeD0iOCIgY2xhc3M9ImJ4Ii8+PHRleHQgeD0iMjA2IiB5PSIxMjQiPjMgVmlzdWFsIGxvb3A8L3RleHQ+PHRleHQgeD0iMjA2IiB5PSIxNDIiPig0IHN0ZXBzKTwvdGV4dD4KPHJlY3QgeD0iMTYiIHk9IjEwMCIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjI4IiB5PSIxMjQiPjQgRG9jcywgdGVzdHMsPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSIxNDIiPnZlcnNpb248L3RleHQ+CjxwYXRoIGQ9Ik0xNjYgNDJIMTk0TTI2OSA2OFYxMDBNMTk0IDEyNkgxNjYiIGNsYXNzPSJhciIvPgo8cmVjdCB4PSIxNiIgeT0iMTc2IiB3aWR0aD0iMzI4IiBoZWlnaHQ9IjU4IiByeD0iOCIgY2xhc3M9InkiLz48dGV4dCB4PSIyOCIgeT0iMjAwIj5FYXJseSBjaGVjayBieSB5b3UgYWZ0ZXIgcGhhc2UgMSw8L3RleHQ+PHRleHQgeD0iMjgiIHk9IjIyMCI+d2hpbGUgcGhhc2VzIDIgdG8gNCBrZWVwIGJ1aWxkaW5nLjwvdGV4dD4KPHBhdGggZD0iTTkxIDY4VjE3NiIgY2xhc3M9ImFyIiBzdHJva2UtZGFzaGFycmF5PSI1IDQiLz4KPC9zdmc+",
      "alt": "Four build phases in order; phase 1 is checked by you early while the rest keep building",
@@ -52,7 +52,7 @@
     "Docs, tests and version",
     "",
     "Issue 568: the checks that tie each rule to its text, docs, the decisions entry, the token-cost measurement, the version number and the QA page.",
-    "Nothing from you until the QA page arrives; then tell me whether QA passed."
+    "Nothing from you until the quality-check page arrives; then tell me whether it passed."
    ],
    [
     "lock",
@@ -70,7 +70,7 @@
    "#556 Pictures step 1: build pictures into the page file",
    "make_page.py stops writing a pictures folder and embeds each picture.",
    null,
-   "Done when: a built page has no -pics link and no sibling folder is written; an oversized picture and a web link are refused with the reason; the new verify.py cases and the full verify.py pass.",
+   "Done when: a built page has no link to a separate pictures folder and no sibling folder is written; an oversized picture and a web link are refused with the reason; the new verify.py cases and the full verify.py pass.",
    null,
    null
   ],
@@ -133,7 +133,7 @@
    "#563 Wait clock step 4: the rule text and agent prompts",
    "A short rule section and a detail file; the old wait wording is moved, not copied.",
    null,
-   "Done when: the rules-size, duplication and mapping checks pass, and the injected rules grow only by the new section, measured with measure_footprint.py.",
+   "Done when: the rules-size, duplication and rule-to-text mapping checks pass, and the injected rules grow only by the new section, measured with measure_footprint.py.",
    null,
    null
   ],
@@ -151,7 +151,7 @@
    "#565 Visual loop step 2: video, frame sheet and motion",
    "A recorded video, a timestamped frame sheet and measured motion.",
    null,
-   "Done when: an animated test page gives frames that differ, a frozen animation is flagged, and the Unity route is written down and labelled UNTESTED.",
+   "Done when: an animated test page gives frames that differ, a frozen animation is flagged, and the way to capture video from the Unity game engine is written down and labelled UNTESTED.",
    null,
    null
   ],
@@ -178,7 +178,7 @@
    "#568 Docs, tests and version",
    "Every doc, mapping and test brought in line, then the QA page.",
    null,
-   "Done when: the full verify.py and tools/verify_tools.py pass, the QA page is linked and sent, and you have said QA passed.",
+   "Done when: the full verify.py and tools/verify_tools.py pass, the quality-check (QA) page is linked and sent, and you have said it passed.",
    null,
    null
   ]
