@@ -61,3 +61,22 @@ What the live runs did not cover
     recorded transcripts and made-up payloads.
   - Step 1 (open the QA page on the phone and the PC) and step 2 (confirm the machine) need aj.
   - The visual-loop skill inside a real session (it was proven separately, in docs/qa/loop-proof/).
+
+----------------------------------------------------------------------------------------------------------
+Rerun after "QA failed: wait clocks, fix the visual reminder noise" (the fix: a page that carries
+`<!-- house-rules make_page ... -->` or `<meta name="house-rules-page">` in its first 4096 characters is no longer
+treated as a visual file by the end-of-turn visual check).
+
+Replay of the two REAL first-run transcripts, run by the builder with the same turn splitting as the Stop hook
+  step 4: reminder fired in 1 of 1 turns before the fix, 0 after.
+  step 5: reminder fired in 1 of 2 turns before the fix, 0 after (live it fired 2 times; the replay does not model
+          a Stop-hook retry).
+Full suites on the fixed build, run alone: verify.py 1428 of 1428 passed; tools/verify_tools.py exit 0.
+
+New real headless session, step 4, same prompt, fixed build (plugin 2.88.0 loaded inline)
+                                              first run      rerun on the fixed build
+  visual-reminder note at Stop                      1                 0
+  "send the page" reminders after writes            5                12
+  SendUserFile calls                                2                 3
+  send hook (sendcheck) responses                   2                 3
+
