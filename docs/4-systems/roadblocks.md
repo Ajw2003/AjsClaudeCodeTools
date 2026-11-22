@@ -6,6 +6,8 @@ Status: built in plugin 2.89.0. Parent issue #569; steps #570 (rule text), #571 
 (tests, docs, version). aj approved the design on 2026-11-22 as "Design approved: clear roadblocks
 1C 2A" on `docs/plans/2026-11-22-clear-roadblocks.html`.
 
+**Merged with main (2.89.0):** main shipped a different 2.88.0 (wait clocks and visual checks, pull request #573), so this feature is 2.89.0. To fit the injected-rules limit after that merge, the rule is two sentences inside the "The user's hands are for decisions, not labour" section rather than its own section; the full list of what stays aj's (purchases, licences, logins, destructive actions) is in `rules/detail/roadblocks.md`.
+
 ## Why it exists
 
 A session on aj's PC said it could not go further because Unity was missing and it was on the wrong
