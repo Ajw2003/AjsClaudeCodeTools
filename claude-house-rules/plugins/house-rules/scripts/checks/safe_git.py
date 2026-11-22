@@ -1942,10 +1942,14 @@ report("PASS" if _rr_o[0] == 0 and not _rr_denied(_rr_o[1]) and "rerun count cou
 _rr_reset()
 
 # --- speed switches (#525): a foreground wait is refused with its background form ---
-def _wait_run(cmd, background=None):
+def _wait_run(cmd, background=None, timeout=None):
     ti = {"command": cmd}
     if background is not None:
         ti["run_in_background"] = background
+    if background and timeout is None:
+        timeout = 595000  # #562: a background launch must carry a timeout
+    if timeout is not None:
+        ti["timeout"] = timeout
     pl = {"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash", "tool_input": ti}
     return run_hook("guard", json.dumps(pl), env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]
 
@@ -2076,6 +2080,49 @@ report("PASS" if '"permissionDecision":"deny"' not in _un_cr_on and "credit rule
        and '"permissionDecision":"deny"' in _un_cr_off and "Remove every `Co-Authored-By:`" in _un_cr_off else "FAIL",
        "unattended: a Claude credit line is allowed with a note; attended the commit is still refused")
 print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
+
+
+# --- #562: a background launch with no deadline is refused; an unchecked one is reported once ---
+_bg_big, _bg_ok = (_wait_run("make", True, t) for t in (1300000, 1200000))
+_bg_missing = run_hook("guard", json.dumps({"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash",
+                       "tool_input": {"command": "make", "run_in_background": True}}),
+                       env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]
+_bgd = '"permissionDecision":"deny"'
+report("PASS" if _bgd in _bg_missing and "1200000" in _bg_missing and "waitfor.py" in _bg_missing else "FAIL",
+       "bg deadline: a background command with no timeout is refused, naming 1200000 ms and waitfor.py")
+report("PASS" if _bgd in _bg_big and "1200000" in _bg_big else "FAIL",
+       "bg deadline: a timeout over the largest deadline is refused")
+report("PASS" if _bgd not in _bg_ok else "FAIL", "bg deadline: a timeout inside the limit passes")
+report("PASS" if _bgd in _wait_run("timeout 90 python x.py") else "FAIL", "bg deadline: a foreground timeout 90 is still refused")
+
+
+def _bg_lines(name, check):
+    rows = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}}),
+            json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b1", "name": "Bash",
+                        "input": {"command": "make", "run_in_background": True, "timeout": 600000}}]}}),
+            json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "b1",
+                        "content": "Command running in background with ID: bk7x2. Output is being written to: /tmp/t/bk7x2.output"}]}})]
+    if check:
+        rows.append(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b2",
+                    "name": "Read", "input": {"file_path": "/tmp/t/bk7x2.output"}}]}}))
+    return _hand_transcript(name, rows)
+
+
+def _bg_stop(path, sid):
+    pl = json.dumps({"session_id": sid, "hook_event_name": "Stop", "stop_hook_active": False, "transcript_path": path,
+                     "last_assistant_message": "ok"})
+    env = dict(os.environ)
+    env["HOUSE_RULES_COMMIT_CHECK"] = "off"
+    return run_hook("handover", pl, env=env)[1]
+
+
+_bg_sid = "bgnote-%d" % os.getpid()
+_bg_u = _bg_lines("bg-unchecked", False)
+_bg_first, _bg_again = _bg_stop(_bg_u, _bg_sid), _bg_stop(_bg_u, _bg_sid)
+report("PASS" if "never checked" in _bg_first and "decision" not in _bg_first and "never checked" not in _bg_again
+       else "FAIL", "bg note: an unchecked background task is reported once, not blocking, and not again")
+report("PASS" if "never checked" not in _bg_stop(_bg_lines("bg-checked", True), _bg_sid + "c") else "FAIL",
+       "bg note: a task whose output file was read is not reported")
 
 
 finish()
