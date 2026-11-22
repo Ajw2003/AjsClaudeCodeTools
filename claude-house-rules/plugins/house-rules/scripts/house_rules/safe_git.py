@@ -15,7 +15,7 @@ import re
 import sys
 import time
 
-from house_rules import core
+from house_rules import core, waits
 from house_rules.core import *  # noqa: F401,F403
 from house_rules.core import (  # noqa: F401
     _COMMAND_VALUE_RE,
@@ -666,7 +666,6 @@ def _rerun_check(payload, subject):
 
 
 # Speed switches choice 5: a foreground wait holds the whole turn, so it is refused with its background form.
-WAIT_LIMIT_SECONDS = 60
 _WAIT_LOOP_RE = re.compile(r"\b(?:until|while)\b.*?\bdo\b.*?\bsleep\b|\bwhile\b.*?\bStart-Sleep\b", re.I | re.S)
 _WAIT_TIMEOUT_RE = re.compile(r"\btimeout\s+(?:-{1,2}\S+\s+)*(\d+(?:\.\d+)?)([smhd]?)\b")
 WAIT_DENY = (
@@ -676,7 +675,7 @@ WAIT_DENY = (
 
 
 def _wait_check(payload, subject):
-    """A deny reason for a foreground sleep loop or a timeout over WAIT_LIMIT_SECONDS; else None."""
+    """A deny reason for a foreground sleep loop or a timeout over the foreground limit (rules/waits.json); else None."""
     try:
         ti = json.loads(payload).get("tool_input") or {}
     except (ValueError, AttributeError) as exc:
@@ -685,12 +684,13 @@ def _wait_check(payload, subject):
     if not isinstance(ti, dict) or ti.get("run_in_background") is True:
         return None
     cmd = _rerun_command(payload, subject) or ""
+    limit = waits.load_waits()["foreground_limit_seconds"]
     if _WAIT_LOOP_RE.search(cmd):
         return WAIT_DENY % "a loop that sleeps until something happens"
     for amount, unit in _WAIT_TIMEOUT_RE.findall(cmd):
         secs = float(amount) * {"": 1, "s": 1, "m": 60, "h": 3600, "d": 86400}[unit]
-        if secs > WAIT_LIMIT_SECONDS:
-            return WAIT_DENY % ("timeout %s%s, over %d seconds" % (amount, unit, WAIT_LIMIT_SECONDS))
+        if secs > limit:
+            return WAIT_DENY % ("timeout %s%s, over %g seconds" % (amount, unit, limit))
     return None
 
 
