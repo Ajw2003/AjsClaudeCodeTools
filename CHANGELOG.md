@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Opened draft pull request #573 for the wait clocks, visual checks, page sending and pictures work (plugin 2.88.0, refs #555 to #568). It stays a draft until four known test-side checks are fixed, which needs aj's go-ahead. No code changed in this step.
+
 Tested the wait clocks, visual checks, page sending and pictures work (#555) for a pull request: three more real sessions confirmed the never-sent page block, the guard refusal for a launch with no timeout, and the unchecked-wait note. A CI-like run (Python 3.12, no browser) found 4 failing test checks and two false alarms in the wait checks, recorded in `docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt`; the fixes wait for aj's go-ahead. Pull request opened as a draft.
 
 QA for the wait clocks, visual checks, page sending and pictures work (#555) is open again after the visual reminder fix: all 14 issues say `needs review` and aj has the final QA page. No code changed in this step.
