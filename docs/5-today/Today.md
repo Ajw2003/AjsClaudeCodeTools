@@ -1,4 +1,8 @@
-# Today — 2026-11-20
+# Today — 2026-11-22
+
+Wait clocks and visual checks, proposed on `ajsagent/eloquent-mayer-0ayp82` and waiting on aj's four choices; nothing built. Page: `docs/plans/2026-11-22-wait-and-visual-checks.html`. Handoff: `docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md`.
+
+## 2026-11-20
 
 Free issue closing, plugin 2.83.0, built on `AjsAgent/free-issue-closing` (issues #548 to #552). The agent closes an issue on its own when it is labelled `needs review`, `in review` or completed by someone else and is in no GitHub milestone; anything else, milestone issues and milestones need aj's "Close approved". The five issues were made with a command that printed only numbers, so the design loop recorded none of them; aj's "Issues for free issue closing" came after the stage had moved to Build and also recorded nothing. Design: `docs/4-systems/issue-closing.md`, "Free issue closing (2.83.0)".
 

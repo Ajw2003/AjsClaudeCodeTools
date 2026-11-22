@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Docs only: a proposal page for two workflow fixes, a one-minute clock and deadline for every wait, and an unattended capture-critique-fix loop for visual work. Nothing is built; it waits on aj's four choices. See `docs/plans/2026-11-22-wait-and-visual-checks.html`.
+
 Plugin 2.87.0: unattended mode on one typed line. Type `unattended on` (or `unattended off`, add `everywhere` for all folders) at any point; it turns every other switch off except autosave, refuses questions and prompts, tells the agent to use its own judgment and push only to its own `AjsAgent/` branch, never `main`, and the art-pipeline plugin follows the same line. The switch file is not to be committed while it is on.
 
 Plugin 2.86.0: unattended mode, stage 2. With `HOUSE_RULES_UNATTENDED=on`, a whole-file Write, a commit with a big file and a `Co-Authored-By: Claude` line are allowed with a note instead of refused, so an overnight run is not stopped on a question only aj can answer; attended they refuse as before. The guard's two allow paths now keep a note instead of dropping it. aj approved the relaxations on 2026-11-22.

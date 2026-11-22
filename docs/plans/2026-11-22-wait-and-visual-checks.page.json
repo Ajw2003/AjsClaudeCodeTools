@@ -13,7 +13,7 @@
     "items": [
       ["stop", "Have", "A wait guard, but only for the foreground", "", "The guard refuses a foreground sleep loop, or a timeout over 60 seconds (safe_git.py:668). A background task, a helper agent or a scheduled wake-up has no limit, no rule says when to check, and stallcheck.py only runs if I remember it.", "Reused; the gaps are new.", {"src": "2026-11-22-wait-and-visual-checks-art/waits.svg", "alt": "A timeline: first check at one minute, then every minute, ending at done, stalled or deadline", "caption": "The wait clock this page proposes."}],
       ["eye", "Have", "A visual rule that only reminds", "", "The rule says to screenshot before and after. The end-of-turn hook counts any command containing the word \"browser\" or \"capture\" as a look, so it is easy to satisfy without looking. There is no video, no frame sheet, no phone-and-desktop flow and no loop.", "Reused; the loop and the tools are new.", {"src": "2026-11-22-wait-and-visual-checks-art/loop.svg", "alt": "The visual loop: write criteria, capture, critique, fix, repeat", "caption": "The visual loop this page proposes."}],
-      ["flask", "Need", "Wait clock, with a tool and a guard", "you", "A rule, a waitfor.py script that checks every minute and reports one of four outcomes: done, failed, stalled or timed out, and a guard that refuses background launches with no deadline. Your choices 1 and 2 set how strict it is.", "Your answers under Choices."],
+      ["flask", "Need", "Wait clock, with a tool and a guard", "you", "A rule; a waitfor.py script that checks every minute and reports one of four outcomes (done, failed, stalled or timed out); and a guard that refuses background launches with no deadline. Your choices 1 and 2 set how strict it is.", "Your answers under Choices."],
       ["loop", "Need", "Visual loop, with capture tools", "you", "A visualcheck.py tool that captures phone and desktop flows, video and frame sheets, plus a skill that runs capture, critique and fix by itself. Your choices 3 and 4 set the tools and the gate.", "Your answers under Choices.", {"src": "2026-11-22-wait-and-visual-checks-art/sheet.svg", "alt": "Phone and desktop screenshots, a video and a frame sheet", "caption": "What one check produces."}]
     ]
   },
@@ -58,9 +58,9 @@
       "A turn passes only with real captures and a ledger that cite its criteria.",
       "More turns are checked, so I will tune it against real sessions to keep false alarms low."
     ], null],
-    ["chg", "Everything else that each fix touches", "Every place both fixes reach, so nothing is left behind.", null, "Each place both fixes reach is updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.", [
+    ["chg", "Everything else that each fix touches", "Every file and doc the two fixes touch, so nothing is left behind.", null, "All of these are updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.", [
       "The rules are in three places that must agree.",
-      "Each place updated in the same change, with verify.py failing if one drifts.",
+      "If any one falls out of step, verify.py fails.",
       "The injected rules grow a little, so I measure the cost and keep the new text short."
     ], null]
   ],

@@ -326,7 +326,7 @@ const PAGE = {
         "Need",
         "Wait clock, with a tool and a guard",
         "you",
-        "A rule, a waitfor.py script that checks every minute and reports one of four outcomes: done, failed, stalled or timed out, and a guard that refuses background launches with no deadline. Your choices 1 and 2 set how strict it is.",
+        "A rule; a waitfor.py script that checks every minute and reports one of four outcomes (done, failed, stalled or timed out); and a guard that refuses background launches with no deadline. Your choices 1 and 2 set how strict it is.",
         "Your answers under Choices."
       ],
       [
@@ -464,12 +464,12 @@ const PAGE = {
     [
       "chg",
       "Everything else that each fix touches",
-      "Every place both fixes reach, so nothing is left behind.",
+      "Every file and doc the two fixes touch, so nothing is left behind.",
       null,
-      "Each place both fixes reach is updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.",
+      "All of these are updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.",
       [
         "The rules are in three places that must agree.",
-        "Each place updated in the same change, with verify.py failing if one drifts.",
+        "If any one falls out of step, verify.py fails.",
         "The injected rules grow a little, so I measure the cost and keep the new text short."
       ],
       null
