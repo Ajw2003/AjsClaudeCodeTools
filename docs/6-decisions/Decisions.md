@@ -7,6 +7,11 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-22 - Unattended mode: three guards relax to a note
+
+**Decision.** When `HOUSE_RULES_UNATTENDED=on`, the whole-file Write guard, the big-file commit guard and the Claude-credit check allow the action and say so in a note, instead of refusing. Attended they refuse exactly as before. The destructive-command guard and main-branch guard do not change. aj approved this in the coordinator session on 2026-11-22, after Claude Code's auto-mode safety check refused the builder's edit; the edit was then made directly in the coordinator session.
+**Why.** Each refusal needs aj to answer ("approval by name", "LFS approved", the credit line), and nobody is there overnight, so the run would stop on it. The notes list what was allowed so the morning review can undo it. A note could be lost on the guard's two allow paths; they now carry it. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
+
 ## 2026-11-22 - Unattended mode: rule text overridden by the session note, not forked
 
 **Decision.** The rules files are not forked for unattended runs. The unattended SessionStart note says the wait-for-the-user and ask-before instructions are overridden for this run, and versioncheck emits one line instead of the update-and-wait banner. aj approved these in the coordinator session on 2026-11-22.

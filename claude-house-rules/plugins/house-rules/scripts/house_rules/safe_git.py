@@ -960,6 +960,9 @@ def _event_guard_main():
         if docs_note:
             _dc = out["hookSpecificOutput"].get("additionalContext")
             out["hookSpecificOutput"]["additionalContext"] = (_dc + " " if _dc else "") + docs_note
+        if note_ctx:  # a note must not be lost because the command was let through silently
+            _nc = out["hookSpecificOutput"].get("additionalContext")
+            out["hookSpecificOutput"]["additionalContext"] = (_nc + " " if _nc else "") + note_ctx
         emit(out)
         return 0
 
