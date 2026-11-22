@@ -2231,4 +2231,84 @@ commit_case("pickup: another branch's recent save is named in one line",
             "Other branches with a save under 24 h old: AjsAgent/other" in _pk_text, "got %r" % _pk_text[-300:])
 
 
+# --- the visual loop ledger (#566) ---------------------------------------------------------------
+import tempfile
+import shutil
+_LG = os.path.join(HERE, "scripts", "ledger.py")
+
+
+def _lg(*a, **env):
+    r = subprocess.run([sys.executable, _LG] + list(a), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       universal_newlines=True, env=dict(os.environ, **env))
+    return r.returncode, r.stdout + r.stderr
+
+
+def _lg_feature(d, rounds):
+    """rounds: list of lists of (PASS|FAIL, image or None) for C1, C2"""
+    open(os.path.join(d, "img.png"), "w").write("x")
+    open(os.path.join(d, "criteria.md"), "w").write(
+        "C1. Title is visible | proof: still | page: a.html\nC2. Button is blue | proof: still | page: a.html\n")
+    for n, rows in enumerate(rounds, 1):
+        lines = ["# Round %d" % n] + ["C%d: %s - shows a thing - %s" % (i, v, im) for i, (v, im) in enumerate(rows, 1)]
+        ok = all(v == "PASS" for v, _ in rows)
+        open(os.path.join(d, "round-%d.md" % n), "w").write("\n".join(lines) + "\nSTATUS: %s\n" % ("pass" if ok else "fail"))
+
+
+_lg_tmp = tempfile.mkdtemp(prefix="ledger-test-")
+try:
+    def _fresh(name, rounds):
+        d = os.path.join(_lg_tmp, name)
+        os.makedirs(d)
+        _lg_feature(d, rounds)
+        return d
+    P = ("PASS", "img.png")
+    F = ("FAIL", "img.png")
+    d = _fresh("ok", [[P, P]])
+    code, out = _lg("check", d)
+    commit_case("ledger: a valid criteria file and round pass check", code == 0, out)
+    d = _fresh("miss", [[P, P]])
+    t = open(os.path.join(d, "round-1.md")).read().replace("C2: PASS - shows a thing - img.png\n", "")
+    open(os.path.join(d, "round-1.md"), "w").write(t)
+    code, out = _lg("check", d)
+    commit_case("ledger: a round missing a criterion fails check", code == 1 and "C2" in out, out)
+    d = _fresh("noimg", [[P, ("PASS", "gone.png")]])
+    code, out = _lg("check", d)
+    commit_case("ledger: a verdict citing a missing image fails check", code == 1 and "gone.png" in out, out)
+    d = _fresh("badstatus", [[P, P]])
+    t = open(os.path.join(d, "round-1.md")).read().replace("C2: PASS", "C2: FAIL")
+    open(os.path.join(d, "round-1.md"), "w").write(t)
+    code, out = _lg("check", d)
+    commit_case("ledger: STATUS pass with a FAIL line fails check", code == 1 and "STATUS" in out, out)
+    code, out = _lg("status", _fresh("s1", [[P, F]]))
+    commit_case("ledger: status at round 1 failing says NEXT: fix", code == 1 and "NEXT: fix" in out and "C2" in out, out)
+    code, out = _lg("status", _fresh("s2", [[P, P]]))
+    commit_case("ledger: status at a passing round says NEXT: done", code == 0 and "NEXT: done" in out, out)
+    d = _fresh("s3", [[P, F]] * 4)
+    code, out = _lg("status", d)
+    commit_case("ledger: status at round 4 failing says NEXT: blocked", code == 1 and "NEXT: blocked" in out and "blocked.md" in out, out)
+    code, out = _lg("new-round", d)
+    commit_case("ledger: new-round refuses at the cap", code == 1 and "refusing" in out, out)
+    d = _fresh("n1", [[P, P]])
+    code, out = _lg("new-round", d)
+    commit_case("ledger: new-round refuses after a pass", code == 1 and "refusing" in out, out)
+    d = _fresh("n2", [[P, F]])
+    code, out = _lg("new-round", d)
+    commit_case("ledger: new-round writes the next skeleton", code == 0 and "not yet judged" in open(os.path.join(d, "round-2.md")).read(), out)
+    bad = os.path.join(_lg_tmp, "bad.json")
+    open(bad, "w").write("{not json")
+    code, out = _lg("status", _fresh("s4", [[P, F]]), HOUSE_RULES_VISUAL_FILE=bad)
+    commit_case("ledger: a bad rules/visual.json is reported in words and the default used",
+                "could not be read" in out and "NEXT: fix" in out, out)
+    code, out = _lg("check")
+    commit_case("ledger: bad usage exits 4", code == 4, out)
+finally:
+    shutil.rmtree(_lg_tmp, ignore_errors=True)
+
+_sk = os.path.join(HERE, "skills", "visual-loop", "SKILL.md")
+_skt = open(_sk, encoding="utf-8").read() if os.path.isfile(_sk) else ""
+commit_case("visual-loop skill exists with frontmatter and names ledger.py, waitfor.py, visualcheck.py and the reviewer",
+            _skt.startswith("---\nname: visual-loop\n") and "description:" in _skt
+            and all(w in _skt for w in ("ledger.py", "waitfor.py", "visualcheck.py", "@house-rules:reviewer")), "skill text missing pieces")
+
+
 finish()
