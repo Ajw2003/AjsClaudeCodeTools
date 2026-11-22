@@ -1,0 +1,143 @@
+Live QA on Linux: the equivalent of aj's QA steps, run 2026-11-22 against branch ajsagent/eloquent-mayer-0ayp82
+(plugin 2.88.0). Nothing here ran on aj's PC (Windows); each step says what the Linux run does and does not prove.
+
+How the live sessions were run
+  python3 live_qa.py 4   and   python3 live_qa.py 5     (a throwaway script kept in the session scratch folder, because
+  code files are locked during QA; this text records what it did)
+  Each starts one real headless session on the haiku model:
+    claude -p --plugin-dir <repo>/claude-house-rules/plugins/house-rules
+           --settings '{"enabledPlugins":{"house-rules@aj-house-rules":false}}'   (the installed copy is off)
+           --permission-mode acceptEdits --allowedTools Bash,Write,Edit,Read,SendUserFile
+           --output-format stream-json --verbose --include-hook-events "<aj's prompt, word for word>"
+  in a scratch git repo in the OS temp folder (a page-style.json, one commit, branch AjsAgent/live-test).
+  The session reported: plugin house-rules 2.88.0, source inline, file-send tool SendUserFile available.
+
+Step 3 (install the branch): python3 tools/use_branch.py ajsagent/eloquent-mayer-0ayp82, throwaway CLAUDE_CONFIG_DIR
+  marketplace ref : ajsagent/eloquent-mayer-0ayp82
+  plugin version  : 2.88.0
+  checkout commit : aa6ddee            (the pushed branch head at that moment)
+  OK: installed build matches the request.
+  Proves: the branch installs and reports 2.88.0. Does not prove: the same on Windows.
+
+Step 7 (switch back): python3 tools/use_branch.py main
+  marketplace ref : (none - default branch)   plugin version : 2.87.0   checkout commit : 4c5161e   OK.
+
+Step 6 (waitfor, Linux form of the page's command):
+  python3 .../scripts/waitfor.py --kind command --check "exit 1" --first-check 1 --interval 1 --deadline 4
+  waitfor: exit 1: first check at 1s, then every 1s, deadline 4s (kind command)
+  waitfor: check 1 at 1s: not yet   ... check 4 at 4s: not yet
+  waitfor: timed out: gave up after 4s; still unknown: the check exited 1 with no output
+  exit code 3 after 4 seconds.
+  Proves: four "not yet" lines, then the timeout, exit 3. Does not prove: that "exit 1" runs the same way through
+  Windows' command shell (the Linux shell ran it here).
+
+Step 4 (aj's words: "Write a one-section page about what you changed today under docs/plans and finish.")
+  23 tool calls. The agent wrote docs/plans/today-changes.html by hand (it did not use the page builder).
+  - "House rules, send the page: today-changes.html must be sent to aj with the file-send tool before the turn
+    ends, and sent again after any later change." appeared after each page write or edit (5 times).
+  - The agent called SendUserFile after the first version, and AGAIN after it edited the page later: 2 sends.
+  - PreToolUse:SendUserFile (the sendcheck hook) ran before each send and was silent (no broken pictures).
+  - The end-of-turn page-sent check never had to block: every change had been sent.
+  - Found: at Stop, the new visual check said "this turn changed today-changes.html, but after the last change it
+    has no: capture, ledger check, image read" (1 time). An ordinary status page triggered it.
+  - Not a product fault: "artifact custody" said the page was outside the project directory, because the scratch
+    repo itself sits under /tmp.
+
+Step 5 (aj's words: "Send me docs/plans/2026-10-19-restructure-step-1-qa.html")
+  73 tool calls (the model also ran several editor passes and edited the page's wording; that is the house rules'
+  page habit, not part of this work). 3 SendUserFile calls.
+  The first send produced this hook response, exactly the note the QA page promises:
+    house-rules send check: <repo>/docs/plans/2026-10-19-restructure-step-1-qa.html was repaired: embedded
+    2026-10-19-restructure-step-1-qa-pics/before-phone-light.png, 2026-10-19-restructure-step-1-qa-pics/after-phone-light.png.
+    The send goes ahead.
+  Later sends ran the hook silently (nothing left to repair).
+  Proves: the real SendUserFile hook payload names its file field `files` (confirmed), and the in-place repair works
+  inside a real session on a real old page.
+  Found: the visual check at Stop fired 2 times on this page too.
+
+What the live runs did not cover
+  - aj's PC (Windows, PowerShell), and Windows paths, shells and quoting.
+  - The "block once if a made page was never sent" path: the test agent always sent its pages, so it only ran on
+    recorded transcripts and made-up payloads.
+  - Step 1 (open the QA page on the phone and the PC) and step 2 (confirm the machine) need aj.
+  - The visual-loop skill inside a real session (it was proven separately, in docs/qa/loop-proof/).
+
+----------------------------------------------------------------------------------------------------------
+Rerun after "QA failed: wait clocks, fix the visual reminder noise" (the fix: a page that carries
+`<!-- house-rules make_page ... -->` or `<meta name="house-rules-page">` in its first 4096 characters is no longer
+treated as a visual file by the end-of-turn visual check).
+
+Replay of the two REAL first-run transcripts, run by the builder with the same turn splitting as the Stop hook
+  step 4: reminder fired in 1 of 1 turns before the fix, 0 after.
+  step 5: reminder fired in 1 of 2 turns before the fix, 0 after (live it fired 2 times; the replay does not model
+          a Stop-hook retry).
+Full suites on the fixed build, run alone: verify.py 1428 of 1428 passed; tools/verify_tools.py exit 0.
+
+New real headless session, step 4, same prompt, fixed build (plugin 2.88.0 loaded inline)
+                                              first run      rerun on the fixed build
+  visual-reminder note at Stop                      1                 0
+  "send the page" reminders after writes            5                12
+  SendUserFile calls                                2                 3
+  send hook (sendcheck) responses                   2                 3
+
+New real headless session, step 5, same prompt, fixed build (plugin 2.88.0 loaded inline)
+                                              first run      rerun on the fixed build
+  visual-reminder note at Stop                      2                 0
+  SendUserFile calls                                3                 1
+  "was repaired: embedded" (both pictures)          1                 1
+  The repair note was identical in both runs: "house-rules send check: <repo>/docs/plans/2026-10-19-restructure-step-1-qa.html
+  was repaired: embedded 2026-10-19-restructure-step-1-qa-pics/before-phone-light.png, ...after-phone-light.png. The send goes ahead."
+Result: the visual-reminder noise is gone in both real sessions, and the send reminder, the send hook and the in-place repair
+still work.
+
+----------------------------------------------------------------------------------------------------------
+Tests run for the pull request (aj: "test what you can yourself and open a pr"), 2026-11-22
+
+Three more real headless sessions on the fixed build (plugin 2.88.0 inline), the paths that had only run on made-up data
+  "Write a one-section page about today's date under docs/plans and finish. Do not send it to me."
+    The agent obeyed and did not send. At the end of the turn the hook blocked once with three checkpoints; the third was
+    the new one: "send page: A page written or rebuilt this turn is sent to aj with the file-send tool, after its last
+    change. Fix: send <page> with the file-send tool (display render) as the last action." It blocked once, then let the
+    turn end (the block-once rule). So the never-sent path is verified live.
+  "Run `sleep 3` in the background with NO timeout parameter, then finish."
+    The guard refused: "This background command has no timeout, so nothing would stop it if it hung (the tool default is
+    30 minutes). Run it again with the timeout parameter set to 1200000 or less (milliseconds; the longest wait in
+    rules/waits.json). To check the wait every minute, run scripts/waitfor.py."
+    Found: the unchecked-wait note at the end of that turn also listed the REFUSED launch ("started this turn in the
+    background and never checked: Sleep 3 seconds in background"), although it never started. A false alarm; the note should
+    skip a launch whose result is a refusal. Not fixed (code edits are closed during QA).
+  "Run `sleep 3` in the background with the timeout parameter set to 20000 and do not check on it."
+    Allowed. The end-of-turn note listed it: "started this turn in the background and never checked: ... Check with
+    scripts/waitfor.py." A true positive.
+
+Also found, by accident, while writing this very file: the wait guard refused a command because quoted TEXT inside it
+contained the words "timeout" and a number over 60 (it read them as a foreground timeout). The foreground-wait pattern
+matches anywhere in the command, including inside quoted text and heredocs. A false positive; not fixed (locked in QA).
+
+What GitHub's CI will see (a CI-like run: Python 3.12, a stripped environment with no Node and no browser path)
+  version-bump check (what CI runs on a pull request): PASS, 2.87.0 to 2.88.0.
+  tools/verify_tools.py 53 of 53 PASS; prompt-workshop 22 of 22 PASS; agent-router 41 of 41 PASS.
+  claude-house-rules verify.py: 4 of 1425 checks FAIL. Main passes the same core part in the same environment (205 of 205).
+    1. core "handover stays silent on its stand-down": the check runs the hook in the repository folder, so it reads this
+       branch's loop state (stage qa, 14 recorded issues, committed by the design loop). With no GitHub access the hook
+       prints "Labels were taken from the changes this hook recorded, because the GitHub read failed", so the check
+       fails. Main's state is stage done with no issues, so it never reads labels. This goes away when the loop state
+       goes to done, or when the check runs in a scratch folder.
+    2. make_page, three sendcheck/static-picture tests expect the note "was repaired" from a browser re-check. With no
+       browser the real hook still repairs (checked by hand: embedded pictures 2 to 4) and says the re-check did not
+       run, so the product works; the tests should skip, as the other browser cases do.
+  Both are test-side fixes. They are not made yet because code edits are closed during QA: they need aj's go-ahead
+  ("QA failed: wait clocks" plus what to fix, or "skip design" for one small change).
+
+
+----------------------------------------------------------------------------------------------------------
+Fixes after "QA failed: wait clocks. fix the test issues and the two false alarms" (2026-11-22)
+
+  Fixed: the three browser-dependent make_page cases now skip (with the hook's real output) when no browser re-check ran,
+  and still assert the embedded pictures; the core handover check runs in a scratch folder; the unchecked-wait note skips a
+  launch the guard refused; the foreground-wait pattern matches `timeout` only at command position (heredoc bodies stripped).
+  Full suites run alone on this machine: verify.py 1434 of 1434 (core 206, safe_git 275, design_loop 498, writing 22,
+  delegation 181, docs 167, make_page 85); tools/verify_tools.py 55 of 55, exit 0.
+  CI-like run (Python 3.12, stripped environment, no browser): verify.py all parts PASS, 1434 of 1434; 5 SKIP lines, three of
+  them the new browser skips. GitHub's own CI result is not read yet.
+  Not run: the two false-alarm fixes in a new real headless session (verified by the safe_git part cases and by reading the diff).

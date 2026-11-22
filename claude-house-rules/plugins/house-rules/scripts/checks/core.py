@@ -336,8 +336,8 @@ art_case(
 )
 art_case(
     "trace",
-    "an .html report written inside the project is left alone",
-    r"C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\docs\architecture-review.html",
+    "an .html report written inside the project but outside docs/ is left alone",
+    r"C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\build\architecture-review.html",
 )
 for _ext in ("csv", "json", "svg", "pdf"):
     art_case(
@@ -752,17 +752,25 @@ else:
 # Tracing its stand-down would announce a compliant card's own compliance, which the rules
 # forbid, and would put a line on the end of every ordinary turn. Silence there already means
 # "I looked and there was nothing to do".
-code, out, err = run_hook(
-    "handover",
-    json.dumps(
-        {
-            "session_id": "verify",
-            "hook_event_name": "Stop",
-            "stop_hook_active": False,
-            "last_assistant_message": "a reply with no fenced block",
-        }
-    ),
-)
+_ho_cwd, _ho_scratch = os.getcwd(), tempfile.mkdtemp(prefix="handover-quiet-")
+os.chdir(_ho_scratch)  # no loop state here, so the hook cannot read this branch's .claude/house-rules-loop.json
+try:
+    _ho_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+    code, out, err = run_hook(
+        "handover",
+        json.dumps(
+            {
+                "session_id": "verify",
+                "hook_event_name": "Stop",
+                "stop_hook_active": False,
+                "last_assistant_message": "a reply with no fenced block",
+            }
+        ),
+        env=_ho_env,
+    )
+finally:
+    os.chdir(_ho_cwd)
+    shutil.rmtree(_ho_scratch, ignore_errors=True)
 if not out.strip() and "never announces its own compliance" in rules_corpus():
     report("PASS", "handover stays silent on its stand-down, and the rule that requires it still stands")
     print("          the one handler where tracing would break a rule rather than cost tokens")
@@ -1229,7 +1237,7 @@ _hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
 # start_remote_control MCP tool. And noask (unattended mode), which runs only on AskUserQuestion and ExitPlanMode.
 # 11, not 10, since promptran (#149): one process per prompt-capable tool call, measured at about
 # the same cost as artifact's, and the only way to tell the timer an action actually ran.
-_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] or "noask" in h["command"] for h in g["hooks"])]
+_non_agent = [g for g in _hj.get("PreToolUse", []) + _hj.get("PostToolUse", []) if not any("agentcap" in h["command"] or "guardgithub" in h["command"] or "pagecheck" in h["command"] or "closablemerge" in h["command"] or "rclink" in h["command"] or "noask" in h["command"] or "sendcheck" in h["command"] for h in g["hooks"])]
 _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
@@ -2635,6 +2643,11 @@ _fs_type(_fs_c, "builders on")
 report("PASS" if _fs_env_seen(_fs_c, "HOUSE_RULES_DELEGATION") == "on"
        and _fs_env_seen(_fs_b, "HOUSE_RULES_DELEGATION") == "off" else "FAIL",
        "feature switches (c): a folder 'builders on' beats an everywhere 'builders off'")
+_fs_w = _fs_dir("waits")
+_fs_type(_fs_w, "waits off")
+report("PASS" if _fs_json(os.path.join(_fs_w, ".claude", "house-rules-mode.json")) == {"waits": "off"}
+       and _fs_env_seen(_fs_w, "HOUSE_RULES_WAITS") == "off" else "FAIL",
+       "feature switches (waits): 'waits off' is saved and a later hook call sees WAITS=off")
 _fs_g = _fs_dir("repo", git=True)
 _fs_type(_fs_g, "house rules off")
 _fs_deny = run_hook("guard", json.dumps({"session_id": "fs", "cwd": _fs_g, "tool_name": "Bash",

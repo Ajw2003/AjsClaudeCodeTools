@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 300" role="img" aria-label="What a check produces: phone and desktop screenshots, a video, and a numbered frame sheet">
+<style>text{font-family:Helvetica,Arial,sans-serif;font-size:14px;fill:#17202e}.p{fill:#fff;stroke:#566174;stroke-width:2}.b{fill:#e3eafc}.f{fill:#dbe3f7;stroke:#2f5bd3}.t{font-weight:700}</style>
+<rect width="360" height="300" class="b"/>
+<text x="16" y="26" class="t">One check produces</text>
+<rect x="20" y="42" width="34" height="68" rx="6" class="p"/><text x="14" y="130">phone</text>
+<rect x="76" y="52" width="86" height="58" rx="4" class="p"/><text x="90" y="130">desktop</text>
+<text x="14" y="150">light and dark each</text>
+<rect x="196" y="42" width="140" height="68" rx="4" class="p"/><polygon points="250,62 250,90 276,76" fill="#2f5bd3"/><text x="240" y="130">video</text>
+<text x="16" y="186" class="t">Frame sheet, with times</text>
+<g><rect x="16" y="198" width="74" height="40" class="f"/><rect x="98" y="198" width="74" height="40" class="f"/><rect x="180" y="198" width="74" height="40" class="f"/><rect x="262" y="198" width="74" height="40" class="f"/></g>
+<text x="30" y="223">0.0s</text><text x="112" y="223">0.5s</text><text x="194" y="223">1.0s</text><text x="276" y="223">1.5s</text>
+<text x="16" y="266">Named after the criterion it proves.</text>
+<text x="16" y="286">Motion is measured, not just seen.</text>
+</svg>

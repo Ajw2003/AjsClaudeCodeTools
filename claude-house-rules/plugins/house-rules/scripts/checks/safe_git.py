@@ -1942,10 +1942,14 @@ report("PASS" if _rr_o[0] == 0 and not _rr_denied(_rr_o[1]) and "rerun count cou
 _rr_reset()
 
 # --- speed switches (#525): a foreground wait is refused with its background form ---
-def _wait_run(cmd, background=None):
+def _wait_run(cmd, background=None, timeout=None):
     ti = {"command": cmd}
     if background is not None:
         ti["run_in_background"] = background
+    if background and timeout is None:
+        timeout = 595000  # #562: a background launch must carry a timeout
+    if timeout is not None:
+        ti["timeout"] = timeout
     pl = {"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash", "tool_input": ti}
     return run_hook("guard", json.dumps(pl), env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]
 
@@ -1956,6 +1960,31 @@ report("PASS" if '"permissionDecision":"deny"' in _wait_run(_wait_shot) and "run
 report("PASS" if '"permissionDecision":"deny"' in _wait_run("timeout 5m python long.py")
        and '"permissionDecision":"deny"' not in _wait_run("timeout 30 python short.py")
        else "FAIL", "wait guard: timeout over 60 seconds is refused, timeout 30 is not")
+# #560: the foreground limit is a setting (rules/waits.json), overridden by environment variables
+def _wait_cfg(cmd, **env_extra):
+    pl = {"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash", "tool_input": {"command": cmd}}
+    rc, out, err = run_hook("guard", json.dumps(pl), env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off", **env_extra))
+    return '"permissionDecision":"deny"' in out, err
+
+
+_wait_tmp = tempfile.mkdtemp(prefix="waits-")
+_wait_file = os.path.join(_wait_tmp, "waits.json")
+with open(_wait_file, "w") as _f:
+    json.dump({"foreground_limit_seconds": 120}, _f)
+_wait_bad = os.path.join(_wait_tmp, "bad.json")
+with open(_wait_bad, "w") as _f:
+    json.dump({"foreground_limit_seconds": "soon"}, _f)
+_w90 = "timeout 90 python x.py"
+report("PASS" if _wait_cfg(_w90)[0] and not _wait_cfg(_w90, HOUSE_RULES_WAIT_FOREGROUND_LIMIT="120")[0]
+       else "FAIL", "wait settings: timeout 90 is refused at the default and allowed with the limit set to 120")
+report("PASS" if not _wait_cfg(_w90, HOUSE_RULES_WAITS_FILE=_wait_file)[0] else "FAIL",
+       "wait settings: a changed number in the settings file changes the result")
+_w = _wait_cfg(_w90, HOUSE_RULES_WAITS_FILE=os.path.join(_wait_tmp, "missing.json"))
+report("PASS" if _w[0] and "could not be read" in _w[1] else "FAIL",
+       "wait settings: a missing file is reported in words and the default (60) applies")
+_w = _wait_cfg(_w90, HOUSE_RULES_WAITS_FILE=_wait_bad)
+report("PASS" if _w[0] and "not a positive number" in _w[1] else "FAIL",
+       "wait settings: a bad value is reported in words and the default (60) applies")
 report("PASS" if '"permissionDecision":"deny"' not in _wait_run(_wait_shot, background=True)
        and '"permissionDecision":"deny"' not in _wait_run("python -c 'import time; time.sleep(1)'")
        else "FAIL", "wait guard: the same loop in the background is allowed, and a one-off command is not touched")
@@ -2052,5 +2081,115 @@ report("PASS" if '"permissionDecision":"deny"' not in _un_cr_on and "credit rule
        "unattended: a Claude credit line is allowed with a note; attended the commit is still refused")
 print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
 
+
+# --- #562: a background launch with no deadline is refused; an unchecked one is reported once ---
+_bg_big, _bg_ok = (_wait_run("make", True, t) for t in (1300000, 1200000))
+_bg_missing = run_hook("guard", json.dumps({"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash",
+                       "tool_input": {"command": "make", "run_in_background": True}}),
+                       env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]
+_bgd = '"permissionDecision":"deny"'
+report("PASS" if _bgd in _bg_missing and "1200000" in _bg_missing and "waitfor.py" in _bg_missing else "FAIL",
+       "bg deadline: a background command with no timeout is refused, naming 1200000 ms and waitfor.py")
+report("PASS" if _bgd in _bg_big and "1200000" in _bg_big else "FAIL",
+       "bg deadline: a timeout over the largest deadline is refused")
+report("PASS" if _bgd not in _bg_ok else "FAIL", "bg deadline: a timeout inside the limit passes")
+report("PASS" if _bgd in _wait_run("timeout 90 python x.py") else "FAIL", "bg deadline: a foreground timeout 90 is still refused")
+
+
+def _bg_lines(name, check):
+    rows = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}}),
+            json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b1", "name": "Bash",
+                        "input": {"command": "make", "run_in_background": True, "timeout": 600000}}]}}),
+            json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "b1",
+                        "content": "Command running in background with ID: bk7x2. Output is being written to: /tmp/t/bk7x2.output"}]}})]
+    if check:
+        rows.append(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b2",
+                    "name": "Read", "input": {"file_path": "/tmp/t/bk7x2.output"}}]}}))
+    return _hand_transcript(name, rows)
+
+
+def _bg_stop(path, sid):
+    pl = json.dumps({"session_id": sid, "hook_event_name": "Stop", "stop_hook_active": False, "transcript_path": path,
+                     "last_assistant_message": "ok"})
+    env = dict(os.environ)
+    env["HOUSE_RULES_COMMIT_CHECK"] = "off"
+    return run_hook("handover", pl, env=env)[1]
+
+
+_bg_sid = "bgnote-%d" % os.getpid()
+_bg_u = _bg_lines("bg-unchecked", False)
+_bg_first, _bg_again = _bg_stop(_bg_u, _bg_sid), _bg_stop(_bg_u, _bg_sid)
+report("PASS" if "never checked" in _bg_first and "decision" not in _bg_first and "never checked" not in _bg_again
+       else "FAIL", "bg note: an unchecked background task is reported once, not blocking, and not again")
+_bg_w_env = env_in(_rr_dir, HOUSE_RULES_RERUNS="off", HOUSE_RULES_WAITS="off")
+_bg_w_pl = json.dumps({"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash",
+                       "tool_input": {"command": "make", "run_in_background": True}})
+report("PASS" if _bgd not in run_hook("guard", _bg_w_pl, env=_bg_w_env)[1] else "FAIL",
+       "bg switch: with HOUSE_RULES_WAITS=off a background launch with no timeout is allowed")
+os.environ["HOUSE_RULES_WAITS"] = "off"
+try:
+    _bg_off_note = _bg_stop(_bg_lines("bg-unchecked-off", False), _bg_sid + "w")
+finally:
+    os.environ.pop("HOUSE_RULES_WAITS", None)
+report("PASS" if "never checked" not in _bg_off_note else "FAIL",
+       "bg switch: with HOUSE_RULES_WAITS=off no unchecked-wait note appears (unset: the cases above)")
+report("PASS" if "never checked" not in _bg_stop(_bg_lines("bg-checked", True), _bg_sid + "c") else "FAIL",
+       "bg note: a task whose output file was read is not reported")
+
+
+def _bg_with(name, later):
+    p = _bg_lines(name, False)
+    with open(p, "a", encoding="utf-8") as fh:
+        fh.write("\n" + json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b9",
+                 "name": later[0], "input": later[1]}]}}))
+    return p
+
+
+# #562 defect: only an actual run or a lookup counts, not a prompt that merely mentions waitfor.py
+report("PASS" if "never checked" in _bg_stop(_bg_with("bg-agentprompt", ("Agent", {"prompt": "use scripts/waitfor.py"})), _bg_sid + "a") else "FAIL",
+       "bg note: a later Agent prompt that mentions waitfor.py does not clear an unchecked launch")
+report("PASS" if "never checked" not in _bg_stop(_bg_with("bg-bashwait", ("Bash", {"command": "python3 scripts/waitfor.py x"})), _bg_sid + "b") else "FAIL",
+       "bg note: a later Bash command that runs waitfor.py clears it")
+report("PASS" if "never checked" not in _bg_stop(_bg_with("bg-readout", ("Read", {"file_path": "/tmp/t/bk7x2.output"})), _bg_sid + "r") else "FAIL",
+       "bg note: a later Read of the task's .output file clears it")
+
+def _bg_redir(name, cmd, later):
+    rows = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}}),
+            json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b1", "name": "Bash",
+                        "input": {"command": cmd, "run_in_background": True, "timeout": 600000}}]}}),
+            json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "b1",
+                        "content": "started"}]}})]
+    if later:
+        rows.append(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "b2",
+                    "name": "Bash", "input": {"command": later}}]}}))
+    return _hand_transcript(name, rows)
+
+
+_bg_rcmd = 'python3 verify.py > part9.out 2>&1; echo "PRC=$?" >> part9.out'
+report("PASS" if "never checked" not in _bg_stop(_bg_redir("bg-redir-read", _bg_rcmd, "grep FAIL part9.out"), _bg_sid + "d") else "FAIL",
+       "bg note: a launch redirecting to a file that is later grep'd is not reported")
+report("PASS" if "never checked" in _bg_stop(_bg_redir("bg-redir-none", _bg_rcmd, "ls"), _bg_sid + "e") else "FAIL",
+       "bg note: a launch redirecting to a file that is never read is reported")
+report("PASS" if "never checked" in _bg_stop(_bg_redir("bg-devnull", "make > /dev/null 2>&1", "echo x > /dev/null"), _bg_sid + "f") else "FAIL",
+       "bg note: > /dev/null adds no token, so a later /dev/null mention does not clear a launch")
+# wait-clocks false alarms: a refused background launch is not "unchecked"; `timeout N` counts only at command position
+_bg_ref = _bg_lines("bg-refused", False)
+with open(_bg_ref, encoding="utf-8") as _fh:
+    _bg_rows = _fh.read().split("\n")
+_bg_rows[2] = json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "b1", "is_error": True,
+                          "content": "This background command has no timeout, so nothing would stop it"}]}})
+with open(_bg_ref, "w", encoding="utf-8") as _fh:
+    _fh.write("\n".join(_bg_rows))
+report("PASS" if "never checked" not in _bg_stop(_bg_ref, _bg_sid + "x") else "FAIL",
+       "bg note: a launch the guard refused is not reported as unchecked")
+report("PASS" if "never checked" in _bg_stop(_bg_lines("bg-allowed", False), _bg_sid + "y") else "FAIL",
+       "bg note: an allowed unchecked launch is still reported")
+_wd = '"permissionDecision":"deny"'
+report("PASS" if _wd not in _wait_run('echo "raise timeout 20000 later"') and
+       _wd not in _wait_run("cat <<'EOF'\nset timeout 20000\nEOF") else "FAIL",
+       "wait guard: a mention of timeout 20000 in quoted text or a heredoc body is allowed")
+report("PASS" if _wd in _wait_run("cd /x && timeout 120 sleep 1") and _wd in _wait_run("timeout 90 x")
+       and _wd not in _wait_run("timeout 20 x") else "FAIL",
+       "wait guard: timeout 120 after && and timeout 90 are refused, timeout 20 is allowed")
 
 finish()

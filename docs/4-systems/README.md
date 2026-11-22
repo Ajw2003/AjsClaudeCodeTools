@@ -17,6 +17,7 @@ works, invariants, and traps that have already cost time.
 | [work-tracking.md](work-tracking.md) | Letting aj follow every layer of work a project thread delegates: transcript links and helper work trails |
 | [audit-fixes.md](audit-fixes.md) | The six-step order for fixing the 45 findings of the 2026-11-05 audits (planned) |
 | [flexible-pages.md](flexible-pages.md) | Letting a page take any format that meets seven basics, checked by `page_criteria.py` instead of refused for lacking the builder's mark |
+| [wait-and-visual-checks.md](wait-and-visual-checks.md) | Giving every wait a clock and deadline, checking visual work with captures and an unattended loop, sending every made or changed page, and building pictures into the page (built, waiting on QA) |
 | [offshoot-plugins.md](offshoot-plugins.md) | `prompt-workshop` and `agent-router` — the two v0.1 nudge plugins built on the same formula |
 
 ## Considered and deliberately left out

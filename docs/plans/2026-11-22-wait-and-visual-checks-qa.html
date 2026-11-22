@@ -1,0 +1,1588 @@
+<!doctype html>
+<!-- house-rules make_page 2.88.0 -->
+<meta charset="utf-8">
+<meta name="house-rules-page" content="qa">
+<title>QA: Wait Clocks, Visual Checks, Page Sending And Pictures</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#566174; --line:#d5dbe6;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --you:#b35f00; --you-soft:#fdeed9;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.55 var(--body)}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:1.9rem;font-weight:800}
+h2{font-size:1.45rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.ico{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* stepper */
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stepper button{border:0;background:none;display:grid;justify-items:center;gap:4px;padding:4px 0;font-size:.72rem;color:var(--muted)}
+.stepper .bar{width:100%;height:6px;border-radius:3px;background:var(--line)}
+.stepper button.done .bar{background:var(--accent)}
+.stepper button[aria-current="step"]{color:var(--fg);font-weight:700}
+.stepper button[aria-current="step"] .bar{background:var(--accent)}
+
+.panel{display:grid;gap:18px}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.lead{font-size:1.1rem}
+
+/* at-a-glance strip */
+.glance{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.g{display:grid;justify-items:center;gap:4px;width:56px;text-align:center;font-size:.72rem;color:var(--muted)}
+.g span.c{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
+.arrow{color:var(--muted);font-size:1.1rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
+.glance .lk .ico{width:14px;height:14px}
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p,.crb li{font-size:.9rem}
+.crb ul.cl{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.sd h3{display:flex;gap:8px;align-items:center}
+.sd .back{padding-left:0}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.key i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent)}
+.key i.y{border-radius:4px;background:var(--you-soft);border-color:var(--you)}
+
+/* stage list */
+.stages{display:grid;gap:8px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.st > summary{list-style:none;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;cursor:pointer;min-height:48px}
+.st > summary::-webkit-details-marker{display:none}
+.st .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.st.you .c{border-radius:11px;background:var(--you-soft);color:var(--you)}
+.st.you{border-color:var(--you)}
+.st .nm b{display:block}
+.st .nm small{color:var(--muted);font-size:.85rem}
+.more{font-size:.78rem;color:var(--accent);font-weight:700;white-space:nowrap}
+details[open] > summary .more::after{content:" ▲"} details:not([open]) > summary .more::after{content:" ▼"}
+.detail{padding:0 14px 14px 68px;display:grid;gap:8px;font-size:.92rem}
+@media (max-width:420px){.detail{padding-left:14px}}
+.row{display:grid;grid-template-columns:72px 1fr;gap:8px}
+.row > span:first-child{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.back{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--you);padding-left:12px}
+
+/* created / changed */
+.cc{display:grid;gap:8px}
+.ci{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.ci > summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;cursor:pointer;min-height:48px}
+.ci > summary::-webkit-details-marker{display:none}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ci b{display:block}
+.ci small{color:var(--muted);font-size:.86rem}
+.ci .detail{padding:0 14px 14px 14px}
+.fromto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:.88rem}
+.fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
+.fromto span.to{background:var(--accent-soft)}
+.flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch;font-size:.84rem}
+.flow > span{border-radius:8px;padding:8px;background:var(--bg);display:grid;gap:2px;align-content:start;min-width:0}
+.flow > span.mid{background:var(--accent-soft)}
+.flow > i{align-self:center;color:var(--muted);font-style:normal}
+.flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+@media (max-width:479px){.flow{grid-template-columns:minmax(0,1fr)}.flow > i{justify-self:center;transform:rotate(90deg)}}
+.files{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.files h4{margin:0;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.frow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;align-items:baseline}
+.frow code{font-size:.82rem;word-break:break-all}
+.files .n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.parts{margin:0 0 4px;padding-left:18px;display:grid;gap:4px;font-size:.86rem}
+.parts li span:first-child{margin-right:8px}
+
+/* choices */
+.q{display:grid;gap:8px}
+.q h3{display:flex;gap:10px;align-items:flex-start}
+.qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input[type=radio]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.opt small{display:block;color:var(--muted);font-size:.86rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+.rec{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.rec .ico{width:12px;height:12px}
+.why{font-size:.88rem}
+.why summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:32px}
+.why p{margin-top:6px;color:var(--muted)}
+
+/* wrap-up */
+.wrapup{display:grid;gap:10px}
+.wu{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.wu .c{width:40px;height:40px;border-radius:10px;display:grid;place-items:center}
+.wu h3{margin-bottom:2px}
+.wu p,.wu li{font-size:.94rem}
+.wu ol{margin:4px 0 0;padding-left:20px;display:grid;gap:4px}
+.wu.do{border:2px solid var(--you)}
+.reply{display:grid;gap:8px}
+.reply pre{white-space:pre-wrap;margin:0;background:var(--card);border:1px dashed var(--accent);border-radius:10px;padding:12px;font-size:.92rem}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:12px;padding:14px 18px;font-weight:800;min-height:48px}
+.secondary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:700;min-height:48px}
+.nav{display:flex;justify-content:space-between;gap:10px}
+.nav .primary{margin-left:auto}
+.nextbox{position:sticky;bottom:0;z-index:3;background:var(--card);border:2px solid var(--you);border-radius:12px;padding:10px 14px;display:grid;gap:2px;font-size:.92rem}
+.nextbox b{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--you)}
+.wu li label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.wu li label > span{min-width:0;overflow-wrap:anywhere}
+.wu li code{font-size:.82rem;overflow-wrap:anywhere;word-break:break-all}
+.wu li input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--accent)}
+.status{font-size:.88rem;color:var(--muted)}
+.missing{color:var(--gap);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.panel{animation:in .2s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+<style>
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.g.done span.c{background:var(--ok-soft);color:var(--ok)}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+/* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+.pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+.pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+.pic img,.cmp img{display:block;max-width:100%;height:auto;background:var(--bg)}
+.pic,.pic button{width:100%;box-sizing:border-box}
+/* A tall screenshot shrunk to fit a short box is a sliver: fill the width and show its top instead. */
+.pic button img{width:100%;max-height:280px;object-fit:cover;object-position:top;border-radius:6px}
+.pic figcaption,.cmp figcaption{font-size:.86rem;color:var(--muted)}
+.pic,.cmp{margin:0}
+.cmp{display:grid;gap:6px;min-width:0}
+.cmp-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+body{overflow-wrap:anywhere}
+.crb p,.crb li,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
+@media (max-width:479px){.cr{grid-template-columns:minmax(0,1fr)}}
+.cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
+.cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cmp-slide{display:none;gap:6px;min-width:0}
+.cmp-frame{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.cmp-frame img{width:100%}
+.cmp-frame img + img{position:absolute;inset:0;height:100%;object-fit:fill;clip-path:inset(0 0 0 var(--pos,50%))}
+.cmp-slide input[type=range]{width:100%;accent-color:var(--accent);min-height:44px;margin:0}
+@media (max-width:639px){.cmp-side{display:none}.cmp-slide{display:grid}}
+dialog.lightbox{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:12px;width:min(96vw,960px);max-height:94vh;box-sizing:border-box;overflow:auto}
+dialog.lightbox::backdrop{background:rgba(0,0,0,.6)}
+dialog.lightbox img{display:block;width:100%;height:auto}
+dialog.lightbox p{margin-top:8px;font-size:.9rem}
+dialog.lightbox button{margin-top:10px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L3 15l3 3 8-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+</defs></svg>
+
+<!--
+  Handover page template (house-rules, issue #233). The approved format: four parts in this order -
+  In short, Changes, Choices, Wrap-up - and a part is left out only when it would be empty.
+  Copy this file, edit PAGE below, and nothing else. Every part keeps four rules:
+  detail only on tap; names, never bare numbers; one colour, one meaning (orange = the user acts,
+  green = done, nothing else orange); I check it first (phone width, light and dark, every tap,
+  a bare-number search). Rule: rules/detail/show-dont-tell.md.
+-->
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="eyebrow" id="eyebrow"></span>
+    <h1 id="title"></h1>
+  </header>
+  <nav class="stepper" aria-label="Steps" id="stepper"></nav>
+  <section class="panel" data-part="short" aria-labelledby="h-short">
+    <h2 id="h-short" tabindex="-1">In short</h2>
+    <div class="card">
+      <p class="lead" id="lead" data-basic="summary">Everything in the approved plan is built and tested here; I need you to try it on your PC in eight short steps and tell me whether it passes.</p>
+      <div class="key" id="key"></div>
+      <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
+      <p class="muted" style="font-size:.85rem" id="hint"></p>
+      <div class="sd" id="sd" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="panel" data-part="changes" aria-labelledby="h-changes" hidden>
+    <h2 id="h-changes" tabindex="-1">What this creates or changes</h2>
+    <p class="muted" id="cc-count"></p>
+    <div class="cc" id="cc"></div>
+  </section>
+  <section class="panel" data-part="choices" aria-labelledby="h-choices" hidden>
+    <h2 id="h-choices" tabindex="-1">Your choices</h2>
+    <p class="muted">My suggestion is marked, nothing is picked for you, and each has room for your own answer.</p>
+    <div id="qs" style="display:grid;gap:22px"></div>
+  </section>
+  <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
+    <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
+    <div class="wrapup" id="wrapup"></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.</label></li><li><label><input type="checkbox"> Check the machine details I am using: Windows 11, PowerShell 5.1, folder <code>C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools</code> (an old example from 2026-08-25, not confirmed). If any is wrong, put the right one in your reply.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Open PowerShell in that folder and run <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py ajsagent/eloquent-mayer-0ayp82</code>. Expect the last lines <code>plugin version  : 2.88.0</code> and <code>OK: installed build matches the request.</code>, then restart Claude Code. (I ran it on Linux in a throwaway config and it printed exactly that shape.)</label></li><li><label><input type="checkbox"> In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.</code> Expect the page to appear in your window without you asking, with its picture showing if it has one.</label></li><li><label><input type="checkbox"> Say: <code>Send me docs/plans/2026-10-19-restructure-step-1-qa.html</code>. Expect a note that the page was repaired by embedding 2 pictures, and its before and after pictures to show.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Run <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\waitfor.py --kind command --check "exit 1" --first-check 1 --interval 1 --deadline 4</code>. Expect four <code>not yet</code> lines, then <code>timed out: gave up after 4s</code>.</label></li><li><label><input type="checkbox"> UNTESTED on Windows. Switch back with <code>python C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\tools\use_branch.py main</code>. Expect <code>plugin version  : 2.87.0</code> and <code>OK</code>, then restart.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: wait clocks", or send "QA failed: wait clocks" with what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows. Real sessions on Linux exercised the send reminder, the send hook, the in-place repair, the block-once check for a page never sent, the guard refusal and the unchecked-wait note. The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available. Video and frames were proven for the phone in light only; Unity and game capture is only written down. The injected rules are 6 characters under their size limit, so the next rule added must make room first.</p></details></div></div></div>
+    <div class="reply">
+      <pre id="out" aria-live="polite"></pre>
+      <p class="status" id="miss"></p>
+      <button class="primary" id="copy" type="button">Copy my reply</button>
+      <p class="status" id="st"></p>
+    </div>
+  </section>
+  <div class="nav">
+    <button class="secondary" id="prev" type="button">‹ Back</button>
+    <button class="primary" id="next" type="button">Next ›</button>
+  </div>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">On a pass, I open a pull request to main for you to merge.</span></aside>
+</div>
+
+<script>
+// ---- PAGE: the only part you edit. Example content shows every field. ----------------------
+// Tiny inline SVGs so the template stays one file; real pages use a data: URI or a path next to the page.
+const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
+const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
+const PAGE = {
+  "title": "QA: Wait Clocks, Visual Checks, Page Sending And Pictures",
+  "eyebrow": "QA · eight steps for you to follow",
+  "pageType": "qa",
+  "short": {
+    "lead": "Everything in the approved plan is built and tested here; I need you to try it on your PC in eight short steps and tell me whether it passes.",
+    "hint": "Tap a row to see what I checked.",
+    "key": [
+      [
+        "Checked by me",
+        ""
+      ],
+      [
+        "Your test",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "flask",
+        "Checked",
+        "Round 1: the banner ran off the phone screen",
+        "",
+        "A reviewer helper looked at the screenshots with fresh eyes and marked all three written criteria FAIL. It saw the blue banner cut off mid-word at the right edge, and a console error in the capture report.",
+        "Nothing from you.",
+        {
+          "src": "data:image/png;base64,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gOOXgz747asxzXpYt7Dt7wP712k7vHEXc862Uwfa/T7o1JVzBvB8SBIcGr8BjgL9Gxr/LhnKKZ4lQDo7G47vkZHpGBeQVoxPSq+dgYdjXECqLf7eGc9dv3zk4unHPl1y12R50vvLbwkI64iVY76pfKRCtO30AWl8Rb9XKjUy+p4xlbcMe0tWGjr29JhmAInP/0HKII5IGSRO/BUrALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAuuKdMt4pvAwkPuwXJFrxTpmA9P4GEh/2CxKteKdMnvTZDCQ+7BckWvFOmfpFKrk4Jeq/F/Ecck+arEGRSgaQKMU7ZfzTZGxXfFqM5QAACVBJREFUvpGBxKR9+cZZ0mQ0gEQpIWNMLcrUDkif1UDikCd91jdLVjOAxCref1/GdDv8zsi/p/2yYfb9B/cN/Eeckjg1L11LmpZuLq4GkFglMGVMO84cmrVz5dFLgfJzPSzYwL8ilbtHDp/M2X0y1S1csUim3AaQuD1RygDAY/HZXwC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALpIGQC6SBkAukgZALr+BwAA//81TYAtAAAABklEQVQDAHzywQGELQVtAAAAAElFTkSuQmCC",
+          "alt": "A phone screenshot where a blue banner runs past the right edge and its text is cut off",
+          "caption": "Round 1, before the fix."
+        }
+      ],
+      [
+        "check",
+        "Checked",
+        "Round 2: fixed, with nobody steering",
+        "",
+        "A builder fixed the causes, not the symptoms. A second, fresh reviewer marked all three criteria PASS, and the check of the written record said the work was done. Nobody asked you anything in between.",
+        "Nothing from you.",
+        {
+          "src": "data:image/png;base64,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AGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqEXKAFCLlAGgFikDQC1SBoBapAwAtUgZAGqRMgDUImUAqPU/AAAA//+oF5nSAAAABklEQVQDAGatWH0lWddfAAAAAElFTkSuQmCC",
+          "alt": "The same phone screenshot with the banner fitting the screen and its text wrapped on two lines",
+          "caption": "Round 2, after the fix."
+        }
+      ],
+      [
+        "file",
+        "Checked",
+        "Pages stay whole when sent alone",
+        "",
+        "A copy of the proposal page sent alone had 5 of 5 pictures broken. Pictures now live inside the page file. An old page with folder pictures went from 2 broken pictures to 0 when repaired in place.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjkwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlRvZGF5IGEgcGljdHVyZSBzaXRzIGluIGEgZm9sZGVyIHRoYXQgaXMgbm90IHNlbnQgd2l0aCB0aGUgcGFnZSwgc28gaXQgYnJlYWtzOyBwcm9wb3NlZCwgdGhlIHBpY3R1cmUgaXMgaW5zaWRlIHRoZSBwYWdlIGZpbGUsIHNvIGl0IGFsd2F5cyBzaG93cyI+CjxzdHlsZT50ZXh0e2ZvbnQtZmFtaWx5OkhlbHZldGljYSxBcmlhbCxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToxNHB4O2ZpbGw6IzE3MjAyZX0uYnh7ZmlsbDojZmZmO3N0cm9rZTojNTY2MTc0O3N0cm9rZS13aWR0aDoyfS5iYWR7ZmlsbDojZmJlMWUzO3N0cm9rZTojYjQyMzJmO3N0cm9rZS13aWR0aDoyfS5va3tmaWxsOiNkZmYzZTg7c3Ryb2tlOiMxZjdhNGQ7c3Ryb2tlLXdpZHRoOjJ9LmJ7ZmlsbDojZTNlYWZjfS50e2ZvbnQtd2VpZ2h0OjcwMH0uYXJ7c3Ryb2tlOiM1NjYxNzQ7c3Ryb2tlLXdpZHRoOjI7ZmlsbDpub25lfTwvc3R5bGU+CjxyZWN0IHdpZHRoPSIzNjAiIGhlaWdodD0iMjkwIiBjbGFzcz0iYiIvPgo8dGV4dCB4PSIxNiIgeT0iMjYiIGNsYXNzPSJ0Ij5Ub2RheTogdGhlIHBpY3R1cmUgaXMgbGVmdCBiZWhpbmQ8L3RleHQ+CjxyZWN0IHg9IjE2IiB5PSI0MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI2MiIgcng9IjYiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjMwIiB5PSI3NiI+cGFnZSBmaWxlPC90ZXh0Pgo8cmVjdCB4PSIxNTAiIHk9IjQwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjYyIiByeD0iNiIgY2xhc3M9ImJhZCIgc3Ryb2tlLWRhc2hhcnJheT0iNSA0Ii8+PHRleHQgeD0iMTY0IiB5PSI2OCI+Zm9sZGVyIHdpdGg8L3RleHQ+PHRleHQgeD0iMTY0IiB5PSI4NiI+cGljdHVyZXM8L3RleHQ+Cjx0ZXh0IHg9IjI2MiIgeT0iNzYiIGNsYXNzPSJ0IiBzdHlsZT0iZmlsbDojYjQyMzJmIj5ub3Qgc2VudDwvdGV4dD4KPHBhdGggZD0iTTY2IDEwMlYxMjIiIGNsYXNzPSJhciIvPgo8cmVjdCB4PSIxNiIgeT0iMTIyIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjUwIiByeD0iNiIgY2xhc3M9ImJhZCIvPjxsaW5lIHgxPSI0MCIgeTE9IjEzNCIgeDI9IjkyIiB5Mj0iMTYwIiBzdHJva2U9IiNiNDIzMmYiIHN0cm9rZS13aWR0aD0iMyIvPjxsaW5lIHgxPSI5MiIgeTE9IjEzNCIgeDI9IjQwIiB5Mj0iMTYwIiBzdHJva2U9IiNiNDIzMmYiIHN0cm9rZS13aWR0aD0iMyIvPgo8dGV4dCB4PSIxMzAiIHk9IjE1MiI+YnJva2VuIHBpY3R1cmU8L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIyMDYiIGNsYXNzPSJ0Ij5Qcm9wb3NlZDogdGhlIHBpY3R1cmUgaXMgaW5zaWRlPC90ZXh0Pgo8cmVjdCB4PSIxNiIgeT0iMjIwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjU4IiByeD0iNiIgY2xhc3M9Im9rIi8+PHJlY3QgeD0iMjgiIHk9IjIzMiIgd2lkdGg9IjQwIiBoZWlnaHQ9IjM0IiByeD0iMyIgY2xhc3M9ImJ4Ii8+PHBvbHlnb24gcG9pbnRzPSIzNCwyNjAgNDYsMjQ0IDU2LDI1NCA2MiwyNDggNjQsMjYwIiBmaWxsPSIjMmY1YmQzIi8+PHRleHQgeD0iNzgiIHk9IjI0NiI+b25lIGZpbGUsPC90ZXh0Pjx0ZXh0IHg9Ijc4IiB5PSIyNjQiPmFsd2F5cyBzaG93czwvdGV4dD4KPHRleHQgeD0iMTg0IiB5PSIyNDYiPlNlbnQsIHB1Ymxpc2hlZCw8L3RleHQ+PHRleHQgeD0iMTg0IiB5PSIyNjQiPm1vdmVkLCBvciBvZmZsaW5lLjwvdGV4dD4KPC9zdmc+Cg==",
+          "alt": "Today a picture is left in a folder and breaks; now it is inside the page file",
+          "caption": "One file, pictures included."
+        }
+      ],
+      [
+        "stop",
+        "Checked",
+        "A wait ends at its deadline",
+        "",
+        "On real processes: a check that succeeds after 2 seconds exits 0; one that never succeeds with a 4-second deadline exits 3 after 4 seconds. By default the first check is at 60 seconds, then every 60 seconds.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkEgd2FpdCB3aXRoIGEgY2xvY2s6IGZpcnN0IGNoZWNrIGF0IDEgbWludXRlLCB0aGVuIGV2ZXJ5IG1pbnV0ZSwgZW5kaW5nIGF0IGRvbmUsIHN0YWxsZWQgb3IgZGVhZGxpbmUiPgo8c3R5bGU+dGV4dHtmb250LWZhbWlseTpIZWx2ZXRpY2EsQXJpYWwsc2Fucy1zZXJpZjtmb250LXNpemU6MTRweDtmaWxsOiMxNzIwMmV9Lmx7c3Ryb2tlOiM1NjYxNzQ7c3Ryb2tlLXdpZHRoOjJ9LmR7ZmlsbDojMmY1YmQzfS5ye2ZpbGw6I2I0MjMyZn0uYntmaWxsOiNlM2VhZmN9LnR7Zm9udC13ZWlnaHQ6NzAwfTwvc3R5bGU+CjxyZWN0IHdpZHRoPSIzNjAiIGhlaWdodD0iMjUwIiBjbGFzcz0iYiIvPgo8dGV4dCB4PSIxNiIgeT0iMjgiIGNsYXNzPSJ0Ij5FdmVyeSB3YWl0IGhhcyBhIGNsb2NrPC90ZXh0Pgo8bGluZSB4MT0iMzAiIHkxPSI5MCIgeDI9IjMzMCIgeTI9IjkwIiBjbGFzcz0ibCIvPgo8Y2lyY2xlIGN4PSIzMCIgY3k9IjkwIiByPSI4IiBjbGFzcz0iZCIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9IjkwIiByPSI2IiBjbGFzcz0iZCIvPjxjaXJjbGUgY3g9IjE2MCIgY3k9IjkwIiByPSI2IiBjbGFzcz0iZCIvPjxjaXJjbGUgY3g9IjIyMCIgY3k9IjkwIiByPSI2IiBjbGFzcz0iZCIvPjxjaXJjbGUgY3g9IjMzMCIgY3k9IjkwIiByPSI5IiBjbGFzcz0iciIvPgo8dGV4dCB4PSIxNCIgeT0iNzAiPnN0YXJ0PC90ZXh0Pjx0ZXh0IHg9IjgyIiB5PSI3MCI+MSBtaW48L3RleHQ+PHRleHQgeD0iMTQyIiB5PSI3MCI+MiBtaW48L3RleHQ+PHRleHQgeD0iMjAyIiB5PSI3MCI+MyBtaW48L3RleHQ+PHRleHQgeD0iMjcyIiB5PSI3MCI+ZGVhZGxpbmU8L3RleHQ+Cjx0ZXh0IHg9Ijg2IiB5PSIxMTgiPmZpcnN0IGNoZWNrPC90ZXh0Pjx0ZXh0IHg9IjE5NiIgeT0iMTE4Ij4uLi5ldmVyeSBtaW51dGU8L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIxNjUiPkVhY2ggY2hlY2sgc2F5cyBvbmUgb2YgdGhyZWUgdGhpbmdzOjwvdGV4dD4KPHRleHQgeD0iMTYiIHk9IjE5MCI+ZG9uZSwgc3RpbGwgbW92aW5nLCBvciBzdGFsbGVkLjwvdGV4dD4KPHRleHQgeD0iMTYiIHk9IjIyMiI+U3RhbGxlZCBvciBsYXRlIGVuZHMgdGhlIHdhaXQuPC90ZXh0Pgo8dGV4dCB4PSIxNiIgeT0iMjQyIj5JIHJlcG9ydCBpdCBhbmQgY2Fycnkgb24uPC90ZXh0Pgo8L3N2Zz4K",
+          "alt": "A timeline: first check at one minute, then every minute, ending at done, stalled or deadline",
+          "caption": "The wait clock."
+        }
+      ],
+      [
+        "hammer",
+        "Checked",
+        "The full test suites",
+        "",
+        "`verify.py` passed 1428 of 1428 and `tools/verify_tools.py` exited 0 on the merged code, run by me with nothing else running. Several real faults turned up on the way and were fixed; they are listed under Changes.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjcwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlBhZ2Ugc2VuZGluZzogYSBwYWdlIGlzIG1hZGUsIHNlbnQgdG8geW91LCBhbmQgc2VudCBhZ2FpbiBhZnRlciBldmVyeSBjaGFuZ2UsIGJlZm9yZSB0aGUgdHVybiBlbmRzIj4KPHN0eWxlPnRleHR7Zm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7Zm9udC1zaXplOjE0cHg7ZmlsbDojMTcyMDJlfS5ieHtmaWxsOiNmZmY7c3Ryb2tlOiMyZjViZDM7c3Ryb2tlLXdpZHRoOjJ9LmFye3N0cm9rZTojNTY2MTc0O3N0cm9rZS13aWR0aDoyO2ZpbGw6bm9uZX0uYntmaWxsOiNlM2VhZmN9Lm9re2ZpbGw6I2RmZjNlODtzdHJva2U6IzFmN2E0ZDtzdHJva2Utd2lkdGg6Mn0udHtmb250LXdlaWdodDo3MDB9PC9zdHlsZT4KPHJlY3Qgd2lkdGg9IjM2MCIgaGVpZ2h0PSIyNzAiIGNsYXNzPSJiIi8+Cjx0ZXh0IHg9IjE2IiB5PSIyNiIgY2xhc3M9InQiPkEgcGFnZSBuZXZlciBzdGF5cyB1bnNlbnQ8L3RleHQ+CjxyZWN0IHg9IjE2IiB5PSI0MiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjI4IiB5PSI2NiI+UGFnZSBtYWRlIG9yPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSI4NCI+cmVidWlsdDwvdGV4dD4KPHJlY3QgeD0iMTk0IiB5PSI0MiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJvayIvPjx0ZXh0IHg9IjIwNiIgeT0iNjYiPlNlbnQgdG8geW91LDwvdGV4dD48dGV4dCB4PSIyMDYiIHk9Ijg0Ij5zaG93biBpbiB0aGUgYXBwPC90ZXh0Pgo8cGF0aCBkPSJNMTY2IDY4SDE5NCIgY2xhc3M9ImFyIi8+CjxyZWN0IHg9IjE2IiB5PSIxMjQiIHdpZHRoPSIxNTAiIGhlaWdodD0iNTIiIHJ4PSI4IiBjbGFzcz0iYngiLz48dGV4dCB4PSIyOCIgeT0iMTQ4Ij5QYWdlIGNoYW5nZWQ8L3RleHQ+PHRleHQgeD0iMjgiIHk9IjE2NiI+YWZ0ZXIgc2VuZGluZzwvdGV4dD4KPHJlY3QgeD0iMTk0IiB5PSIxMjQiIHdpZHRoPSIxNTAiIGhlaWdodD0iNTIiIHJ4PSI4IiBjbGFzcz0ib2siLz48dGV4dCB4PSIyMDYiIHk9IjE0OCI+U2VudCBhZ2Fpbiw8L3RleHQ+PHRleHQgeD0iMjA2IiB5PSIxNjYiPm5vIHJlcXVlc3QgbmVlZGVkPC90ZXh0Pgo8cGF0aCBkPSJNMTY2IDE1MEgxOTRNMjY5IDk0VjEyNCIgY2xhc3M9ImFyIi8+Cjx0ZXh0IHg9IjE2IiB5PSIyMTIiPlRoZSB0dXJuIGNhbm5vdCBlbmQgd2l0aCBhIG1hZGU8L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIyMzIiPm9yIGNoYW5nZWQgcGFnZSB0aGF0IHdhcyBub3Qgc2VudC48L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIyNTQiPkNoZWNrZWQgZnJvbSB0aGUgdHVybidzIG93biByZWNvcmQuPC90ZXh0Pgo8L3N2Zz4K",
+          "alt": "A page is made, sent to you, and sent again after every change",
+          "caption": "A page never stays unsent."
+        }
+      ],
+      [
+        "flask",
+        "Checked",
+        "Your steps 3 to 7, run on Linux in real sessions, before and after the fix",
+        "",
+        "I ran the Linux form of steps 3 to 7. The install says 2.88.0; the waitfor.py wait script ends in a timeout, exit 3; a real session sent its page unasked, and again after an edit; the send hook repaired an old page in place. Full output: docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjcwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlBhZ2Ugc2VuZGluZzogYSBwYWdlIGlzIG1hZGUsIHNlbnQgdG8geW91LCBhbmQgc2VudCBhZ2FpbiBhZnRlciBldmVyeSBjaGFuZ2UsIGJlZm9yZSB0aGUgdHVybiBlbmRzIj4KPHN0eWxlPnRleHR7Zm9udC1mYW1pbHk6SGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWY7Zm9udC1zaXplOjE0cHg7ZmlsbDojMTcyMDJlfS5ieHtmaWxsOiNmZmY7c3Ryb2tlOiMyZjViZDM7c3Ryb2tlLXdpZHRoOjJ9LmFye3N0cm9rZTojNTY2MTc0O3N0cm9rZS13aWR0aDoyO2ZpbGw6bm9uZX0uYntmaWxsOiNlM2VhZmN9Lm9re2ZpbGw6I2RmZjNlODtzdHJva2U6IzFmN2E0ZDtzdHJva2Utd2lkdGg6Mn0udHtmb250LXdlaWdodDo3MDB9PC9zdHlsZT4KPHJlY3Qgd2lkdGg9IjM2MCIgaGVpZ2h0PSIyNzAiIGNsYXNzPSJiIi8+Cjx0ZXh0IHg9IjE2IiB5PSIyNiIgY2xhc3M9InQiPkEgcGFnZSBuZXZlciBzdGF5cyB1bnNlbnQ8L3RleHQ+CjxyZWN0IHg9IjE2IiB5PSI0MiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjI4IiB5PSI2NiI+UGFnZSBtYWRlIG9yPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSI4NCI+cmVidWlsdDwvdGV4dD4KPHJlY3QgeD0iMTk0IiB5PSI0MiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJvayIvPjx0ZXh0IHg9IjIwNiIgeT0iNjYiPlNlbnQgdG8geW91LDwvdGV4dD48dGV4dCB4PSIyMDYiIHk9Ijg0Ij5zaG93biBpbiB0aGUgYXBwPC90ZXh0Pgo8cGF0aCBkPSJNMTY2IDY4SDE5NCIgY2xhc3M9ImFyIi8+CjxyZWN0IHg9IjE2IiB5PSIxMjQiIHdpZHRoPSIxNTAiIGhlaWdodD0iNTIiIHJ4PSI4IiBjbGFzcz0iYngiLz48dGV4dCB4PSIyOCIgeT0iMTQ4Ij5QYWdlIGNoYW5nZWQ8L3RleHQ+PHRleHQgeD0iMjgiIHk9IjE2NiI+YWZ0ZXIgc2VuZGluZzwvdGV4dD4KPHJlY3QgeD0iMTk0IiB5PSIxMjQiIHdpZHRoPSIxNTAiIGhlaWdodD0iNTIiIHJ4PSI4IiBjbGFzcz0ib2siLz48dGV4dCB4PSIyMDYiIHk9IjE0OCI+U2VudCBhZ2Fpbiw8L3RleHQ+PHRleHQgeD0iMjA2IiB5PSIxNjYiPm5vIHJlcXVlc3QgbmVlZGVkPC90ZXh0Pgo8cGF0aCBkPSJNMTY2IDE1MEgxOTRNMjY5IDk0VjEyNCIgY2xhc3M9ImFyIi8+Cjx0ZXh0IHg9IjE2IiB5PSIyMTIiPlRoZSB0dXJuIGNhbm5vdCBlbmQgd2l0aCBhIG1hZGU8L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIyMzIiPm9yIGNoYW5nZWQgcGFnZSB0aGF0IHdhcyBub3Qgc2VudC48L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIyNTQiPkNoZWNrZWQgZnJvbSB0aGUgdHVybidzIG93biByZWNvcmQuPC90ZXh0Pgo8L3N2Zz4K",
+          "alt": "A page is made, sent to you, and sent again after every change",
+          "caption": "Seen in a real session."
+        }
+      ],
+      [
+        "hand",
+        "Your test",
+        "Eight steps on your PC",
+        "you",
+        "Follow the numbered steps in Wrap-up. Three of them are commands I could not run on your machine, and each says so.",
+        "Follow the steps in Wrap-up."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "Wait clocks (#560 to #563)",
+      "Every wait has a test for when it is finished, a deadline and a check every minute.",
+      null,
+      "A settings file for the numbers, waitfor.py (the script that runs a wait), a guard refusal for background launches with no timeout, a reminder for waits nobody checked, and the rule in \"Nothing fails silently\". A switch group named waits turns off the parts that block you.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Pictures inside pages (#556, #557)",
+      "The builder stores pictures in the page and checks a copy opened alone.",
+      null,
+      "No more pictures folder beside a page. A picture over 1 MB or linked from the web is refused. Two checks look for pictures that would break: a scan of the page, and a copy opened in an empty folder.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "Page sending (#558, #559)",
+      "A made or changed page that was not sent blocks the turn once.",
+      null,
+      "The builder ends with a line saying to send the page, and a page write is followed by a reminder. A hook (an automatic step that runs before each send) opens the page alone and repairs old folder pictures in place, never blocking the send.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "Visual capture and loop (#564 to #567)",
+      "Screenshots, video, frame sheets, a written record and a reviewer each round.",
+      null,
+      "visualcheck.py captures phone and desktop in light and dark, records video and builds a sheet of timestamped frames, measuring how much moved between them. A skill (a saved set of instructions for Claude) runs up to four review rounds. A turn that changes a visual file must now show a real capture, a record check and an image read.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Faults found by running real data",
+      "Six faults that only real pages and real transcripts showed.",
+      null,
+      "The picture check missed pictures that appear only when a row is tapped. The repair rebuilt QA pages from git. The reminder about unchecked waits fired wrongly when a prompt merely mentioned a tool. Test runs collided. The injected rules went over their size limit. Long commands were squeezed into a one-character column on a phone. All fixed.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Where the build differs from your approved design",
+      "Three places where the build differs; the reasons are in the decisions log.",
+      null,
+      "Old pages are repaired by embedding pictures in place, not rebuilding from source. The wait rule sits inside \"Nothing fails silently\". The reviewer returns its verdict lines and the main session saves them. See docs/6-decisions/Decisions.md.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Fixed after your QA: the visual reminder is quiet on pages",
+      "Zero reminders in two fresh real runs on the fixed build.",
+      null,
+      "Pages that carry the page builder's mark, or the handover-page meta tag, are no longer treated as visual files. Replaying your two real sessions gave 1 reminder before the fix and 0 after, in each. Fresh runs on the fixed build also gave 0 and 0. A plain test page is still checked.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Fixed after your QA failed: four tests that failed when run the way GitHub runs them",
+      "Run the way GitHub runs them (Python 3.12, no browser installed), all 1434 checks now pass.",
+      null,
+      "Three tests of the page repair assumed a browser was installed. When no browser is available, they now skip the browser re-check, print the hook's real output, and still check that the pictures are embedded. The fourth test, the handover check, now runs in a scratch folder, so it no longer reads the loop state saved on this branch.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Fixed after your QA failed: two false alarms in the wait checks",
+      "Real sessions showed both false alarms. Both are fixed, and the guard still refuses a launch with no timeout and the turn-end note still appears for waits nobody checked.",
+      null,
+      "The note at the end of a turn no longer lists a background launch that the guard had already refused. The guard now looks for the word timeout only at the start of a command, so quoted text and heredoc bodies (blocks of text fed to a command) no longer trigger it. One limit remains: a timeout inside a quoted bash -c command is not seen. That limit is noted in a comment in scripts/house_rules/safe_git.py.",
+      null,
+      null
+    ],
+    [
+      "chg",
+      "Files changed, counted from git against origin/main",
+      "78 files, +9399 −120",
+      null,
+      "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
+      null,
+      [
+        [
+          ".claude/house-rules-loop.json",
+          2872,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "CHANGELOG.md",
+          36,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/README.md",
+          1,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json",
+          1,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/agents/archivist.md",
+          1,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/agents/builder.md",
+          1,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/agents/reviewer.md",
+          1,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/commands/mode.md",
+          3,
+          2,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/hooks/hooks.json",
+          10,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/checks.json",
+          3,
+          2,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/detail/fails-silently.md",
+          0,
+          21,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/detail/show-dont-tell.md",
+          6,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/detail/waits.md",
+          44,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/house-rules.md",
+          1,
+          3,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/show-dont-tell.md",
+          2,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/visual.json",
+          5,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/rules/waits.json",
+          8,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/core.py",
+          27,
+          14,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/delegation.py",
+          281,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
+          81,
+          3,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/docs.py",
+          13,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
+          131,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
+          140,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/checks/writing.py",
+          56,
+          8,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/clarity.py",
+          4,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/hook.py",
+          12,
+          2,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/core.py",
+          4,
+          2,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
+          132,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
+          97,
+          8,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/waits.py",
+          60,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/writing.py",
+          62,
+          25,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/ledger.py",
+          196,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/make_page.py",
+          86,
+          22,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/verify.py",
+          3,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/visualcheck.py",
+          392,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/waitfor.py",
+          118,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/skills/visual-loop/SKILL.md",
+          45,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/templates/handover-page.html",
+          3,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/1-landing/README.md",
+          1,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/3-state/ProjectState.md",
+          10,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/4-systems/README.md",
+          1,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/4-systems/wait-and-visual-checks.md",
+          147,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/5-today/Today.md",
+          13,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md",
+          88,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/6-decisions/Decisions.md",
+          27,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/architecture.md",
+          2,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-art/loop.svg",
+          12,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-art/pictures.svg",
+          14,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-art/send.svg",
+          14,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-art/sheet.svg",
+          14,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-art/waits.svg",
+          13,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-build-plan.html",
+          629,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-build-plan.page.json",
+          218,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt",
+          143,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-pics/loop.svg",
+          12,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-pics/pictures.svg",
+          14,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-pics/send.svg",
+          14,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-pics/sheet.svg",
+          14,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-pics/waits.svg",
+          13,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-qa.html",
+          1588,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks-qa.page.json",
+          218,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks.html",
+          895,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-22-wait-and-visual-checks.page.json",
+          142,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/_to_delete/2026-11-22-wait-and-visual-checks.starter.page.json",
+          90,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/criteria.md",
+          3,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/fixture/index.html",
+          14,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-1.md",
+          5,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-1/page-desktop-dark.png",
+          0,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-1/page-desktop-light.png",
+          0,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-1/page-phone-dark.png",
+          0,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-1/page-phone-light.png",
+          0,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-1/report.json",
+          48,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-2.md",
+          5,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-2/page-desktop-dark.png",
+          0,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-2/page-desktop-light.png",
+          0,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-2/page-phone-dark.png",
+          0,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-2/page-phone-light.png",
+          0,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/loop-proof/round-2/report.json",
+          40,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ]
+      ]
+    ],
+    [
+      "keep",
+      "Still unverified",
+      "5 things not yet proven",
+      null,
+      "Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows. Real sessions on Linux exercised the send reminder, the send hook, the in-place repair, the block-once check for a page never sent, the guard refusal and the unchecked-wait note. The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available. Video and frames were proven for the phone in light only; Unity and game capture is only written down. The injected rules are 6 characters under their size limit, so the next rule added must make room first.",
+      null,
+      null
+    ]
+  ],
+  "qa": {
+    "feature": "wait clocks",
+    "base": "origin/main",
+    "unverified": [
+      "Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows.",
+      "Real sessions on Linux exercised the send reminder, the send hook, the in-place repair, the block-once check for a page never sent, the guard refusal and the unchecked-wait note.",
+      "The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available.",
+      "Video and frames were proven for the phone in light only; Unity and game capture is only written down.",
+      "The injected rules are 6 characters under their size limit, so the next rule added must make room first."
+    ],
+    "files": {}
+  },
+  "wrapup": {
+    "summary": "All 13 steps (#556 to #568) of the approved plan are built, merged on one branch and tested, and the fix for your QA verdict is in; the page shows the evidence and eight steps for you.",
+    "changing": "Plugin 2.88.0: the page builder, the guard, the end-of-turn checks, a send hook, three new scripts (waitfor.py, visualcheck.py, ledger.py), the visual-loop skill, rules, tests and docs.",
+    "blocking": "Your eight steps below, and whether the machine details in step 2 are right.",
+    "next": "On a pass, I open a pull request to main for you to merge.",
+    "todo": [
+      "Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.",
+      "Check the machine details I am using: Windows 11, PowerShell 5.1, folder <code>C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools<\/code> (an old example from 2026-08-25, not confirmed). If any is wrong, put the right one in your reply.",
+      "UNTESTED on Windows. Open PowerShell in that folder and run <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py ajsagent/eloquent-mayer-0ayp82<\/code>. Expect the last lines <code>plugin version  : 2.88.0<\/code> and <code>OK: installed build matches the request.<\/code>, then restart Claude Code. (I ran it on Linux in a throwaway config and it printed exactly that shape.)",
+      "In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.<\/code> Expect the page to appear in your window without you asking, with its picture showing if it has one.",
+      "Say: <code>Send me docs/plans/2026-10-19-restructure-step-1-qa.html<\/code>. Expect a note that the page was repaired by embedding 2 pictures, and its before and after pictures to show.",
+      "UNTESTED on Windows. Run <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\claude-house-rules\\plugins\\house-rules\\scripts\\waitfor.py --kind command --check \"exit 1\" --first-check 1 --interval 1 --deadline 4<\/code>. Expect four <code>not yet<\/code> lines, then <code>timed out: gave up after 4s<\/code>.",
+      "UNTESTED on Windows. Switch back with <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py main<\/code>. Expect <code>plugin version  : 2.87.0<\/code> and <code>OK<\/code>, then restart.",
+      "Tap <b>Copy my reply<\/b> and send it: \"QA passed: wait clocks\", or send \"QA failed: wait clocks\" with what to change."
+    ]
+  },
+  "choices": [],
+  "approval": "QA passed: wait clocks"
+};
+// ---- End of PAGE. Nothing below needs editing. ----------------------------------------------
+
+const ic = id => `<svg class="ico"><use href="#i-${id}"/></svg>`;
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// A picture is found by shape (src or before), not position, because flow and files before it are optional.
+const picOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && (x.src || x.before));
+let picN = 0; const PICS = [];
+const picHtml = p => {
+  if (!p) return "";
+  if (p.before && p.after) {
+    const id = "cmp" + (picN++), cap = p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : "";
+    const im = x => `<img src="${esc(x.src)}" alt="${esc(x.alt || p.caption || "")}">`;
+    return `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
+      <div class="cmp-slide"><div class="cmp-frame">${im(p.before)}${im(p.after)}</div><label for="${id}">Reveal after over before: drag to compare</label><input type="range" id="${id}" min="0" max="100" value="50" aria-label="Compare before and after: ${esc(p.caption || "")}"></div>${cap}</figure>`;
+  }
+  const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+  return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+};
+document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+let boxFrom = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-pic]");
+  if (b) { const p = PICS[+b.dataset.pic]; boxFrom = b; box.querySelector("img").src = p.src; box.querySelector("img").alt = p.alt; box.querySelector("p").textContent = p.caption; box.showModal(); return; }
+  if (e.target === box || e.target.closest("dialog.lightbox")) box.close();  // tap anywhere on it closes; Escape does too
+});
+box.addEventListener("close", () => { if (boxFrom) boxFrom.focus(); boxFrom = null; });
+document.title = PAGE.title;
+document.getElementById("title").textContent = PAGE.title;
+document.getElementById("eyebrow").textContent = PAGE.eyebrow;
+document.getElementById("lead").textContent = PAGE.short.lead;
+document.getElementById("hint").textContent = PAGE.short.hint;
+document.getElementById("key").innerHTML = PAGE.short.key.map(([l, k]) =>
+  `<span><i class="${k === "you" ? "y" : ""}"${k === "done" ? ' style="background:var(--ok-soft);border-color:var(--ok)"' : ""}></i>${esc(l)}</span>`).join("");
+
+// A part is left out only when it would be empty.
+const PARTS = [["short", "In short"], ["changes", "Changes"], ["choices", "Choices"], ["wrapup", "Wrap-up"]]
+  .filter(([id]) => id === "short" || id === "wrapup" || (PAGE[id] && PAGE[id].length));
+document.querySelectorAll("[data-part]").forEach(p => { if (!PARTS.some(([id]) => id === p.dataset.part)) p.remove(); });
+
+const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+const lst = v => Array.isArray(v) ? `<ul class="cl">${v.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p>${esc(v)}</p>`;
+const glance = document.getElementById("glance"), sd = document.getElementById("sd");
+glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
+  `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
+function showItem(n) {
+  glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
+  const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
+  const row = PAGE.short.items[n], summary = PAGE.kind === "summary";
+  const strip = Array.isArray(row[6]) && row[6].length === 3 && row[6].every(x => typeof x === "string") ? row[6] : null;
+  const needsYou = !summary && !/^Nothing/.test(Array.isArray(requires) ? requires.join(" ") : requires);
+  sd.innerHTML = `<h3>${esc(t)}</h3>${strip ? flow(strip) : ""}<div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span>${lst(creates)}</div>
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${summary ? ic("check") + "Decided by" : ic("hand") + "Requires"}</span>${lst(requires)}</div></div>${picHtml(pic)}`;
+}
+glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
+if (PAGE.short.items.length) showItem(0);
+
+if (document.getElementById("cc")) {
+  const counts = { new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
+  document.getElementById("cc-count").textContent =
+    `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
+  // A New item's picture (#241): what sets it off -> what it does -> what you get.
+  // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
+  const lineCounts = (a, r) => `+${a} \u2212${r}`;
+  const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+    fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+      (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
+}
+
+if (document.getElementById("qs")) {
+  document.getElementById("qs").innerHTML = PAGE.choices.map(([id, q, opts, why], n) =>
+    `<fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n + 1}</span>${esc(q)}</h3></legend>
+     ${opts.map(o => { const [v, l, rec, d] = o; return `<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${esc(l)}</b>${rec ? '<span class="rec">' + ic("check") + 'Suggested</span>' : ""}${d ? `<small>${esc(d)}</small>` : ""}</span></label>${picHtml(picOf(o, 4))}`; }).join("")}
+     <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to: ${esc(q)}" placeholder="Type your idea here"></span></label>
+     ${why ? `<details class="why"><summary>Why I suggest this</summary><p>${esc(why)}</p></details>` : ""}</fieldset>`).join("");
+}
+
+const W = PAGE.wrapup;
+document.getElementById("wrapup").innerHTML = [
+  ["file", "Summary", W.summary, "accent"], ["swap", "What's changing", W.changing, "accent"],
+  ["stop", "What's blocking", W.blocking, "gap"], ["next", "What's next", W.next, "ok"]
+].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("");
+// The to-do list is ticked off; make_page.py writes the same list and next-step text into the file so a reader without script sees them.
+document.getElementById("todo").innerHTML = W.todo.map(x => `<li><label><input type="checkbox"><span>${x}</span></label></li>`).join("");
+document.getElementById("nextstep").textContent = W.next || W.todo[0].replace(/<[^>]*>/g, "");
+
+const out = document.getElementById("out"), miss = document.getElementById("miss");
+function reply() {
+  const picks = PAGE.choices.map(([id], i) => {
+    const c = document.querySelector(`input[name=${id}]:checked`);
+    if (c && c.value === "own") { const t = document.querySelector(`.owntext[data-for=${id}]`).value.trim(); return [i + 1, t ? "own" : null, t]; }
+    return [i + 1, c && c.value];
+  });
+  const A = PAGE.approval || PAGE.replyPrefix;  // replyPrefix: only for pages built before approval existed
+  out.textContent = picks.length
+    ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
+      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
+    : A;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
+  const m = picks.filter(([, v]) => !v).map(([n]) => n);
+  miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
+  const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
+}
+document.addEventListener("change", reply);
+document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
+document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
+  // navigator.clipboard is missing on file:// and other non-https pages, so it is called inside a promise and falls back to execCommand.
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(out); getSelection().removeAllRanges(); getSelection().addRange(r);
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    st.textContent = ok ? "Copied. Paste it into the chat." : "Couldn't copy automatically. The reply is selected; copy it by hand."; };
+  Promise.resolve().then(() => navigator.clipboard.writeText(out.textContent))
+  .then(() => st.textContent = "Copied. Paste it into the chat.").catch(fallback); };
+
+let cur = 1;
+const stepper = document.getElementById("stepper");
+stepper.style.gridTemplateColumns = `repeat(${PARTS.length},1fr)`;
+stepper.innerHTML = PARTS.map(([, s], i) => `<button type="button" data-go="${i + 1}"><span class="bar"></span>${s}</button>`).join("");
+function go(n, focus = true) {
+  cur = Math.min(PARTS.length, Math.max(1, n));
+  const id = PARTS[cur - 1][0];
+  document.querySelectorAll("[data-part]").forEach(p => p.hidden = p.dataset.part !== id);
+  stepper.querySelectorAll("button").forEach((b, i) => { b.classList.toggle("done", i + 1 < cur); if (i + 1 === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  document.getElementById("prev").hidden = cur === 1;
+  const nx = document.getElementById("next"); nx.hidden = cur === PARTS.length; nx.textContent = cur === PARTS.length - 1 ? "Wrap-up ›" : "Next ›";
+  if (focus) { document.getElementById("h-" + id).focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+}
+stepper.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(+b.dataset.go); });
+document.getElementById("prev").onclick = () => go(cur - 1);
+document.getElementById("next").onclick = () => go(cur + 1);
+go(1, false); reply();
+</script>

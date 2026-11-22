@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 290" role="img" aria-label="Visual loop: criteria, capture, critique, fix, repeat until all pass or the round cap">
+<style>text{font-family:Helvetica,Arial,sans-serif;font-size:14px;fill:#17202e}.bx{fill:#fff;stroke:#2f5bd3;stroke-width:2}.ar{stroke:#566174;stroke-width:2;fill:none}.b{fill:#e3eafc}.ok{fill:#dff3e8;stroke:#1f7a4d;stroke-width:2}</style>
+<rect width="360" height="290" class="b"/>
+<rect x="16" y="16" width="150" height="52" rx="8" class="bx"/><text x="28" y="40">1 Write the</text><text x="28" y="58">criteria</text>
+<rect x="194" y="16" width="150" height="52" rx="8" class="bx"/><text x="206" y="40">2 Capture shots,</text><text x="206" y="58">video, frames</text>
+<rect x="194" y="100" width="150" height="52" rx="8" class="bx"/><text x="206" y="124">3 Critique each</text><text x="206" y="142">criterion</text>
+<rect x="16" y="100" width="150" height="52" rx="8" class="bx"/><text x="28" y="124">4 Fix what</text><text x="28" y="142">failed</text>
+<path d="M166 42H194M269 68V100M194 126H166" class="ar"/>
+<path d="M91 100V84H219V68" class="ar" stroke-dasharray="5 4"/>
+<text x="16" y="184">Repeat, at most 4 rounds.</text>
+<rect x="16" y="200" width="328" height="74" rx="8" class="ok"/><text x="28" y="225">Done when every criterion passes.</text><text x="28" y="245">Otherwise a list of what still fails,</text><text x="28" y="263">and why, is written. No questions.</text>
+</svg>

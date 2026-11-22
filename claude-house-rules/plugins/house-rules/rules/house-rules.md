@@ -46,9 +46,7 @@ the conflict. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/what-prompted-me.md`.
 <!-- subagent -->
 
 Silence means only "looked, nothing to do." "Couldn't tell" says so, naming what/why. `except:
-pass` is never the answer; a non-blocking check still announces it ran. Before leaving a wait or
-background task running: its target name is real, one status check shows it working; never pipe it
-through `tail`/`head`. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/fails-silently.md`.
+pass` is never the answer; a non-blocking check still announces it ran. Every wait has a done-test and a deadline: check at one minute, then every minute (`scripts/waitfor.py`, with a timeout); at the deadline I stop and say what is unknown. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/waits.md`. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/fails-silently.md`.
 
 ## Evidence before claims
 <!-- subagent -->
@@ -65,7 +63,7 @@ intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
 ## Plain language and the voice
 
-Moved into "Write it so nothing is left to guess", loaded beside Show, don't tell. See
+Moved into "Write it so nothing is left to guess". See
 `${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`.
 
 ## Deliver a whole workflow, not a starting point

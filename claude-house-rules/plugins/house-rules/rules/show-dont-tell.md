@@ -17,6 +17,8 @@ act in each project. A missing editor pass, evidence, commit or plain summary bl
 once. A missing page keeps blocking until the reply links one, up to three blocks in a row; only
 "no page" in aj's own message lets a reply through without one.
 
+Any page I make, rebuild or edit in a turn is sent to aj with the file-send tool as my last action, and sent again after any later change; a published artifact link counts as sent.
+
 A plan or pitch follows aj's reference page `docs/plans/reference/sword-fighting-proposal.html` (`Ajw2003/AjsClaudeCodeTools`); checklist in the detail file.
 
 A simple question gets a short answer. Each reply ends with one question or one next step; a

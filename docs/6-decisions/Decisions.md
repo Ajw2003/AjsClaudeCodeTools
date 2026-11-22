@@ -7,6 +7,23 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-22 - Wait clocks and visual checks: three places the build differs from the approved design
+
+**Decision.** (1) An old page whose pictures sit in a folder is repaired by embedding those pictures into the existing page (`_embed_in_place` in `house_rules/design_loop.py`), not by rebuilding it from its `.page.json` as the approved page said. (2) The wait rule is a sentence inside "Nothing fails silently" in `rules/house-rules.md`, not a section of its own. (3) The reviewer helper returns its verdict lines and the main session saves them as `round-N.md`; the reviewer has no write tool.
+**Why.** (1) Running the finished repair on a real old QA page showed a rebuild regenerates a QA page's content from git at build time, and fails outside a git repo; embedding in place changes nothing else, and also works for a page with no source file. Proven on a copy of `docs/plans/2026-10-19-restructure-step-1-qa.html`: 2 broken pictures to 0, page unchanged otherwise. aj's choice 6A (repair on first send) still holds; only the mechanism changed. (2) The new section pushed the injected rules to 9,979 characters against the 9,700 limit; the original wait text already lived under "Nothing fails silently", so the rule moved back there with no wording cut; the injected size is now 9,694. (3) Matches the reviewer's agent definition (read, search and run only).
+**Replaces.** Nothing reversed; refines the approved design. Detail: [wait-and-visual-checks.md](../4-systems/wait-and-visual-checks.md).
+**Status.** Current. Awaiting aj's QA.
+
+
+## 2026-11-22 - Wait clocks, visual checks, page sending and working pictures: design approved
+
+**Decision.** aj approved "Design approved: wait clocks, visual checks, page sending and pictures 1A 2A 3B 4B 5A 6A". At a wait deadline the agent stops waiting, reports what is unknown and carries on (1A). Background launches with no deadline are refused and an unchecked wait is reported once at turn end (2A). The visual capture tool uses Python Playwright and Pillow (3B) and a separate reviewer helper critiques the images each round (4B). The end-of-turn check blocks once when a made or changed page was not sent (5A). Old pages with folder pictures are repaired the first time they are sent (6A).
+**Why.** aj asked for waits that can never run on unchecked, a visual check the agent can run, critique and fix unattended, pages sent without being asked, and pictures that always show. Measured: a copy of the proposal page opened alone had 5 of 5 pictures broken, because the builder links pictures in a folder that is not sent with the page. 3B and 4B differ from the suggested options (Node Playwright with ffmpeg; the agent critiquing its own images); a check on 2026-11-22 showed Python Playwright and Pillow work here. Detail: [wait-and-visual-checks.md](../4-systems/wait-and-visual-checks.md); parent issue #555.
+**Replaces.** Nothing reversed; it extends the foreground-wait guard in [speed-switches.md](../4-systems/speed-switches.md) and the visual-check reminder in `rules/detail/visual-check.md`.
+**Status.** Current. Not built.
+
+---
+
 ## 2026-11-22 - Unattended mode is a typed switch, shared with art-pipeline
 
 **Decision.** `unattended on|off` is a typed switch group (saved in `house-rules-mode.json`), not only an environment variable, so aj can turn it on at any point in a session with one line. The art-pipeline plugin reads the same file instead of getting its own command. It is kept out of `house rules off`, and the agent is told not to commit the file while it is on.
@@ -3586,3 +3603,23 @@ session test could not sign in inside the cloud sandbox.
 
 **Status.** Standing. The label rule covers completed closes only; a not-planned close still needs an
 approval (`docs/4-systems/issue-closing.md`, "As built").
+
+## 2026-11-22 — Wait clocks: QA failed, four known issues to fix
+
+**Context.** Wait clocks, visual checks, page sending and pictures (plugin 2.88.0, issues #555 to #568, pull request #573) reached QA with four known issues: three picture-repair tests and one handover check fail when run without a browser or without GitHub access, and two wait checks raise false alarms.
+
+**Decision.** aj wrote "QA failed: wait clocks. fix the test issues and the two false alarms". The stage returns to Build. The fixes: the browser-dependent make_page cases skip when the re-check did not run; the core handover check runs in a scratch folder; the unchecked-wait note ignores a launch the guard refused; the foreground-wait pattern matches `timeout` only at command position.
+
+**Why.** CI runs without a browser and without GitHub access, so the failing cases would block the merge, and the two false alarms would teach aj to ignore the notes.
+
+**Status.** Standing once built. No change to the approved design.
+
+## 2026-11-22 — Wait clocks: QA passed
+
+**Context.** Wait clocks, visual checks, page sending and pictures (plugin 2.88.0, issues #555 to #568) were fixed after two failed QA rounds and rebuilt; verify.py passed 1434 of 1434, also in a CI-like run without a browser.
+
+**Decision.** aj wrote "QA passed: wait clocks". Pull request #573 is marked ready for review.
+
+**Why.** aj's own QA is the sign-off the design loop requires.
+
+**Status.** Standing. Merging to main and closing the issues are aj's steps; the issues stay `needs review`.

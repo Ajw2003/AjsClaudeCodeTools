@@ -2476,6 +2476,54 @@ def _check_page(ctx):
     return ""
 
 
+_SEND_TOOL = "SendUserFile"
+_PAGE_DOCS_RE = re.compile(r"(^|/)docs/.+\.html$", re.IGNORECASE)
+_MADE_PAGE_RE = re.compile(r"make_page: wrote (\S+?\.html)")
+
+
+def _norm_page(path, cwd):
+    return os.path.normcase(os.path.abspath(os.path.join(cwd or "", str(path))))
+
+
+def _pages_unsent(records, cwd):
+    """#559: pages under docs/ written or rebuilt this turn with no file send or Artifact publish after
+    their last change. A rebuild is a Bash make_page.py build whose result says `make_page: wrote <page>`."""
+    results = {}
+    for rec in records:
+        c = (rec.get("message") or {}).get("content") if isinstance(rec, dict) else None
+        for b in c if isinstance(c, list) else []:
+            if isinstance(b, dict) and b.get("type") == "tool_result":
+                t = b.get("content")
+                results[b.get("tool_use_id")] = t if isinstance(t, str) else " ".join(
+                    x.get("text", "") for x in t if isinstance(x, dict)) if isinstance(t, list) else ""
+    changed, sent = {}, {}
+    for i, b in enumerate(core._turn_tool_uses(records)):
+        name, inp = b.get("name"), b.get("input") if isinstance(b.get("input"), dict) else {}
+        if name in ("Write", "Edit"):
+            fp = inp.get("file_path") or ""
+            if _PAGE_DOCS_RE.search(fp.replace("\\", "/")):
+                changed[_norm_page(fp, cwd)] = i
+        elif name == "Bash" and "make_page.py" in (inp.get("command") or "") and " build" in inp["command"]:
+            for m in _MADE_PAGE_RE.finditer(results.get(b.get("id"), "")):
+                if _PAGE_DOCS_RE.search(m.group(1).replace("\\", "/")):
+                    changed[_norm_page(m.group(1), cwd)] = i
+        elif name == _SEND_TOOL or name == "Artifact":
+            for v in _page_candidates(inp):
+                sent[_norm_page(v, cwd)] = i
+    return sorted(p for p, i in changed.items() if sent.get(p, -1) < i)
+
+
+def _check_send(ctx):
+    """#559: a page written or rebuilt this turn is sent to aj before the turn ends."""
+    pages = ctx.get("pages_unsent") or []
+    if not pages or _page_escape(ctx) or not _pages_enabled():
+        return ""
+    if not ctx.get("can_send") and _reply_links_page(ctx.get("reply") or "", ctx.get("cwd") or ""):
+        return ""
+    return ("send %s with the file-send tool (display render) as the last action"
+            % ", ".join(pages))
+
+
 def _check_editor(ctx):
     if _page_escape(ctx) or not ctx.get("editor_owed"):
         return ""
@@ -2656,6 +2704,79 @@ def event_pagecheck():
     return 0
 
 
+def _embed_in_place(page, look):
+    """#559: embed each relative picture beside `page` as a data: address, nothing else changes. Returns the note."""
+    import base64
+    if SCRIPTS_DIR not in sys.path:
+        sys.path.insert(0, SCRIPTS_DIR)
+    import make_page as mp  # the mime table and size limit live there
+    with open(page, encoding="utf-8", newline="") as fh:
+        html = fh.read()
+    done, left = [], []
+    for s in mp.static_broken_pictures(html):
+        path = re.split(r"[?#]", s)[0]
+        ext = os.path.splitext(path)[1].lower()
+        full = os.path.join(os.path.dirname(os.path.abspath(page)), path)
+        if re.match(r"(?i)^([a-z][a-z0-9+.-]*:|//|/|\\)", s) or os.path.isabs(path):
+            left.append("%s (not a relative path)" % s)
+        elif not os.path.isfile(full):
+            left.append("%s (file not found)" % s)
+        elif ext not in mp.PIC_MIME:
+            left.append("%s (type %s not supported)" % (s, ext or "none"))
+        elif os.path.getsize(full) > mp.MAX_PIC:
+            left.append("%s (over %d bytes)" % (s, mp.MAX_PIC))
+        else:
+            with open(full, "rb") as fh:
+                addr = "data:%s;base64,%s" % (mp.PIC_MIME[ext], base64.b64encode(fh.read()).decode("ascii"))
+                # not when it is the tail of a longer path (a file list naming docs/plans/<src> is text, not a source)
+                html = re.sub(r"(?<![\w./-])" + re.escape(s), lambda _m: addr, html)
+            done.append(s)
+    if done:
+        with open(page, "w", encoding="utf-8", newline="") as fh:
+            fh.write(html)
+    again, why = look(page)
+    if again is None:
+        return "%s: embedded %d picture(s) but the re-check did not run (%s); not embedded: %s" % (
+            page, len(done), why, ", ".join(left) or "none")
+    if not again:
+        return "%s was repaired: embedded %s" % (page, ", ".join(done))
+    if done:
+        return "%s was partly repaired: embedded %s; still broken: %s" % (page, ", ".join(done), "; ".join(left) or ", ".join(again))
+    return "%s could not be repaired: %s" % (page, "; ".join(left) or ", ".join(again))
+
+
+def event_sendcheck():
+    """#559: before an .html page is sent, open a copy alone; embed pictures that sit beside it when they are
+    broken. Never blocks: every outcome is allow, with a note."""
+    import subprocess
+    try:
+        data = json.loads(read_payload() or "{}")
+        ti = data.get("tool_input") if isinstance(data, dict) else None
+        pages = [v for v in _page_candidates(ti) if v.lower().endswith(_PAGE_EXT)] if isinstance(ti, dict) else []
+        notes = []
+
+        def look(page):
+            r = subprocess.run([sys.executable, os.path.join(SCRIPTS_DIR, "page_criteria.py"), page, "--visual"],
+                               capture_output=True, text=True, timeout=240)
+            found = list(dict.fromkeys(re.findall(r"broken picture when the page is opened alone: (.+)", r.stdout)))
+            if not found and "visual check did not run" in r.stdout:  # the static check reports without a browser
+                return None, r.stdout.split("visual check did not run:", 1)[1].strip()[:150]
+            return found, ""
+
+        for page in pages:
+            broken, why = look(page)
+            if broken is None:
+                notes.append("the picture check did not run for %s (%s), so its pictures are unchecked" % (page, why))
+            elif broken:
+                notes.append(_embed_in_place(page, look))
+        if notes:
+            emit({"systemMessage": "house-rules send check: " + "; ".join(notes) + ". The send goes ahead."})
+    except Exception as exc:
+        emit({"systemMessage": "house-rules plugin: the send check hit an error (%s: %s); the send goes ahead."
+                               % (type(exc).__name__, exc)})
+    return 0
+
+
 def _record_qa_link(ctx):
     """True (and qa_page_linked recorded) when the reply links the QA page. Also used on a retry."""
     page, reply = ctx.get("qa_page") or "", ctx.get("reply") or ""
@@ -2740,6 +2861,7 @@ CHECKPOINTS = [
     ("reply ends", "decided for you", _check_decided, "block"),
     ("reply ends", "changelog", _check_changelog, "block"),
     ("reply ends", "handoff", _check_handoff, "block"),
+    ("reply ends", "send page", _check_send, "block"),
 ]
 
 
@@ -2751,6 +2873,7 @@ CHECKPOINT_RULES = {
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
     "decided for you": "Design points are aj's to decide; a reply puts them as options, not as \"I went with ...\".",
     "handoff": "A turn that wrote or committed files is pushed, with a fresh clean handoff note.",
+    "send page": "A page written or rebuilt this turn is sent to aj with the file-send tool, after its last change.",
     "changelog": "Every change adds a line to the repo's CHANGELOG.md, in the same turn.",
     "plain summary": "A reply reporting finished work opens with a short plain-English summary.",
 }
@@ -3350,6 +3473,15 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
                            qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd)
         except Exception as exc:
             trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
+                               "so it is off for this reply." % (type(exc).__name__, exc))
+        try:
+            recs, _d = core._records_since_last_user_message(transcript_path) if transcript_path else (None, "")
+            if recs is not None:
+                ctx["pages_unsent"] = _pages_unsent(recs, ctx["cwd"])
+                # no send tool in the transcript: a link in the reply counts instead
+                ctx["can_send"] = _SEND_TOOL in _read_text(transcript_path)
+        except Exception as exc:
+            trace_lines.append("house-rules: the send-page checkpoint could not read the turn (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
         missed = _missed_checkpoints(ctx)
         if missed:

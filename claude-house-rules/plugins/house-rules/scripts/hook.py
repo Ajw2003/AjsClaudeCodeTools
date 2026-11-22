@@ -158,7 +158,16 @@ def event_handover():
                     parity_word = pm.group(1)
             shell_page_notes, editor_owed, trace_lines_early = handover_page_editor_check(
                 transcript_path, payload, written_now, turn_records, have_reply, reply_text)
-            visual_files = handover_visual_check(written_now, turn_records)
+            visual_files, visual_missing = handover_visual_check(written_now, turn_records)
+
+    try:  # #562: a note for aj only (systemMessage), never blocking
+        if transcript_path and not retry:
+            _bg = handover_unchecked_waits(_records_since_last_user_message(transcript_path)[0],
+                                           _field(re.compile(r'"session_id"\s*:\s*"([^"]*)"'), payload))
+            if _bg:
+                trace_lines_early.append(_bg)
+    except Exception as exc:
+        trace_lines_early.append("house-rules: unchecked-wait note could not run (%s)" % type(exc).__name__)
 
     issue_line, issue_problem, label_line, label_problem = handover_stop_lines(payload)
 
@@ -231,7 +240,7 @@ def event_handover():
     if parity_word:
         parts.append(_parity_report_note(parity_word))
     if visual_files:
-        parts.append(_visual_note(visual_files))
+        parts.append(_visual_note(visual_files, visual_missing))
     if uncommitted:
         parts.append(_commit_note(uncommitted))
     if multirepo:
@@ -302,6 +311,7 @@ EVENTS = {
     "handover": event_handover,
     "harvest": event_harvest,
     "pagecheck": event_pagecheck,
+    "sendcheck": event_sendcheck,
     "closablemerge": event_closablemerge,
 }
 
