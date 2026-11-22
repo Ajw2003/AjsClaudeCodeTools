@@ -522,6 +522,32 @@ else:
                       "gone-pics/a.svg" in _sp_o1 and "no nosrc.page.json" in _sp_o1 and "deny" not in _sp_o1))
     _mp_cases.append(("sendcheck (#559): a clean page and a non-page file get no note and no denial",
                       _sp_send(_sp_fix) == "" and _sp_send(os.path.join(_sp_plans, "x.txt")) == ""))
+# ---- #557 static check: picture sources not built into the page are named, with no browser needed ----
+_sb = __import__("make_page").static_broken_pictures
+_mp_cases.append(("static picture check (#557): a PAGE data block holding a -pics/ src and no <img> at load is named",
+                  _sb('<script>const PAGE = {"c":[{"src": "x-pics/a.png", "alt": "a"}]};</script>') == ["x-pics/a.png"]))
+_mp_cases.append(("static picture check (#557): only data: pictures pass",
+                  _sb('<img src="data:image/png;base64,AAAA"><script>var P={src:"data:image/svg+xml;utf8,x"}</script>') == []))
+_mp_cases.append(("static picture check (#557): an in-page # source, a font stylesheet link and a font url do not count; an http image and css image url do",
+                  _sb('<img src="#a"><link href="https://fonts.googleapis.com/css2?family=X" rel="stylesheet">'
+                      '<style>@font-face{src:url(https://f.example/x.woff2)}b{background:url(/img/b.png)}</style>'
+                      '<img src="https://e.com/p.jpg">') == ["https://e.com/p.jpg", "/img/b.png"]))
+_sd_src = os.path.join(ROOT, "docs", "plans")
+_sd_tmp = tempfile.mkdtemp(prefix="realqa-", dir=_sd_src)
+try:
+    _sd_name = "2026-10-19-restructure-step-1-qa"
+    for _e in (".html", ".page.json"):
+        shutil.copyfile(os.path.join(_sd_src, _sd_name + _e), os.path.join(_sd_tmp, _sd_name + _e))
+    shutil.copytree(os.path.join(_sd_src, _sd_name + "-pics"), os.path.join(_sd_tmp, _sd_name + "-pics"))
+    _sd_page = os.path.join(_sd_tmp, _sd_name + ".html")
+    _sd_out = _sp_send(_sd_page)
+    _sd_txt = open(_sd_page, encoding="utf-8").read()
+    _sd_left = _sd_txt.count("-pics/")
+    _sd_after = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _sd_page, "--visual"], capture_output=True, text=True, timeout=300).stdout
+    _mp_cases.append(("static picture check (#557): REAL DATA, sendcheck rebuilds the finished QA page; no -pics/ link is left and a lone copy has no broken picture",
+                      "rebuilt it from" in _sd_out and _sd_left == 0 and "broken picture" not in _sd_after))
+finally:
+    shutil.rmtree(_sd_tmp, ignore_errors=True)
 # ---- starters: one optional content skeleton per page type (#544) ----
 _mp_cases.append(("starters (#544): make_page's type list equals page_criteria's", tuple(__import__("make_page").PAGE_TYPES) == tuple(_pc.TYPES)))
 _sp = _mp_proj("starts", {"use": "defaults"})

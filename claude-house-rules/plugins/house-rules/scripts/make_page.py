@@ -656,7 +656,7 @@ def static_broken_pictures(html):
             parts = [p.split()[0] for p in m.split(",") if p.strip()] if i == 1 else [m]
             for s in parts:
                 s = s.strip()
-                if not s or s.startswith(("data:", "#")) or s in found:
+                if not s or s.startswith(("data:", "#")) or s in found or re.search(r"[${}`]", s):  # JS template text
                     continue
                 if i == 0 or _IMG_EXT.search(re.split(r"[?#]", s)[0]):
                     found.append(s)

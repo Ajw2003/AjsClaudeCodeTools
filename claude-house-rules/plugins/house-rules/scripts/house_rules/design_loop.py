@@ -2717,9 +2717,10 @@ def event_sendcheck():
         def look(page):
             r = subprocess.run([sys.executable, os.path.join(SCRIPTS_DIR, "page_criteria.py"), page, "--visual"],
                                capture_output=True, text=True, timeout=240)
-            if "visual check did not run" in r.stdout:
+            found = list(dict.fromkeys(re.findall(r"broken picture when the page is opened alone: (.+)", r.stdout)))
+            if not found and "visual check did not run" in r.stdout:  # the static check reports without a browser
                 return None, r.stdout.split("visual check did not run:", 1)[1].strip()[:150]
-            return re.findall(r"broken picture when the page is opened alone: (.+)", r.stdout), ""
+            return found, ""
 
         for page in pages:
             broken, why = look(page)
