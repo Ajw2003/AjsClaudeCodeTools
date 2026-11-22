@@ -21,7 +21,7 @@
     "Checked",
     "Both verify scripts pass, and the check blocks twice, then warns",
     "",
-    "I ran verify.py (1345 of 1345 checks pass) and verify_tools.py (55 of 55). I also ran the branch's hook.py three times with the same roadblock claim and no check run in between. The first two replies were blocked (\"block 1 of 2\", \"block 2 of 2\"). The third printed the warning \"a roadblock claim (i cannot) went out unchecked\".",
+    "I ran verify.py (1345 of 1345 checks pass) and verify_tools.py (55 of 55). I also ran the branch's hook.py three times with the same roadblock claim, and I ran no check between the runs. The first two replies were blocked (\"block 1 of 2\", \"block 2 of 2\"). The third printed the warning \"a roadblock claim (i cannot) went out unchecked\".",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%201:%20block%20%281%20of%202%29%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%202:%20block%20%282%20of%202%29%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%203:%20passes%20%2B%20warning%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ENew%20message:%20count%20resets%3C/text%3E%3C/svg%3E",
@@ -61,7 +61,7 @@
   [
    "chg",
    "One older test changed",
-   "The existing test case for the \"untested\" rule (issue #89) now gives a four-hour test suite as its reason.",
+   "The existing test case for the rule that a \"not checked\" must say why (issue #89) now gives a four-hour test suite as its reason for not having been run.",
    "",
    "That test's old reason was a missing Unity editor, which is exactly the kind of claim the new check blocks, so the test would have failed.",
    null,
