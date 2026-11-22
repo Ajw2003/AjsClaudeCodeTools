@@ -73,7 +73,7 @@
     "Checked",
     "The full test suites",
     "",
-    "`verify.py` passed 1422 of 1422 and `tools/verify_tools.py` exited 0 on the merged code, run by me with nothing else running. Several real faults turned up on the way and were fixed; they are listed under Changes.",
+    "`verify.py` passed 1428 of 1428 and `tools/verify_tools.py` exited 0 on the merged code, run by me with nothing else running. Several real faults turned up on the way and were fixed; they are listed under Changes.",
     "Nothing from you.",
     {
      "src": "docs/plans/2026-11-22-wait-and-visual-checks-art/send.svg",
@@ -84,7 +84,7 @@
    [
     "flask",
     "Checked",
-    "Your steps 3 to 7, run on Linux in real sessions",
+    "Your steps 3 to 7, run on Linux in real sessions, before and after the fix",
     "",
     "I ran the Linux form of steps 3 to 7. The install says 2.88.0; the waitfor.py wait script ends in a timeout, exit 3; a real session sent its page unasked, and again after an edit; the send hook repaired an old page in place. Full output: docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt.",
     "Nothing from you.",
@@ -161,10 +161,10 @@
   ],
   [
    "chg",
-   "Found by the live runs: the visual reminder is noisy",
-   "It fired after ordinary docs pages in both live runs.",
+   "Fixed after your QA: the visual reminder is quiet on pages",
+   "Zero reminders in two real reruns, down from one and two.",
    null,
-   "After ordinary pages were written, the visual check asked for a capture, a record check and an image read at the turn's end (once in step 4, twice in step 5). It only reminds. Proposed fix: count a page build, or the page checker's visual run, as the capture for docs pages. Code edits are closed in QA, so this waits for your word.",
+   "Pages that carry the page builder's mark, or the handover-page meta tag, are no longer treated as visual files. Replaying your two real sessions: 1 firing before, 0 after; 1 before, 0 after. Real reruns on the fixed build: 0 and 0. A plain test page is still checked.",
    null,
    null
   ]
@@ -182,9 +182,9 @@
   "files": {}
  },
  "wrapup": {
-  "summary": "All 13 steps (#556 to #568) of the approved plan are built, merged on one branch and tested; the page shows the evidence and eight steps for you.",
+  "summary": "All 13 steps (#556 to #568) of the approved plan are built, merged on one branch and tested, and the fix for your QA verdict is in; the page shows the evidence and eight steps for you.",
   "changing": "Plugin 2.88.0: the page builder, the guard, the end-of-turn checks, a send hook, three new scripts (waitfor.py, visualcheck.py, ledger.py), the visual-loop skill, rules, tests and docs.",
-  "blocking": "Your eight steps below, whether the machine details in step 2 are right, and what to do about the noisy visual reminder (see Changes).",
+  "blocking": "Your eight steps below, and whether the machine details in step 2 are right.",
   "next": "On a pass, I open a pull request to main for you to merge.",
   "todo": [
    "Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.",

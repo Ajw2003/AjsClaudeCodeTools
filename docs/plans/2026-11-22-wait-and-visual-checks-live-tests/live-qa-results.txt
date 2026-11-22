@@ -80,3 +80,13 @@ New real headless session, step 4, same prompt, fixed build (plugin 2.88.0 loade
   SendUserFile calls                                2                 3
   send hook (sendcheck) responses                   2                 3
 
+New real headless session, step 5, same prompt, fixed build (plugin 2.88.0 loaded inline)
+                                              first run      rerun on the fixed build
+  visual-reminder note at Stop                      2                 0
+  SendUserFile calls                                3                 1
+  "was repaired: embedded" (both pictures)          1                 1
+  The repair note was identical in both runs: "house-rules send check: <repo>/docs/plans/2026-10-19-restructure-step-1-qa.html
+  was repaired: embedded 2026-10-19-restructure-step-1-qa-pics/before-phone-light.png, ...after-phone-light.png. The send goes ahead."
+Result: the visual-reminder noise is gone in both real sessions, and the send reminder, the send hook and the in-place repair
+still work.
+

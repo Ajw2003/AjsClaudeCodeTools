@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Fixed the visual reminder noise from aj's QA of the wait clocks work (#555): pages that carry the page builder's mark or the handover-page meta tag no longer trigger the end-of-turn visual reminder; plain visual files are still checked. Proven by two real headless sessions on the fixed build (0 reminders, down from 1 and 2, repair still works) and a full `verify.py` 1428 of 1428.
+
 QA failed on the wait clocks work (#555) with one item to fix: the end-of-turn visual reminder fired after ordinary pages in both real test sessions. It is being changed to skip pages that carry the page builder's mark or the handover-page meta tag; everything else visual is checked as before. Not released.
 
 Reworded the QA page for the wait clocks, visual checks, page sending and pictures work after a final editor pass, and sent it to aj again (`docs/plans/2026-11-22-wait-and-visual-checks-qa.html`). No code changed.
