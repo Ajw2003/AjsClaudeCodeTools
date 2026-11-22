@@ -267,3 +267,5 @@ overrun that `verify.py` had never measured. See the dated entry in
 **Still 2026-11-22:** GitHub CI on PR 573 fails 2 of 1430 checks (injected rules 21 characters over the limit on the runner's longer path; one make_page send check with no browser). Diagnosed, not fixed: code edits are closed at Done.
 
 **Still 2026-11-22:** waiting on aj to reopen code edits for the two CI fixes.
+
+**Still 2026-11-22:** aj typed "skip design"; the two CI fixes are written (a make_page test skip, 33 characters off the injected rules) and being checked at a GitHub-like path.

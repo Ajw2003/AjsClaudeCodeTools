@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Fixed the two failing CI checks on pull request #573: the clean-page send check now skips when there is no browser, and the injected rules are 33 characters shorter (9721 to 9688 on GitHub's path, limit 9700).
+
 Diagnosed the two failing CI checks on pull request #573 (injected rules 9721 of 9700 characters on the runner; a make_page send check with no browser); not fixed yet, waiting on aj to reopen code edits.
 
 aj passed QA on the wait clocks work; pull request #573 (plugin 2.88.0) is ready for review, waiting on aj's merge.
