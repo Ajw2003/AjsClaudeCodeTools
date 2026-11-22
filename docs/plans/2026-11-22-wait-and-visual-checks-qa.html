@@ -450,33 +450,33 @@ const PAGE = {
     ],
     [
       "chg",
-      "Found while testing for the pull request",
-      "Four test checks fail on a stock GitHub runner; the product works.",
+      "Fixed after your QA failed: the four test checks that failed on a GitHub-like run",
+      "Run like GitHub's runner (Python 3.12, no browser), all 1434 checks now pass.",
       null,
-      "Run like GitHub's runner (Python 3.12, no browser), three repair tests that assume a browser fail, and one check that reads this branch's loop state needs access to GitHub. By hand, the repair works without a browser. Fixing the tests needs your go-ahead, because code edits are closed in QA.",
+      "Three repair tests that assumed a browser now skip with the hook's real output when no browser re-check ran, and still check the embedded pictures. The handover check now runs in a scratch folder, so it no longer reads this branch's loop state.",
       null,
       null
     ],
     [
       "chg",
-      "Also found: two false alarms in the wait checks",
-      "Real sessions showed both; the guard's refusal and the real notes still work.",
+      "Fixed after your QA failed: two false alarms in the wait checks",
+      "Real sessions showed both; both are fixed, and the guard's refusal and the real notes still work.",
       null,
-      "The turn-end note listed a launch the guard had refused, though it never started. The guard also misread quoted text containing the word timeout and a number over 60 as a real foreground wait. The same go-ahead covers fixing both.",
+      "The turn-end note no longer lists a launch the guard refused. The guard now counts the word timeout only where a command starts, so quoted text and heredoc bodies no longer trigger it. A timeout inside bash -c with quotes is not seen; that limit is noted in the code.",
       null,
       null
     ],
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "78 files, +9296 −107",
+      "78 files, +6510 −120",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          2868,
+          1,
           1,
           [
             [
@@ -488,7 +488,7 @@ const PAGE = {
         ],
         [
           "CHANGELOG.md",
-          32,
+          34,
           0,
           [
             [
@@ -680,8 +680,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/core.py",
-          8,
-          3,
+          27,
+          14,
           [
             [
               "Not in the plan",
@@ -728,7 +728,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
-          124,
+          131,
           1,
           [
             [
@@ -740,7 +740,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
-          121,
+          140,
           1,
           [
             [
@@ -812,8 +812,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
-          88,
-          6,
+          97,
+          8,
           [
             [
               "Not in the plan",
@@ -980,7 +980,7 @@ const PAGE = {
         ],
         [
           "docs/5-today/Today.md",
-          5,
+          11,
           1,
           [
             [
@@ -992,7 +992,7 @@ const PAGE = {
         ],
         [
           "docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md",
-          77,
+          86,
           0,
           [
             [
@@ -1004,7 +1004,7 @@ const PAGE = {
         ],
         [
           "docs/6-decisions/Decisions.md",
-          17,
+          27,
           0,
           [
             [

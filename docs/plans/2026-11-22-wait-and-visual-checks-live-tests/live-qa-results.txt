@@ -129,3 +129,15 @@ What GitHub's CI will see (a CI-like run: Python 3.12, a stripped environment wi
   Both are test-side fixes. They are not made yet because code edits are closed during QA: they need aj's go-ahead
   ("QA failed: wait clocks" plus what to fix, or "skip design" for one small change).
 
+
+----------------------------------------------------------------------------------------------------------
+Fixes after "QA failed: wait clocks. fix the test issues and the two false alarms" (2026-11-22)
+
+  Fixed: the three browser-dependent make_page cases now skip (with the hook's real output) when no browser re-check ran,
+  and still assert the embedded pictures; the core handover check runs in a scratch folder; the unchecked-wait note skips a
+  launch the guard refused; the foreground-wait pattern matches `timeout` only at command position (heredoc bodies stripped).
+  Full suites run alone on this machine: verify.py 1434 of 1434 (core 206, safe_git 275, design_loop 498, writing 22,
+  delegation 181, docs 167, make_page 85); tools/verify_tools.py 55 of 55, exit 0.
+  CI-like run (Python 3.12, stripped environment, no browser): verify.py all parts PASS, 1434 of 1434; 5 SKIP lines, three of
+  them the new browser skips. GitHub's own CI result is not read yet.
+  Not run: the two false-alarm fixes in a new real headless session (verified by the safe_git part cases and by reading the diff).

@@ -255,3 +255,5 @@ overrun that `verify.py` had never measured. See the dated entry in
 **Still 2026-11-22:** the 14 issues were relabelled `in progress` (the design loop blocks code edits while they say `needs review`); the two builders are re-running the four fixes.
 
 **Still 2026-11-22:** the wait false-alarm fixes are in (refused launches skipped; `timeout` matched at command position only). The test-side fixes are written; my full test run is next.
+
+**Still 2026-11-22:** the four QA-failed fixes are built; full verify.py 1434 of 1434 here and in a CI-like run, verify_tools 55 of 55. Issues are `needs review` again and the QA page was rebuilt and resent.
