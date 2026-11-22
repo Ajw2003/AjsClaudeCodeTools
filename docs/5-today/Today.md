@@ -259,3 +259,5 @@ overrun that `verify.py` had never measured. See the dated entry in
 **Still 2026-11-22:** the four QA-failed fixes are built; full verify.py 1434 of 1434 here and in a CI-like run, verify_tools 55 of 55. Issues are `needs review` again and the QA page was rebuilt and resent.
 
 **Still 2026-11-22:** the editor helper reworded the two new QA-page rows; the page was rebuilt and sent again.
+
+**Still 2026-11-22:** all work is pushed and the issues are `needs review`; waiting on aj's QA verdict.

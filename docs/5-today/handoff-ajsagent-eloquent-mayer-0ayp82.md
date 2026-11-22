@@ -88,3 +88,5 @@ Build status (wait fixes in): the unchecked-wait note now skips a launch the gua
 Build status (QA-failed fixes done): all four fixes are built and proven: full verify.py 1434 of 1434 on this machine and in a CI-like run (Python 3.12, no browser); verify_tools 55 of 55. The 14 issues (#555 to #568) are `needs review` again; the QA page and PR 573 are updated. Next: aj's QA verdict; GitHub CI for PR 573 unread. Unverified: Windows, the new wait fixes in a real session, GitHub CI.
 
 Build status (editor pass done): the editor helper reworded the two new QA-page rows; the page was rebuilt (no page errors, 0 broken pictures) and is sent again. Nothing else changed. Next: aj's QA verdict; GitHub CI for PR 573 unread. Unverified: Windows, the wait fixes in a real session, GitHub CI. Issues #555 to #568, all needs review.
+
+Build status (final for this turn): everything is pushed; the QA page was sent again after the editor pass. Waiting on aj's QA verdict. Unverified: Windows, GitHub CI for PR 573, the wait fixes in a real session. Issues #555 to #568, all needs review.
