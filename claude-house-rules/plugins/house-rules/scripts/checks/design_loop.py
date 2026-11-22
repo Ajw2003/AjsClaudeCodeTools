@@ -3779,7 +3779,7 @@ _sp_cases.append(("#559: with no file-send tool in the session a link to the pag
                     "send page" not in _sp_run([_sp_w], reply="See [p](docs/plans/p.html)") and "send page" in _sp_run([_sp_w])))
 _sp_cases.append(("#559: HOUSE_RULES_PAGES=off turns the send check off",
                     "send page" not in run_hook("handover", stop_payload(
-                        transcript_path=os.path.join(_FIXTURE_ROOT, "sendpage-%d.jsonl" % (_sp_n[0] - 1)),
+                        transcript_path=os.path.join(_FIXTURE_ROOT, "sendpage-%d.jsonl" % _sp_n[0]),
                         last_assistant_message="Done.", cwd=_sp_dir, session_id="verify-send"),
                         env=dict(_sp_env, HOUSE_RULES_PAGES="off"))[1]))
 
