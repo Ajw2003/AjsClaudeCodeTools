@@ -2,7 +2,7 @@
 
 **Owns:** the rule that the agent checks a roadblock claim before making it, installs missing tools
 itself, and tries other routes before stopping, plus the end-of-reply check that enforces it.
-Status: built in plugin 2.88.0. Parent issue #569; steps #570 (rule text), #571 (the check), #572
+Status: built in plugin 2.89.0. Parent issue #569; steps #570 (rule text), #571 (the check), #572
 (tests, docs, version). aj approved the design on 2026-11-22 as "Design approved: clear roadblocks
 1C 2A" on `docs/plans/2026-11-22-clear-roadblocks.html`.
 
