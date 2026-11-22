@@ -75,7 +75,7 @@
       "A send after the last change is required; a link in the text is not enough.",
       "No more resend requests. A false alarm costs me one extra send."
     ], null],
-    ["chg", "Everything else that each fix touches", "Every file and doc the two fixes touch, so nothing is left behind.", null, "All of these are updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.", [
+    ["chg", "Everything else that each fix touches", "Every file and doc the three fixes touch, so nothing is left behind.", null, "All of these are updated in the same change: the rule text, the table that maps each rule to its check, the tests in verify.py, the helper agent prompts, the on and off switches, the token-cost measurement, the architecture and systems docs, a decisions-log entry, project state, the changelog and the version number.", [
       "The rules are in three places that must agree.",
       "If any one falls out of step, verify.py fails.",
       "The injected rules grow a little, so I measure the cost and keep the new text short."
@@ -111,7 +111,7 @@
     "summary": "Three workflow fixes: every wait gets a one-minute clock with a deadline, every visual change is captured, critiqued and fixed in an unattended loop, and every page I make or change is sent to you at the end of the turn.",
     "changing": "The rules file, three detail files, a settings file, two new scripts (waitfor.py and visualcheck.py), one new skill, the guard, the page builder, the end-of-turn checks, the agent prompts, tests and docs.",
     "blocking": "Your five answers under Choices: what happens at a deadline, how strict the guard is, which capture tools, who critiques, and how firm the page-sending check is.",
-    "next": "After you approve, I open one parent issue and a child issue per step, then build page sending first, because it is the smallest and fixes your most repeated complaint, then the wait clock, because the visual loop uses it. I prove each fix on seeded failures, not just a green test run.",
+    "next": "After you approve, I open one parent issue and a child issue per step, then build page sending first, because it is the smallest and fixes your most repeated complaint, then the wait clock, because the visual loop uses it. I prove each fix by planting the failure it should catch, not just by a passing test run.",
     "todo": [
       "Pick your answers under Choices.",
       "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
