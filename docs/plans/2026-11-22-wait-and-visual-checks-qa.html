@@ -340,7 +340,7 @@ const PAGE = {
         "Checked",
         "A wait ends at its deadline",
         "",
-        "On real processes: a check that succeeds after 2 seconds exits 0; one that never succeeds with a 4-second deadline exits 3 after 4 seconds. By default the first check is at 60 seconds, then every 60.",
+        "On real processes: a check that succeeds after 2 seconds exits 0; one that never succeeds with a 4-second deadline exits 3 after 4 seconds. By default the first check is at 60 seconds, then every 60 seconds.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkEgd2FpdCB3aXRoIGEgY2xvY2s6IGZpcnN0IGNoZWNrIGF0IDEgbWludXRlLCB0aGVuIGV2ZXJ5IG1pbnV0ZSwgZW5kaW5nIGF0IGRvbmUsIHN0YWxsZWQgb3IgZGVhZGxpbmUiPgo8c3R5bGU+dGV4dHtmb250LWZhbWlseTpIZWx2ZXRpY2EsQXJpYWwsc2Fucy1zZXJpZjtmb250LXNpemU6MTRweDtmaWxsOiMxNzIwMmV9Lmx7c3Ryb2tlOiM1NjYxNzQ7c3Ryb2tlLXdpZHRoOjJ9LmR7ZmlsbDojMmY1YmQzfS5ye2ZpbGw6I2I0MjMyZn0uYntmaWxsOiNlM2VhZmN9LnR7Zm9udC13ZWlnaHQ6NzAwfTwvc3R5bGU+CjxyZWN0IHdpZHRoPSIzNjAiIGhlaWdodD0iMjUwIiBjbGFzcz0iYiIvPgo8dGV4dCB4PSIxNiIgeT0iMjgiIGNsYXNzPSJ0Ij5FdmVyeSB3YWl0IGhhcyBhIGNsb2NrPC90ZXh0Pgo8bGluZSB4MT0iMzAiIHkxPSI5MCIgeDI9IjMzMCIgeTI9IjkwIiBjbGFzcz0ibCIvPgo8Y2lyY2xlIGN4PSIzMCIgY3k9IjkwIiByPSI4IiBjbGFzcz0iZCIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9IjkwIiByPSI2IiBjbGFzcz0iZCIvPjxjaXJjbGUgY3g9IjE2MCIgY3k9IjkwIiByPSI2IiBjbGFzcz0iZCIvPjxjaXJjbGUgY3g9IjIyMCIgY3k9IjkwIiByPSI2IiBjbGFzcz0iZCIvPjxjaXJjbGUgY3g9IjMzMCIgY3k9IjkwIiByPSI5IiBjbGFzcz0iciIvPgo8dGV4dCB4PSIxNCIgeT0iNzAiPnN0YXJ0PC90ZXh0Pjx0ZXh0IHg9IjgyIiB5PSI3MCI+MSBtaW48L3RleHQ+PHRleHQgeD0iMTQyIiB5PSI3MCI+MiBtaW48L3RleHQ+PHRleHQgeD0iMjAyIiB5PSI3MCI+MyBtaW48L3RleHQ+PHRleHQgeD0iMjcyIiB5PSI3MCI+ZGVhZGxpbmU8L3RleHQ+Cjx0ZXh0IHg9Ijg2IiB5PSIxMTgiPmZpcnN0IGNoZWNrPC90ZXh0Pjx0ZXh0IHg9IjE5NiIgeT0iMTE4Ij4uLi5ldmVyeSBtaW51dGU8L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIxNjUiPkVhY2ggY2hlY2sgc2F5cyBvbmUgb2YgdGhyZWUgdGhpbmdzOjwvdGV4dD4KPHRleHQgeD0iMTYiIHk9IjE5MCI+ZG9uZSwgc3RpbGwgbW92aW5nLCBvciBzdGFsbGVkLjwvdGV4dD4KPHRleHQgeD0iMTYiIHk9IjIyMiI+U3RhbGxlZCBvciBsYXRlIGVuZHMgdGhlIHdhaXQuPC90ZXh0Pgo8dGV4dCB4PSIxNiIgeT0iMjQyIj5JIHJlcG9ydCBpdCBhbmQgY2Fycnkgb24uPC90ZXh0Pgo8L3N2Zz4K",
@@ -442,7 +442,7 @@ const PAGE = {
     [
       "chg",
       "Fixed after your QA: the visual reminder is quiet on pages",
-      "Zero reminders in two real reruns, down from one and two in the first runs.",
+      "Zero reminders in two fresh real runs on the fixed build.",
       null,
       "Pages that carry the page builder's mark, or the handover-page meta tag, are no longer treated as visual files. Replaying your two real sessions gave 1 reminder before the fix and 0 after, in each. Fresh runs on the fixed build also gave 0 and 0. A plain test page is still checked.",
       null,
@@ -451,32 +451,32 @@ const PAGE = {
     [
       "chg",
       "Found while testing for the pull request",
-      "Four test checks fail on a stock runner with no browser; the product works.",
+      "Four test checks fail on a stock GitHub runner; the product works.",
       null,
-      "Run like GitHub's runner (Python 3.12, no browser), three repair tests that assume a browser fail, and one check that reads this branch's loop state needs GitHub. By hand, the repair works without a browser. Fixing the tests needs your go-ahead, because code edits are closed in QA.",
+      "Run like GitHub's runner (Python 3.12, no browser), three repair tests that assume a browser fail, and one check that reads this branch's loop state needs access to GitHub. By hand, the repair works without a browser. Fixing the tests needs your go-ahead, because code edits are closed in QA.",
       null,
       null
     ],
     [
       "chg",
       "Also found: two false alarms in the wait checks",
-      "Real sessions showed both; the guard's refusal and the real notes work.",
+      "Real sessions showed both; the guard's refusal and the real notes still work.",
       null,
-      "The turn-end note listed a launch the guard had refused, though it never started. The guard also misread quoted text containing the word timeout and a big number as a real foreground wait. The same go-ahead covers fixing both.",
+      "The turn-end note listed a launch the guard had refused, though it never started. The guard also misread quoted text containing the word timeout and a number over 60 as a real foreground wait. The same go-ahead covers fixing both.",
       null,
       null
     ],
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "78 files, +6342 −107",
+      "78 files, +9296 −107",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
       [
         [
           ".claude/house-rules-loop.json",
-          1,
+          2868,
           1,
           [
             [
@@ -488,7 +488,7 @@ const PAGE = {
         ],
         [
           "CHANGELOG.md",
-          30,
+          32,
           0,
           [
             [
@@ -944,7 +944,7 @@ const PAGE = {
         ],
         [
           "docs/3-state/ProjectState.md",
-          9,
+          10,
           0,
           [
             [
@@ -992,7 +992,7 @@ const PAGE = {
         ],
         [
           "docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md",
-          68,
+          77,
           0,
           [
             [
@@ -1112,7 +1112,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt",
-          92,
+          131,
           0,
           [
             [
@@ -1184,7 +1184,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-22-wait-and-visual-checks-qa.html",
-          1570,
+          1588,
           0,
           [
             [
@@ -1196,7 +1196,7 @@ const PAGE = {
         ],
         [
           "docs/plans/2026-11-22-wait-and-visual-checks-qa.page.json",
-          200,
+          218,
           0,
           [
             [

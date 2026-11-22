@@ -60,7 +60,7 @@
     "Checked",
     "A wait ends at its deadline",
     "",
-    "On real processes: a check that succeeds after 2 seconds exits 0; one that never succeeds with a 4-second deadline exits 3 after 4 seconds. By default the first check is at 60 seconds, then every 60.",
+    "On real processes: a check that succeeds after 2 seconds exits 0; one that never succeeds with a 4-second deadline exits 3 after 4 seconds. By default the first check is at 60 seconds, then every 60 seconds.",
     "Nothing from you.",
     {
      "src": "docs/plans/2026-11-22-wait-and-visual-checks-art/waits.svg",
@@ -162,7 +162,7 @@
   [
    "chg",
    "Fixed after your QA: the visual reminder is quiet on pages",
-   "Zero reminders in two real reruns, down from one and two in the first runs.",
+   "Zero reminders in two fresh real runs on the fixed build.",
    null,
    "Pages that carry the page builder's mark, or the handover-page meta tag, are no longer treated as visual files. Replaying your two real sessions gave 1 reminder before the fix and 0 after, in each. Fresh runs on the fixed build also gave 0 and 0. A plain test page is still checked.",
    null,
@@ -171,18 +171,18 @@
   [
    "chg",
    "Found while testing for the pull request",
-   "Four test checks fail on a stock runner with no browser; the product works.",
+   "Four test checks fail on a stock GitHub runner; the product works.",
    null,
-   "Run like GitHub's runner (Python 3.12, no browser), three repair tests that assume a browser fail, and one check that reads this branch's loop state needs GitHub. By hand, the repair works without a browser. Fixing the tests needs your go-ahead, because code edits are closed in QA.",
+   "Run like GitHub's runner (Python 3.12, no browser), three repair tests that assume a browser fail, and one check that reads this branch's loop state needs access to GitHub. By hand, the repair works without a browser. Fixing the tests needs your go-ahead, because code edits are closed in QA.",
    null,
    null
   ],
   [
    "chg",
    "Also found: two false alarms in the wait checks",
-   "Real sessions showed both; the guard's refusal and the real notes work.",
+   "Real sessions showed both; the guard's refusal and the real notes still work.",
    null,
-   "The turn-end note listed a launch the guard had refused, though it never started. The guard also misread quoted text containing the word timeout and a big number as a real foreground wait. The same go-ahead covers fixing both.",
+   "The turn-end note listed a launch the guard had refused, though it never started. The guard also misread quoted text containing the word timeout and a number over 60 as a real foreground wait. The same go-ahead covers fixing both.",
    null,
    null
   ]
