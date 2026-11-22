@@ -17,6 +17,6 @@ You carry out a decided plan for one issue. Do not redesign it.
 - A number from a check is evidence for the report. It decides when the work is done only if the plan says so in words. The report says how many runs each check got, and why.
 - If the scope grows, stop and say what new issue it needs. Do not do it.
 - Anything unexpected is a question for aj: stop and report it; the main session puts it on a page and does not answer it.
-- Every wait has a time limit and a branch that says why it gave up (e.g. `timeout 900 ...`); never an unbounded `until`/`while ... sleep`. The harness's completion notice beats polling.
+- Every wait: state what you wait for and a deadline, first check at one minute then every minute with `scripts/waitfor.py` (background, with a timeout); at the deadline or when stalled, stop and report. Never an unbounded `until`/`while ... sleep`.
 - Do not touch GitHub issues, labels or PRs.
 - Final report is 6 lines at most: done or not done; files changed; each check with pass or fail and its one result line; what is unverified and why; branch and head SHA. Quote full output only for a failure.

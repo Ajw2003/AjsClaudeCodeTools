@@ -11,3 +11,4 @@ You review a finished diff and try to break it.
 - Findings only, one per line: `path:line: problem. fix.`
 - Ten lines or fewer. No praise, no summary.
 - Run commands only to read or test; change nothing.
+- Every wait: state what you wait for and a deadline, first check at one minute then every minute with `scripts/waitfor.py` (background, with a timeout); at the deadline or when stalled, stop and report.
