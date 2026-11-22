@@ -932,6 +932,9 @@ def _event_guard_main():
             if allow_ctx:
                 _ac = out["hookSpecificOutput"].get("additionalContext")
                 out["hookSpecificOutput"]["additionalContext"] = (_ac + " " if _ac else "") + allow_ctx
+            if note_ctx:  # a note must not be lost because the command was also approved outright
+                _nc = out["hookSpecificOutput"].get("additionalContext")
+                out["hookSpecificOutput"]["additionalContext"] = (_nc + " " if _nc else "") + note_ctx
             if docs_status == "unknown" and trace_enabled():
                 out["systemMessage"] = "%s - docs check could not tell: %s." % (allow_trace, docs_detail)
             elif trace_verbose():
