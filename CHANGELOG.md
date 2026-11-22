@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+The visual loop is built and proven live (#555): `visualcheck.py` video, frame sheets and motion measures (#565), the `visual-loop` skill with `ledger.py` and a 4-round cap (#566), and an end-of-turn visual check that needs a real capture, a ledger check and an image read instead of a keyword (#567). The wait rule is folded into "Nothing fails silently" to keep the injected rules under their size limit. Full `verify.py` 1417 of 1417. Not released: no version bump until #568.
+
 Wait clock rule text and agent prompts (#563) and the first part of the visual capture tool, `visualcheck.py` doctor and screenshots (#564), are built on `ajsagent/eloquent-mayer-0ayp82` (#555). Running the new page-send check on a real old page showed that repairing a page by rebuilding it from its source is wrong for QA pages; it is being changed to embed the pictures into the page in place. Not released.
 
 Fixed a miss in the new picture check (#557): it reported no broken pictures for builder pages whose pictures only appear when a row is tapped, because nothing was rendered at page load. It now also scans the page for any picture source that is not built into the file, and `sendcheck` repairs such a page before it is sent. Found by running the check on a real old page. Full `verify.py` 1381 of 1381.
