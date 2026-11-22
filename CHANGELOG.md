@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Plugin 2.88.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
+
 Plugin 2.87.0: unattended mode on one typed line. Type `unattended on` (or `unattended off`, add `everywhere` for all folders) at any point; it turns every other switch off except autosave, refuses questions and prompts, tells the agent to use its own judgment and push only to its own `AjsAgent/` branch, never `main`, and the art-pipeline plugin follows the same line. The switch file is not to be committed while it is on.
 
 Plugin 2.86.0: unattended mode, stage 2. With `HOUSE_RULES_UNATTENDED=on`, a whole-file Write, a commit with a big file and a `Co-Authored-By: Claude` line are allowed with a note instead of refused, so an overnight run is not stopped on a question only aj can answer; attended they refuse as before. The guard's two allow paths now keep a note instead of dropping it. aj approved the relaxations on 2026-11-22.
