@@ -1,0 +1,93 @@
+{
+ "title": "Clear Roadblocks QA",
+ "eyebrow": "QA \u00b7 parent issue #569, plugin 2.88.0",
+ "pageType": "qa",
+ "short": {
+  "lead": "The roadblocks rule and its reply check are built as plugin 2.88.0; you check that a claim like \"Unity is not installed\" gets blocked twice, then carries a warning.",
+  "hint": "Tap a step to see what to do.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Checked",
+    "Both verify scripts pass, and the check blocks twice then warns",
+    "",
+    "I ran verify.py (1345 of 1345 checks pass) and verify_tools.py (55 of 55). I also ran the branch's hook.py three times with the same roadblock claim and no probe: the first two replies were blocked (\"block 1 of 2\", \"block 2 of 2\") and the third printed the warning \"a roadblock claim (i cannot) went out unchecked\".",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%201:%20block%20%281%20of%202%29%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%202:%20block%20%282%20of%202%29%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%203:%20passes%20%2B%20warning%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ENew%20message:%20count%20resets%3C/text%3E%3C/svg%3E",
+     "alt": "The block, block, warn sequence",
+     "caption": "What the check does for one user message."
+    }
+   ],
+   [
+    "hand",
+    "Your test",
+    "Try it in a session on the branch build",
+    "you",
+    "Install the branch build, start a new session, and ask something that tempts a roadblock claim. Expect me to run a check or install the tool instead of saying it is missing. The exact steps are in Wrap-up.",
+    "Follow the steps in Wrap-up."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Rule: Roadblocks are mine to clear",
+   "One short section in the rules, with its detail file.",
+   "",
+   "Check before claiming a tool or machine is missing, install what is missing, try the next route, and keep only purchases, licences, logins and destructive actions for you. The injected rules are 9,694 of 9,700 characters.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "The end-of-reply check",
+   "Blocks a roadblock claim twice per message, then warns.",
+   "",
+   "The state file lives in the temp directory, keyed by transcript path and your message count. An unreadable transcript or state file produces a message and never blocks. HOUSE_RULES_ROADBLOCKS=off turns it off.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "One older test changed",
+   "The #89 'untested' case now uses a four-hour suite as its reason.",
+   "",
+   "Its old reason, a missing Unity editor, is exactly what the new check blocks.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "clear roadblocks",
+  "base": "origin/main",
+  "unverified": [
+   "No live Claude Code session has run 2.88.0 yet: the Stop hook in the session that built it is the installed 2.87.0, so every check drove the branch's hook.py directly or used fixture transcripts",
+   "Which phrases real replies use for a roadblock was not measured; the check flags a fixed list of phrases, so a roadblock worded another way goes through",
+   "The install-without-asking behaviour in bypass mode is a rule I follow, not something a hook enforces"
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "The roadblocks rule and its end-of-reply check are built as plugin 2.88.0 and wait for your test.",
+  "changing": "One rules section, a detail file, the end-of-reply check, nine new test cases, one older test example and the docs.",
+  "blocking": "Your test on the branch build.",
+  "next": "On a pass, a pull request is opened. On a fail, I fix it on this branch.",
+  "todo": [
+   "UNTESTED: not run on your PC. Open PowerShell in the repo folder and run <code>python tools/use_branch.py ajsagent/affectionate-lovelace-r0zfgg</code>. Expect it to print the ref, version 2.88.0 and the commit.",
+   "Start a new Claude Code session in any project.",
+   "Type: <code>Is Unity installed on this PC?</code>. Expect me to run a check such as which, ls or a search, not to say it is missing without looking.",
+   "Tap <b>Copy my reply</b> and send it: \"QA passed: clear roadblocks\", or say what failed."
+  ]
+ }
+}
