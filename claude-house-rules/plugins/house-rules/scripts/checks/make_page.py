@@ -539,10 +539,11 @@ try:
     for _e in (".html", ".page.json"):
         shutil.copyfile(os.path.join(_sd_src, _sd_name + _e), os.path.join(_sd_tmp, _sd_name + _e))
     shutil.copytree(os.path.join(_sd_src, _sd_name + "-pics"), os.path.join(_sd_tmp, _sd_name + "-pics"))
+    shutil.copytree(os.path.join(_sd_src, "qa-339"), os.path.join(_sd_tmp, "qa-339"))  # where the .page.json's own src paths point
     _sd_page = os.path.join(_sd_tmp, _sd_name + ".html")
     _sd_out = _sp_send(_sd_page)
     _sd_txt = open(_sd_page, encoding="utf-8").read()
-    _sd_left = _sd_txt.count("-pics/")
+    _sd_left = len(_sb(_sd_txt))  # not grep -c '-pics/': the rebuilt page lists changed files, 7 lines name some *-pics/ file as text
     _sd_after = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _sd_page, "--visual"], capture_output=True, text=True, timeout=300).stdout
     _mp_cases.append(("static picture check (#557): REAL DATA, sendcheck rebuilds the finished QA page; no -pics/ link is left and a lone copy has no broken picture",
                       "rebuilt it from" in _sd_out and _sd_left == 0 and "broken picture" not in _sd_after))
