@@ -7,6 +7,11 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-22 - Roadblocks: a rule plus a check that blocks twice, then warns
+
+**Decision.** aj approved "Design approved: clear roadblocks 1C 2A". The agent probes before claiming a blocker, installs missing tools itself (without asking in bypass mode), and tries other routes before stopping. An end-of-reply check blocks a roadblock claim made with no probe twice, then lets it through with a warning line. Only licences, logins, purchases and destructive actions stay aj's. The session-start line for bypass mode was dropped.
+**Why.** A session on aj's PC claimed Unity was missing and that it was on the wrong machine; both were false. Rule text alone was ignored, and a check that blocks without end would hang a session. Detail: [roadblocks.md](../4-systems/roadblocks.md).
+
 ## 2026-11-22 - Unattended mode is a typed switch, shared with art-pipeline
 
 **Decision.** `unattended on|off` is a typed switch group (saved in `house-rules-mode.json`), not only an environment variable, so aj can turn it on at any point in a session with one line. The art-pipeline plugin reads the same file instead of getting its own command. It is kept out of `house rules off`, and the agent is told not to commit the file while it is on.
