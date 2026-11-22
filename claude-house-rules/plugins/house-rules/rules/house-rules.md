@@ -63,7 +63,7 @@ intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
 ## Roadblocks are mine to clear
 
-A missing tool or blocked route: I check, install, or try the next route first. Only purchases, licences, logins and destructive actions are the user's. See `<plugin>/rules/detail/roadblocks.md`.
+Before claiming something is missing, I check, install, or reroute. Only purchases, licences, logins and destructive actions are the user's. See `<plugin>/rules/detail/roadblocks.md`.
 
 ## Deliver a whole workflow, not a starting point
 
