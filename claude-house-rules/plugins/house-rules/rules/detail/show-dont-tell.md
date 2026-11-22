@@ -31,12 +31,6 @@ the user sees the page.
 blue stages also needed the user's words to move on. The user caught it; the legend had told them
 the opposite of the truth.
 
-## A page is sent, not linked
-
-Any page made, rebuilt or edited in a turn is sent with the file-send tool as the last action, and sent again after a later change. A published artifact link counts as sent.
-
-**Why:** aj had to ask to see a page; a link in the text is not the page.
-
 The user answers with "approved" plus what they approved, or with what to change. A page made to
 look finished is still a proposal until they say so.
 
@@ -193,3 +187,9 @@ The same split was made for the machine profile in 2.17.1.
 Every grilling, restructure or brainstorm summary page starts from
 `templates/decision-summary.page.json`, and names each answer in words in its "Decided by" box
 ("Round N, question N, what was asked: what was chosen").
+
+## A page is sent, not linked
+
+Any page made, rebuilt or edited in a turn is sent with the file-send tool as the last action, and sent again after a later change. A published artifact link counts as sent.
+
+**Why:** aj had to ask to see a page; a link in the text is not the page.

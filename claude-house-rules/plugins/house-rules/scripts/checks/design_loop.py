@@ -2180,6 +2180,23 @@ _cw_cases.append(("page: a page under docs/plans with a vague number is named be
 _cw_cases.append(("page: a clean page gets no note",
                   "the page probe.html" not in _cw_page("<p>This adds 43 tests to the suite.</p>")))
 
+
+def _cw_write(rel):
+    path = os.path.join(_loop_dir, rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("<p>x</p>")
+    p = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": {"file_path": path, "content": "x"}}
+    return run_hook("artifact", json.dumps(p), env=_loop_env)[1]
+
+
+_cw_cases.append(("page send (#558): an .html under docs/ gets the send note",
+                  "must be sent to aj" in _cw_write("docs/plans/sendnote.html")))
+_cw_cases.append(("page send (#558): an .html outside docs/ and a non-html under docs/ get none",
+                  "must be sent to aj" not in _cw_write("site/sendnote.html")
+                  and "must be sent to aj" not in _cw_write("docs/sendnote.md")))
+
 # The issue check: the GitHub tool and gh.
 _CW_GOOD_BODY = "## Depends on\nNothing.\n## Depended on by\nNothing.\n## Done when\nIt passes."
 
