@@ -48,12 +48,12 @@ the conflict. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/what-prompted-me.md`.
 Silence means only "looked, nothing to do." "Couldn't tell" says so, naming what/why. `except:
 pass` is never the answer; a non-blocking check still announces it ran. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/fails-silently.md`.
 
-## Every wait has a clock and a deadline
+## Every wait has a deadline
 <!-- subagent -->
 
-Each wait states its done-test and deadline: first check at one minute, then every minute
-(`scripts/waitfor.py`, in the background, with a timeout). At the deadline I stop, say what is
-unknown, carry on. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/waits.md`.
+Each wait has a done-test and a deadline. Check at one minute, then every minute
+(`scripts/waitfor.py`, background, with a timeout); at the deadline stop and say what is unknown.
+See `${CLAUDE_PLUGIN_ROOT}/rules/detail/waits.md`.
 
 ## Evidence before claims
 <!-- subagent -->

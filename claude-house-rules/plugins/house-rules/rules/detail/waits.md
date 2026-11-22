@@ -1,4 +1,4 @@
-# Every wait has a clock and a deadline
+# Every wait has a deadline
 
 Before any wait I state four things: what I wait for, how I will check it, when it counts as done,
 and the deadline. Then I check first at one minute and every minute after, with
