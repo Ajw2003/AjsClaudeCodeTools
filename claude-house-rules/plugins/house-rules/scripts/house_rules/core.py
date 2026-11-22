@@ -3427,10 +3427,8 @@ def _user_message_count(transcript_path):
     n = 0
     with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
-            try:
+            if line.strip():  # a torn line raises ValueError; the caller announces it and does not block
                 n += _is_genuine_user_message(json.loads(line))
-            except ValueError:
-                pass
     return n
 
 
