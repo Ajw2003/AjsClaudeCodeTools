@@ -158,7 +158,7 @@ def event_handover():
                     parity_word = pm.group(1)
             shell_page_notes, editor_owed, trace_lines_early = handover_page_editor_check(
                 transcript_path, payload, written_now, turn_records, have_reply, reply_text)
-            visual_files = handover_visual_check(written_now, turn_records)
+            visual_files, visual_missing = handover_visual_check(written_now, turn_records)
 
     try:  # #562: a note for aj only (systemMessage), never blocking
         if transcript_path and not retry:
@@ -240,7 +240,7 @@ def event_handover():
     if parity_word:
         parts.append(_parity_report_note(parity_word))
     if visual_files:
-        parts.append(_visual_note(visual_files))
+        parts.append(_visual_note(visual_files, visual_missing))
     if uncommitted:
         parts.append(_commit_note(uncommitted))
     if multirepo:
