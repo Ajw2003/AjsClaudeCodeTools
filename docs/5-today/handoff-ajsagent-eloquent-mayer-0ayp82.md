@@ -80,3 +80,5 @@ Parent #555. Steps: #556, #557 (pictures); #558, #559 (page sending); #560, #561
 ## Update, QA failed again (2026-11-22): fixing four known issues
 
 aj wrote "QA failed: wait clocks. fix the test issues and the two false alarms". Stage is Build. Two builders are fixing: (1) make_page cases skip when no browser re-check ran, and the core handover check runs in a scratch folder; (2) the unchecked-wait note ignores a refused launch, and the foreground-wait pattern matches `timeout` only at command position. Decision logged in Decisions.md. Next: my own full verify.py and verify_tools alone, a CI-like run (Python 3.12, stripped env), relabel the 14 issues `needs review`, update PR 573 and the QA page, resend it. Unverified: nothing of this is built or run yet; GitHub CI for PR 573 unread. Issues #555 to #568.
+
+Build status (later, 2026-11-22): the 14 issues (#555 to #568) were relabelled `in progress` so code edits are open (the design loop refused the first builder attempts while they said `needs review`). Both builders are re-running their fixes; nothing is merged or tested yet. Next: my own full verify.py and verify_tools alone, then a CI-like run.
