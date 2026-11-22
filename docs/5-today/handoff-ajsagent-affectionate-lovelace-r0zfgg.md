@@ -9,7 +9,7 @@ Design approved on 2026-11-22 as "Design approved: clear roadblocks 1C 2A" (a ru
 ## Update after QA
 QA on this machine found main already shipped a different 2.88.0 (#573). Main was merged in with the loop-state file kept as ours, the feature is now 2.89.0, and the rule is folded into the user's-hands section (9691 of 9700 injected characters). verify.py 1443 of 1443 and verify_tools.py 55 of 55 pass.
 
-Live test on the branch build passed (blocked once, then the agent probed and answered with evidence). Pull request #574 is open.
+Live test on the branch build passed (blocked once, then the agent probed and answered with evidence). Pull request #574 is open. The QA page's final editor pass is applied; issue #89 on that page is named from a code comment, not from the issue itself.
 
 ## The next step
 Wait for aj's review and merge of pull request #574, or aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).

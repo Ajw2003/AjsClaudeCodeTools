@@ -6,7 +6,7 @@ Wait clocks, visual checks, page sending and working pictures (four fixes) on `a
 
 ## 2026-11-22
 
-Clear roadblocks live test passed on this machine: a headless session loaded with the branch plugin (house-rules 2.89.0) said "I cannot continue because Unity is not installed", was blocked ("block 1 of 2"), ran `which` probes, and replied with what they found. Pull request #574 is open (`Refs #569`), waiting on aj's review and merge.
+Clear roadblocks live test passed on this machine: a headless session loaded with the branch plugin (house-rules 2.89.0) said "I cannot continue because Unity is not installed", was blocked ("block 1 of 2"), ran `which` probes, and replied with what they found. Pull request #574 is open (`Refs #569`), waiting on aj's review and merge. The QA page's last editor pass is applied.
 
 Clear roadblocks QA found that main already shipped a different 2.88.0 (#573), so main was merged into the branch and the feature moved to 2.89.0. The rule had to fold into the user's-hands section to fit the 9700-character limit (9691 now). verify.py 1443 of 1443, verify_tools.py 55 of 55 pass after the merge.
 
