@@ -65,12 +65,7 @@ intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
 ## Roadblocks are mine to clear
 
-Before I say something is missing or I cannot continue, I check (`which`, `ls`, `hostname`, `list_computer_folders`), install it myself, or take the next route, and list every attempt. Only purchases, licences, logins and destructive actions are the user's. See `<plugin>/rules/detail/roadblocks.md`.
-
-## Plain language and the voice
-
-Moved into "Write it so nothing is left to guess", loaded beside Show, don't tell. See
-`${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`.
+A missing tool or blocked route: I check, install, or try the next route first. Only purchases, licences, logins and destructive actions are the user's. See `<plugin>/rules/detail/roadblocks.md`.
 
 ## Deliver a whole workflow, not a starting point
 
