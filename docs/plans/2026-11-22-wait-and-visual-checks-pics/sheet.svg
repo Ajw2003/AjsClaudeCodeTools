@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 230" role="img" aria-label="What a check produces: phone and desktop screenshots, a video, and a numbered frame sheet">
+<style>text{font-family:Helvetica,Arial,sans-serif;font-size:14px;fill:#17202e}.p{fill:#fff;stroke:#566174;stroke-width:2}.b{fill:#e3eafc}.f{fill:#dbe3f7;stroke:#2f5bd3}</style>
+<rect width="640" height="230" class="b"/>
+<rect x="30" y="30" width="50" height="100" rx="8" class="p"/><text x="22" y="150">phone</text>
+<rect x="100" y="45" width="110" height="75" rx="4" class="p"/><text x="125" y="150">desktop</text>
+<rect x="240" y="30" width="140" height="90" rx="4" class="p"/><polygon points="295,60 295,90 320,75" fill="#2f5bd3"/><text x="270" y="150">video</text>
+<g><rect x="410" y="30" width="48" height="40" class="f"/><rect x="462" y="30" width="48" height="40" class="f"/><rect x="514" y="30" width="48" height="40" class="f"/><rect x="566" y="30" width="48" height="40" class="f"/>
+<rect x="410" y="76" width="48" height="40" class="f"/><rect x="462" y="76" width="48" height="40" class="f"/><rect x="514" y="76" width="48" height="40" class="f"/><rect x="566" y="76" width="48" height="40" class="f"/></g><text x="430" y="150">frame sheet</text>
+<text x="30" y="195">Every image is named after the criterion it proves, with light and dark versions.</text>
+</svg>
