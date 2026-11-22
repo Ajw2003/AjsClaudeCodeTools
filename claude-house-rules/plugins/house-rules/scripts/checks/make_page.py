@@ -514,9 +514,12 @@ if "picture check did not run" in _sp_o1:
 else:
     _sp_o2 = _sp_send(_sp_fix)
     _sp_after = open(_sp_fix, encoding="utf-8").read()
-    _mp_cases.append(("sendcheck (#559): a page with a -pics/ link is repaired in place with the picture embedded, allowed with a note",
-                      "was repaired" in _sp_o2 and "deny" not in _sp_o2 and "data:image/svg" in _sp_after
-                      and "fix-pics/a.svg" not in _sp_after))
+    _mp_cases.append(("sendcheck (#559): a page with a -pics/ link is repaired in place with the picture embedded, allowed",
+                      "deny" not in _sp_o2 and "data:image/svg" in _sp_after and "fix-pics/a.svg" not in _sp_after))
+    if "re-check did not run" in _sp_o2:  # no browser: the repair still happened, only the note differs
+        report("SKIP", "sendcheck (#559): the 'was repaired' note (no browser): %s" % _sp_o2[:200])
+    else:
+        _mp_cases.append(("sendcheck (#559): the repair is announced with a 'was repaired' note", "was repaired" in _sp_o2))
     _mp_cases.append(("sendcheck (#559): a picture whose file is missing is named with the reason, send allowed",
                       "gone-pics/a.svg (file not found)" in _sp_o1 and "could not be repaired" in _sp_o1 and "deny" not in _sp_o1))
     _mp_cases.append(("sendcheck (#559): a clean page and a non-page file get no note and no denial",
@@ -550,8 +553,12 @@ try:
         _sd_masked_before = re.sub(r"(?<![\w./-])" + re.escape(_u), "DATA", _sd_masked_before)  # same rule as the handler: a longer path naming it is text
     _sd_after = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _sd_page, "--visual"], capture_output=True, text=True, timeout=300).stdout
     _mp_cases.append(("static picture check (#557): REAL DATA, sendcheck repairs a copy of the finished QA page in place; no unbuilt picture is left, only the sources changed",
-                      "was repaired" in _sd_out and _sd_left == 0 and "broken picture when the page is opened alone" not in _sd_after
+                      _sd_left == 0 and "broken picture when the page is opened alone" not in _sd_after
                       and _sd_mask(_sd_txt) == _sd_masked_before and len(_sd_txt.splitlines()) == len(_sd_before.splitlines())))
+    if "re-check did not run" in _sd_out:
+        report("SKIP", "static picture check (#557): the 'was repaired' note (no browser): %s" % _sd_out[:200])
+    else:
+        _mp_cases.append(("static picture check (#557): REAL DATA, the repair is announced with a 'was repaired' note", "was repaired" in _sd_out))
 finally:
     shutil.rmtree(_sd_root, ignore_errors=True)
 # ---- starters: one optional content skeleton per page type (#544) ----

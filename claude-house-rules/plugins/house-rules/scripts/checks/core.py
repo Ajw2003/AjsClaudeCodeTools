@@ -752,17 +752,25 @@ else:
 # Tracing its stand-down would announce a compliant card's own compliance, which the rules
 # forbid, and would put a line on the end of every ordinary turn. Silence there already means
 # "I looked and there was nothing to do".
-code, out, err = run_hook(
-    "handover",
-    json.dumps(
-        {
-            "session_id": "verify",
-            "hook_event_name": "Stop",
-            "stop_hook_active": False,
-            "last_assistant_message": "a reply with no fenced block",
-        }
-    ),
-)
+_ho_cwd, _ho_scratch = os.getcwd(), tempfile.mkdtemp(prefix="handover-quiet-")
+os.chdir(_ho_scratch)  # no loop state here, so the hook cannot read this branch's .claude/house-rules-loop.json
+try:
+    _ho_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+    code, out, err = run_hook(
+        "handover",
+        json.dumps(
+            {
+                "session_id": "verify",
+                "hook_event_name": "Stop",
+                "stop_hook_active": False,
+                "last_assistant_message": "a reply with no fenced block",
+            }
+        ),
+        env=_ho_env,
+    )
+finally:
+    os.chdir(_ho_cwd)
+    shutil.rmtree(_ho_scratch, ignore_errors=True)
 if not out.strip() and "never announces its own compliance" in rules_corpus():
     report("PASS", "handover stays silent on its stand-down, and the rule that requires it still stands")
     print("          the one handler where tracing would break a rule rather than cost tokens")
