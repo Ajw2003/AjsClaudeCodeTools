@@ -1,11 +1,14 @@
 ---
 description: Switch a feature group on or off for this folder or everywhere, or show which are off
-argument-hint: "[design loop|pages|builders|issues|writing checks|autosave|house rules] on|off [everywhere]"
+argument-hint: "[design loop|pages|builders|issues|writing checks|autosave|house rules|unattended] on|off [everywhere]"
 ---
 
 The feature switches (docs/4-systems/speed-switches.md in the house-rules repo) are saved by the
 plugin's prompt hook as soon as aj's message holds a line such as `pages off` or `builders on everywhere`.
-The groups are design loop, pages, builders, issues, writing checks, autosave and house rules. This command's own text is that message, so by the time you read
+The groups are design loop, pages, builders, issues, writing checks, autosave, house rules and unattended
+(`unattended on` turns every other group off except autosave, refuses questions and prompts, and tells you to use
+your own judgment and push only to your own AjsAgent/ branch; the art-pipeline plugin reads it too; do not commit
+the switch file while it is on). This command's own text is that message, so by the time you read
 this the switch in `$ARGUMENTS` is already saved, and the hook's note above says so.
 
 Reply in two or three plain sentences:

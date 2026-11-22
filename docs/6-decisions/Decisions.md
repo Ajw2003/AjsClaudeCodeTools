@@ -7,6 +7,11 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-22 - Unattended mode is a typed switch, shared with art-pipeline
+
+**Decision.** `unattended on|off` is a typed switch group (saved in `house-rules-mode.json`), not only an environment variable, so aj can turn it on at any point in a session with one line. The art-pipeline plugin reads the same file instead of getting its own command. It is kept out of `house rules off`, and the agent is told not to commit the file while it is on.
+**Why.** aj asked for a single simple command to run at any point; an environment variable needs a restart and the launcher. One file means one line covers both plugins. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
+
 ## 2026-11-22 - Unattended mode: three guards relax to a note
 
 **Decision.** When `HOUSE_RULES_UNATTENDED=on`, the whole-file Write guard, the big-file commit guard and the Claude-credit check allow the action and say so in a note, instead of refusing. Attended they refuse exactly as before. The destructive-command guard and main-branch guard do not change. aj approved this in the coordinator session on 2026-11-22, after Claude Code's auto-mode safety check refused the builder's edit; the edit was then made directly in the coordinator session.
