@@ -9,8 +9,10 @@ Design approved on 2026-11-22 as "Design approved: clear roadblocks 1C 2A" (a ru
 ## Update after QA
 QA on this machine found main already shipped a different 2.88.0 (#573). Main was merged in with the loop-state file kept as ours, the feature is now 2.89.0, and the rule is folded into the user's-hands section (9691 of 9700 injected characters). verify.py 1443 of 1443 and verify_tools.py 55 of 55 pass.
 
+Live test on the branch build passed (blocked once, then the agent probed and answered with evidence). Pull request #574 is open.
+
 ## The next step
-Wait for aj's QA reply on the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
+Wait for aj's review and merge of pull request #574, or aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
 
 ## What is unverified
 The injected rules have only 6 characters of room, so any later rule text needs more cut; the shortened rule in house-rules.md no longer says installs happen without asking in bypass mode (only the detail file does). The new check has only been run against fixture transcripts, not inside a live Claude Code session. The count is kept in a temp-directory file keyed by transcript path and user-message count.
