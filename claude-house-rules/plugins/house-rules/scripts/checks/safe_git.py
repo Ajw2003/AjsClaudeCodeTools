@@ -1956,6 +1956,31 @@ report("PASS" if '"permissionDecision":"deny"' in _wait_run(_wait_shot) and "run
 report("PASS" if '"permissionDecision":"deny"' in _wait_run("timeout 5m python long.py")
        and '"permissionDecision":"deny"' not in _wait_run("timeout 30 python short.py")
        else "FAIL", "wait guard: timeout over 60 seconds is refused, timeout 30 is not")
+# #560: the foreground limit is a setting (rules/waits.json), overridden by environment variables
+def _wait_cfg(cmd, **env_extra):
+    pl = {"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash", "tool_input": {"command": cmd}}
+    rc, out, err = run_hook("guard", json.dumps(pl), env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off", **env_extra))
+    return '"permissionDecision":"deny"' in out, err
+
+
+_wait_tmp = tempfile.mkdtemp(prefix="waits-")
+_wait_file = os.path.join(_wait_tmp, "waits.json")
+with open(_wait_file, "w") as _f:
+    json.dump({"foreground_limit_seconds": 120}, _f)
+_wait_bad = os.path.join(_wait_tmp, "bad.json")
+with open(_wait_bad, "w") as _f:
+    json.dump({"foreground_limit_seconds": "soon"}, _f)
+_w90 = "timeout 90 python x.py"
+report("PASS" if _wait_cfg(_w90)[0] and not _wait_cfg(_w90, HOUSE_RULES_WAIT_FOREGROUND_LIMIT="120")[0]
+       else "FAIL", "wait settings: timeout 90 is refused at the default and allowed with the limit set to 120")
+report("PASS" if not _wait_cfg(_w90, HOUSE_RULES_WAITS_FILE=_wait_file)[0] else "FAIL",
+       "wait settings: a changed number in the settings file changes the result")
+_w = _wait_cfg(_w90, HOUSE_RULES_WAITS_FILE=os.path.join(_wait_tmp, "missing.json"))
+report("PASS" if _w[0] and "could not be read" in _w[1] else "FAIL",
+       "wait settings: a missing file is reported in words and the default (60) applies")
+_w = _wait_cfg(_w90, HOUSE_RULES_WAITS_FILE=_wait_bad)
+report("PASS" if _w[0] and "not a positive number" in _w[1] else "FAIL",
+       "wait settings: a bad value is reported in words and the default (60) applies")
 report("PASS" if '"permissionDecision":"deny"' not in _wait_run(_wait_shot, background=True)
        and '"permissionDecision":"deny"' not in _wait_run("python -c 'import time; time.sleep(1)'")
        else "FAIL", "wait guard: the same loop in the background is allowed, and a one-off command is not touched")
