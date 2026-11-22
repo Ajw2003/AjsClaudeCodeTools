@@ -268,7 +268,7 @@ dialog.lightbox button{margin-top:10px}
     <button class="secondary" id="prev" type="button">‹ Back</button>
     <button class="primary" id="next" type="button">Next ›</button>
   </div>
-  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I open one parent issue and a child issue per step, then build page sending and the picture fix first, because they are the smallest and answer your most repeated complaints, then the wait clock, because the visual loop uses it. I prove each fix by planting the failure it should catch, not just by a passing test run.</span></aside>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I open one parent issue and a child issue per step, then build page sending and the picture fix first, because they are the smallest and answer your most repeated complaints, then the wait clock, because the visual loop uses it. I prove each fix by planting the failure it should catch.</span></aside>
 </div>
 
 <script>
@@ -334,8 +334,8 @@ const PAGE = {
         "Have",
         "Pictures kept beside the page, not in it",
         "",
-        "The builder copies each picture into a folder next to the page and links it by path (make_page.py:156). A page sent on its own has no folder beside it. I opened a lone copy of this page: 5 of 5 pictures were broken, against 0 of 5 in the repo. Six other pages in docs/plans use the same pattern.",
-        "Reused; the embedding is new."
+        "The builder copies each picture into a folder next to the page and links it by path (make_page.py:156). A page sent on its own has no folder beside it. I opened a copy of this page on its own: 5 of 5 pictures were broken, against 0 of 5 in the repo. Six other pages in docs/plans use the same pattern.",
+        "Reused; putting pictures inside the page is new."
       ],
       [
         "flask",
@@ -376,7 +376,7 @@ const PAGE = {
         "Need",
         "Pictures that always show",
         "you",
-        "The builder puts every picture inside the page file, and a check opens a lone copy and fails on any broken picture. Your choice 6 sets how old pages are fixed.",
+        "The builder puts every picture inside the page file, and a check opens a copy of the page on its own and fails on any broken picture. Your choice 6 sets how old pages are fixed.",
         "Your answer under Choices.",
         {
           "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjkwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlRvZGF5IGEgcGljdHVyZSBzaXRzIGluIGEgZm9sZGVyIHRoYXQgaXMgbm90IHNlbnQgd2l0aCB0aGUgcGFnZSwgc28gaXQgYnJlYWtzOyBwcm9wb3NlZCwgdGhlIHBpY3R1cmUgaXMgaW5zaWRlIHRoZSBwYWdlIGZpbGUsIHNvIGl0IGFsd2F5cyBzaG93cyI+CjxzdHlsZT50ZXh0e2ZvbnQtZmFtaWx5OkhlbHZldGljYSxBcmlhbCxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToxNHB4O2ZpbGw6IzE3MjAyZX0uYnh7ZmlsbDojZmZmO3N0cm9rZTojNTY2MTc0O3N0cm9rZS13aWR0aDoyfS5iYWR7ZmlsbDojZmJlMWUzO3N0cm9rZTojYjQyMzJmO3N0cm9rZS13aWR0aDoyfS5va3tmaWxsOiNkZmYzZTg7c3Ryb2tlOiMxZjdhNGQ7c3Ryb2tlLXdpZHRoOjJ9LmJ7ZmlsbDojZTNlYWZjfS50e2ZvbnQtd2VpZ2h0OjcwMH0uYXJ7c3Ryb2tlOiM1NjYxNzQ7c3Ryb2tlLXdpZHRoOjI7ZmlsbDpub25lfTwvc3R5bGU+CjxyZWN0IHdpZHRoPSIzNjAiIGhlaWdodD0iMjkwIiBjbGFzcz0iYiIvPgo8dGV4dCB4PSIxNiIgeT0iMjYiIGNsYXNzPSJ0Ij5Ub2RheTogdGhlIHBpY3R1cmUgaXMgbGVmdCBiZWhpbmQ8L3RleHQ+CjxyZWN0IHg9IjE2IiB5PSI0MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI2MiIgcng9IjYiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjMwIiB5PSI3NiI+cGFnZSBmaWxlPC90ZXh0Pgo8cmVjdCB4PSIxNTAiIHk9IjQwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjYyIiByeD0iNiIgY2xhc3M9ImJhZCIgc3Ryb2tlLWRhc2hhcnJheT0iNSA0Ii8+PHRleHQgeD0iMTY0IiB5PSI2OCI+Zm9sZGVyIHdpdGg8L3RleHQ+PHRleHQgeD0iMTY0IiB5PSI4NiI+cGljdHVyZXM8L3RleHQ+Cjx0ZXh0IHg9IjI2MiIgeT0iNzYiIGNsYXNzPSJ0IiBzdHlsZT0iZmlsbDojYjQyMzJmIj5ub3Qgc2VudDwvdGV4dD4KPHBhdGggZD0iTTY2IDEwMlYxMjIiIGNsYXNzPSJhciIvPgo8cmVjdCB4PSIxNiIgeT0iMTIyIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjUwIiByeD0iNiIgY2xhc3M9ImJhZCIvPjxsaW5lIHgxPSI0MCIgeTE9IjEzNCIgeDI9IjkyIiB5Mj0iMTYwIiBzdHJva2U9IiNiNDIzMmYiIHN0cm9rZS13aWR0aD0iMyIvPjxsaW5lIHgxPSI5MiIgeTE9IjEzNCIgeDI9IjQwIiB5Mj0iMTYwIiBzdHJva2U9IiNiNDIzMmYiIHN0cm9rZS13aWR0aD0iMyIvPgo8dGV4dCB4PSIxMzAiIHk9IjE1MiI+YnJva2VuIHBpY3R1cmU8L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIyMDYiIGNsYXNzPSJ0Ij5Qcm9wb3NlZDogdGhlIHBpY3R1cmUgaXMgaW5zaWRlPC90ZXh0Pgo8cmVjdCB4PSIxNiIgeT0iMjIwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjU4IiByeD0iNiIgY2xhc3M9Im9rIi8+PHJlY3QgeD0iMjgiIHk9IjIzMiIgd2lkdGg9IjQwIiBoZWlnaHQ9IjM0IiByeD0iMyIgY2xhc3M9ImJ4Ii8+PHBvbHlnb24gcG9pbnRzPSIzNCwyNjAgNDYsMjQ0IDU2LDI1NCA2MiwyNDggNjQsMjYwIiBmaWxsPSIjMmY1YmQzIi8+PHRleHQgeD0iNzgiIHk9IjI0NiI+b25lIGZpbGUsPC90ZXh0Pjx0ZXh0IHg9Ijc4IiB5PSIyNjQiPmFsd2F5cyBzaG93czwvdGV4dD4KPHRleHQgeD0iMTg0IiB5PSIyNDYiPlNlbnQsIHB1Ymxpc2hlZCw8L3RleHQ+PHRleHQgeD0iMTg0IiB5PSIyNjQiPm1vdmVkLCBvciBvZmZsaW5lLjwvdGV4dD4KPC9zdmc+Cg==",
@@ -551,7 +551,7 @@ const PAGE = {
       "Fix 4, pictures that always show: built into the page",
       "Every picture is stored inside the page file itself.",
       null,
-      "The builder stores each picture inside the page as inline data, so the page is one file that works sent alone, published, moved or opened offline. It stops creating the folder beside the page. A picture over 1 MB is refused, naming the file and size. Pictures linked from the web are not used.",
+      "The builder stores each picture inside the page file, so the page is one file that works sent alone, published, moved or opened offline. It stops creating the folder beside the page. A picture over 1 MB is refused, naming the file and size. Pictures linked from the web are not used.",
       [
         "Pictures sit in a folder beside the page and are linked by path.",
         "One self-contained file. Nothing to keep beside it.",
@@ -568,10 +568,10 @@ const PAGE = {
       "Fix 4: a check that opens the page alone",
       "After every build, a lone copy of the page is opened and any broken picture fails the build.",
       null,
-      "The builder already opens each page in light and dark and counts errors. It will also copy the page into an empty folder and count pictures that fail to load. One broken picture refuses the page and names it. Hand-written pages get the same check from the page-write hook.",
+      "The builder already opens each page in light and dark and counts errors. It will also copy the page into an empty folder and count pictures that fail to load. One broken picture refuses the page and names it. Hand-written pages get the same check from the hook that runs whenever a page is written.",
       [
         "The current check opens the page in place, where the folder exists, so it cannot see this failure.",
-        "A lone-copy check that reproduces what you see.",
+        "A check on a copy opened alone shows what you would see.",
         "A broken picture is caught before you see it."
       ],
       null
@@ -729,7 +729,7 @@ const PAGE = {
       [
         [
           "A",
-          "Repair each one the first time it is sent, using the same check",
+          "Repair each one the first time it is sent, using the check from Fix 4 that opens a copy on its own",
           1,
           "No bulk rewrite of finished pages, and any page you open again works."
         ],
@@ -746,14 +746,14 @@ const PAGE = {
           "Least work. Old pages stay broken whenever they are sent."
         ]
       ],
-      "A repairs exactly the pages you actually open, and the same check that protects new pages does the work."
+      "A repairs exactly the pages you actually open, and the Fix 4 check that protects new pages does the work."
     ]
   ],
   "wrapup": {
     "summary": "Four workflow fixes: every wait gets a one-minute clock with a deadline, every visual change is captured, critiqued and fixed in an unattended loop, every page I make or change is sent to you at the end of the turn, and every picture is built into its page so it always shows.",
     "changing": "The rules file, three detail files, a settings file, two new scripts (waitfor.py and visualcheck.py), one new skill, the guard, the page builder, the end-of-turn checks, the agent prompts, tests and docs.",
     "blocking": "Your six answers under Choices: what happens at a deadline, how strict the guard is, which capture tools, who critiques, how firm the page-sending check is, and how old pages with broken pictures are fixed.",
-    "next": "After you approve, I open one parent issue and a child issue per step, then build page sending and the picture fix first, because they are the smallest and answer your most repeated complaints, then the wait clock, because the visual loop uses it. I prove each fix by planting the failure it should catch, not just by a passing test run.",
+    "next": "After you approve, I open one parent issue and a child issue per step, then build page sending and the picture fix first, because they are the smallest and answer your most repeated complaints, then the wait clock, because the visual loop uses it. I prove each fix by planting the failure it should catch.",
     "todo": [
       "Pick your answers under Choices.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: wait clocks, visual checks, page sending and pictures\", or say what to change."
