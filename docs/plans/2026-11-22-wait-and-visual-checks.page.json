@@ -1,90 +1,98 @@
 {
- "title": "<replace: proposal title>",
- "eyebrow": "Proposal · nothing built yet",
- "pageType": "proposal",
- "approval": "Design approved: <feature>",
- "short": {
-  "lead": "<replace: one sentence: what is proposed and what you need from aj>",
-  "hint": "Tap a step to see it.",
-  "key": [
-   [
-    "We work on it",
-    ""
-   ],
-   [
-    "You act on it",
-    "you"
-   ]
-  ],
-  "items": [
-   [
-    "bulb",
-    "Idea",
-    "<replace: the idea>",
-    "",
-    "<replace: what it creates or changes>",
-    "Nothing from you.",
-    {
-     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
-     "alt": "<replace: what the picture shows>",
-     "caption": "<replace: what the picture shows>"
-    }
-   ],
-   [
-    "lock",
-    "Approve",
-    "You approve it",
-    "you",
-    "A line in the decisions log.",
-    "Pick an option, then send the approval line."
-   ]
-  ]
- },
- "changes": [
-  [
-   "new",
-   "<replace: name of the new thing>",
-   "<replace: one line>",
-   null,
-   "<replace: detail, shown on tap>",
-   [
-    "<replace: what exists today>",
-    "<replace: what this creates>",
-    "<replace: how it affects you>"
-   ],
-   null
-  ]
- ],
- "choices": [
-  [
-   "first",
-   "<replace: the question>",
-   [
-    [
-     "A",
-     "<replace: suggested option>",
-     1,
-     "<replace: why it fits>"
+  "title": "Wait Clocks And Visual Checks",
+  "eyebrow": "Proposal · two workflow fixes, nothing built yet",
+  "pageType": "proposal",
+  "approval": "Design approved: wait clocks and visual checks",
+  "short": {
+    "lead": "Two changes: every wait gets a one-minute clock and a deadline, and every visual change is recorded, looked at and fixed by me in a loop; I need your answers to four choices.",
+    "hint": "Tap a row to see what it covers.",
+    "key": [
+      ["What exists today", ""],
+      ["Needs your decision", "you"]
     ],
-    [
-     "B",
-     "<replace: other option>",
-     0,
-     "<replace: one line>"
+    "items": [
+      ["stop", "Have", "A wait guard, but only for the foreground", "", "The guard refuses a foreground sleep loop, or a timeout over 60 seconds (safe_git.py:668). A background task, a helper agent or a scheduled wake-up has no limit, no rule says when to check, and stallcheck.py only runs if I remember it.", "Reused; the gaps are new.", {"src": "2026-11-22-wait-and-visual-checks-pics/waits.svg", "alt": "A timeline: first check at one minute, then every minute, ending at done, stalled or deadline", "caption": "The wait clock this page proposes."}],
+      ["eye", "Have", "A visual rule that only reminds", "", "The rule says to screenshot before and after. The end-of-turn hook counts any command containing the word \"browser\" or \"capture\" as a look, so it is easy to satisfy without looking. There is no video, no frame sheet, no phone-and-desktop flow and no loop.", "Reused; the loop and the tools are new.", {"src": "2026-11-22-wait-and-visual-checks-pics/loop.svg", "alt": "The visual loop: write criteria, capture, critique, fix, repeat", "caption": "The visual loop this page proposes."}],
+      ["flask", "Need", "Wait clock, with a tool and a guard", "you", "A rule, a waitfor.py script that checks every minute and reports one of three answers, and a guard that refuses background launches with no deadline. Your choices 1 and 2 set how strict it is.", "Your answers under Choices."],
+      ["loop", "Need", "Visual loop, with capture tools", "you", "A visualcheck.py tool that captures phone and desktop flows, video and frame sheets, plus a skill that runs capture, critique and fix by itself. Your choices 3 and 4 set the tools and the gate.", "Your answers under Choices.", {"src": "2026-11-22-wait-and-visual-checks-pics/sheet.svg", "alt": "Phone and desktop screenshots, a video and a frame sheet", "caption": "What one check produces."}]
     ]
-   ],
-   "<replace: why A is suggested>"
-  ]
- ],
- "wrapup": {
-  "summary": "<replace: what this proposal is>",
-  "changing": "<replace: what changes, named>",
-  "blocking": "<replace: what waits on aj, named>",
-  "next": "After you approve, the work is planned in a build plan.",
-  "todo": [
-   "Read the suggestion.",
-   "Pick an option under Your choices.",
-   "Tap <b>Copy my reply</b> and send it."
-  ]
- }
+  },
+  "changes": [
+    ["new", "Fix 1, the wait clock: the rule", "Every wait states what it waits for, how to check it, and when to give up.", null, "A new section in rules/house-rules.md, with detail in rules/detail/waits.md. The first check is at one minute and then every minute. A wait with no stated done-test and no deadline is not allowed. The existing \"Verify a wait, then leave it\" text moves into it, so nothing is said twice.", [
+      "Only the foreground is covered, and the 60-second limit is a hard-coded number.",
+      "One rule for every kind of wait: commands, tests, helper agents, builds, CI, deploys and scheduled wake-ups.",
+      "Nothing sits idle past its deadline. Each wait ends as done, stalled or timed out, and I say which."
+    ], {"src": "2026-11-22-wait-and-visual-checks-pics/waits.svg", "alt": "The wait clock timeline", "caption": "One minute, then every minute."}],
+    ["new", "Fix 1: the deadlines live in a settings file", "Default deadlines by kind of wait, changeable without touching code.", null, "A small file, rules/waits.json, holds the numbers: first check 60 seconds, check interval 60 seconds, stalled after 3 quiet checks, and a deadline for each kind. Proposed deadlines: command or test 10 minutes, helper agent 15, build 20, CI run 15. Environment variables override them.", [
+      "The 60 is written into safe_git.py as WAIT_LIMIT_SECONDS.",
+      "One file read by the guard, the tool and the stop check, so they never disagree.",
+      "You can change a deadline in one place."
+    ], null],
+    ["new", "Fix 1: waitfor.py, the one way to wait", "A script that polls every minute and prints a line each time.", null, "It takes a check command and a done-test. It prints a line at each check, never hides output, and exits with a distinct code for done, failed, stalled or timed out. It reuses stallcheck.py for helper agents and background files. I run it in the background, so the harness wakes me when it ends.", [
+      "I hand-write sleep loops, and stallcheck.py is a separate script I must remember.",
+      "One tool that already does the checking, tested against a real hanging process.",
+      "No more guessing how long to wait."
+    ], null],
+    ["chg", "Fix 1: the guard and the stop check", "Un-budgeted background launches are refused; a forgotten wait is reported.", null, "The guard (safe_git.py:668) also refuses a background command with no timeout, or one over its deadline, and says the exact fix. A hook cannot interrupt a tool that is already hung, so refusing the launch is the lever. At turn end, a background task or helper agent that was started and never checked is reported once.", [
+      "A background command can run for its tool default of 30 minutes, with nothing looking at it.",
+      "Every launch carries a deadline, and an unchecked wait cannot hide at the end of a turn.",
+      "Fewer stalls. A refused launch costs one retry with a timeout added."
+    ], null],
+    ["new", "Fix 2, the visual loop: criteria first", "Before building anything visual, the acceptance criteria are written down.", null, "A file at docs/qa/<feature>/criteria.md lists numbered criteria taken from the approved page, each with the capture that proves it: a still, a flow, a video or a frame sheet. Without criteria there is nothing to check against, so this comes first.", [
+      "I screenshot something and say it looks fine, with nothing written to compare against.",
+      "Each criterion names its evidence, so a pass or a fail is checkable.",
+      "You see the criteria on the page you approve, before any work."
+    ], null],
+    ["new", "Fix 2: visualcheck.py, the capture tool", "One script that records what a person would see.", null, "It runs a short steps file against a page. It writes phone (375 pixels) and desktop (1280) screenshots in light and dark, a video of the feature, and a frame sheet with timestamps for animation. It also records console errors, failed requests, sideways scroll at 375 pixels, and blank images. A doctor command says exactly what is missing.", [
+      "The rule says \"screenshot it\", and I improvise each time with whatever is installed.",
+      "One command per kind of evidence, with fixed file names that the stop check can find.",
+      "Motion gets measured as well as looked at, so a frozen or jumping animation is flagged."
+    ], {"src": "2026-11-22-wait-and-visual-checks-pics/sheet.svg", "alt": "Phone and desktop screenshots, a video and a frame sheet", "caption": "What one check produces."}],
+    ["new", "Fix 2: a skill that runs the loop alone", "Capture, critique, fix and repeat without you in the middle.", null, "A skill, visual-loop, runs the rounds. Each round writes docs/qa/<feature>/round-N.md: every criterion marked pass or fail, citing the image and saying what it shows. It stops when all pass or after 4 rounds, then writes what still fails and why. It never stops to ask you mid-loop.", [
+      "I can look at an image, but nothing makes me critique it or continue until it is right.",
+      "A written ledger per round, so you can audit any decision afterwards.",
+      "You review the end result and the ledger, not each step."
+    ], {"src": "2026-11-22-wait-and-visual-checks-pics/loop.svg", "alt": "The visual loop", "caption": "Repeat until every criterion passes."}],
+    ["chg", "Fix 2: the end-of-turn gate", "A real capture is needed, and a keyword in a command no longer counts.", null, "The check in writing.py:229 accepts any command with the word \"browser\" or \"capture\". It becomes: a report.json written this turn by visualcheck.py, covering the changed files, with a round ledger. The list of visual file types also grows to cover images, shaders, animations and Unity scenes. I measure it on this repo's own sessions before shipping.", [
+      "A turn passes by mentioning a browser.",
+      "A turn passes only with real captures and a ledger that cite its criteria.",
+      "More turns are checked, so I will tune it against real sessions to keep false alarms low."
+    ], null],
+    ["chg", "Everything else that each fix touches", "Every place both fixes reach, so nothing is left behind.", null, "Rule text and the two detail files; checks.json mapping; verify.py cases; the builder, scout and reviewer agent prompts; a waits and a visual group for the feature switches; footprint measurement; the hook table in docs/architecture.md; two systems docs; a decisions entry; project state; the changelog; the plain-English doc copies; the version number.", [
+      "The rules are in three places that must agree.",
+      "Each place updated in the same change, with verify.py failing if one drifts.",
+      "The injected rules grow a little, so I measure the cost and keep the new text short."
+    ], null]
+  ],
+  "choices": [
+    ["deadline", "What should happen when a wait hits its deadline?", [
+      ["A", "I stop waiting, say plainly what is still unknown, and carry on with the next safe step", 1, "Nothing stalls and you are never the one unblocking it. The report says what I could not confirm."],
+      ["B", "I stop and ask you whether to keep waiting", 0, "You stay in control. It puts a question on you for every slow build, which is the stall you asked to remove."]
+    ], "A follows your rule that your hands are for decisions, not labour. A timed-out wait that is destructive to skip still asks."],
+    ["strength", "How strict should the guard be about un-budgeted background launches?", [
+      ["A", "Refuse them with the exact fix, and report an unchecked wait once at turn end", 1, "Works at the moment it matters: before a launch can hang. The turn-end report is one reminder, not a block, because blocking checks caused the loops in issues 303 and 322."],
+      ["B", "Only remind, never refuse", 0, "Never obstructs, and the same forgetting can happen again."],
+      ["C", "Refuse them, and also block the turn end until every wait is checked", 0, "Strictest. Risks the loop-on-block problem."]
+    ], "Hooks cannot stop a tool already hung, so the launch is the only point where a limit holds."],
+    ["tools", "Which tools should capture the images and video?", [
+      ["A", "Playwright for Node plus ffmpeg, both already installed in this cloud container", 1, "No new install here. ffmpeg builds frame sheets and measures motion on its own. visualcheck.py says exactly what to install anywhere else. Proven here; your own machine is untested until you run it."],
+      ["B", "Python Playwright plus Pillow", 0, "Nicer image handling, but neither is installed here and it needs a pip install first."],
+      ["C", "The built-in browser tools only", 0, "Nothing to install. It cannot record video or run unattended on a schedule."]
+    ], "A needs nothing new where this session runs, and keeps the script standard-library only."],
+    ["gate", "Who critiques the images, and how firm is the end-of-turn gate?", [
+      ["A", "I critique them myself against the written criteria, with the gate blocking once if captures or the ledger are missing", 1, "Cheapest, and the ledger makes each judgement checkable. A model can miss things in its own work, so every pass cites what the image shows."],
+      ["B", "A separate reviewer helper critiques them with fresh eyes each round", 0, "Fewer blind spots. Costs a helper run per round, within your two-helper limit."],
+      ["C", "Like A, but a reviewer helper checks only the final round", 0, "A middle path: one fresh-eyed pass at the end."]
+    ], "A is the smallest change that makes it unattended. You can move to C later by changing one setting."]
+  ],
+  "wrapup": {
+    "summary": "Two workflow fixes: every wait gets a one-minute clock with a deadline, and every visual change is captured, critiqued and fixed in an unattended loop.",
+    "changing": "The rules file, two detail files, a settings file, two new scripts (waitfor.py and visualcheck.py), one new skill, the guard, the end-of-turn checks, the agent prompts, tests and docs.",
+    "blocking": "Your four answers under Choices: what happens at a deadline, how strict the guard is, which capture tools, and who critiques.",
+    "next": "After you approve, I open one parent issue and a child issue per step, then build the wait clock first, because the visual loop uses it. I prove each fix on seeded failures, not just a green test run.",
+    "todo": [
+      "Pick your answers under Choices.",
+      "Tap <b>Copy my reply</b> and send it in the chat, or tell me what to change."
+    ]
+  }
 }
