@@ -2095,4 +2095,17 @@ _c2, _o2, _e2 = run_shell([RUN, "commitgate"], env={**os.environ, "PATH": ""})
 report("PASS" if (_c == 0 and _c2 == 0 and "systemMessage" in _o and "systemMessage" in _o2) else "FAIL",
        "guardgithub and commitgate with no working Python warn loudly and still exit 0 (#205)")
 
+# --- wait clock rule text (#563)
+_w_rules = read(RULES_FILE)
+_w_detail = os.path.join(_cj_root, "rules", "detail")
+_w_waits = read(os.path.join(_w_detail, "waits.md"))
+_w_fs = read(os.path.join(_w_detail, "fails-silently.md"))
+report("PASS" if ("Every wait has a done-test and a deadline" in _w_rules and "rules/detail/waits.md" in _w_rules) else "FAIL",
+       "#563: house-rules.md has the wait-clock section with its waits.md pointer")
+report("PASS" if ("Verify a wait, then leave it" in _w_waits and "Verify a wait" not in _w_fs) else "FAIL",
+       "#563: the verify-a-wait text lives in waits.md and no longer in fails-silently.md")
+_w_bad = [a for a in ("builder", "reviewer", "archivist")
+          if "scripts/waitfor.py" not in read(os.path.join(_cj_root, "agents", a + ".md"))]
+report("PASS" if not _w_bad else "FAIL", "#563: builder, reviewer and archivist prompts carry the waitfor.py line" + (": missing in %s" % _w_bad if _w_bad else ""))
+
 finish()

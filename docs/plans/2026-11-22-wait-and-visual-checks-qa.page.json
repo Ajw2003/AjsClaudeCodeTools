@@ -1,0 +1,218 @@
+{
+ "title": "QA: Wait Clocks, Visual Checks, Page Sending And Pictures",
+ "eyebrow": "QA · eight steps for you to follow",
+ "pageType": "qa",
+ "short": {
+  "lead": "Everything in the approved plan is built and tested here; I need you to try it on your PC in eight short steps and tell me whether it passes.",
+  "hint": "Tap a row to see what I checked.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Checked",
+    "Round 1: the banner ran off the phone screen",
+    "",
+    "A reviewer helper looked at the screenshots with fresh eyes and marked all three written criteria FAIL. It saw the blue banner cut off mid-word at the right edge, and a console error in the capture report.",
+    "Nothing from you.",
+    {
+     "src": "docs/qa/loop-proof/round-1/page-phone-light.png",
+     "alt": "A phone screenshot where a blue banner runs past the right edge and its text is cut off",
+     "caption": "Round 1, before the fix."
+    }
+   ],
+   [
+    "check",
+    "Checked",
+    "Round 2: fixed, with nobody steering",
+    "",
+    "A builder fixed the causes, not the symptoms. A second, fresh reviewer marked all three criteria PASS, and the check of the written record said the work was done. Nobody asked you anything in between.",
+    "Nothing from you.",
+    {
+     "src": "docs/qa/loop-proof/round-2/page-phone-light.png",
+     "alt": "The same phone screenshot with the banner fitting the screen and its text wrapped on two lines",
+     "caption": "Round 2, after the fix."
+    }
+   ],
+   [
+    "file",
+    "Checked",
+    "Pages stay whole when sent alone",
+    "",
+    "A copy of the proposal page sent alone had 5 of 5 pictures broken. Pictures now live inside the page file. An old page with folder pictures went from 2 broken pictures to 0 when repaired in place.",
+    "Nothing from you.",
+    {
+     "src": "docs/plans/2026-11-22-wait-and-visual-checks-art/pictures.svg",
+     "alt": "Today a picture is left in a folder and breaks; now it is inside the page file",
+     "caption": "One file, pictures included."
+    }
+   ],
+   [
+    "stop",
+    "Checked",
+    "A wait ends at its deadline",
+    "",
+    "On real processes: a check that succeeds after 2 seconds exits 0; one that never succeeds with a 4-second deadline exits 3 after 4 seconds. By default the first check is at 60 seconds, then every 60 seconds.",
+    "Nothing from you.",
+    {
+     "src": "docs/plans/2026-11-22-wait-and-visual-checks-art/waits.svg",
+     "alt": "A timeline: first check at one minute, then every minute, ending at done, stalled or deadline",
+     "caption": "The wait clock."
+    }
+   ],
+   [
+    "hammer",
+    "Checked",
+    "The full test suites",
+    "",
+    "`verify.py` passed 1428 of 1428 and `tools/verify_tools.py` exited 0 on the merged code, run by me with nothing else running. Several real faults turned up on the way and were fixed; they are listed under Changes.",
+    "Nothing from you.",
+    {
+     "src": "docs/plans/2026-11-22-wait-and-visual-checks-art/send.svg",
+     "alt": "A page is made, sent to you, and sent again after every change",
+     "caption": "A page never stays unsent."
+    }
+   ],
+   [
+    "flask",
+    "Checked",
+    "Your steps 3 to 7, run on Linux in real sessions, before and after the fix",
+    "",
+    "I ran the Linux form of steps 3 to 7. The install says 2.88.0; the waitfor.py wait script ends in a timeout, exit 3; a real session sent its page unasked, and again after an edit; the send hook repaired an old page in place. Full output: docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt.",
+    "Nothing from you.",
+    {
+     "src": "docs/plans/2026-11-22-wait-and-visual-checks-art/send.svg",
+     "alt": "A page is made, sent to you, and sent again after every change",
+     "caption": "Seen in a real session."
+    }
+   ],
+   [
+    "hand",
+    "Your test",
+    "Eight steps on your PC",
+    "you",
+    "Follow the numbered steps in Wrap-up. Three of them are commands I could not run on your machine, and each says so.",
+    "Follow the steps in Wrap-up."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "Wait clocks (#560 to #563)",
+   "Every wait has a test for when it is finished, a deadline and a check every minute.",
+   null,
+   "A settings file for the numbers, waitfor.py (the script that runs a wait), a guard refusal for background launches with no timeout, a reminder for waits nobody checked, and the rule in \"Nothing fails silently\". A switch group named waits turns off the parts that block you.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Pictures inside pages (#556, #557)",
+   "The builder stores pictures in the page and checks a copy opened alone.",
+   null,
+   "No more pictures folder beside a page. A picture over 1 MB or linked from the web is refused. Two checks look for pictures that would break: a scan of the page, and a copy opened in an empty folder.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "Page sending (#558, #559)",
+   "A made or changed page that was not sent blocks the turn once.",
+   null,
+   "The builder ends with a line saying to send the page, and a page write is followed by a reminder. A hook (an automatic step that runs before each send) opens the page alone and repairs old folder pictures in place, never blocking the send.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "Visual capture and loop (#564 to #567)",
+   "Screenshots, video, frame sheets, a written record and a reviewer each round.",
+   null,
+   "visualcheck.py captures phone and desktop in light and dark, records video and builds a sheet of timestamped frames, measuring how much moved between them. A skill (a saved set of instructions for Claude) runs up to four review rounds. A turn that changes a visual file must now show a real capture, a record check and an image read.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Faults found by running real data",
+   "Six faults that only real pages and real transcripts showed.",
+   null,
+   "The picture check missed pictures that appear only when a row is tapped. The repair rebuilt QA pages from git. The reminder about unchecked waits fired wrongly when a prompt merely mentioned a tool. Test runs collided. The injected rules went over their size limit. Long commands were squeezed into a one-character column on a phone. All fixed.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Where the build differs from your approved design",
+   "Three places where the build differs; the reasons are in the decisions log.",
+   null,
+   "Old pages are repaired by embedding pictures in place, not rebuilding from source. The wait rule sits inside \"Nothing fails silently\". The reviewer returns its verdict lines and the main session saves them. See docs/6-decisions/Decisions.md.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Fixed after your QA: the visual reminder is quiet on pages",
+   "Zero reminders in two fresh real runs on the fixed build.",
+   null,
+   "Pages that carry the page builder's mark, or the handover-page meta tag, are no longer treated as visual files. Replaying your two real sessions gave 1 reminder before the fix and 0 after, in each. Fresh runs on the fixed build also gave 0 and 0. A plain test page is still checked.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Fixed after your QA failed: four tests that failed when run the way GitHub runs them",
+   "Run the way GitHub runs them (Python 3.12, no browser installed), all 1434 checks now pass.",
+   null,
+   "Three tests of the page repair assumed a browser was installed. When no browser is available, they now skip the browser re-check, print the hook's real output, and still check that the pictures are embedded. The fourth test, the handover check, now runs in a scratch folder, so it no longer reads the loop state saved on this branch.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Fixed after your QA failed: two false alarms in the wait checks",
+   "Real sessions showed both false alarms. Both are fixed, and the guard still refuses a launch with no timeout and the turn-end note still appears for waits nobody checked.",
+   null,
+   "The note at the end of a turn no longer lists a background launch that the guard had already refused. The guard now looks for the word timeout only at the start of a command, so quoted text and heredoc bodies (blocks of text fed to a command) no longer trigger it. One limit remains: a timeout inside a quoted bash -c command is not seen. That limit is noted in a comment in scripts/house_rules/safe_git.py.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "wait clocks",
+  "base": "origin/main",
+  "unverified": [
+   "Not run on your PC: the cloud session could not attach to your computer, so the three commands in Wrap-up are untested on Windows.",
+   "Real sessions on Linux exercised the send reminder, the send hook, the in-place repair, the block-once check for a page never sent, the guard refusal and the unchecked-wait note.",
+   "The visual check's false-alarm rate is unmeasured: only one transcript of 15 turns was available.",
+   "Video and frames were proven for the phone in light only; Unity and game capture is only written down.",
+   "The injected rules are 6 characters under their size limit, so the next rule added must make room first."
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "All 13 steps (#556 to #568) of the approved plan are built, merged on one branch and tested, and the fix for your QA verdict is in; the page shows the evidence and eight steps for you.",
+  "changing": "Plugin 2.88.0: the page builder, the guard, the end-of-turn checks, a send hook, three new scripts (waitfor.py, visualcheck.py, ledger.py), the visual-loop skill, rules, tests and docs.",
+  "blocking": "Your eight steps below, and whether the machine details in step 2 are right.",
+  "next": "On a pass, I open a pull request to main for you to merge.",
+  "todo": [
+   "Open this page on your phone, then on your PC. Expect the pictures to show on both, with no broken-picture icon.",
+   "Check the machine details I am using: Windows 11, PowerShell 5.1, folder <code>C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools</code> (an old example from 2026-08-25, not confirmed). If any is wrong, put the right one in your reply.",
+   "UNTESTED on Windows. Open PowerShell in that folder and run <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py ajsagent/eloquent-mayer-0ayp82</code>. Expect the last lines <code>plugin version  : 2.88.0</code> and <code>OK: installed build matches the request.</code>, then restart Claude Code. (I ran it on Linux in a throwaway config and it printed exactly that shape.)",
+   "In a new session in that folder, say: <code>Write a one-section page about what you changed today under docs/plans and finish.</code> Expect the page to appear in your window without you asking, with its picture showing if it has one.",
+   "Say: <code>Send me docs/plans/2026-10-19-restructure-step-1-qa.html</code>. Expect a note that the page was repaired by embedding 2 pictures, and its before and after pictures to show.",
+   "UNTESTED on Windows. Run <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\claude-house-rules\\plugins\\house-rules\\scripts\\waitfor.py --kind command --check \"exit 1\" --first-check 1 --interval 1 --deadline 4</code>. Expect four <code>not yet</code> lines, then <code>timed out: gave up after 4s</code>.",
+   "UNTESTED on Windows. Switch back with <code>python C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools\\tools\\use_branch.py main</code>. Expect <code>plugin version  : 2.87.0</code> and <code>OK</code>, then restart.",
+   "Tap <b>Copy my reply</b> and send it: <b>QA passed: wait clocks</b>, or <b>QA failed: wait clocks</b> with what went wrong."
+  ]
+ }
+}

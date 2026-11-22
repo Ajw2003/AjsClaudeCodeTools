@@ -150,6 +150,8 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .nextbox{position:sticky;bottom:0;z-index:3;background:var(--card);border:2px solid var(--you);border-radius:12px;padding:10px 14px;display:grid;gap:2px;font-size:.92rem}
 .nextbox b{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--you)}
 .wu li label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.wu li label > span{min-width:0;overflow-wrap:anywhere}
+.wu li code{font-size:.82rem;overflow-wrap:anywhere;word-break:break-all}
 .wu li input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--accent)}
 .status{font-size:.88rem;color:var(--muted)}
 .missing{color:var(--gap);font-weight:700}
@@ -400,7 +402,7 @@ document.getElementById("wrapup").innerHTML = [
   ["stop", "What's blocking", W.blocking, "gap"], ["next", "What's next", W.next, "ok"]
 ].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("");
 // The to-do list is ticked off; make_page.py writes the same list and next-step text into the file so a reader without script sees them.
-document.getElementById("todo").innerHTML = W.todo.map(x => `<li><label><input type="checkbox"> ${x}</label></li>`).join("");
+document.getElementById("todo").innerHTML = W.todo.map(x => `<li><label><input type="checkbox"><span>${x}</span></label></li>`).join("");
 document.getElementById("nextstep").textContent = W.next || W.todo[0].replace(/<[^>]*>/g, "");
 
 const out = document.getElementById("out"), miss = document.getElementById("miss");

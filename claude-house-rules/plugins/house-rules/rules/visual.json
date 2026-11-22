@@ -1,0 +1,5 @@
+{
+  "_about": "Settings for the visual loop. max_rounds: the most capture-review-fix rounds before the loop stops and writes down what still fails. ledger_dir: where each feature's criteria and round files live; <feature> is replaced by the feature name.",
+  "max_rounds": 4,
+  "ledger_dir": "docs/qa/<feature>"
+}

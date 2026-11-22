@@ -100,3 +100,4 @@ Follow this digest instead:
   the prompt that delegated this says not to run git, don't, and list the uncommitted files in
   your report instead. A hook sends you back once if you try to finish with files you wrote
   still uncommitted. Commit messages: `<type>: <short summary>` — feat, fix, refactor, chore, docs, test.
+- Every wait: state what you wait for and a deadline, first check at one minute then every minute with `scripts/waitfor.py` (background, with a timeout); at the deadline or when stalled, stop and report.

@@ -1,0 +1,218 @@
+{
+ "title": "Build Plan: Wait Clocks, Visual Checks, Page Sending And Pictures",
+ "eyebrow": "Build plan · 13 steps in 4 phases, nothing built yet",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: wait clocks",
+ "short": {
+  "lead": "Thirteen steps in four phases, built one phase at a time with each step proved on a planted failure; I need your answer to one choice and your approval.",
+  "hint": "Tap a phase to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Phase 1",
+    "Pictures and page sending",
+    "",
+    "Issues 556 to 559: pictures built into the page, a check of a copy opened alone, the send rule, and the end-of-turn check that a page was sent, which rebuilds old pages when they are sent.",
+    "Nothing from you, unless you choose the early check below.",
+    {
+     "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMjUwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkJ1aWxkIG9yZGVyOiBwaGFzZSAxIHBpY3R1cmVzIGFuZCBwYWdlIHNlbmRpbmcsIHBoYXNlIDIgdGhlIHdhaXQgY2xvY2ssIHBoYXNlIDMgdGhlIHZpc3VhbCBsb29wLCBwaGFzZSA0IGRvY3MgYW5kIHRlc3RzOyBwaGFzZSAxIGdvZXMgdG8geW91IGZvciBhbiBlYXJseSBjaGVjayI+CjxzdHlsZT50ZXh0e2ZvbnQtZmFtaWx5OkhlbHZldGljYSxBcmlhbCxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToxNHB4O2ZpbGw6IzE3MjAyZX0uYnh7ZmlsbDojZmZmO3N0cm9rZTojMmY1YmQzO3N0cm9rZS13aWR0aDoyfS5hcntzdHJva2U6IzU2NjE3NDtzdHJva2Utd2lkdGg6MjtmaWxsOm5vbmV9LmJ7ZmlsbDojZTNlYWZjfS55e2ZpbGw6I2ZkZWVkOTtzdHJva2U6I2IzNWYwMDtzdHJva2Utd2lkdGg6Mn08L3N0eWxlPgo8cmVjdCB3aWR0aD0iMzYwIiBoZWlnaHQ9IjI1MCIgY2xhc3M9ImIiLz4KPHJlY3QgeD0iMTYiIHk9IjE2IiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjUyIiByeD0iOCIgY2xhc3M9ImJ4Ii8+PHRleHQgeD0iMjgiIHk9IjQwIj4xIFBpY3R1cmVzIGFuZDwvdGV4dD48dGV4dCB4PSIyOCIgeT0iNTgiPnBhZ2Ugc2VuZGluZzwvdGV4dD4KPHJlY3QgeD0iMTk0IiB5PSIxNiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjIwNiIgeT0iNDAiPjIgV2FpdCBjbG9jazwvdGV4dD48dGV4dCB4PSIyMDYiIHk9IjU4Ij4oNCBzdGVwcyk8L3RleHQ+CjxyZWN0IHg9IjE5NCIgeT0iMTAwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjUyIiByeD0iOCIgY2xhc3M9ImJ4Ii8+PHRleHQgeD0iMjA2IiB5PSIxMjQiPjMgVmlzdWFsIGxvb3A8L3RleHQ+PHRleHQgeD0iMjA2IiB5PSIxNDIiPig0IHN0ZXBzKTwvdGV4dD4KPHJlY3QgeD0iMTYiIHk9IjEwMCIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgcng9IjgiIGNsYXNzPSJieCIvPjx0ZXh0IHg9IjI4IiB5PSIxMjQiPjQgRG9jcywgdGVzdHMsPC90ZXh0Pjx0ZXh0IHg9IjI4IiB5PSIxNDIiPnZlcnNpb248L3RleHQ+CjxwYXRoIGQ9Ik0xNjYgNDJIMTk0TTI2OSA2OFYxMDBNMTk0IDEyNkgxNjYiIGNsYXNzPSJhciIvPgo8cmVjdCB4PSIxNiIgeT0iMTc2IiB3aWR0aD0iMzI4IiBoZWlnaHQ9IjU4IiByeD0iOCIgY2xhc3M9InkiLz48dGV4dCB4PSIyOCIgeT0iMjAwIj5FYXJseSBjaGVjayBieSB5b3UgYWZ0ZXIgcGhhc2UgMSw8L3RleHQ+PHRleHQgeD0iMjgiIHk9IjIyMCI+d2hpbGUgcGhhc2VzIDIgdG8gNCBrZWVwIGJ1aWxkaW5nLjwvdGV4dD4KPHBhdGggZD0iTTkxIDY4VjE3NiIgY2xhc3M9ImFyIiBzdHJva2UtZGFzaGFycmF5PSI1IDQiLz4KPC9zdmc+",
+     "alt": "Four build phases in order; phase 1 is checked by you early while the rest keep building",
+     "caption": "Build order."
+    }
+   ],
+   [
+    "hammer",
+    "Phase 2",
+    "The wait clock",
+    "",
+    "Issues 560 to 563: a settings file for deadlines, waitfor.py, refusing background launches with no deadline, and the rule text.",
+    "Nothing from you."
+   ],
+   [
+    "eye",
+    "Phase 3",
+    "The visual loop",
+    "",
+    "Issues 564 to 567: visualcheck.py, video and frame sheets, the criteria and visual-loop skill with reviewer rounds, and the end-of-turn visual gate.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Phase 4",
+    "Docs, tests and version",
+    "",
+    "Issue 568: the checks that tie each rule to its text, docs, the decisions entry, the token-cost measurement, the version number and the QA page.",
+    "Nothing from you until the quality-check page arrives; then tell me whether it passed."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the plan",
+    "you",
+    "The build starts on branch ajsagent/eloquent-mayer-0ayp82, at most two builders at a time.",
+    "Pick your answer under Choices, then send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "#556 Pictures step 1: build pictures into the page file",
+   "make_page.py stops writing a pictures folder and embeds each picture.",
+   null,
+   "Done when: a built page has no link to a separate pictures folder and no sibling folder is written; an oversized picture and a web link are refused with the reason; the new verify.py cases and the full verify.py pass.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "#557 Pictures step 2: check a copy opened alone",
+   "After each build, a copy opened in an empty folder must show every picture.",
+   null,
+   "Done when: a page with a folder-linked picture fails and names it, a page with embedded pictures passes, and a run over docs/plans lists the six old pages that need repair.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "#558 Page sending step 1: the send rule and the builder's send line",
+   "One rule sentence, and the builder ends its output with the send step.",
+   null,
+   "Done when: the build output ends with the send line, the reminder fires once per page write, and the rules-size and duplication checks pass.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "#559 Page sending step 2: block once at turn end, repair on send",
+   "A made or changed page that was not sent blocks the turn once, naming it.",
+   null,
+   "Done when: cases prove a never-sent page blocks once then passes, a page changed after sending blocks once, a sent page passes, and a folder-picture page is rebuilt on send.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "#560 Wait clock step 1: a settings file for deadlines",
+   "rules/waits.json holds the numbers; the command-blocking hook reads them from there.",
+   null,
+   "Done when: changing a number or an environment variable changes the hook's behaviour in a case, and an unreadable file is reported in words with defaults used.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "#561 Wait clock step 2: waitfor.py",
+   "A script that checks every minute and ends as done, failed, stalled or timed out.",
+   null,
+   "Done when: run against a real hanging process, a stalled one and a finishing one, it reports timed out, stalled and done with the right exit codes and the first check at 60 seconds.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "#562 Wait clock step 3: refuse background launches with no deadline",
+   "The hook refuses them and names the fix; an unchecked wait is reported once.",
+   null,
+   "Done when: a background command with no timeout is refused with the fix, one inside its deadline passes, and an unchecked wait is reported once at turn end.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "#563 Wait clock step 4: the rule text and agent prompts",
+   "A short rule section and a detail file; the old wait wording is moved, not copied.",
+   null,
+   "Done when: the rules-size, duplication and rule-to-text mapping checks pass, and the injected rules grow only by the new section, measured with measure_footprint.py.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "#564 Visual loop step 1: visualcheck.py doctor and screenshots",
+   "Phone and desktop screenshots in light and dark, with a report of errors.",
+   null,
+   "Done when: doctor names a missing tool in words, shots writes four screenshots (phone and desktop, light and dark) and a report, and a test page with sideways scroll and a console error fails both checks.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "#565 Visual loop step 2: video, frame sheet and motion",
+   "A recorded video, a timestamped frame sheet and measured motion.",
+   null,
+   "Done when: an animated test page gives frames that differ, a frozen animation is flagged, and the way to capture video from the Unity game engine is written down and labelled UNTESTED.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "#566 Visual loop step 3: criteria, the skill and reviewer rounds",
+   "Capture the page, have a reviewer critique it, fix it, and repeat, for at most four rounds, without asking you anything.",
+   null,
+   "Done when: on a test page with seeded sideways scroll the loop finds it, fixes it and passes in round two with no input; an unfixable test page ends at round four with a written list.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "#567 Visual loop step 4: the end-of-turn visual gate",
+   "A real capture report and a record of what was checked replace the keyword match.",
+   null,
+   "Done when: a changed visual file with no report is flagged, one with a report and record passes, a keyword in a command no longer counts, and the false-alarm count over recorded sessions is written down.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "#568 Docs, tests and version",
+   "Every doc, mapping and test brought in line, then the QA page.",
+   null,
+   "Done when: the full verify.py and tools/verify_tools.py pass, the quality-check (QA) page is linked and sent, and you have said it passed.",
+   null,
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "qa",
+   "When should you check the work?",
+   [
+    [
+     "A",
+     "One check at the end, when all four phases are built",
+     0,
+     "Fewest interruptions. If page sending or pictures are wrong, it shows up late."
+    ],
+    [
+     "B",
+     "An early check after phase 1, while phases 2 to 4 keep building",
+     1,
+     "Page sending and pictures answer your most repeated complaints and are the quickest to check. It does not pause the build."
+    ]
+   ],
+   "B gets the fixes you asked about most into your hands first, and nothing waits on your answer."
+  ]
+ ],
+ "wrapup": {
+  "summary": "A build plan: thirteen steps in four phases, each step proved on a planted failure before it is called done.",
+  "changing": "The page builder, the command-blocking hook, the end-of-turn checks, two new scripts, one new skill, the rules text, tests and docs; nothing is changed until you approve.",
+  "blocking": "Your answer to the one choice, and the line Build plan approved: wait clocks.",
+  "next": "After you approve, I build phase 1 with at most two builders at a time, each in its own separate copy of the code, and send you the early check page if you chose B.",
+  "todo": [
+   "Read the four phases.",
+   "Pick your answer under Choices.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

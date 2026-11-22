@@ -2147,6 +2147,14 @@ _cw_cases.append(("issue sections: all three found, or each missing one named",
                   and _cw.missing_issue_sections("## Depends on\nx") == ["Depended on by", "Done when"]))
 _cw_cases.append(("page text: a template page's PAGE strings are what gets read",
                   "about 43 tests" in _cw.page_text('<p>Hi there all</p><script>const PAGE = {\n lead: "It adds about 43 tests in all."\n};</script>')))
+_B64 = "data:image/png;base64," + "iVBORw0KGgo" * 20
+_PG = '<p>Hi there all</p><img src="%s"><script>const PAGE = {\n pic: "%s"\n};</script>' % (_B64, _B64)
+_LONG = " ".join("w%s" % chr(97 + i % 26) + chr(97 + i // 26) for i in range(45)) + "."
+_cw_cases.append(("page text: data: addresses give no finding; one long sentence still gives exactly one",
+                  not _cw.findings(_cw.page_text(_PG)) and len(_cw.findings(_cw.page_text(_PG + "<p>%s</p>" % _LONG))) == 1))
+_cw_cases.append(("page text: a 100-character blob outside a data address is ignored; a short URL stays",
+                  "x" * 100 not in _cw.page_text("<p>See the table here now %s ok</p>" % ("x" * 100))
+                  and "https://example.com/a/b" in _cw.page_text("<p>See https://example.com/a/b for more</p>")))
 
 # The reply check: one note, quiet on a clean reply, off with its switch.
 def _cw_stop(text, env=None):
@@ -2179,6 +2187,23 @@ _cw_cases.append(("page: a page under docs/plans with a vague number is named be
                   "the page probe.html" in _cw_page("<p>This adds about 43 tests to the suite.</p>")))
 _cw_cases.append(("page: a clean page gets no note",
                   "the page probe.html" not in _cw_page("<p>This adds 43 tests to the suite.</p>")))
+
+
+def _cw_write(rel):
+    path = os.path.join(_loop_dir, rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("<p>x</p>")
+    p = {"hook_event_name": "PostToolUse", "tool_name": "Write", "session_id": "loop", "cwd": _loop_dir,
+         "tool_input": {"file_path": path, "content": "x"}}
+    return run_hook("artifact", json.dumps(p), env=_loop_env)[1]
+
+
+_cw_cases.append(("page send (#558): an .html under docs/ gets the send note",
+                  "must be sent to aj" in _cw_write("docs/plans/sendnote.html")))
+_cw_cases.append(("page send (#558): an .html outside docs/ and a non-html under docs/ get none",
+                  "must be sent to aj" not in _cw_write("site/sendnote.html")
+                  and "must be sent to aj" not in _cw_write("docs/sendnote.md")))
 
 # The issue check: the GitHub tool and gh.
 _CW_GOOD_BODY = "## Depends on\nNothing.\n## Depended on by\nNothing.\n## Done when\nIt passes."
@@ -2349,7 +2374,10 @@ def _ck_triple(label, rule, transcript, bad, good, env=None, good_transcript=Non
 _ck_t_plain = _hand_transcript("ck-plain", _ck_user("what is up"))
 _ck_t_read = _hand_transcript("ck-read", _ck_user("check it", [json.dumps({"type": "assistant", "message": {"content": [
     {"type": "tool_use", "id": "r1", "name": "Bash", "input": {"command": "python3 t.py"}}]}})]))
-_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
+# #559: the edited page is then sent, as the send-page checkpoint requires; this fixture is about the editor rule
+_CK_SEND = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "SendUserFile",
+                       "input": {"file_path": os.path.join(_cw_pages, "plan.html")}}]}})
+_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR, _CK_SEND])
 
 # 1 page rule (long reply) - editor ran, so only the page rule is in play
 _ck_long = " ".join(["Words"] * 230) + "."
@@ -3716,5 +3744,55 @@ _ubf_on = _iss_call("guard", _iss_payload("PreToolUse", "Bash", _ubf, command="g
 report("PASS" if _ubf_off[0] == "deny" and "huge.bin" in _ubf_off[1] and _iss_decision(_ubf_on) != "deny"
        and "UNATTENDED run" in _ubf_on and "huge.bin" in _ubf_on else "FAIL",
        "unattended: a big-file commit is allowed with a note naming the file; attended it is still refused")
+
+# -- #559: the send-page checkpoint (Stop) and sendcheck (PreToolUse on SendUserFile) -------------
+_sp_dir = tempfile.mkdtemp(prefix="sendpage-", dir=_FIXTURE_ROOT)
+_sp_page = os.path.join(_sp_dir, "docs", "plans", "p.html")
+os.makedirs(os.path.dirname(_sp_page), exist_ok=True)
+_sp_env = dict(_loop_env, HOUSE_RULES_COMMIT_CHECK="off", HOUSE_RULES_CLEAR_WRITING="off", HOUSE_RULES_HANDOFF="off")
+_sp_n = [0]
+_sp_cases = []
+
+
+def _sp_run(steps, reply="Done.", retry=False):
+    """steps: (tool, input, result text or None); a prior send of other.txt makes the send tool exist."""
+    _sp_n[0] += 1
+    lines = [json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "do it"}})]
+    for i, (tool, inp, res) in enumerate(steps):
+        lines.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "s%d" % i, "name": tool, "input": inp}]}}))
+        if res is not None:
+            lines.append(json.dumps({"type": "user", "message": {"content": [
+                {"type": "tool_result", "tool_use_id": "s%d" % i, "content": res}]}}))
+    t = os.path.join(_FIXTURE_ROOT, "sendpage-%d.jsonl" % _sp_n[0])
+    open(t, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+    return run_hook("handover", stop_payload(transcript_path=t, last_assistant_message=reply, cwd=_sp_dir,
+                                             stop_hook_active=retry, session_id="verify-send"), env=_sp_env)[1]
+
+
+_sp_other = ("SendUserFile", {"file_path": "/x/other.txt"}, "ok")
+_sp_w = ("Write", {"file_path": _sp_page}, "ok")
+_sp_s = ("SendUserFile", {"file_path": _sp_page}, "ok")
+_sp_b1 = _sp_run([_sp_other, _sp_w])
+_sp_cases.append(("#559: a page written and never sent blocks, naming the page and the file-send tool",
+                    "send page" in _sp_b1 and "p.html" in _sp_b1 and "SendUserFile" not in _sp_b1 and "file-send tool" in _sp_b1))
+_sp_cases.append(("#559: the retry of that blocked turn passes", "send page" not in _sp_run([_sp_other, _sp_w], retry=True)))
+_sp_cases.append(("#559: a page edited after it was sent blocks",
+                    "send page" in _sp_run([_sp_other, _sp_w, _sp_s, ("Edit", {"file_path": _sp_page}, "ok")])))
+_sp_cases.append(("#559: a page sent after its last write passes", "send page" not in _sp_run([_sp_other, _sp_w, _sp_s])))
+_sp_mk = ("Bash", {"command": "python3 make_page.py build c.json"}, "make_page: wrote %s (0 picture(s) embedded)" % _sp_page)
+_sp_cases.append(("#559: a Bash make_page build of a page counts the same: blocks unsent, passes once sent",
+                    "send page" in _sp_run([_sp_other, _sp_mk]) and "send page" not in _sp_run([_sp_other, _sp_mk, _sp_s])))
+_sp_cases.append(("#559: with no file-send tool in the session a link to the page counts, and no link blocks",
+                    "send page" not in _sp_run([_sp_w], reply="See [p](docs/plans/p.html)") and "send page" in _sp_run([_sp_w])))
+_sp_cases.append(("#559: HOUSE_RULES_PAGES=off turns the send check off",
+                    "send page" not in run_hook("handover", stop_payload(
+                        transcript_path=os.path.join(_FIXTURE_ROOT, "sendpage-%d.jsonl" % _sp_n[0]),
+                        last_assistant_message="Done.", cwd=_sp_dir, session_id="verify-send"),
+                        env=dict(_sp_env, HOUSE_RULES_PAGES="off"))[1]))
+
+
+for _t, _ok in _sp_cases:
+    report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
 finish()

@@ -1563,6 +1563,207 @@ _c, _o = _sc_run()
 _cap_case("stallcheck: no-flag mode says it is watching all sessions",
           "watching ALL sessions" in _o and "aaa" in _o and "bbb" in _o, "exit %d out %r" % (_c, _o[:200]))
 
+# --- waitfor.py (#561): real processes, short numbers.
+_wf = os.path.join(HERE, "waitfor.py")
+_wf_flag = os.path.join(_home, "wf-flag")
+
+
+def _wf_run(*extra):
+    t0 = time.time()
+    pr = subprocess.run([sys.executable, _wf, "--kind", "command"] + list(extra), stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT, timeout=30)
+    return pr.returncode, pr.stdout.decode("utf-8", "replace"), time.time() - t0
+
+
+_c, _o, _t = _wf_run("--check", "test -e " + _wf_flag + " || { test -e " + _wf_flag + ".t || touch " + _wf_flag + ".t; "
+                     "test $(( $(date +%s) - $(stat -c %Y " + _wf_flag + ".t) )) -ge 2 && exit 0; exit 1; }",
+                     "--deadline", "10", "--first-check", "1", "--interval", "1")
+_cap_case("waitfor: a check that succeeds after about 2 s reports done, exit 0",
+          _c == 0 and "DONE" in _o.splitlines()[-1] and "first check at 1s" in _o.splitlines()[0], "exit %d out %r" % (_c, _o[:300]))
+_c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "4", "--first-check", "1", "--interval", "1")
+_cap_case("waitfor: a check that never succeeds times out, exit 3, in under 8 s",
+          _c == 3 and _t < 8 and "timed out" in _o and "gave up after 4s; still unknown" in _o, "exit %d in %.1f s out %r" % (_c, _t, _o[-200:]))
+_c, _o, _t = _wf_run("--check", "exit 1", "--watch-file", os.path.join(_home, "never-written"), "--stalled-after", "3",
+                     "--first-check", "1", "--interval", "1", "--deadline", "20")
+_cap_case("waitfor: a watched file never written reports stalled, exit 2",
+          _c == 2 and "STALLED" in _o.splitlines()[-1] and "never-written" in _o, "exit %d out %r" % (_c, _o[-250:]))
+_c, _o, _t = _wf_run("--check", "echo boom; exit 2", "--deadline", "5", "--first-check", "1")
+_cap_case("waitfor: a check exiting 2 reports failed, exit 1, with its output",
+          _c == 1 and "FAILED" in _o and "boom" in _o, "exit %d out %r" % (_c, _o[-200:]))
+_c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "1")
+_cap_case("waitfor: with no overrides the first line shows the 60 s clock",
+          "first check at 60s, then every 60s" in _o.splitlines()[0] and _c == 3, "exit %d out %r" % (_c, _o[:200]))
+_c, _o, _t = _wf_run("--check", "sleep 30", "--deadline", "3", "--first-check", "1", "--interval", "1")
+_cap_case("waitfor: a hung check is cut off at the deadline, timed out, exit 3, in under 8 s",
+          _c == 3 and _t < 8 and "still running at the deadline" in _o, "exit %d in %.1f s out %r" % (_c, _t, _o[-200:]))
+_wf_sd = os.path.join(_home, ".claude", "projects", "p", "wfsess", "subagents")
+os.makedirs(_wf_sd, exist_ok=True)
+_wf_ag = os.path.join(_wf_sd, "agent-wfag.jsonl")
+open(_wf_ag, "w").write('{"type":"assistant"}\n')
+os.utime(_wf_ag, (time.time() - 600, time.time() - 600))
+_wf_args = ["--check", "exit 1", "--agent", "wfag", "--session", "wfsess", "--first-check", "1", "--interval", "1"]
+_pr = subprocess.run([sys.executable, _wf, "--kind", "agent", "--stalled-after", "2", "--deadline", "20"] + _wf_args,
+                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=_henv, timeout=30)
+_o = _pr.stdout.decode("utf-8", "replace")
+_cap_case("waitfor: an agent transcript silent across 2 checks reports stalled, exit 2",
+          _pr.returncode == 2 and "STALLED" in _o.splitlines()[-1] and "wfag" in _o, "exit %d out %r" % (_pr.returncode, _o[-250:]))
+_toucher = subprocess.Popen([sys.executable, "-c", "import os,time\nfor _ in range(12):\n os.utime(%r);time.sleep(0.5)" % _wf_ag])
+_pr = subprocess.run([sys.executable, _wf, "--kind", "agent", "--stalled-after", "2", "--deadline", "4"] + _wf_args,
+                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=_henv, timeout=30)
+_toucher.wait()
+_o = _pr.stdout.decode("utf-8", "replace")
+_cap_case("waitfor: an agent transcript touched every second is not stalled, ends timed out, exit 3",
+          _pr.returncode == 3 and "timed out" in _o, "exit %d out %r" % (_pr.returncode, _o[-250:]))
+_c, _o, _t = _wf_run("--check", "exit 1", "--deadline", "0")
+_cap_case("waitfor: a missing deadline is a usage error, exit 4, never an endless wait",
+          _c == 4 and "bad usage" in _o, "exit %d out %r" % (_c, _o[:200]))
+
+# --- visualcheck.py (#564): the no-browser cases always run; the browser cases need HOUSE_RULES_VISUALCHECK_PYTHON.
+_vc = os.path.join(HERE, "visualcheck.py")
+_vc_dir = _cap_tf.mkdtemp(prefix="visualcheck-")  # OS temp dir, never the repo
+atexit.register(shutil.rmtree, _vc_dir, True)
+_vc_py = os.environ.get("HOUSE_RULES_VISUALCHECK_PYTHON")
+
+
+def _vc_run(py, *a):
+    pr = subprocess.run([py, _vc] + list(a), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+    return pr.returncode, pr.stdout.decode("utf-8", "replace")
+
+
+def _vc_write(name, text):
+    p = os.path.join(_vc_dir, name)
+    open(p, "w", encoding="utf-8").write(text)
+    return p
+
+
+_c, _o = _vc_run(sys.executable, "doctor")
+_cap_case("visualcheck: doctor prints one line per tool and exits 0 or 3 with the install command when missing",
+          _c in (0, 3) and all(w in _o for w in ("playwright", "pillow", "chromium", "ffmpeg"))
+          and (_c == 0 or "MISSING" in _o), "exit %d out %r" % (_c, _o[:300]))
+for _nm, _txt in (("notjson.json", "{nope"), ("nourl.json", "{}"), ("badstep.json", '{"url":"x.html","steps":[{"hover":"a"}]}'),
+                  ("badfill.json", '{"url":"x.html","steps":[{"fill":["a"]}]}')):
+    _c, _o = _vc_run(sys.executable, "shots", "--steps", _vc_write(_nm, _txt), "--out", os.path.join(_vc_dir, "o"))
+    _cap_case("visualcheck: %s is bad usage, exit 4" % _nm, _c == 4 and "bad usage" in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _vc_run(sys.executable, "shots", "--steps", _vc_write("ok.json", '{"url":"x.html"}'), "--out", os.path.join(_vc_dir, "o"), "--themes", "sepia")
+_cap_case("visualcheck: an unknown theme is bad usage, exit 4", _c == 4 and "sepia" in _o, "exit %d out %r" % (_c, _o[:200]))
+try:
+    import PIL.Image
+    sys.path.insert(0, HERE)
+    import visualcheck as _vcm
+    _im_w, _im_n = os.path.join(_vc_dir, "w.png"), os.path.join(_vc_dir, "n.png")
+    PIL.Image.new("RGB", (40, 40), "white").save(_im_w)
+    _noisy = PIL.Image.new("RGB", (40, 40), "white")
+    _noisy.paste("black", (0, 0, 20, 20))
+    _noisy.save(_im_n)
+    _cap_case("visualcheck: the blank detector flags a one-colour image and not a two-colour one",
+              _vcm.is_blank(_im_w) and not _vcm.is_blank(_im_n), "white blank=%s, half-black blank=%s" % (_vcm.is_blank(_im_w), _vcm.is_blank(_im_n)))
+except ImportError as _e:
+    print("SKIP  visualcheck: blank detector - Pillow is not installed in this python (%s)" % _e)
+
+if not _vc_py:
+    print("SKIP  visualcheck: browser cases (clean page, sideways scroll plus console error, blank page) - "
+          "HOUSE_RULES_VISUALCHECK_PYTHON is not set to an interpreter that has playwright and Pillow")
+else:
+    _body = "<!doctype html><meta name=viewport content='width=device-width'><body style='background:#fff'>%s</body>"
+    _pages = {"clean": _body % "<h1>Hello</h1><p style='color:#036'>A fine page.</p>",
+              "bad": _body % "<div style='width:900px;background:#c00;height:50px'>wide</div><script>console.error('boom-on-purpose')</script>",
+              "blank": _body % ""}
+    _runs = {}
+    for _k, _html in _pages.items():
+        _pg = _vc_write(_k + ".html", _html)
+        _st = _vc_write(_k + ".json", json.dumps({"url": _pg, "steps": [{"shot": "p"}]}))
+        _od = os.path.join(_vc_dir, "out-" + _k)
+        _c, _o = _vc_run(_vc_py, "shots", "--steps", _st, "--out", _od)
+        try:
+            _rep = json.load(open(os.path.join(_od, "report.json")))
+        except (OSError, ValueError) as _e:
+            _rep = {"read_error": str(_e)}
+        _runs[_k] = (_c, _o, _rep, _od)
+    _c, _o, _rep, _od = _runs["clean"]
+    _cap_case("visualcheck: a clean page writes 4 screenshots and the report is ok, exit 0",
+              _c == 0 and _rep.get("ok") is True and len([f for f in os.listdir(_od) if f.endswith(".png")]) == 4,
+              "exit %d report %r out %r" % (_c, _rep.get("ok"), _o[:300]))
+    _c, _o, _rep, _od = _runs["bad"]
+    _ph = _rep.get("per_image", {}).get("p-phone-light.png", {})
+    _cap_case("visualcheck: sideways scroll plus console.error is reported, exit 1",
+              _c == 1 and _rep.get("ok") is False and _ph.get("overflow_x") is True and any("boom-on-purpose" in m for m in _ph.get("console_errors", [])),
+              "exit %d phone-light %r out %r" % (_c, _ph, _o[:300]))
+    _c, _o, _rep, _od = _runs["blank"]
+    _cap_case("visualcheck: an all-white page is flagged blank, exit 1",
+              _c == 1 and any(d.get("blank") for d in _rep.get("per_image", {}).values()), "exit %d out %r" % (_c, _o[:300]))
+
+    # --- #565: per-image errors, video, frames and motion measures
+    _pg = _vc_write("later.html", _body % "<button onclick=\"console.error('after-click-boom')\">go</button>")
+    _st = _vc_write("later.json", json.dumps({"url": _pg, "steps": [{"shot": "before"}, {"click": "button"}, {"shot": "after"}]}))
+    _od = os.path.join(_vc_dir, "out-later")
+    _c, _o = _vc_run(_vc_py, "shots", "--steps", _st, "--out", _od, "--viewports", "phone", "--themes", "light")
+    try:
+        _pi = json.load(open(os.path.join(_od, "report.json")))["per_image"]
+    except (OSError, ValueError, KeyError) as _e:
+        _pi = {}
+    _cap_case("visualcheck: a console error after a click is reported on the later shot only, not the earlier one",
+              _c == 1 and _pi.get("before-phone-light.png", {}).get("console_errors") == []
+              and any("after-click-boom" in m for m in _pi.get("after-phone-light.png", {}).get("console_errors", [])),
+              "exit %d per_image %r" % (_c, _pi))
+    _anim = "<div style='width:80px;height:80px;background:#c00;position:absolute;animation:m %s'></div><style>@keyframes m{from{left:0}to{left:280px}}</style>"
+    _vpages = {"moving": (_anim % "2s linear infinite alternate", 3000), "frozen": (_anim % "1s linear forwards", 3000), "static": ("<h1>still</h1>", 3000)}
+    _vres = {}
+    for _k, (_h, _ms) in _vpages.items():
+        _pg = _vc_write("v-" + _k + ".html", _body % _h)
+        _st = _vc_write("v-" + _k + ".json", json.dumps({"url": _pg, "steps": [{"wait": _ms}]}))
+        _od = os.path.join(_vc_dir, "vout-" + _k)
+        _c, _o = _vc_run(_vc_py, "video", "--steps", _st, "--out", _od)
+        _vres[_k] = (_c, _o, _od)
+    if any(r[0] == 3 for r in _vres.values()):
+        print("SKIP  visualcheck: video cases - Playwright cannot record here (%s)" % _vres["moving"][1].strip()[:150])
+    else:
+        _fr = {}
+        for _k, (_c0, _o0, _od) in _vres.items():
+            _vf = os.path.join(_od, "video-phone-light.webm")
+            _c, _o = _vc_run(_vc_py, "frames", "--video", _vf, "--out", _od, "--expect-motion")
+            try:
+                _fj = json.load(open(os.path.join(_od, "frames.json")))
+            except (OSError, ValueError):
+                _fj = {}
+            _fr[_k] = (_c0, _c, _o, _fj, _od)
+        _c0, _c, _o, _fj, _od = _fr["moving"]
+        _cap_case("visualcheck: an animated page gives a webm, a sheet, max_delta above 0.05 and exit 0 with --expect-motion",
+                  _c0 == 0 and _c == 0 and os.path.isfile(os.path.join(_od, "sheet.png")) and _fj.get("max_delta", 0) > 0.05 and _fj.get("ok") is True,
+                  "video exit %d frames exit %d out %r" % (_c0, _c, _o[:300]))
+        _c0, _c, _o, _fj, _od = _fr["frozen"]
+        _cap_case("visualcheck: an animation that stops after 1s reports a frozen run, exit 1 with --expect-motion",
+                  _c == 1 and bool(_fj.get("frozen_runs")) and _fj.get("ok") is False, "exit %d frozen %r out %r" % (_c, _fj.get("frozen_runs"), _o[:300]))
+        _c0, _c, _o, _fj, _od = _fr["static"]
+        _cap_case("visualcheck: a static page is static, exit 1 with --expect-motion",
+                  _c == 1 and _fj.get("static") is True, "exit %d static %r out %r" % (_c, _fj.get("static"), _o[:300]))
+
+# frames needs only Pillow and ffmpeg: a hand-made sequence with one abrupt change must flag a jump.
+if _vc_py and shutil.which("ffmpeg"):
+    _sq = os.path.join(_vc_dir, "seq")
+    os.makedirs(_sq, exist_ok=True)
+    _mk = ("from PIL import Image\nfor i in range(12):\n"
+           "    x = i * 4 if i < 8 else 120\n"
+           "    im = Image.new('RGB', (160, 120), 'white'); im.paste((200, 0, 0), (x, 10, x + 30, 110)); im.save(r'%s/%%03d.png' %% i)\n" % _sq.replace("\\", "/"))
+    subprocess.run([_vc_py, "-c", _mk], timeout=60)
+    _vj = os.path.join(_vc_dir, "jump.mp4")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-framerate", "2", "-i", os.path.join(_sq, "%03d.png"), "-pix_fmt", "yuv420p", _vj], timeout=60)
+    _od = os.path.join(_vc_dir, "jout")
+    _c, _o = _vc_run(_vc_py, "frames", "--video", _vj, "--out", _od, "--expect-motion")
+    try:
+        _fj = json.load(open(os.path.join(_od, "frames.json")))
+    except (OSError, ValueError):
+        _fj = {}
+    _cap_case("visualcheck: an abrupt change in a synthetic video is flagged in jumps, exit 1 with --expect-motion",
+              _c == 1 and bool(_fj.get("jumps")), "exit %d jumps %r deltas %r out %r" % (_c, _fj.get("jumps"), _fj.get("deltas"), _o[:200]))
+else:
+    print("SKIP  visualcheck: jump detection - needs HOUSE_RULES_VISUALCHECK_PYTHON and ffmpeg on PATH")
+
+_c, _o = _vc_run(sys.executable, "frames", "--video", os.path.join(_vc_dir, "nope.webm"), "--out", os.path.join(_vc_dir, "o"))
+_cap_case("visualcheck: frames on a missing video is bad usage in words, exit 4", _c == 4 and "not found" in _o, "exit %d out %r" % (_c, _o[:200]))
+_c, _o = _vc_run(sys.executable, "frames", "--video", _vc_write("fake.webm", "x"), "--out", os.path.join(_vc_dir, "o"))
+_cap_case("visualcheck: frames on a file that is not a video is an error in words (exit 3 without ffmpeg or Pillow, else 4)",
+          _c in (3, 4) and ("tools missing" in _o or "could not read" in _o), "exit %d out %r" % (_c, _o[:200]))
+
 audq = []
 code, out, err = run_hook("audit", "")
 if code != 0 or "systemMessage" not in out:
@@ -2028,6 +2229,86 @@ _as_git(_pk_d4, "push", "-q", "origin", _PK_OLD + ":refs/house-rules/saves/AjsAg
 _pk_text = _pk_ctx(_pk_run(_pk_clone(_pk_bare4)))
 commit_case("pickup: another branch's recent save is named in one line",
             "Other branches with a save under 24 h old: AjsAgent/other" in _pk_text, "got %r" % _pk_text[-300:])
+
+
+# --- the visual loop ledger (#566) ---------------------------------------------------------------
+import tempfile
+import shutil
+_LG = os.path.join(HERE, "ledger.py")
+
+
+def _lg(*a, **env):
+    r = subprocess.run([sys.executable, _LG] + list(a), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       universal_newlines=True, env=dict(os.environ, **env))
+    return r.returncode, r.stdout + r.stderr
+
+
+def _lg_feature(d, rounds):
+    """rounds: list of lists of (PASS|FAIL, image or None) for C1, C2"""
+    open(os.path.join(d, "img.png"), "w").write("x")
+    open(os.path.join(d, "criteria.md"), "w").write(
+        "C1. Title is visible | proof: still | page: a.html\nC2. Button is blue | proof: still | page: a.html\n")
+    for n, rows in enumerate(rounds, 1):
+        lines = ["# Round %d" % n] + ["C%d: %s - shows a thing - %s" % (i, v, im) for i, (v, im) in enumerate(rows, 1)]
+        ok = all(v == "PASS" for v, _ in rows)
+        open(os.path.join(d, "round-%d.md" % n), "w").write("\n".join(lines) + "\nSTATUS: %s\n" % ("pass" if ok else "fail"))
+
+
+_lg_tmp = tempfile.mkdtemp(prefix="ledger-test-")
+try:
+    def _fresh(name, rounds):
+        d = os.path.join(_lg_tmp, name)
+        os.makedirs(d)
+        _lg_feature(d, rounds)
+        return d
+    P = ("PASS", "img.png")
+    F = ("FAIL", "img.png")
+    d = _fresh("ok", [[P, P]])
+    code, out = _lg("check", d)
+    commit_case("ledger: a valid criteria file and round pass check", code == 0, out)
+    d = _fresh("miss", [[P, P]])
+    t = open(os.path.join(d, "round-1.md")).read().replace("C2: PASS - shows a thing - img.png\n", "")
+    open(os.path.join(d, "round-1.md"), "w").write(t)
+    code, out = _lg("check", d)
+    commit_case("ledger: a round missing a criterion fails check", code == 1 and "C2" in out, out)
+    d = _fresh("noimg", [[P, ("PASS", "gone.png")]])
+    code, out = _lg("check", d)
+    commit_case("ledger: a verdict citing a missing image fails check", code == 1 and "gone.png" in out, out)
+    d = _fresh("badstatus", [[P, P]])
+    t = open(os.path.join(d, "round-1.md")).read().replace("C2: PASS", "C2: FAIL")
+    open(os.path.join(d, "round-1.md"), "w").write(t)
+    code, out = _lg("check", d)
+    commit_case("ledger: STATUS pass with a FAIL line fails check", code == 1 and "STATUS" in out, out)
+    code, out = _lg("status", _fresh("s1", [[P, F]]))
+    commit_case("ledger: status at round 1 failing says NEXT: fix", code == 1 and "NEXT: fix" in out and "C2" in out, out)
+    code, out = _lg("status", _fresh("s2", [[P, P]]))
+    commit_case("ledger: status at a passing round says NEXT: done", code == 0 and "NEXT: done" in out, out)
+    d = _fresh("s3", [[P, F]] * 4)
+    code, out = _lg("status", d)
+    commit_case("ledger: status at round 4 failing says NEXT: blocked", code == 1 and "NEXT: blocked" in out and "blocked.md" in out, out)
+    code, out = _lg("new-round", d)
+    commit_case("ledger: new-round refuses at the cap", code == 1 and "refusing" in out, out)
+    d = _fresh("n1", [[P, P]])
+    code, out = _lg("new-round", d)
+    commit_case("ledger: new-round refuses after a pass", code == 1 and "refusing" in out, out)
+    d = _fresh("n2", [[P, F]])
+    code, out = _lg("new-round", d)
+    commit_case("ledger: new-round writes the next skeleton", code == 0 and "not yet judged" in open(os.path.join(d, "round-2.md")).read(), out)
+    bad = os.path.join(_lg_tmp, "bad.json")
+    open(bad, "w").write("{not json")
+    code, out = _lg("status", _fresh("s4", [[P, F]]), HOUSE_RULES_VISUAL_FILE=bad)
+    commit_case("ledger: a bad rules/visual.json is reported in words and the default used",
+                "could not be read" in out and "NEXT: fix" in out, out)
+    code, out = _lg("check")
+    commit_case("ledger: bad usage exits 4", code == 4, out)
+finally:
+    shutil.rmtree(_lg_tmp, ignore_errors=True)
+
+_sk = os.path.join(HERE, "..", "skills", "visual-loop", "SKILL.md")
+_skt = open(_sk, encoding="utf-8").read() if os.path.isfile(_sk) else ""
+commit_case("visual-loop skill exists with frontmatter and names ledger.py, waitfor.py, visualcheck.py and the reviewer",
+            _skt.startswith("---\nname: visual-loop\n") and "description:" in _skt
+            and all(w in _skt for w in ("ledger.py", "waitfor.py", "visualcheck.py", "@house-rules:reviewer")), "skill text missing pieces")
 
 
 finish()

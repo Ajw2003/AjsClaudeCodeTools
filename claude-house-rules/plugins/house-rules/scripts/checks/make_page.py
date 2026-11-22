@@ -88,6 +88,8 @@ with open(os.path.join(HERE, "..", ".claude-plugin", "plugin.json"), encoding="u
 _mp_cases.append(("make_page: style --quick then build succeeds and stamps the mark right after the doctype",
                   _rc1 == 0 and _rc2 == 0 and _txt.startswith("<!doctype html>\n<!-- house-rules make_page %s -->" % _ver)
                   and "visual check" in _o2 and "<title>T basic</title>" in _txt))
+_mp_cases.append(("make_page (#558): a successful build ends with the SEND THIS PAGE NOW line",
+                  _rc2 == 0 and _o2.rstrip().splitlines()[-1].startswith("make_page: SEND THIS PAGE NOW: ")))
 
 _d = _mp_proj("ps", _PS_STYLE)
 _rc, _o = _mp("build", _c1, "--project", _d)
@@ -113,9 +115,44 @@ _mp_cases.append(("make_page: a required-pictures project refuses a visual Chang
                   _rc == 2 and "Shiny button" in _o))
 
 _cv2 = _mp_content("visual2", [["chg", "Shiny button", "Looks new.", None, "Detail.", None, None, {"visual": True},
-                                {"src": "data:image/png;base64,AAAA", "alt": "a", "caption": "c"}]])
+                                {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "alt": "a", "caption": "c"}]])
 _rc, _o = _mp("build", _cv2, "--project", _d)
 _mp_cases.append(("make_page: the same visual item with a picture builds", _rc == 0))
+
+# pictures are embedded in the page file
+_pd = _mp_proj("pics", _PS_STYLE)
+_pp = os.path.join(_pd, "pic")
+os.makedirs(_pp, exist_ok=True)
+
+
+def _pic_page(name, src):
+    return _mp_content(name, [["chg", "Pic item", "L.", None, "D.", None, None, {"visual": True},
+                               {"src": src, "alt": "a", "caption": "c"}]])
+
+
+def _pic_src(name):
+    return _mp_page_of(os.path.join(_pd, "docs", "plans", name + ".html"))["changes"][1][8]["src"]
+
+
+with open(os.path.join(_pp, "a.svg"), "w") as _f:
+    _f.write('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')
+with open(os.path.join(_pp, "b.png"), "wb") as _f:
+    _f.write(__import__("base64").b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="))
+with open(os.path.join(_pp, "big.png"), "wb") as _f:
+    _f.write(b"0" * 1000001)
+_rc, _o = _mp("build", _pic_page("psvg", os.path.join(_pp, "a.svg")), "--project", _pd)
+_mp_cases.append(("make_page: an SVG picture is embedded as a data: address and no -pics folder is written",
+                  _rc == 0 and _pic_src("psvg").startswith("data:image/svg+xml;base64,") and "embedded" in _o
+                  and not any(n.endswith("-pics") for n in os.listdir(os.path.join(_pd, "docs", "plans")))))
+_rc, _o = _mp("build", _pic_page("ppng", os.path.join(_pp, "b.png")), "--project", _pd)
+_mp_cases.append(("make_page: a PNG picture is embedded as image/png", _rc == 0 and _pic_src("ppng").startswith("data:image/png;base64,")))
+_rc, _o = _mp("build", _pic_page("pbig", os.path.join(_pp, "big.png")), "--project", _pd)
+_mp_cases.append(("make_page: a picture over 1,000,000 bytes is refused, naming file and size",
+                  _rc == 2 and "big.png" in _o and "1000001" in _o))
+_rc, _o = _mp("build", _pic_page("pweb", "https://example.com/x.png"), "--project", _pd)
+_mp_cases.append(("make_page: a picture linked from the web is refused", _rc == 2 and "linked from the web" in _o))
+_rc, _o = _mp("build", _pic_page("pdata", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="), "--project", _pd)
+_mp_cases.append(("make_page: an existing data: picture is left unchanged", _rc == 0 and _pic_src("pdata") == "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="))
 
 _tk = os.path.join(_mp_tmp, "tokens.json")
 with open(_tk, "w", encoding="utf-8") as f:
@@ -431,6 +468,104 @@ _pc_r = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), 
 _pc_u = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _pc_f + ".nope"], capture_output=True, text=True, timeout=60)
 _mp_cases.append(("page_criteria (#542): the command exits 1 naming the miss, and 2 for an unreadable file",
                   _pc_r.returncode == 1 and "Basic 3" in _pc_r.stdout and _pc_u.returncode == 2))
+# ---- the lone-copy picture check (#557): a page opened alone must not have broken pictures ----
+def _lone(name, pics):
+    f = os.path.join(_mp_tmp, name + ".html")
+    with open(f, "w", encoding="utf-8") as _f:
+        _f.write(_pcp("art", add=pics))
+    return subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), f, "--visual"], capture_output=True, text=True, timeout=300)
+
+
+_ln_bad = _lone("lone-bad", '<img src="gone-pics/a.svg" alt="x">')
+if "visual check did not run" in _ln_bad.stdout:
+    report("SKIP", "page_criteria (#557): the lone-copy picture check (no usable browser: %s)"
+           % _ln_bad.stdout.split("visual check did not run:", 1)[1].strip()[:200])
+else:
+    _ln_ok = _lone("lone-data", '<img alt="x" src="data:image/svg+xml;utf8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%272%27 height=%272%27%3E%3Crect width=%272%27 height=%272%27/%3E%3C/svg%3E">')
+    _ln_none = _lone("lone-nosrc", '<img alt="later">')
+    _mp_cases.append(("page_criteria (#557): a page with img src=gone-pics/a.svg and no such folder fails and names that src",
+                      _ln_bad.returncode == 2 and "gone-pics/a.svg" in _ln_bad.stdout))
+    _mp_cases.append(("page_criteria (#557): a page with an embedded data: picture passes the lone-copy check",
+                      _ln_ok.returncode == 0 and "broken pictures 0" in _ln_ok.stdout))
+    _mp_cases.append(("page_criteria (#557): a page with an img that has no src passes the lone-copy check",
+                      _ln_none.returncode == 0 and "broken pictures 0" in _ln_none.stdout))
+
+# ---- #559: sendcheck embeds a page's broken pictures in place, never denies ----
+def _sp_send(page):
+    return run_hook("sendcheck", json.dumps({"tool_name": "SendUserFile", "tool_input": {"file_path": page}}), env=dict(os.environ))[1]
+
+
+_sp_proj = _mp_proj("sendfix", {"use": "defaults"})
+_sp_plans = os.path.join(_sp_proj, "docs", "plans")
+os.makedirs(os.path.join(_sp_plans, "fix-pics"), exist_ok=True)
+with open(os.path.join(_sp_plans, "fix-pics", "a.svg"), "w") as _f:
+    _f.write("<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><rect width='4' height='4'/></svg>")
+_sp_src = _mp_content("fix", [["chg", "Pic", "Looks new.", None, "Detail.", None, None, {"visual": True},
+                               {"src": "fix-pics/a.svg", "alt": "a", "caption": "c"}]])
+_sp_fix = os.path.join(_sp_plans, "fix.html")
+with open(_sp_fix, "w", encoding="utf-8") as _f:
+    _f.write(_pcp("art", add='<img src="fix-pics/a.svg" alt="x">'))
+_sp_nosrc = os.path.join(_sp_plans, "nosrc.html")
+with open(_sp_nosrc, "w", encoding="utf-8") as _f:
+    _f.write(_pcp("art", add='<img src="gone-pics/a.svg" alt="x">'))
+_sp_o1 = _sp_send(_sp_nosrc)
+if "picture check did not run" in _sp_o1:
+    report("SKIP", "sendcheck (#559): no usable browser: %s" % _sp_o1[:200])
+else:
+    _sp_o2 = _sp_send(_sp_fix)
+    _sp_after = open(_sp_fix, encoding="utf-8").read()
+    _mp_cases.append(("sendcheck (#559): a page with a -pics/ link is repaired in place with the picture embedded, allowed",
+                      "deny" not in _sp_o2 and "data:image/svg" in _sp_after and "fix-pics/a.svg" not in _sp_after))
+    if "re-check did not run" in _sp_o2:  # no browser: the repair still happened, only the note differs
+        report("SKIP", "sendcheck (#559): the 'was repaired' note (no browser): %s" % _sp_o2[:200])
+    else:
+        _mp_cases.append(("sendcheck (#559): the repair is announced with a 'was repaired' note", "was repaired" in _sp_o2))
+    _mp_cases.append(("sendcheck (#559): a picture whose file is missing is named with the reason, send allowed",
+                      "gone-pics/a.svg (file not found)" in _sp_o1 and "could not be repaired" in _sp_o1 and "deny" not in _sp_o1))
+    _mp_cases.append(("sendcheck (#559): a non-page file gets no note and no denial",
+                      _sp_send(os.path.join(_sp_plans, "x.txt")) == ""))
+    _sp_clean = _sp_send(_sp_fix)
+    if "did not run" in _sp_clean:  # no browser at all: the hook says so on every send, even for a clean page
+        report("SKIP", "sendcheck (#559): a clean page gets no note (no browser): %s" % _sp_clean[:200])
+    else:
+        _mp_cases.append(("sendcheck (#559): a clean page gets no note and no denial", _sp_clean == ""))
+# ---- #557 static check: picture sources not built into the page are named, with no browser needed ----
+_sb = __import__("make_page").static_broken_pictures
+_mp_cases.append(("static picture check (#557): a PAGE data block holding a -pics/ src and no <img> at load is named",
+                  _sb('<script>const PAGE = {"c":[{"src": "x-pics/a.png", "alt": "a"}]};</script>') == ["x-pics/a.png"]))
+_mp_cases.append(("static picture check (#557): only data: pictures pass",
+                  _sb('<img src="data:image/png;base64,AAAA"><script>var P={src:"data:image/svg+xml;utf8,x"}</script>') == []))
+_mp_cases.append(("static picture check (#557): an in-page # source, a font stylesheet link and a font url do not count; an http image and css image url do",
+                  _sb('<img src="#a"><link href="https://fonts.googleapis.com/css2?family=X" rel="stylesheet">'
+                      '<style>@font-face{src:url(https://f.example/x.woff2)}b{background:url(/img/b.png)}</style>'
+                      '<img src="https://e.com/p.jpg">') == ["https://e.com/p.jpg", "/img/b.png"]))
+_sd_src = os.path.join(ROOT, "docs", "plans")  # read only; the copy lives in the OS temp dir, outside the repo
+_sd_root = tempfile.mkdtemp(prefix="realqa-")
+try:
+    _sd_name = "2026-10-19-restructure-step-1-qa"
+    _sd_tmp = os.path.join(_sd_root, "docs", "plans")
+    os.makedirs(_sd_tmp)
+    shutil.copyfile(os.path.join(_sd_src, _sd_name + ".html"), os.path.join(_sd_tmp, _sd_name + ".html"))
+    shutil.copytree(os.path.join(_sd_src, _sd_name + "-pics"), os.path.join(_sd_tmp, _sd_name + "-pics"))
+    _sd_page = os.path.join(_sd_tmp, _sd_name + ".html")
+    _sd_before = open(_sd_page, encoding="utf-8", newline="").read()
+    _sd_out = _sp_send(_sd_page)
+    _sd_txt = open(_sd_page, encoding="utf-8", newline="").read()
+    _sd_left = len(_sb(_sd_txt))
+    _sd_mask = lambda t: re.sub(r"data:[a-z/+]+;base64,[A-Za-z0-9+/=]+", "DATA", t)
+    _sd_masked_before = _sd_before
+    for _u in _sb(_sd_before):  # the source text itself is what changed
+        _sd_masked_before = re.sub(r"(?<![\w./-])" + re.escape(_u), "DATA", _sd_masked_before)  # same rule as the handler: a longer path naming it is text
+    _sd_after = subprocess.run([sys.executable, os.path.join(HERE, "page_criteria.py"), _sd_page, "--visual"], capture_output=True, text=True, timeout=300).stdout
+    _mp_cases.append(("static picture check (#557): REAL DATA, sendcheck repairs a copy of the finished QA page in place; no unbuilt picture is left, only the sources changed",
+                      _sd_left == 0 and "broken picture when the page is opened alone" not in _sd_after
+                      and _sd_mask(_sd_txt) == _sd_masked_before and len(_sd_txt.splitlines()) == len(_sd_before.splitlines())))
+    if "re-check did not run" in _sd_out:
+        report("SKIP", "static picture check (#557): the 'was repaired' note (no browser): %s" % _sd_out[:200])
+    else:
+        _mp_cases.append(("static picture check (#557): REAL DATA, the repair is announced with a 'was repaired' note", "was repaired" in _sd_out))
+finally:
+    shutil.rmtree(_sd_root, ignore_errors=True)
 # ---- starters: one optional content skeleton per page type (#544) ----
 _mp_cases.append(("starters (#544): make_page's type list equals page_criteria's", tuple(__import__("make_page").PAGE_TYPES) == tuple(_pc.TYPES)))
 _sp = _mp_proj("starts", {"use": "defaults"})

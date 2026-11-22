@@ -2670,6 +2670,7 @@ _MODE_GROUPS = {
     "writing": ("HOUSE_RULES_CLEAR_WRITING", "HOUSE_RULES_PLAIN_SUMMARY", "HOUSE_RULES_VISUAL_CHECK",
                 "HOUSE_RULES_PARITY", "HOUSE_RULES_VOICE"),
     "autosave": ("HOUSE_RULES_AUTOSAVE", "HOUSE_RULES_HANDOFF"),
+    "waits": ("HOUSE_RULES_WAITS",),
 }
 _MODE_GROUPS["house"] = tuple(dict.fromkeys(v for g in _MODE_GROUPS.values() for v in g)) + (
     "HOUSE_RULES_HARVEST", "HOUSE_RULES_COMMIT_CHECK", "HOUSE_RULES_HANDOVER", "HOUSE_RULES_RERUNS",
@@ -2679,7 +2680,7 @@ _MODE_GROUPS["house"] = tuple(dict.fromkeys(v for g in _MODE_GROUPS.values() for
 _MODE_GROUPS["unattended"] = ("HOUSE_RULES_UNATTENDED",)
 MODE_SWITCHES = tuple(_MODE_GROUPS)
 _MODE_NAMES = {"design loop": "design", "writing checks": "writing", "house rules": "house"}
-_MODE_NAME_RE = r"(?:design\s+loop|pages|builders|issues|writing\s+checks|autosave|house\s+rules|unattended)"
+_MODE_NAME_RE = r"(?:design\s+loop|pages|builders|issues|writing\s+checks|autosave|waits|house\s+rules|unattended)"
 _MODE_ONE = _MODE_NAME_RE + r"\s+(?:on|off)(?:\s+everywhere)?"
 _MODE_SWITCH_RE = re.compile(r"\b(%s)\s+(on|off)(\s+everywhere)?\b" % _MODE_NAME_RE, re.IGNORECASE)
 # A switch counts only when its sentence or line holds nothing else, so a quoted mention does not flip it.
@@ -2846,6 +2847,7 @@ def _mode_note(payload=None):
              ("issues", "HOUSE_RULES_ISSUES", "Issues OFF (%s): no issue-before-code gate."),
              ("writing", "HOUSE_RULES_CLEAR_WRITING", "Writing checks OFF (%s): the clear-writing, plain-summary, visual and parity checks are skipped."),
              ("autosave", "HOUSE_RULES_AUTOSAVE", "Autosave OFF (%s): no autosave or handoff."),
+             ("waits", "HOUSE_RULES_WAITS", "Waits OFF (%s): background launches need no timeout and unchecked background tasks are not noted."),
              ("house", None, "House rules OFF (%s): everything is off except the destructive-command guard, the main-branch guard and the credit check, which still apply."))
     for g, var, text in extra:
         if typed.get(g) == "off" or (var and g != "issues" and sj(g, var)) or (g == "issues" and "design" not in typed and sj(g, var)):
@@ -2863,7 +2865,7 @@ def _mode_note(payload=None):
                      "to your own AjsAgent/ branch, never to main or master (the main-branch guard refuses it); if "
                      "you are on main, branch off first with `git switch -c AjsAgent/<topic>`.")
     if parts:
-        parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules, unattended) to switch back; add \"everywhere\" for all folders.")
+        parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, waits, house rules, unattended) to switch back; add \"everywhere\" for all folders.")
     return " ".join(parts)
 
 

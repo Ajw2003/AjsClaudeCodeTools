@@ -28,14 +28,11 @@ from house_rules.core import (  # noqa: F401
 
 
 _VISUAL_EXT_RE = re.compile(
-    r"\.(css|scss|sass|less|html?|jsx|tsx|vue|svelte|astro|uss|uxml|xaml|unity|prefab)$", re.IGNORECASE
+    r"\.(css|scss|sass|less|html?|jsx|tsx|vue|svelte|astro|uss|uxml|xaml|unity|prefab|svg|glsl|shader|hlsl|anim|controller)$", re.IGNORECASE
 )
 
 
 _IMAGE_EXT_RE = re.compile(r"\.(png|jpe?g|gif|webp|bmp)$", re.IGNORECASE)
-
-
-_SCREENSHOT_WORD_RE = re.compile(r"screenshot|playwright|puppeteer|capture|browser|computer", re.IGNORECASE)
 
 
 # --- plain summary first (#98) -------------------------------------------------------------
@@ -224,27 +221,57 @@ def _visual_check_enabled():
     return os.environ.get("HOUSE_RULES_VISUAL_CHECK", "on").strip().lower() not in _TOGGLE_OFF
 
 
-def _looked_at_result(tool_uses):
-    """True when the turn captured or read an image of the result."""
-    for block in tool_uses:
+_CAPTURE_RE = re.compile(r"visualcheck\.py[\"']?\s+(?:\S+\s+)*?(?:shots|video|frames)\b")
+_LEDGER_RE = re.compile(r"ledger\.py[\"']?\s+(?:check|status)\b")
+
+
+def _is_visual(path):
+    """A visual file, except a handover page: those were built or checked by the page pipeline."""
+    if not _VISUAL_EXT_RE.search(path or ""):
+        return False
+    if not re.search(r"\.html?$", path, re.IGNORECASE):
+        return True
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            head = f.read(4096)
+    except OSError:
+        head = ""  # unreadable or missing: not exempt, so it is still checked (no mark found)
+    return not ("house-rules make_page" in head or "house-rules-page" in head)
+
+
+def _visual_missing(tool_uses):
+    """What the turn still owes after its last visual write: "capture", "ledger check", "image read"."""
+    last_write = -1
+    for i, block in enumerate(tool_uses):
+        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
+        if block.get("name") in _AUDIT_WRITE_TOOLS and _is_visual(inp.get("file_path") or ""):
+            last_write = i
+    cap = led = img = None
+    for i, block in enumerate(tool_uses):
+        if i <= last_write:
+            continue
         name = block.get("name") or ""
         inp = block.get("input") if isinstance(block.get("input"), dict) else {}
-        if _SCREENSHOT_WORD_RE.search(name):
-            return True
-        if name == "Read" and _IMAGE_EXT_RE.search(inp.get("file_path") or ""):
-            return True
-        if name in _AUDIT_COMMAND_TOOLS and _SCREENSHOT_WORD_RE.search(inp.get("command") or ""):
-            return True
-    return False
+        cmd = inp.get("command") or ""
+        if name in _AUDIT_COMMAND_TOOLS:
+            if _CAPTURE_RE.search(cmd) and cap is None:
+                cap = i
+            if _LEDGER_RE.search(cmd) and cap is not None and i > cap:
+                led = i
+        # A report without a look is a machine reading only: someone must open an image.
+        if name == "Read" and _IMAGE_EXT_RE.search(inp.get("file_path") or "") and cap is not None and i > cap:
+            img = i
+    return [w for w, v in (("capture", cap), ("ledger check", led), ("image read", img)) if v is None]
 
 
-def _visual_note(files):
+def _visual_note(files, missing):
     return (
         "House rules, a visual change is checked by looking at it: this turn changed %s, but "
-        "nothing in it captured or looked at the result. Before this turn ends, screenshot the "
-        "same flow before (the committed version) and after, plus any flow the change adds, and "
-        "say what the images show. If nothing can render here, say what stops it and name the "
-        "screenshot the user should take." % ", ".join(files[:6])
+        "after the last change it has no: %s. Follow the visual-loop skill: run visualcheck.py "
+        "(shots, video or frames), run ledger.py check or status on the docs/qa folder, and Read "
+        "a captured image, then say what the images show. If nothing can render here, say what "
+        "stops it and name the screenshot the user should take."
+        % (", ".join(files[:6]), ", ".join(missing))
     )
 
 
@@ -363,16 +390,26 @@ def handover_page_editor_check(transcript_path, payload, written_now, turn_recor
 
 def handover_visual_check(written_now, turn_records):
     """The visual files written this turn that nothing looked at ([] when none)."""
-    visual_files = []
+    visual_files, missing = [], []
     if written_now and _visual_check_enabled():
-        visual = [os.path.basename(p) for p in written_now if _VISUAL_EXT_RE.search(p)]
-        if visual and not _looked_at_result(list(_turn_tool_uses(turn_records))):
+        visual = [os.path.basename(p) for p in written_now if _is_visual(p)]
+        missing = _visual_missing(list(_turn_tool_uses(turn_records))) if visual else []
+        if missing:
             visual_files = visual
-    return visual_files
+    return visual_files, missing
 
 
 def handover_long_reply(payload, have_reply, reply_text):
     return _long_reply_words(reply_text, _payload_cwd(payload)) if (have_reply and _loop_enabled() and _pages_enabled()) else 0
 
 
+def _page_send_note(file_path):
+    """#558: a page under docs/ was written; it must be sent to aj before the turn ends."""
+    if not re.search(r"(^|/)docs/.+\.html$", file_path.replace("\\", "/"), re.IGNORECASE):
+        return ""
+    return ("House rules, send the page: %s must be sent to aj with the file-send tool before "
+            "the turn ends, and sent again after any later change." % os.path.basename(file_path))
+
+
 core.register_post_tool("artifact", _page_writing_note)
+core.register_post_tool("artifact", _page_send_note)
