@@ -2,7 +2,7 @@
 
 ## 2026-11-22
 
-Clear-roadblocks rule: proposal page `docs/plans/2026-11-22-clear-roadblocks.html` written, aj chose a Stop check that blocks twice then warns (now option C); waiting on aj's approval line and the ownership pick. No issues filed and nothing built. The `@house-rules:editor` pass was applied to the page text and the page rebuilt. Handoff: `docs/5-today/handoff-ajsagent-affectionate-lovelace-r0zfgg.md`.
+Clear-roadblocks rule: proposal page `docs/plans/2026-11-22-clear-roadblocks.html` written, aj chose a Stop check that blocks twice then warns (now option C); waiting on aj's approval line and the ownership pick. No issues filed and nothing built. The `@house-rules:editor` pass was applied, a second time to the option C wording, to the page text and the page rebuilt. Handoff: `docs/5-today/handoff-ajsagent-affectionate-lovelace-r0zfgg.md`.
 
 Free issue closing, plugin 2.83.0, built on `AjsAgent/free-issue-closing` (issues #548 to #552). The agent closes an issue on its own when it is labelled `needs review`, `in review` or completed by someone else and is in no GitHub milestone; anything else, milestone issues and milestones need aj's "Close approved". The five issues were made with a command that printed only numbers, so the design loop recorded none of them; aj's "Issues for free issue closing" came after the stage had moved to Build and also recorded nothing. Design: `docs/4-systems/issue-closing.md`, "Free issue closing (2.83.0)".
 

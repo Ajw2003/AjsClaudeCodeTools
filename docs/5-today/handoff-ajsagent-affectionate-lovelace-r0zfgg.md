@@ -10,7 +10,7 @@ Design stage. A proposal page, `docs/plans/2026-11-22-clear-roadblocks.html`, of
 Wait for aj's reply, "Design approved: clear roadblocks 1C 2A". Then write a build plan page, and file issues if it has more than three steps.
 
 ## What is unverified
-How the existing Stop evidence check matches "can't" phrases was not read in hook.py, so option C is untested against it. The page text went through the editor helper.
+How the existing Stop evidence check matches "can't" phrases was not read in hook.py, so option C is untested against it. The page text, including the option C wording, went through the editor helper and the edits are applied.
 
 ## Issue numbers
 None filed yet.
