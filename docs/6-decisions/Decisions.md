@@ -3613,3 +3613,13 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 **Why.** CI runs without a browser and without GitHub access, so the failing cases would block the merge, and the two false alarms would teach aj to ignore the notes.
 
 **Status.** Standing once built. No change to the approved design.
+
+## 2026-11-22 — Wait clocks: QA passed
+
+**Context.** Wait clocks, visual checks, page sending and pictures (plugin 2.88.0, issues #555 to #568) were fixed after two failed QA rounds and rebuilt; verify.py passed 1434 of 1434, also in a CI-like run without a browser.
+
+**Decision.** aj wrote "QA passed: wait clocks". Pull request #573 is marked ready for review.
+
+**Why.** aj's own QA is the sign-off the design loop requires.
+
+**Status.** Standing. Merging to main and closing the issues are aj's steps; the issues stay `needs review`.

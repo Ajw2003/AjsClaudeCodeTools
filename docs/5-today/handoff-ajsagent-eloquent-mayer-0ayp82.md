@@ -90,3 +90,5 @@ Build status (QA-failed fixes done): all four fixes are built and proven: full v
 Build status (editor pass done): the editor helper reworded the two new QA-page rows; the page was rebuilt (no page errors, 0 broken pictures) and is sent again. Nothing else changed. Next: aj's QA verdict; GitHub CI for PR 573 unread. Unverified: Windows, the wait fixes in a real session, GitHub CI. Issues #555 to #568, all needs review.
 
 Build status (final for this turn): everything is pushed; the QA page was sent again after the editor pass. Waiting on aj's QA verdict. Unverified: Windows, GitHub CI for PR 573, the wait fixes in a real session. Issues #555 to #568, all needs review.
+
+QA passed (2026-11-22): aj wrote "QA passed: wait clocks". The loop stage is done. PR 573 is marked ready for review; the merge and the closing of #555 to #568 are aj's. Next: aj merges (or asks me to). Unverified: Windows, GitHub CI for PR 573 (no check runs listed when I looked). Issues #555 to #568, all needs review.

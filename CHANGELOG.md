@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+aj passed QA on the wait clocks work; pull request #573 (plugin 2.88.0) is ready for review, waiting on aj's merge.
+
 Recorded that the wait clocks work is pushed and waiting on aj's QA verdict (handoff note and Today updated; no code change).
 
 Reworded the two new rows on the wait clocks QA page after the editor pass (page `docs/plans/2026-11-22-wait-and-visual-checks-qa.html`, rebuilt with `make_page.py build`).

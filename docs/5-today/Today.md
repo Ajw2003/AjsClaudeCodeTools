@@ -261,3 +261,5 @@ overrun that `verify.py` had never measured. See the dated entry in
 **Still 2026-11-22:** the editor helper reworded the two new QA-page rows; the page was rebuilt and sent again.
 
 **Still 2026-11-22:** all work is pushed and the issues are `needs review`; waiting on aj's QA verdict.
+
+**Still 2026-11-22:** aj passed QA ("QA passed: wait clocks"). The stage is done and PR 573 is ready for review.
