@@ -2120,6 +2120,17 @@ else:
     report("FAIL", "versioncheck is quiet when installed, marketplace and GitHub all agree")
     print(f"          rc={rc} out={out[:200]!r}")
 
+# unattended: an out-of-date plugin gets one line, no wait/ask banner, no marker, no update run
+vc_clear("vc-un")
+rc, out, err = run_hook("versioncheck", vc_payload("vc-un"),
+                        vc_env("vc-un", HOUSE_RULES_UNATTENDED="on", HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"))
+report("PASS" if rc == 0 and "UNATTENDED run: a house-rules update is available and was not applied" in out
+       and "wait for the user" not in out and "OUT OF DATE" not in out and not os.path.isfile(vc_marker_path("vc-un"))
+       and not vc_fake_calls("vc-un") else "FAIL",
+       "unattended: versioncheck says one line, runs no update, writes no marker, never says wait or ask")
+rc, out, err = run_hook("inject", "{}", env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if "OVERRIDDEN" in out and "never stop or wait for the user" in out and "Waiting-on-you list" in out else "FAIL",
+       "unattended: the session note overrides the hand-over-then-wait and ask-before rule text")
 # #403: in a synced copy (claude.ai cloud) the update commands cannot work, so one plain line.
 _sy_root = "/root/.claude/plugins/synced/org_id/house-rules~g2"
 rc, out, err = run_hook("versioncheck", vc_payload("vc-sync-old"),

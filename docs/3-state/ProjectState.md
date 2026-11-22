@@ -425,9 +425,9 @@ Plugin 2.82.0. State: built, waiting on aj's QA. Any page format passes if it me
 - 2026-11-19: aj typed "QA failed: flexible pages": after `use_branch.py AjsAgent/speed-switches` and a restart, the desktop app still loaded the old build and refused hand-written pages. Cause (already recorded 2026-11-17, `CHANGELOG.md` 2.81.2 entry): the desktop app runs the claude.ai account's plugin copy, which follows main; `use_branch.py` switches only the CLI copy and checks only its files. aj asked that QA be run in the agent's own sessions instead: `docs/plans/2026-11-19-flexible-pages-live-tests/live_flexible_pages.py` runs headless sessions with `--plugin-dir` on the branch code. Issues #541 to #545 back to `in progress`.
 - 2026-11-19: live test run 3 passed 3 of 3 after the checker fix (#542). The #546 fix (verify.py ignores the repo's typed switches) is merged; its new check (g) was corrected to pass the ignore list to the hook's own environment. On aj's PC from the repo: verify.py 1289 of 1295, verify_tools 53 of 54, all failures the known Windows-only ones (#523).
 
-## Unattended mode (2.84.0)
+## Unattended mode (2.85.0)
 
-State: built, verified by verify.py and verify_tools.py; not yet run overnight. `HOUSE_RULES_UNATTENDED=on` turns off every switch except autosave, refuses guard asks outright, denies `AskUserQuestion`/`ExitPlanMode` through the `noask` hook; `tools/overnight.sh` launches it. Detail: [`docs/4-systems/speed-switches.md`](../4-systems/speed-switches.md), "Unattended mode".
+State: built, verified by verify.py and verify_tools.py; not yet run overnight. `HOUSE_RULES_UNATTENDED=on` turns off every switch except autosave, refuses guard asks outright, denies `AskUserQuestion`/`ExitPlanMode` through the `noask` hook; `tools/overnight.sh` launches it. Stage 1 (2.85.0): the session note overrides the wait/ask rule text, versioncheck stays one line. Detail: [`docs/4-systems/speed-switches.md`](../4-systems/speed-switches.md), "Unattended mode".
 
 ## Free issue closing (#548 to #552)
 

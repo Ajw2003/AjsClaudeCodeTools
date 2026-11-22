@@ -7,6 +7,14 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-22 - Unattended mode: rule text overridden by the session note, not forked
+
+**Decision.** The rules files are not forked for unattended runs. The unattended SessionStart note says the wait-for-the-user and ask-before instructions are overridden for this run, and versioncheck emits one line instead of the update-and-wait banner. aj approved these in the coordinator session on 2026-11-22.
+**Why.** One copy of the rules text; the note is injected last, so it wins. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
+**Status.** Current.
+
+---
+
 ## 2026-11-22 - Unattended mode: guard asks are refused outright
 
 **Decision.** With `HOUSE_RULES_UNATTENDED=on`, a guard `ask` is always a refusal (deny, "Refused, not asked", listed under "Waiting on you"), not an ask that is refused after `HOUSE_RULES_PROMPT_TIMEOUT`.

@@ -99,3 +99,6 @@ For a run with nobody present. `HOUSE_RULES_UNATTENDED=on` (case-insensitive) tu
 - **`noask`:** a PreToolUse hook on `AskUserQuestion|ExitPlanMode`. Unattended it denies, telling the agent to choose the safest option, record the question and choice in the final report, and carry on. Otherwise silent.
 - **Session start** adds one note saying the run is unattended.
 - **Launcher:** `tools/overnight.sh` sets `HOUSE_RULES_UNATTENDED=on` and `ART_PIPELINE=unattended`, then runs `claude --dangerously-skip-permissions "$@"`. Use a throwaway branch or clone.
+- **Rule text (2.85.0):** the session note says that for this run "hand it over, then wait", "stop and wait for the user's answer" and the ask-before list (new dependency, deleting files, refactors over 3 files, public API changes) are overridden: report the command, take the conservative reversible option, log it. The rules files are not forked.
+- **versioncheck (2.85.0):** one line that an update is available and was not applied; no update run, no banner, no marker.
+- A guard ask is refused even with `HOUSE_RULES_PROMPT_TIMEOUT=off` (checked).

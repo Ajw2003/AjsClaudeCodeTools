@@ -1436,6 +1436,11 @@ def event_versioncheck():
                 )
             return 0
 
+        if unattended():  # nobody to wait for: no update, no wait/ask banner, no first-command prompt marker
+            emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext":
+                  "UNATTENDED run: a house-rules update is available and was not applied."}})
+            return 0
+
         # Out of date: update it here rather than asking, then check the result on disk rather
         # than trusting the exit code (docs/6-decisions/Decisions.md, 2026-09-26).
         failure = "automatic updating is switched off (HOUSE_RULES_AUTO_UPDATE=off)"
@@ -2838,7 +2843,13 @@ def _mode_note(payload=None):
                                  if g in typed else "%s=off in settings.json" % var))
     if unattended():
         parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): nobody can approve or answer; guard prompts are "
-                     "refused instead of asked and listed under \"Waiting on you\"; decide and keep going.")
+                     "refused instead of asked and listed under \"Waiting on you\"; decide and keep going. For this run these "
+                     "instructions are OVERRIDDEN: never stop or wait for the user (\"hand it over, then wait\", "
+                     "\"stop and wait for the user's answer\"). For a command only the user can run, write it into the "
+                     "final report and the Waiting-on-you list and continue with other work. For ask-before items "
+                     "(new dependency, deleting files, refactors over 3 files, public API changes) take the most "
+                     "conservative reversible option and log the choice in the final report; the destructive-command "
+                     "guard still applies to deletes.")
     if parts:
         parts.append("Type \"<group> on\" (design loop, pages, builders, issues, writing checks, autosave, house rules) to switch back; add \"everywhere\" for all folders.")
     return " ".join(parts)

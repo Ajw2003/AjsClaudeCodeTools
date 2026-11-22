@@ -2013,6 +2013,11 @@ report("PASS" if _ua_dec(_un1) == "deny" and "Refused, not asked" in _un1 and "u
        "unattended: a guard ask becomes a refusal naming the unattended run; not unattended it is still an ask")
 print("          on %s, ON %s, off %s" % (_ua_dec(_un1), _ua_dec(_un2), _ua_dec(_un3)))
 
+_un4 = _ua_guard("verify-un4", env_extra=dict(_un_on, HOUSE_RULES_PROMPT_TIMEOUT="off"))
+_un5 = _ua_guard("verify-un5", env_extra={"HOUSE_RULES_PROMPT_TIMEOUT": "off"})
+report("PASS" if _ua_dec(_un4) == "deny" and "Refused, not asked" in _un4 and _ua_dec(_un5) == "ask" else "FAIL",
+       "unattended: a guard ask is refused even with HOUSE_RULES_PROMPT_TIMEOUT=off; attended it stays an ask")
+
 
 def _un_noask(tool, on):
     e = dict(os.environ)
