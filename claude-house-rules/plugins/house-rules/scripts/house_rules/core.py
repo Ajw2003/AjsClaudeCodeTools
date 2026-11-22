@@ -2674,9 +2674,12 @@ _MODE_GROUPS = {
 _MODE_GROUPS["house"] = tuple(dict.fromkeys(v for g in _MODE_GROUPS.values() for v in g)) + (
     "HOUSE_RULES_HARVEST", "HOUSE_RULES_COMMIT_CHECK", "HOUSE_RULES_HANDOVER", "HOUSE_RULES_RERUNS",
     "HOUSE_RULES_DISKREPORT")
+# Added after "house" is built so "house rules off" never touches it: `unattended on` turns every other switch off
+# except autosave (apply_switches) and tells the agent nobody is there; `unattended off` undoes it.
+_MODE_GROUPS["unattended"] = ("HOUSE_RULES_UNATTENDED",)
 MODE_SWITCHES = tuple(_MODE_GROUPS)
 _MODE_NAMES = {"design loop": "design", "writing checks": "writing", "house rules": "house"}
-_MODE_NAME_RE = r"(?:design\s+loop|pages|builders|issues|writing\s+checks|autosave|house\s+rules)"
+_MODE_NAME_RE = r"(?:design\s+loop|pages|builders|issues|writing\s+checks|autosave|house\s+rules|unattended)"
 _MODE_ONE = _MODE_NAME_RE + r"\s+(?:on|off)(?:\s+everywhere)?"
 _MODE_SWITCH_RE = re.compile(r"\b(%s)\s+(on|off)(\s+everywhere)?\b" % _MODE_NAME_RE, re.IGNORECASE)
 # A switch counts only when its sentence or line holds nothing else, so a quoted mention does not flip it.
