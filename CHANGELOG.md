@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Phase 1 and the start of the wait clock are built and merged on `ajsagent/eloquent-mayer-0ayp82` (#555): pictures are built into the page file (#556), a copy of the page opened alone is checked for broken pictures (#557), the send rule and the builder's send line exist (#558), the wait numbers live in `rules/waits.json` (#560), and `scripts/waitfor.py` gives every wait a clock and a deadline (#561). Full `verify.py` 1361 of 1361. Not yet released: no version bump until the docs step (#568).
+
 Build started on the wait clocks, visual checks, page sending and pictures work (#555): aj approved the build plan with an early check after phase 1, and builders began #556 and #558. Nothing is merged yet.
 
 Docs only: the wait clocks, visual checks, page sending and pictures design was approved (1A 2A 3B 4B 5A 6A). Added the systems doc `docs/4-systems/wait-and-visual-checks.md`, a decisions entry, parent issue #555 with 13 step issues (#556 to #568), and a build plan page waiting on aj. Nothing is built.
