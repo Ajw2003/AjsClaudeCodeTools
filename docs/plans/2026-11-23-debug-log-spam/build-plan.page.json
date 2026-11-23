@@ -1,0 +1,93 @@
+{
+ "title": "Quieter hook messages build plan",
+ "eyebrow": "Build plan \u00b7 nothing built yet",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: quieter hook messages",
+ "short": {
+  "lead": "The build is three steps, one issue each, starting with the log; I need your approval to begin step 1.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Step 1 (#584)",
+    "Build the log and the hook-log command",
+    "",
+    "Status messages are written to a log file instead of the chat. `/house-rules:hook-log` prints the latest ones, and `HOUSE_RULES_TRACE=chat` brings the old behaviour back.",
+    "Nothing from you."
+   ],
+   [
+    "wrench",
+    "Step 2 (#585)",
+    "Fix the autosave collision",
+    "",
+    "Each autosave run gets its own scratch file. A real error prints as one line, once per session.",
+    "Nothing from you."
+   ],
+   [
+    "book",
+    "Step 3 (#586)",
+    "Docs, changelog and version",
+    "",
+    "Updates the trace-tier docs, adds the changelog line, and sets a new plugin version number.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the plan",
+    "you",
+    "I start building step 1.",
+    "Tap Copy my reply and send it."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Log and command",
+   "Step 1",
+   "",
+   "Done when: after a Bash call with the design loop off nothing prints in chat, and `/house-rules:hook-log` shows the message.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Autosave",
+   "Step 2",
+   "",
+   "Done when: two autosaves started together give no error, and a forced error prints one line once.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Docs and version",
+   "Step 3",
+   "",
+   "Done when: `verify.py`, `verify_tools.py`, `docref.py check` and `docs_drift.py` all exit 0 and the version-bump check passes.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "This plan makes the plugin's status messages go to a log instead of the chat, fixes the autosave collision, and is tracked as three issues under #583 (Quieter hook messages: status messages go to a log, not the chat).",
+  "changing": "The trace functions in core.py, the autosave code in delegation.py, a new hook-log command, the trace-tier docs, and the plugin version number.",
+  "blocking": "Your approval of this plan.",
+  "next": "After you approve, I build step 1.",
+  "todo": [
+   "Read the steps in order.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}
