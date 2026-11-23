@@ -22,10 +22,10 @@
     "Readings",
     "How I read your three answers",
     "you",
-    "Answer 1: a first try never counts as \"I can't\". I try two different methods, and only then may I say something could not be verified, tested or done, and the reply lists every method tried. Answer 2: these nine phrases are always flagged: \"can't verify\", \"won't verify\", \"unable to verify\", \"unable to\", \"could not\", \"couldn't\", \"don't have access\", \"not available here\" and \"isn't available\". These four are flagged only in unattended or bypass mode: \"not done\", \"I've stopped\", \"I've stopped here\" and \"next step\". Answer 3: in those modes I make build-time design choices myself; I still wait for your approval before the build starts.",
+    "Answer 1: a first try never counts as \"I can't\". I try again with two different methods, three attempts in total, and only then may I say something could not be verified, tested or done. The reply lists every method tried. Answer 2: these nine phrases are always flagged: \"can't verify\", \"won't verify\", \"unable to verify\", \"unable to\", \"could not\", \"couldn't\", \"don't have access\", \"not available here\" and \"isn't available\". These four are flagged only in unattended or bypass mode: \"not done\", \"I've stopped\", \"I've stopped here\" and \"next step\". Answer 3: in those modes I make build-time design choices myself; I still wait for your approval before the build starts.",
     "Tell me if a reading is wrong.",
     {
-     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%201:%202%20methods%2C%20listed%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%202:%209%20always%2C%204%20stall%20only%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%203:%20choose%2C%20record%2C%20carry%20on%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EApproval%20gate%20unchanged%3C/text%3E%3C/svg%3E",
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%201:%203%20attempts%2C%20listed%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%202:%209%20always%2C%204%20stall%20only%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%203:%20choose%2C%20record%2C%20carry%20on%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EApproval%20gate%20unchanged%3C/text%3E%3C/svg%3E",
      "alt": "The three readings",
      "caption": "My readings of answers 2 and 3 are interpretation, so check those two."
     }
@@ -48,10 +48,10 @@
     "Step 2",
     "#589: the evidence rule",
     "",
-    "A roadblock claim passes only when I tried two different methods on the thing I say I cannot do, both failed, and the reply lists each method. If I tried only one, the block asks for a second. A turn that only ran ls or git ls-files is blocked. If no such thing can be found in the claim, any two failed tool results count. That fallback is a known weakness.",
+    "A roadblock claim passes only after three failed attempts: the first try, then two more by different methods from it and from each other. The reply lists each method. If I tried fewer, the block says how many more are needed. A turn that only ran ls or git ls-files is blocked. If no thing can be found in the claim, any three failed tool results that differ in method count. That fallback is a known weakness.",
     "Nothing from you.",
     {
-     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eclaim%20names%20Blender%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%202%20different%20calls%20failed%2C%20listed:%20ok%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%201%20call%2C%20or%20not%20listed:%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20only%20git%20ls-files:%20block%3C/text%3E%3C/svg%3E",
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eclaim%20names%20Blender%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%203%20different%20attempts%20failed%2C%20listed:%20ok%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%201%20or%202%20attempts%2C%20or%20not%20listed:%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%203%20attempts%2C%20same%20method:%20block%3C/text%3E%3C/svg%3E",
      "alt": "The evidence rule",
      "caption": "Checking that a program exists, without trying to use it, no longer counts as evidence."
     }
@@ -92,9 +92,9 @@
   [
    "chg",
    "scripts/house_rules/core.py: the evidence test",
-   "Step 2 replaces the test that only checks whether a program exists with a test for two different failed methods, each listed in the reply.",
+   "Step 2 replaces the test that only checks whether a program exists with a test for three failed attempts by different methods, each listed in the reply.",
    "",
-   "Done when: a claim made after only git ls-files is blocked. A claim after a single failed Blender call asks for a second method. A claim after two different failed Blender calls, both listed in the reply, is accepted. The same claim with the methods left out of the reply is blocked.",
+   "Done when: a claim made after only git ls-files is blocked. A claim after one or two failed Blender calls says how many more methods are needed. A claim after three failed Blender calls by three different methods, all listed in the reply, is accepted. Three failed calls by the same method, or with the methods left out of the reply, are blocked.",
    null,
    null
   ],
