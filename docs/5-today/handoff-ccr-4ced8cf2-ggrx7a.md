@@ -14,7 +14,7 @@ Modular tests: Design approved ("Design approved: modular tests 1A 2* 3A"). Plan
 Once aj approves the build plan, build step 1 (#584). Earlier note: write `docs/4-systems/` doc and issues for quieter messages (decisions-log entry still owed). For the quieter-messages work: aj picks the two options and approves ("Design approved: quieter hook messages"). For modular tests: aj approves the build plan ("Build plan approved: modular tests"). Then build step 1, the rule text and its detail file (#576). The injected rules sit near the 9700-character limit, so the new section needs room made.
 
 ## What is unverified
-The autosave lock collision is read from code and the Windows error text, not reproduced. Nothing has been run. The gate's file-name patterns and the module header format are untested designs. Plunderspell's repository name is not known, so its tests are not planned.
+The hook-log design assumes only `trace()` and the autosave notes move to the log; if aj means every message, step 1 widens. The autosave lock collision is read from code and the Windows error text, not reproduced. Nothing has been run. The gate's file-name patterns and the module header format are untested designs. Plunderspell's repository name is not known, so its tests are not planned.
 
 ## The issue numbers
 Quieter messages: parent #583, steps #584, #585, #586. Modular tests: parent #575. Steps: #576 rule text, #577 refactor switch, #578 write-time gate, #579 skill, command and audit, #580 convert `tools/verify_tools.py`, #581 offshoot suite issues, #582 docs and version.
