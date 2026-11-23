@@ -302,7 +302,7 @@ const PAGE = {
         "The rule",
         "A test is a module, not a slice of one big run",
         "",
-        "A new rule section and a detail file. A test names its module, runs alone with one command, needs no other module's leftovers, and chains with others through one runner. Only a test of everything may run everything.",
+        "A new rule section and a detail file. A test names its module, runs alone with one command, needs no other module's leftovers, and chains with others through one runner. Only a test that is meant to check the whole system may run every check.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0ODAiIGhlaWdodD0iMjIwIiB2aWV3Qm94PSIwIDAgNDgwIDIyMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiPjxyZWN0IHdpZHRoPSI0ODAiIGhlaWdodD0iMjIwIiBmaWxsPSIjZjRmNmZiIi8+PHRleHQgeD0iMjAiIHk9IjI4IiBmaWxsPSIjMWExYTJlIiBmb250LXdlaWdodD0iYm9sZCI+VG9kYXk6IG9uZSBzY3JpcHQsIGFsd2F5cyBldmVyeXRoaW5nPC90ZXh0PjxyZWN0IHg9IjIwIiB5PSI0MCIgd2lkdGg9IjIwMCIgaGVpZ2h0PSI1MCIgcng9IjgiIGZpbGw9IiNmZmUzZTMiIHN0cm9rZT0iI2M5MmEyYSIvPjx0ZXh0IHg9IjEyMC4wIiB5PSI3MC4wIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMWExYTJlIj52ZXJpZnlfdG9vbHMucHkgKDgzNiBsaW5lcyk8L3RleHQ+PHRleHQgeD0iMjAiIHk9IjEyNSIgZmlsbD0iIzFhMWEyZSIgZm9udC13ZWlnaHQ9ImJvbGQiPlByb3Bvc2VkOiBtb2R1bGVzLCBzd2l0Y2hlZCBvbiBvciBvZmY8L3RleHQ+PHJlY3QgeD0iMjAiIHk9IjE0MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiNkYmU3ZmYiIHN0cm9rZT0iIzNiNWJkYiIvPjx0ZXh0IHg9IjcwLjAiIHk9IjE2NS4wIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMWExYTJlIj5pbnN0YWxsIOKclDwvdGV4dD48cmVjdCB4PSIxMzAiIHk9IjE0MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiNkYmU3ZmYiIHN0cm9rZT0iIzNiNWJkYiIvPjx0ZXh0IHg9IjE4MC4wIiB5PSIxNjUuMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzFhMWEyZSI+YnJhbmNoIOKclDwvdGV4dD48cmVjdCB4PSIyNDAiIHk9IjE0MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiNlZWUiIHN0cm9rZT0iIzk5OSIvPjx0ZXh0IHg9IjI5MC4wIiB5PSIxNjUuMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzFhMWEyZSI+bGVkZ2VyIOKcmDwvdGV4dD48cmVjdCB4PSIzNTAiIHk9IjE0MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiNlZWUiIHN0cm9rZT0iIzk5OSIvPjx0ZXh0IHg9IjQwMC4wIiB5PSIxNjUuMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzFhMWEyZSI+Zm9vdHByaW50IOKcmDwvdGV4dD48dGV4dCB4PSIyMCIgeT0iMjA1IiBmaWxsPSIjNTU1Ij5DaGFuZ2UgaW5zdGFsbCBvbmx5OiBydW4gaW5zdGFsbC4gQ2hhaW4gbW9kdWxlcyB3aGVuIHlvdSB3YW50IG1vcmUuPC90ZXh0Pjwvc3ZnPg==",
@@ -349,8 +349,8 @@ const PAGE = {
         "Approve",
         "You approve it",
         "you",
-        "A line in the decisions log.",
-        "Pick an option under Your choices, then send the approval line."
+        "I add one line to the decisions log.",
+        "Pick an option for each of the three questions under Your choices, then tap Copy my reply and send it."
       ]
     ]
   },
@@ -363,7 +363,7 @@ const PAGE = {
       null,
       [
         "Seven part files under `scripts/checks/`, with `--parts` and `--changed`.",
-        "Only a module marker and a doc line, so the audit recognises it.",
+        "A one-line module header and a one-line doc note in each part file, so the audit recognises it.",
         "No change to how you run it."
       ],
       null
@@ -375,7 +375,7 @@ const PAGE = {
       "It tests install, use_branch, session_ledger, footprint, overnight and the version-bump check, and runs every one of them each time. It becomes one module per tool, with a runner.",
       null,
       [
-        "One script, four case groups, run in full at import.",
+        "One script with four groups of checks, all run every time the script is loaded.",
         "One module per tool plus a runner with `--parts`.",
         "Changing install.py runs install checks only."
       ],
@@ -460,7 +460,7 @@ const PAGE = {
         ],
         [
           "B",
-          "Refuse at write time and fail CI too",
+          "Refuse at write time and fail the pull request's automatic checks too",
           0,
           "Same hook, plus a `verify.py` check that fails a pull request containing a non-modular test. Stricter, and catches edits made outside Claude."
         ],
@@ -471,17 +471,17 @@ const PAGE = {
           "The hook reminds but does not refuse. Not what you asked for; listed for completeness."
         ]
       ],
-      "A matches the words you used, and CI can be added later without redoing anything."
+      "A matches the words you used, and the pull-request check can be added later without redoing anything."
     ],
     [
       "second",
-      "What counts as a refactor, where listed tests must be converted?",
+      "What counts as a refactor, the point at which listed tests must be converted?",
       [
         [
           "A",
           "A line you type: `refactor on` (suggested)",
           1,
-          "Works like the other switches: `refactor off` ends it. It is explicit, so the hook never guesses."
+          "Works like the `pages off` and `builders off` switches: `refactor off` ends it. It is explicit, so the hook never guesses."
         ],
         [
           "B",
@@ -512,7 +512,7 @@ const PAGE = {
           "B",
           "All of the above, plus convert every suite now",
           0,
-          "Biggest change, with the most risk. Needs about five issues."
+          "Biggest change, with the most risk. Needs one issue per suite: verify_tools.py, agent-router and prompt-workshop, plus the rule work, so four issues."
         ],
         [
           "C",
@@ -521,13 +521,13 @@ const PAGE = {
           "Smallest. The audit list is the only evidence the conversion works."
         ]
       ],
-      "A proves the conversion on real code without converting three suites at once."
+      "A proves the conversion on real code without converting three suites at once (verify_tools.py, agent-router and prompt-workshop)."
     ]
   ],
   "wrapup": {
     "summary": "This proposal adds a modular-tests rule, a hook that refuses non-modular new tests, an audit that lists old ones, and a skill and command to convert them.",
-    "changing": "The rules file, one hook check, one new skill and command, a state-tier doc listing non-modular tests, and (option A) tools/verify_tools.py split into modules.",
-    "blocking": "Your three choices: how strict the refusal is, what counts as a refactor, and how far the first build goes. Plunderspell's tests also need its repository name from you, because I do not have it; the rule is global, so it applies there, but converting its tests is an issue in that repository.",
+    "changing": "The rules file, one hook check, one new skill and command, a state-tier doc listing non-modular tests, and, if you pick option A under the third choice, tools/verify_tools.py split into modules.",
+    "blocking": "Your three choices: how strict the refusal is, what counts as a refactor, and how far the first build goes. I also need the repository name for Plunderspell, your other project, as owner/repo, because I do not have it. The rule is global, so it applies to Plunderspell's tests too, but converting them is an issue in that repository.",
     "next": "After you approve, I write a build plan with one issue per step.",
     "todo": [
       "Read the suggestion on each choice.",

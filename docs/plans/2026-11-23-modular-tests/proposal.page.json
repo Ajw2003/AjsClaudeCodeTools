@@ -22,7 +22,7 @@
     "The rule",
     "A test is a module, not a slice of one big run",
     "",
-    "A new rule section and a detail file. A test names its module, runs alone with one command, needs no other module's leftovers, and chains with others through one runner. Only a test of everything may run everything.",
+    "A new rule section and a detail file. A test names its module, runs alone with one command, needs no other module's leftovers, and chains with others through one runner. Only a test that is meant to check the whole system may run every check.",
     "Nothing from you.",
     {
      "src": "pics/before-after.svg",
@@ -69,8 +69,8 @@
     "Approve",
     "You approve it",
     "you",
-    "A line in the decisions log.",
-    "Pick an option under Your choices, then send the approval line."
+    "I add one line to the decisions log.",
+    "Pick an option for each of the three questions under Your choices, then tap Copy my reply and send it."
    ]
   ]
  },
@@ -83,7 +83,7 @@
    null,
    [
     "Seven part files under `scripts/checks/`, with `--parts` and `--changed`.",
-    "Only a module marker and a doc line, so the audit recognises it.",
+    "A one-line module header and a one-line doc note in each part file, so the audit recognises it.",
     "No change to how you run it."
    ],
    null
@@ -95,7 +95,7 @@
    "It tests install, use_branch, session_ledger, footprint, overnight and the version-bump check, and runs every one of them each time. It becomes one module per tool, with a runner.",
    null,
    [
-    "One script, four case groups, run in full at import.",
+    "One script with four groups of checks, all run every time the script is loaded.",
     "One module per tool plus a runner with `--parts`.",
     "Changing install.py runs install checks only."
    ],
@@ -180,7 +180,7 @@
     ],
     [
      "B",
-     "Refuse at write time and fail CI too",
+     "Refuse at write time and fail the pull request's automatic checks too",
      0,
      "Same hook, plus a `verify.py` check that fails a pull request containing a non-modular test. Stricter, and catches edits made outside Claude."
     ],
@@ -191,17 +191,17 @@
      "The hook reminds but does not refuse. Not what you asked for; listed for completeness."
     ]
    ],
-   "A matches the words you used, and CI can be added later without redoing anything."
+   "A matches the words you used, and the pull-request check can be added later without redoing anything."
   ],
   [
    "second",
-   "What counts as a refactor, where listed tests must be converted?",
+   "What counts as a refactor, the point at which listed tests must be converted?",
    [
     [
      "A",
      "A line you type: `refactor on` (suggested)",
      1,
-     "Works like the other switches: `refactor off` ends it. It is explicit, so the hook never guesses."
+     "Works like the `pages off` and `builders off` switches: `refactor off` ends it. It is explicit, so the hook never guesses."
     ],
     [
      "B",
@@ -232,7 +232,7 @@
      "B",
      "All of the above, plus convert every suite now",
      0,
-     "Biggest change, with the most risk. Needs about five issues."
+     "Biggest change, with the most risk. Needs one issue per suite: verify_tools.py, agent-router and prompt-workshop, plus the rule work, so four issues."
     ],
     [
      "C",
@@ -241,13 +241,13 @@
      "Smallest. The audit list is the only evidence the conversion works."
     ]
    ],
-   "A proves the conversion on real code without converting three suites at once."
+   "A proves the conversion on real code without converting three suites at once (verify_tools.py, agent-router and prompt-workshop)."
   ]
  ],
  "wrapup": {
   "summary": "This proposal adds a modular-tests rule, a hook that refuses non-modular new tests, an audit that lists old ones, and a skill and command to convert them.",
-  "changing": "The rules file, one hook check, one new skill and command, a state-tier doc listing non-modular tests, and (option A) tools/verify_tools.py split into modules.",
-  "blocking": "Your three choices: how strict the refusal is, what counts as a refactor, and how far the first build goes. Plunderspell's tests also need its repository name from you, because I do not have it; the rule is global, so it applies there, but converting its tests is an issue in that repository.",
+  "changing": "The rules file, one hook check, one new skill and command, a state-tier doc listing non-modular tests, and, if you pick option A under the third choice, tools/verify_tools.py split into modules.",
+  "blocking": "Your three choices: how strict the refusal is, what counts as a refactor, and how far the first build goes. I also need the repository name for Plunderspell, your other project, as owner/repo, because I do not have it. The rule is global, so it applies to Plunderspell's tests too, but converting them is an issue in that repository.",
   "next": "After you approve, I write a build plan with one issue per step.",
   "todo": [
    "Read the suggestion on each choice.",
