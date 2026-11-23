@@ -34,3 +34,4 @@ not to have run it once, it is that the suite now covers what running it found.
 about the ones outside, which is exactly where the expensive failures sit — and reporting "all
 checks green" as though it meant "this works" is a claim the evidence does not support.
 
+Tests themselves are modules that run alone or chained; see `modular-tests.md`.

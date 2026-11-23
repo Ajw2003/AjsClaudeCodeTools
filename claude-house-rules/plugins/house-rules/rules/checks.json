@@ -25,6 +25,7 @@
     "A green test suite is not proof it works": [
       "handover"
     ],
+    "Tests are modules, run alone or chained": [],
     "A shim that compiles is not proof the real code does": [],
     "A reported update is not a completed one": [],
     "Never hand over a command I have not run where they will run it": [
@@ -71,6 +72,7 @@
     "The user's hands are for decisions, not labour": "a judgement about what to ask aj; no check can tell labour from a decision",
     "Roadblocks are mine to clear": "the end-of-reply check is built in step 2 (issue #571); until then no hook inspects roadblock claims",
     "Deliver a whole workflow, not a starting point": "no check can tell a whole workflow from a starting point",
+    "Tests are modules, run alone or chained": "enforced by the write-time gate, issue #578, not built yet",
     "A shim that compiles is not proof the real code does": "the evidence handler checks claims in general, nothing specific to compiler runs or UNTESTED: labels",
     "A reported update is not a completed one": "versioncheck reports the installed version at session start but does not check a claimed update took effect"
   }
