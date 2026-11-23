@@ -2311,4 +2311,64 @@ commit_case("visual-loop skill exists with frontmatter and names ledger.py, wait
             and all(w in _skt for w in ("ledger.py", "waitfor.py", "visualcheck.py", "@house-rules:reviewer")), "skill text missing pieces")
 
 
+# --- #585: the scratch index is per run; an autosave error is one line, once per session ----------
+_sn_d, _ = _as_repo("worktree-agent-x")
+_as_write(_sn_d, "new.py")
+_sn_code = (
+    "import sys, time\n"
+    "sys.path.insert(0, sys.argv[3])\n"
+    "from house_rules import delegation as dl\n"
+    "while time.time() < float(sys.argv[2]): pass\n"  # both processes start the snapshot together
+    "dl._autosave_snapshot(sys.argv[1], 'worktree-agent-x')\n"
+)
+_sn_at = str(time.time() + 1.5)
+_sn_procs = [subprocess.Popen([sys.executable, "-c", _sn_code, _sn_d, _sn_at, os.path.dirname(HOOK)], cwd=_sn_d,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(2)]
+_sn_res = [p.communicate(timeout=60) + (p.returncode,) for p in _sn_procs]
+_sn_left = [f for f in os.listdir(os.path.join(_sn_d, ".git")) if ".index" in f]
+commit_case("autosave: two snapshots started at once on one repo both succeed and leave no scratch index",
+            all(r[2] == 0 for r in _sn_res) and not _sn_left and bool(_as_ref(_sn_d, "worktree-agent-x")),
+            "exit %s, left %s, err %r" % ([r[2] for r in _sn_res], _sn_left, _sn_res[0][1][-200:]))
+
+
+def _sn_broken(rm_objects=True):
+    d, _b = _as_repo("worktree-agent-x")
+    _as_write(d, "new.py")
+    if rm_objects:  # git cannot read HEAD's tree: a real, multi-line git failure
+        for root, _dirs, files in os.walk(os.path.join(d, ".git", "objects")):
+            for f in files:
+                os.chmod(os.path.join(root, f), 0o644)
+                os.remove(os.path.join(root, f))
+    else:  # no commit yet: a different failure
+        shutil.rmtree(os.path.join(d, ".git", "refs", "heads"))
+        os.makedirs(os.path.join(d, ".git", "refs", "heads"))
+    return d
+
+
+def _sn_run(d, session="sn1"):
+    p = _as_payload("PostToolUse", "Write", os.path.join(d, "new.py"), d).replace('"s1"', '"%s"' % session)
+    return run_hook_log("autosave", p, env=_as_env())
+
+
+# the same temp folder must hold the once-per-session file across both calls, so run by hand
+_sn_tmp = tempfile.mkdtemp(prefix="sn-")
+_sn_env = _as_env(TMPDIR=_sn_tmp, TEMP=_sn_tmp, TMP=_sn_tmp)
+_sn_bad = _sn_broken()
+_sn_p1 = _as_payload("PostToolUse", "Write", os.path.join(_sn_bad, "new.py"), _sn_bad)
+_c1, _o1, _e1 = run_hook("autosave", _sn_p1, env=_sn_env)
+_c2, _o2, _e2 = run_hook("autosave", _sn_p1, env=_sn_env)
+_sn_log = open(os.path.join(_sn_tmp, "house-rules-hook-log.txt"), encoding="utf-8").read() if os.path.exists(
+    os.path.join(_sn_tmp, "house-rules-hook-log.txt")) else ""
+commit_case("autosave error: one short line the first time",
+            _o1.count("autosave hit an error") == 1 and _o1.count("\n") <= 1 and "\\n" not in _o1, repr(_o1))
+commit_case("autosave error: an identical second error prints nothing, and both are in the hook log",
+            _o2.strip() == "" and _sn_log.count("autosave error") == 2, "out %r, log %r" % (_o2, _sn_log))
+_sn_bad2 = _sn_broken(rm_objects=False)
+_c3, _o3, _e3 = run_hook("autosave", _as_payload("PostToolUse", "Write", os.path.join(_sn_bad2, "new.py"), _sn_bad2),
+                         env=_sn_env)
+commit_case("autosave error: a different error text prints again", "autosave hit an error" in _o3 and _o3 != _o1,
+            "first %r, third %r" % (_o1, _o3))
+shutil.rmtree(_sn_tmp, ignore_errors=True)
+
+
 finish()
