@@ -48,8 +48,8 @@
     "Test",
     "You re-test in a new session after the fix",
     "you",
-    "You confirmed both sessions ran 2.89.0, so the cause is in the check itself. I could not read the Castle transcript, because your PC does not offer its folders to cloud sessions, so the two causes are reproduced in test runs and not confirmed on that exact turn.",
-    "Follow the steps in the Wrap-up section below."
+    "You confirmed both sessions ran version 2.89.0, so the fault is in the check itself and not in an old install. I could not read the Castle transcript, because your PC does not offer its folders to cloud sessions, so the two causes are reproduced in test runs and not confirmed on that exact turn.",
+    "Nothing yet. The Wrap-up section below lists what to do now: pick one option for each of the three questions."
    ],
    [
     "lock",
