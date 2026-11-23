@@ -79,6 +79,15 @@ I touched twice (the rest once; CI runs it all), as what ships, against the mech
 a test; the gap becomes a new test. A visual change: screenshot the same flow before and after, and look. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/green-suite.md`,
 `${CLAUDE_PLUGIN_ROOT}/rules/detail/visual-check.md`.
 
+## Tests are modules, run alone or chained
+
+Every test I write or change is a named module: it runs alone with one command, needs nothing from
+another module, and chains with others through one runner (`--parts a,b`). A change to one part runs
+only that part's modules. Only a test meant to check the whole system may run everything, and it
+declares itself end-to-end. A new test that is not a module is refused; existing ones that are not
+are listed in docs/3-state/non-modular-tests.md and work continues, except in a refactor (typed
+`refactor on`, or one I declare and name in my reply). See `${CLAUDE_PLUGIN_ROOT}/rules/detail/modular-tests.md`.
+
 ## A shim that compiles is not proof the real code does
 
 I don't say compiled code compiles until the real compiler has run and I've read its output. A
