@@ -6,7 +6,7 @@ Wait clocks, visual checks, page sending and working pictures (four fixes) on `a
 
 ## 2026-11-23
 
-aj corrected the method count: not two in total but three attempts, the first try plus two more by different methods. Issue #589, the plan page, the systems doc and the decisions entry now say three (editor pass on the changed page strings pending). Pickup at this point found 0 uncommitted files, newest save `4048c12` at 21:34 UTC.
+aj corrected the method count: not two in total but three attempts, the first try plus two more by different methods. Issue #589, the plan page, the systems doc and the decisions entry now say three (editor pass applied, page sent to aj). Pickup at this point found 0 uncommitted files, newest save `4048c12` at 21:34 UTC.
 
 aj tightened answer 1 mid-plan: a first try never counts as "I cannot"; two different methods must fail, and the reply must list every method tried. Step 2 (#589) and step 1 (#588) issue bodies, the plan page, the systems doc and the decisions entry now say so; the phrase list also gains the general inability wording (unable to, genuinely unable, could not, couldn't). The editor pass on the changed page strings is applied and the page sent to aj; the page now counts nine always-flagged phrases and four stall phrases.
 
