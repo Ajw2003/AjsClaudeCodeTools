@@ -59,7 +59,7 @@
    "1. Claim wording slips past",
    "Curly apostrophes, paraphrases and blockquotes.",
    "",
-   "Measured: a claim with a curly apostrophe (can\u2019t) was not flagged, and a quoted blockquote line was flagged by mistake. Reasoned: a phrase list never covers every paraphrase, such as \"wasn't able to\" or \"no way to\".",
+   "Measured: a roadblock claim written with a curly apostrophe (can\u2019t) was not flagged, and a line inside a quoted block was flagged by mistake. Reasoned: a phrase list never covers every paraphrase, such as \"wasn't able to\" or \"no way to\".",
    [
     "Today the pattern needs a straight apostrophe and ignores only quotes and backticks.",
     "Normalise apostrophes, ignore blockquotes and code, and add the optional model judge for paraphrases.",
