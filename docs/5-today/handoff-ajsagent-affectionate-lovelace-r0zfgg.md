@@ -15,6 +15,9 @@ CI on #574 failed the inject-size check at the runner's longer path (9717 > 9700
 
 Update: pull request #574 was merged and issues #569 to #572 are closed. Nothing is left to build on this branch.
 
+## New finding after the merge
+aj's PC session (Castle) let a roadblock claim through. Two bugs reproduced against the merged check: curly apostrophe not matched; `git ls-files` counted as a probe. Possible third cause: that session loaded an older build, not checkable from here. Proposal page `docs/plans/2026-11-23-roadblock-detection-fix.html` awaits aj's "Design approved: roadblock detection fix" with two picks. Nothing built.
+
 ## The next step
 Nothing: the work is merged. Optional: aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
 
