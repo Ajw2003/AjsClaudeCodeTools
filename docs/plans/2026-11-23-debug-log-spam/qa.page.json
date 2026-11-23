@@ -1,0 +1,102 @@
+{
+ "title": "Quieter hook messages QA",
+ "eyebrow": "QA \u00b7 parent issue #583, plugin 2.90.0",
+ "pageType": "qa",
+ "short": {
+  "lead": "The quieter hook messages are built as plugin 2.90.0. Your test is to confirm that the two messages from your screenshot no longer appear in chat, and that the log command shows them instead.",
+  "hint": "Tap a step to see what to do.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Checked",
+    "The full check suite passes and the collision fix is proven",
+    "",
+    "I ran verify.py myself after merging each step: every part passes (1453 checks in total). I removed the autosave fix on purpose and the new collision case failed (\"two snapshots started at once on one repo both succeed and leave no scratch index\"), then I put the fix back. docref.py, docs_drift.py and tools/verify_tools.py exit 0, and the version-bump check reports 2.87.0 to 2.90.0.",
+    "Nothing from you.",
+    {
+     "src": "pics/quiet.svg",
+     "alt": "Status messages now go to the log, not the chat.",
+     "caption": "Status messages now go to the log, not the chat."
+    }
+   ],
+   [
+    "hand",
+    "Your test",
+    "Try it in a session on the branch build",
+    "you",
+    "Install the branch build, run a few commands in a session, and look for the two messages from your screenshot. Then open the log with the new command. The exact steps are in the Wrap-up section below.",
+    "Follow the steps in the Wrap-up section."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "trace() and trace_noop()",
+   "Status messages go to a log file, not the chat.",
+   "",
+   "They write one line each to `house-rules-hook-log.txt` in the temp folder, keeping the newest 500 lines. `HOUSE_RULES_TRACE=chat` prints them in chat as before, and `off` drops them. Refusals, reminders and instructions to me still print in chat. The 'nothing to pick up' message at session start is also still in chat; it is not one of the traces.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "/house-rules:hook-log",
+   "A new command prints the last lines of the log.",
+   "",
+   "It runs `scripts/hooklog.py` and takes the number of lines (default 30).",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Autosave",
+   "Overlapping autosaves no longer collide, and an error is one line shown once.",
+   "",
+   "Each run uses its own scratch file (`house-rules-autosave-<branch>.index.<pid>`). An autosave error prints its first line once per session and every occurrence is in the log.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Existing test cases",
+   "The test cases that expected a status message in the chat now read the log.",
+   "",
+   "The cases that expected a status message in the chat now check the log and also check that stdout is empty, so they still test what they meant to.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "quieter hook messages",
+  "base": "origin/main",
+  "unverified": [
+   "No live Claude Code session has run 2.90.0. The session that built it ran the installed 2.89.0 hooks, so every check ran the branch's code directly.",
+   "The /house-rules:hook-log command was run as a script on Linux only; it has not been run as a slash command or on Windows.",
+   "The autosave collision is reproduced by a test with two processes, but not on your Windows machine where the screenshot error appeared."
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "The quieter hook messages are built as plugin 2.90.0 and wait for your test.",
+  "changing": "Status messages go to a log file, a new /house-rules:hook-log command, the autosave scratch file and error message, the test cases that expected chat messages, and the docs.",
+  "blocking": "Waiting on your test of the branch build.",
+  "next": "If it passes, I open a pull request. If it fails, I fix it on this branch and ask you to test again.",
+  "todo": [
+   "UNTESTED: not run on your PC. Open PowerShell in the repo folder and run <code>python tools/use_branch.py ccr-4ced8cf2-ggrx7a</code>. It should print the branch name, version 2.90.0 and the commit it installed.",
+   "Start a new Claude Code session in PlunderSpell and ask me to run a few shell commands, including two at the same moment. You should see no line starting \"closable-merge stamping is off\" and no autosave error.",
+   "Type <code>/house-rules:hook-log 20</code>. You should see lines starting with a time, including the closable-merge one, in place of the chat messages.",
+   "Tap <b>Copy my reply</b> and send me \"QA passed: quieter hook messages\". If something failed, tell me what."
+  ]
+ }
+}
