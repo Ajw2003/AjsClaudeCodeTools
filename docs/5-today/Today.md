@@ -6,6 +6,8 @@ Wait clocks, visual checks, page sending and working pictures (four fixes) on `a
 
 ## 2026-11-23
 
+aj approved the audit as "Design approved: roadblock check audit 1B 2A 3A 4* 5A". Answer 4 is aj's own: stall phrases are checked only at the end of the turn, and a separate check reads the session's goal and decides whether the session genuinely cannot move forward unattended or can continue until the goals are reached. The loop stage is Plan. An agent-hook test of that goal check is running in a throwaway folder; planning (systems doc, issues, plan page) follows its result. Nothing built.
+
 The audit page's editor pass is applied and the final page was sent to aj. A count on it was corrected: the old probe test matches 13 program names plus `command -v`, not nine words. Waiting on aj's five picks ("Design approved: roadblock check audit").
 
 aj asked for an audit of the weaknesses and traps in the plan. Measured against real transcripts and fixtures: eight weak spots (curly apostrophe and blockquotes, the loose probe test, non-Bash tools, undefined failure, weak fallbacks, false alarms, window resets, environment). A model-judged Stop hook was tested once and worked. Audit page `docs/plans/2026-11-23-roadblock-check-audit.html` (editor pass applied, sent to aj) offers five picks; the systems doc has the table. Nothing built.

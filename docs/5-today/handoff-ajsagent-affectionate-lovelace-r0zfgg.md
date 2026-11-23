@@ -28,6 +28,7 @@ aj approved "Design approved: roadblock detection fix 1* 2* 3*" with their own a
 (Final state of the detection-fix plan page: three attempts in step 2, nine always-flagged phrases, four stall phrases, editor pass applied, sent to aj.)
 
 ## Audit (2026-11-23)
+aj approved it as "Design approved: roadblock check audit 1B 2A 3A 4* 5A" (1B: add a model judge; 2A: closed table of method classes; 3A: NEEDS YOU exemption; 5A: unattended and bypass only). Answer 4 is aj's own: stall phrases are checked only at the end of the turn, then a separate goal check reads the session goal and decides whether it genuinely cannot move forward unattended or can carry on until the goals are reached. Next: finish an agent-hook feasibility test, then write the systems doc section, issues and an updated build plan page (extends #587; keep #588 to #590 in step).
 aj asked for an audit of the plan's weaknesses. Page `docs/plans/2026-11-23-roadblock-check-audit.html` (editor pass applied, sent to aj) has eight findings and five picks; waiting on "Design approved: roadblock check audit" with picks. Then update the plan page and issues #588 to #590 to match, and get "Build plan approved: roadblock detection fix". Unverified: the agent-hook option; the judge's cost is from one run; whether aj's PC uses the PowerShell tool; hook time limits.
 
 ## The next step
