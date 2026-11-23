@@ -22,7 +22,7 @@
     "Message one",
     "\"closable-merge stamping is off\" goes quiet",
     "",
-    "With the design loop off, a handler says it did nothing after every Bash call. Silence is the rule's own word for \"looked, nothing to do\", so it will show only under `HOUSE_RULES_TRACE=verbose`.",
+    "While the design loop is off, one of our hook scripts prints a message after every Bash call to say it did nothing. Our rules say silence should mean \"looked, nothing to do\", so this message will now appear only when you set `HOUSE_RULES_TRACE=verbose`.",
     "Nothing from you.",
     {
      "src": "pics/quiet.svg",
@@ -108,9 +108,9 @@
    "Messages that report an action or a failure (saved, committed, could not tell) keep printing. Only \"off\" and \"nothing to do\" messages go quiet.",
    null,
    [
-    "26 trace calls in the plugin.",
-    "Unchanged except the one at line 3273.",
-    "No change."
+    "22 trace calls in the plugin.",
+    "The other 21 keep printing exactly as they do now. (The autosave error is not one of the 22; it is sent a different way.)",
+    "You see the same messages as today."
    ],
    null
   ]
@@ -124,7 +124,7 @@
      "A",
      "Only the \"off\" message and the autosave collision (suggested)",
      1,
-     "Fixes what your screenshot shows and nothing else. The other 25 trace messages are reports of real work and stay."
+     "Fixes what your screenshot shows and nothing else. The other 21 trace messages are reports of real work and stay."
     ],
     [
      "B",
@@ -161,7 +161,7 @@
      "C",
      "Own scratch file per run only",
      0,
-     "Removes the cause but a different real failure would still repeat."
+     "Removes the cause, but any other real failure would still repeat on every call."
     ]
    ],
    "A is the only option that stops both the collision and any repeat."
@@ -169,9 +169,9 @@
  ],
  "wrapup": {
   "summary": "This proposal makes two repeating hook messages quiet, removes the cause of the autosave collision, and keeps every message that reports real work.",
-  "changing": "One message in design_loop.py, the scratch file name and error handler in delegation.py, a verify.py case for each, a changelog line, and a plugin version bump.",
+  "changing": "One message in design_loop.py, the scratch file name and error handler in delegation.py, a test case for each in `verify.py`, a line in the changelog, and a new plugin version number.",
   "blocking": "Your two choices: how far the quieting goes, and how the autosave collision is fixed.",
-  "next": "After you approve, I write a build plan; this is two code changes, so it may need no issues.",
+  "next": "After you approve, I write a build plan. This is a small change, so it may not need separate GitHub issues to track it.",
   "todo": [
    "Read the suggestion on each choice.",
    "Pick an option under Your choices.",
