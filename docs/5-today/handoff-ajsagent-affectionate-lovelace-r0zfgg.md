@@ -18,6 +18,8 @@ Update: pull request #574 was merged and issues #569 to #572 are closed. Nothing
 ## New finding after the merge
 aj's PC session (Castle) let a roadblock claim through. Two bugs reproduced against the merged check: curly apostrophe not matched; `git ls-files` counted as a probe. aj confirmed both sessions ran 2.89.0, so an old build is ruled out; the Castle transcript is not readable from here (aj's PC does not offer its folders to cloud sessions). Proposal page `docs/plans/2026-11-23-roadblock-detection-fix.html` (three questions, editor pass applied to all of it, sent to aj) awaits aj's "Design approved: roadblock detection fix" with three picks (the third covers a second screenshot: an unattended run handed aj a design question in plain text, which the `noask` hook does not catch). Nothing built.
 
+(The proposal page's final editor pass is applied and the page was sent to aj.)
+
 ## The next step
 Wait for aj's "Design approved: roadblock detection fix" with three picks (probe test 1A/1B/1C, wording 2A/2B, unattended decision hand-backs 3A/3B/3C), then plan and build the fix; the follow-up needs new issues, since #569 to #572 are closed. The original work is merged. Optional: aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
 
