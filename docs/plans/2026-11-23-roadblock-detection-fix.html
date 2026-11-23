@@ -237,7 +237,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">The roadblocks check let a reply through on your PC. I reproduced two causes and cannot rule out a third (an old version still running). You choose how strict the repaired check should be.</p>
+      <p class="lead" id="lead" data-basic="summary">The roadblocks check let a reply through on your PC, and a second Castle reply stopped to ask you a design question during an unattended run. I reproduced two causes of the first, and you choose how strict the repaired check should be.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -284,7 +284,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: roadblock detection fix",
   "short": {
-    "lead": "The roadblocks check let a reply through on your PC. I reproduced two causes and cannot rule out a third (an old version still running). You choose how strict the repaired check should be.",
+    "lead": "The roadblocks check let a reply through on your PC, and a second Castle reply stopped to ask you a design question during an unattended run. I reproduced two causes of the first, and you choose how strict the repaired check should be.",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -324,6 +324,19 @@ const PAGE = {
         }
       ],
       [
+        "pause",
+        "Second example",
+        "An unattended run stopped to ask a design question",
+        "",
+        "The Castle session said it should pick a reversible default in unattended mode, then ended its reply with \"Your call: where does Krak's crypt go?\" and waited. The existing hook only blocks the formal question tool, not a plain sentence.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EUnattended%20run%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%20ends:%20Your%20call:%20...%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EHook%20blocks%20only%20the%20question%20tool%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EResult:%20run%20waits%20for%20you%3C/text%3E%3C/svg%3E",
+          "alt": "A plain-text question gets past the unattended-mode hook",
+          "caption": "Unattended mode already says to carry on; nothing enforces it for plain text."
+        }
+      ],
+      [
         "hand",
         "Test",
         "You check the install and re-test in a new session",
@@ -357,6 +370,15 @@ const PAGE = {
       "Words the Castle reply used that the list lacks.",
       "",
       "Today the list has nine phrases, such as \"I can't\" and \"not installed\". The Castle reply said it could not verify the work here, and the list does not cover that kind of wording.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "A check for decision hand-backs in unattended runs",
+      "Applies the same block-twice-then-warn rule to replies that hand you a decision.",
+      "",
+      "Today unattended mode only denies the formal question tool and adds a rule note at session start. The new check would also flag phrases such as \"your call\", \"needs a decision from you\" and \"which do you want\", only when unattended mode is on.",
       null,
       null
     ]
@@ -405,12 +427,37 @@ const PAGE = {
         ]
       ],
       "A adds only phrases that signal a stop, so honest replies are rarely caught."
+    ],
+    [
+      "third",
+      "In an unattended run, what happens when a reply hands you a design decision?",
+      [
+        [
+          "A",
+          "Block it twice, then let it through with a warning, only when unattended mode is on (my suggestion)",
+          1,
+          "Reuses the roadblocks mechanism, never hangs a run, and leaves attended sessions asking you as the design rule requires."
+        ],
+        [
+          "B",
+          "Rely on the existing rule note at session start",
+          0,
+          "No new code, but the Castle session had the note and still stopped."
+        ],
+        [
+          "C",
+          "Also apply it in attended bypass-permission sessions",
+          0,
+          "Stops more stalls, but it conflicts with the rule that you make the design decisions when you are present."
+        ]
+      ],
+      "A matches the one situation where nobody can answer, and it fits how the first check already works."
     ]
   ],
   "wrapup": {
     "summary": "This proposal repairs the roadblocks check so it flags the reply that slipped through on your PC, and asks you to confirm the PC loaded the new version.",
     "changing": "The roadblock check and its phrase list in core.py, its test cases, and the docs.",
-    "blocking": "Your pick for each of the two questions under Your choices, and what you see when you run the new-session check.",
+    "blocking": "Your pick for each of the three questions under Your choices, and what you see when you run the new-session check.",
     "next": "After you approve, I plan the fix and build it with test cases.",
     "todo": [
       "UNTESTED: I have not run this on your PC. Open PowerShell in any folder and run <code>claude plugin list<\/code>. Find the house-rules entry. It should say Version: 2.89.0.",
