@@ -25,6 +25,8 @@ aj approved "Design approved: roadblock detection fix 1* 2* 3*" with their own a
 
 (Plan page final wording applied after the editor pass: nine always-flagged phrases, four stall phrases, sent to aj.)
 
+(Final state of the detection-fix plan page: three attempts in step 2, nine always-flagged phrases, four stall phrases, editor pass applied, sent to aj.)
+
 ## The next step
 Wait for aj's "Build plan approved: roadblock detection fix", then hand step 1 (#588) to a builder, then #589, then #590. The original work (#569 to #572) is merged. Optional: aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
 
