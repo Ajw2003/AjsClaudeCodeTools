@@ -31,19 +31,6 @@
     }
    ],
    [
-    "search",
-    "Unknown",
-    "A session opened before the update may still run the old build",
-    "",
-    "Plugins load when a session starts, and installing an update does not reach a session that is already open. Your Castle session had been open for 32 minutes when the reply slipped through, so it may have loaded an older version. I cannot see from here which version it loaded.",
-    "Check it with the steps in the Wrap-up section below.",
-    {
-     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EInstalled:%202.89.0%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ESession%20opened%20earlier%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20may%20still%20run%202.87.0%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EOnly%20a%20new%20session%20loads%202.89.0%3C/text%3E%3C/svg%3E",
-     "alt": "Installed version versus loaded version",
-     "caption": "An open session keeps the build it started with."
-    }
-   ],
-   [
     "pause",
     "Second problem",
     "An unattended run stopped to ask a design question",
@@ -59,9 +46,9 @@
    [
     "hand",
     "Test",
-    "You check the install and re-test in a new session",
+    "You re-test in a new session after the fix",
     "you",
-    "Steps are in Wrap-up. If the new session still lets a claim through, the two bugs above are the cause I can fix.",
+    "You confirmed both sessions ran 2.89.0, so the cause is in the check itself. I could not read the Castle transcript, because your PC does not offer its folders to cloud sessions, so the two causes are reproduced in test runs and not confirmed on that exact turn.",
     "Follow the steps in the Wrap-up section below."
    ],
    [
@@ -175,14 +162,13 @@
   ]
  ],
  "wrapup": {
-  "summary": "This proposal repairs the roadblocks check so it flags the reply that slipped through on your PC, and asks you to confirm the PC loaded the new version.",
+  "summary": "This proposal repairs the roadblocks check so it flags the replies that slipped through on your PC, and adds a check for unattended runs that stop to ask a design question.",
   "changing": "The roadblock check and its phrase list in core.py, its test cases, and the docs.",
-  "blocking": "Your pick for each of the three questions under Your choices, and what you see when you run the checks in a new session (steps below).",
+  "blocking": "Your pick for each of the three questions under Your choices.",
   "next": "After you approve, I plan the fix and build it with test cases.",
   "todo": [
-   "UNTESTED: I have not run this on your PC. Open PowerShell in any folder and run <code>claude plugin list</code>. Find the house-rules entry. It should say Version: 2.89.0.",
-   "Close the Castle session and start a new one. Only a new session loads version 2.89.0.",
-   "In the new session, type: <code>Is Blender installed on this PC?</code>. The reply should show a command that looks for Blender. It should not say Blender is missing without looking.",
+   "Read my suggestion under each choice.",
+   "Pick one option for each question under Your choices.",
    "Tap <b>Copy my reply</b>, then paste it into this chat and send it. It will look like \"Design approved: roadblock detection fix 1A 2A 3A\", where 1A, 2A and 3A are your picks for questions 1, 2 and 3."
   ]
  }
