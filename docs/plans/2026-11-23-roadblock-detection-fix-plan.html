@@ -237,7 +237,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">The fix is built in three steps under parent issue #587: detection, the evidence rule, then never waiting in unattended or bypass mode. Check how I read your answers below, because two readings are mine.</p>
+      <p class="lead" id="lead" data-basic="summary">A roadblock is any reason I give for stopping. The fix for it is built in three steps under parent issue #587. Step 1 is detection, step 2 is the evidence rule, and step 3 is never waiting in unattended or bypass mode. Check how I read your answers in the first card below, because I had to interpret two of them (answers 2 and 3).</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -258,7 +258,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the three readings in the first card.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: roadblock detection fix", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py: the claim pattern and counter</h3><p data-basic="done-when">Done when: new verify.py cases pass for each phrase with both apostrophes, stall phrases fire only when unattended or bypass, and a retry still blocks a second time but never a third.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py: the evidence test</h3><p data-basic="done-when">Done when: a claim after only git ls-files is blocked, a claim after a failed Blender call is left alone, and a claim after a successful Blender call is blocked.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>show-dont-tell.md, the no-questions hook, a new Stop check</h3><p data-basic="done-when">Done when: an unattended headless session that ends with "Your call" is blocked and carries on, and injected rules stay under 9,700 characters at a runner-like path.</p></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py: the roadblock-claim pattern and the block counter</h3><p data-basic="done-when">Done when: new verify.py test cases pass for each phrase with both straight and curly apostrophes. The stall phrases must fire only in unattended or bypass mode. A reply that retries must still be blocked a second time, but never a third.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py: the evidence test</h3><p data-basic="done-when">Done when: a claim after only git ls-files is blocked, one after a single failed Blender call asks for a second method, one after two different failed Blender calls is accepted, and one after a successful Blender call is blocked.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>show-dont-tell.md, the no-questions hook, and a new check that runs when I finish a reply (the Stop hook)</h3><p data-basic="done-when">Done when: an unattended headless session that ends with "Your call" is blocked and carries on. The rules injected at session start must also stay under 9,700 characters when the plugin is installed at a path as long as the CI runner's, for example /home/runner/work/AjsClaudeCodeTools/AjsClaudeCodeTools.</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -270,7 +270,7 @@ dialog.lightbox button{margin-top:10px}
     <button class="secondary" id="prev" type="button">‹ Back</button>
     <button class="primary" id="next" type="button">Next ›</button>
   </div>
-  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I build step 1 (#588).</span></aside>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I build step 1, the detection fix (#588).</span></aside>
 </div>
 
 <script>
@@ -280,11 +280,11 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Roadblock Detection Fix Build Plan",
-  "eyebrow": "Build plan · parent issue #587, design approved 2026-11-23 with your own three answers",
+  "eyebrow": "Build plan · parent issue #587 · design approved 2026-11-23, based on your three answers",
   "pageType": "build-plan",
   "approval": "Build plan approved: roadblock detection fix",
   "short": {
-    "lead": "The fix is built in three steps under parent issue #587: detection, the evidence rule, then never waiting in unattended or bypass mode. Check how I read your answers below, because two readings are mine.",
+    "lead": "A roadblock is any reason I give for stopping. The fix for it is built in three steps under parent issue #587. Step 1 is detection, step 2 is the evidence rule, and step 3 is never waiting in unattended or bypass mode. Check how I read your answers in the first card below, because I had to interpret two of them (answers 2 and 3).",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -302,12 +302,12 @@ const PAGE = {
         "Readings",
         "How I read your three answers",
         "you",
-        "Answer 1: a claim passes only if this turn tried the claimed thing and it failed. Answer 2: the first six phrases are flagged always; not done, I've stopped, next step are flagged only in unattended or bypass mode, since every reply ends with a next step. Answer 3: mid-build design choices are mine in those modes; the approval gate stays.",
+        "Answer 1: a roadblock claim (\"I can't do X\" or \"I can't verify X\") is accepted only if, in this turn, I tried two different methods and both failed. Answer 2: six phrases are always flagged: can't verify, won't verify, unable to verify, don't have access, not available here and isn't available. Three phrases, \"not done\", \"I've stopped\" and \"next step\", are flagged only in unattended or bypass mode, because every reply ends with a next step. Answer 3: in unattended or bypass mode I make design choices during the build myself. I still wait for your approval before the build starts.",
         "Tell me if a reading is wrong.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%201:%20attempt%20%2B%20failure%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%202:%206%20always%2C%204%20stall%20only%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%203:%20choose%2C%20record%2C%20carry%20on%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EApproval%20gate%20unchanged%3C/text%3E%3C/svg%3E",
           "alt": "The three readings",
-          "caption": "Two readings, on answers 2 and 3, are my interpretation."
+          "caption": "My readings of answers 2 and 3 are interpretation, so check those two."
         }
       ],
       [
@@ -315,12 +315,12 @@ const PAGE = {
         "Step 1",
         "#588: detection",
         "",
-        "Matches straight and curly apostrophes, adds the six phrases, reads the permission mode, flags the stall phrases only in unattended or bypass sessions, and makes the check really block twice. Today the second block never happens, because the check returns at the retry.",
+        "Step 1 makes the check match both straight (') and curly (’) apostrophes and adds the six new phrases. It also reads the session's permission mode, so the three stall phrases are flagged only in unattended or bypass sessions. Finally, it makes the check block a reply twice. Today it never blocks a second time, because the check exits as soon as it sees a retry.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ecurly%20%E2%80%99%20matched%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E6%20new%20phrases%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Estall%20phrases:%20unattended/bypass%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eblock%201%2C%20block%202%2C%20then%20warn%3C/text%3E%3C/svg%3E",
           "alt": "What step 1 changes",
-          "caption": "Step 1 touches the claim pattern and the block counter."
+          "caption": "Step 1 changes the pattern that spots roadblock claims and the counter of how many times a reply was blocked."
         }
       ],
       [
@@ -328,25 +328,25 @@ const PAGE = {
         "Step 2",
         "#589: the evidence rule",
         "",
-        "A claim passes only when a tool call named the claimed thing and its result shows failure. A turn that ran only ls or git ls-files is blocked. If no thing can be picked out of the claim, any failed tool result counts. That fallback is a known limit.",
+        "A roadblock claim passes only when two different methods tried the thing claimed impossible and both failed. If I tried one, the block asks for a second. A reply is blocked if the turn only ran listing commands such as ls or git ls-files, because those do not try the thing. If I cannot tell what the claim is about, any two failed tool results are accepted as evidence. That fallback is a known weakness: it can let a claim through that it should not.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eclaim%20names%20Blender%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20call%20names%20Blender%20%2B%20failed:%20ok%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20only%20git%20ls-files:%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20Blender%20call%20succeeded:%20block%3C/text%3E%3C/svg%3E",
           "alt": "The evidence rule",
-          "caption": "A probe program alone no longer counts."
+          "caption": "Checking that a program exists, without trying to use it, no longer counts as evidence."
         }
       ],
       [
         "clock",
         "Step 3",
-        "#590: never wait, docs, version, QA page",
+        "#590: never wait for you in unattended or bypass mode, plus docs, a version bump and a QA page",
         "",
-        "In unattended or bypass mode, a design decision is chosen, recorded and carried on. This adds one rule sentence, extends the no-questions hook to bypass mode, adds a check for replies that hand you a decision, and posts a QA page.",
-        "Nothing from you until the QA page.",
+        "In unattended or bypass mode, a design decision is chosen, recorded and carried on. This adds one rule sentence, makes the hook that stops me asking questions (the no-questions hook) apply in bypass mode too, adds a check that blocks replies which hand you a decision to make, and posts a QA page for you to test the result.",
+        "Nothing from you until the QA page is posted. Then you test it.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eunattended%20or%20bypass:%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20Your%20call%3F%20-%3E%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20choose%20reversible%20option%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20record%20it%2C%20carry%20on%3C/text%3E%3C/svg%3E",
           "alt": "The never-wait rule",
-          "caption": "Applies only in those two modes."
+          "caption": "This rule applies only in unattended and bypass mode."
         }
       ],
       [
@@ -354,7 +354,7 @@ const PAGE = {
         "Approve",
         "You approve the plan",
         "you",
-        "The build starts with step 1 (#588).",
+        "The build then starts with step 1, the detection fix (#588).",
         "Reply \"Build plan approved: roadblock detection fix\"."
       ]
     ]
@@ -362,37 +362,37 @@ const PAGE = {
   "changes": [
     [
       "chg",
-      "scripts/house_rules/core.py: the claim pattern and counter",
+      "scripts/house_rules/core.py: the roadblock-claim pattern and the block counter",
       "Step 1 widens detection and fixes the block count.",
       "",
-      "Done when: new verify.py cases pass for each phrase with both apostrophes, stall phrases fire only when unattended or bypass, and a retry still blocks a second time but never a third.",
+      "Done when: new verify.py test cases pass for each phrase with both straight and curly apostrophes. The stall phrases must fire only in unattended or bypass mode. A reply that retries must still be blocked a second time, but never a third.",
       null,
       null
     ],
     [
       "chg",
       "scripts/house_rules/core.py: the evidence test",
-      "Step 2 swaps the probe-program test for attempt and failure.",
+      "Step 2 replaces the test that only looks for a probe program with a test that two different methods were tried and failed.",
       "",
-      "Done when: a claim after only git ls-files is blocked, a claim after a failed Blender call is left alone, and a claim after a successful Blender call is blocked.",
+      "Done when: a claim after only git ls-files is blocked, one after a single failed Blender call asks for a second method, one after two different failed Blender calls is accepted, and one after a successful Blender call is blocked.",
       null,
       null
     ],
     [
       "chg",
-      "show-dont-tell.md, the no-questions hook, a new Stop check",
+      "show-dont-tell.md, the no-questions hook, and a new check that runs when I finish a reply (the Stop hook)",
       "Step 3 stops waiting in unattended and bypass mode.",
       "",
-      "Done when: an unattended headless session that ends with \"Your call\" is blocked and carries on, and injected rules stay under 9,700 characters at a runner-like path.",
+      "Done when: an unattended headless session that ends with \"Your call\" is blocked and carries on. The rules injected at session start must also stay under 9,700 characters when the plugin is installed at a path as long as the CI runner's, for example /home/runner/work/AjsClaudeCodeTools/AjsClaudeCodeTools.",
       null,
       null
     ]
   ],
   "wrapup": {
     "summary": "This plan builds the detection fix in three steps, one issue each, from the readings of your three answers.",
-    "changing": "The claim pattern, block counter and evidence test in core.py, the no-questions hook, one rule file, test cases and the docs.",
+    "changing": "In core.py: the roadblock-claim pattern, the block counter and the evidence test. Also the no-questions hook, one rules file, the new test cases and the docs.",
     "blocking": "Your approval of this plan, or a correction to a reading.",
-    "next": "After you approve, I build step 1 (#588).",
+    "next": "After you approve, I build step 1, the detection fix (#588).",
     "todo": [
       "Read the three readings in the first card.",
       "Tap <b>Copy my reply<\/b> and send it: \"Build plan approved: roadblock detection fix\", or say what to change."

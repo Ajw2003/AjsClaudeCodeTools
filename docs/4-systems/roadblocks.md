@@ -75,7 +75,7 @@ happens (the field exists in the Stop payload; its value on a continuation was n
 
 | Answer | aj's words, shortened | Reading |
 |---|---|---|
-| 1 | Only count a probe if it checks the claim and shows the claim cannot run | A claim passes only when the turn has a tool call naming the claimed thing and its result shows failure. `ls` or `git ls-files` alone no longer counts. |
+| 1 | Only count a probe if it checks the claim and shows the claim cannot run. Added 2026-11-23: try up to two different methods before saying something can't be done or can't be verified | A claim passes only when the turn has two different tool calls, each naming the claimed thing, and both results show failure (one attempt gets a block asking for a second; if only one method exists the reply says why). `ls` or `git ls-files` alone no longer counts. |
 | 2 | can't, won't or unable to verify, don't have access, not available here, isn't available, not done, I've stopped, the next step, next step | The first six join the claim pattern everywhere. The last four are stall phrases and are flagged only in unattended or bypass sessions, because every normal reply ends with a next step. |
 | 3 | In unattended mode choose a reasonable reversible design; never leave the session waiting in unattended or bypass mode | Mid-build design decisions are chosen, recorded and carried on in both modes. The approval gate before source edits is unchanged. |
 
@@ -84,4 +84,4 @@ normal headless session). The value for bypass mode was not observed, because th
 refused a bypass test run, so it is assumed to be `bypassPermissions` and is checked in step 1.
 
 **Limits to document in step 2.** The thing a claim names is picked out of free text, so a claim
-with no recognisable name falls back to "any failed tool result this turn counts".
+with no recognisable name falls back to "any two failed tool results this turn count".
