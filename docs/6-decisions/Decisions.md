@@ -7,6 +7,13 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-23 - Roadblock check audit: model judge, method classes, and a goal check for stalls
+
+**Decision.** aj approved "Design approved: roadblock check audit 1B 2A 3A 4* 5A". (1B) A model judge runs on every turn end. (2A) A different method means a different class from a closed table. (3A) A licence, login, purchase or destructive step is marked NEEDS YOU and exempts that part only. (4, aj's own) Stall phrases are checked only at the end of the turn, then a separate goal check reads the session's goal and decides whether the session genuinely cannot move forward unattended or can carry on until the goals are reached. (5A) Unattended runs and bypass mode only.
+**Why.** An audit of the plan found eight weak spots, measured on real transcripts: a curly apostrophe and blockquotes, the loose probe test, tools other than `Bash` being invisible, an undefined failure, weak fallbacks, false alarms (`next step` in 2 of 28 final replies), non-human messages resetting the turn, and environment limits. A model judge and a goal check were tested and worked; see [roadblocks.md](../4-systems/roadblocks.md), "Plan after the audit".
+**Replaces.** Refines the detection-fix entry below: the "any three failed results" fallback and the plain stall-phrase flag are replaced by related attempts, method classes and the goal check.
+**Status.** Current. Not built.
+
 ## 2026-11-23 - Roadblock detection fix: evidence, a longer phrase list, and never waiting in unattended or bypass mode
 
 **Decision.** aj approved "Design approved: roadblock detection fix 1* 2* 3*" with three answers of their own. (1) A roadblock claim passes only when the turn tried the claimed thing and shows evidence it cannot run. (2) The flagged wording grows to include can't, won't or unable to verify, don't have access, not available here, isn't available, not done, I've stopped, I've stopped here, the next step and next step. (3) In unattended or bypass-permission mode, a design decision that comes up while building is chosen by the agent (reasonable and reversible), recorded, and work carries on; the session never waits.

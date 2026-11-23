@@ -118,3 +118,43 @@ an estimate, not a rate). An `agent` hook that reads the transcript was not test
 **Verified in Claude Code's own code.** It overrides a hook after 8 consecutive blocks
 (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, default 8), and the Stop hook feedback message is excluded from
 the "this turn" window (`_is_genuine_user_message`).
+
+
+## Plan after the audit (approved 2026-11-23, not built)
+
+aj approved "Design approved: roadblock check audit 1B 2A 3A 4* 5A" on
+`docs/plans/2026-11-23-roadblock-check-audit.html`. Parent issue #587; steps #588 (detection),
+#589 (record check), #591 (model judge and goal check), #590 (never wait, docs, version, QA).
+
+| Answer | Choice | Reading |
+|---|---|---|
+| 1 | 1B | Add a model judge: a `type: "prompt"` Stop hook on every turn end. |
+| 2 | 2A | Three attempts must fall in three method classes (existence check, disk search, package database, run it, ask the environment, other tool). |
+| 3 | 3A | A reply marking NEEDS YOU for a licence, login, purchase or destructive step is exempt from the three-attempt rule; the rest of the work carries on. |
+| 4 | aj's own | Stall phrases are checked only at the end of the turn. A separate goal check then reads the session's goal and decides whether the session genuinely cannot move forward unattended or can carry on until the goals are reached. |
+| 5 | 5A | Unattended runs and `bypassPermissions` only. |
+
+**The goal check (answer 4), as read.** The Stop command hook scans for a stall phrase. Only on a
+hit does it run a nested `claude -p` call (small fast model, Read tool only, plugin hooks off with
+`--setting-sources project` so it cannot recurse). The call gets the first and the most recent
+genuine user messages and the transcript path. Its verdict `{"ok": false, "reason": ...}` becomes
+the block reason; `{"ok": true}` lets the reply go. It blocks up to 6 times in a row per user
+message, below Claude Code's limit of 8 (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`), because answer 3 says
+never wait; the roadblock claim check keeps its limit of 2. If `claude` is missing, or the call
+fails or times out, the hook says so and does not block.
+
+**Measured on 2026-11-23 (fabricated sessions, small sample).** The judge prompt reads "ANY remaining
+part of the work that can continue without the user; a licence, login, purchase or destructive
+step blocks only its own part". Goal unreached ("Next step: build castles 2 to 12"): blocked with
+"continue building castles 2 to 12". Goal reached with a trailing "Next step: review": passed.
+Blocked on an npm login with the docs step still doable: blocked with "continue with the docs
+changes and leave only the publish". An earlier wording passed the login case, so the sharper
+wording is required. Each call cost about $0.002 and took 4 to 5 seconds.
+
+**Traps of the model layers.** A judge given no input answers ok and says so; a prompt hook
+cannot announce a failure, so layer 3 fails open silently and the deterministic layers 1 and 2 are
+the backstop. The nested call needs `claude` on the hook's PATH; if the goal is only in a resumed
+or compacted session's summary, the first user message is not the real goal (limit). The goal
+check passes a stall phrase through when the goal is reached, so ordinary "next step" lines in
+finished work stop costing a block. The agent hook type (reads files itself) ran in a test but
+its verdict could not be observed in that run, so it is not used.
