@@ -237,7 +237,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">A roadblock is any reason I give for stopping. The fix for it is built in three steps under parent issue #587. Step 1 is detection, step 2 is the evidence rule, and step 3 is never waiting in unattended or bypass mode. Check how I read your answers in the first card below, because I had to interpret two of them (answers 2 and 3).</p>
+      <p class="lead" id="lead" data-basic="summary">The fix is built in four steps under parent issue #587: detection, a record check, two model layers, then never waiting in unattended or bypass mode. Check my readings of your answers in the first card, because three are my interpretation.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -257,8 +257,8 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the three readings in the first card.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: roadblock detection fix", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py: the roadblock-claim pattern and the block counter</h3><p data-basic="done-when">Done when: new verify.py test cases pass for each phrase with both straight and curly apostrophes. The stall phrases must fire only in unattended or bypass mode. A reply that retries must still be blocked a second time, but never a third.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py: the evidence test</h3><details><summary>Show</summary><p data-basic="done-when">Done when: a claim made after only git ls-files is blocked. A claim after one or two failed Blender calls is blocked, and the block says how many more methods are needed. A claim after three failed Blender calls by three different methods, all listed in the reply, is accepted. Three failed calls by the same method, or with the methods left out of the reply, are blocked.</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>show-dont-tell.md, the no-questions hook, and a new check that runs when I finish a reply (the Stop hook)</h3><p data-basic="done-when">Done when: an unattended headless session that ends with "Your call" is blocked and carries on. The rules injected at session start must also stay under 9,700 characters when the plugin is installed at a path as long as the CI runner's, for example /home/runner/work/AjsClaudeCodeTools/AjsClaudeCodeTools.</p></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the readings in the first card.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: roadblock detection fix", or say what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py: claim pattern, counter and turn window</h3><p data-basic="done-when">Done when: new verify.py test cases pass for each phrase with both apostrophes, a quoted claim is ignored, stall phrases are scanned only when unattended or bypass, and a retry is blocked a second time but never a third.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>scripts/house_rules/core.py: the evidence test</h3><p data-basic="done-when">Done when: a claim after only git ls-files is blocked, one after three failed attempts in three kinds of method that are all named in the reply is accepted, and a failed PowerShell or other-server tool call counts as an attempt.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>hooks/hooks.json and a nested goal check</h3><p data-basic="done-when">Done when: a stall phrase with the goal reached passes, one with the goal unreached blocks with the judge's reason, a missing or failing claude program is announced and never blocks, and the judge hook is listed in hooks.json.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>show-dont-tell.md, the no-questions hook, docs and version</h3><p data-basic="done-when">Done when: an unattended session that ends with next step and an unreached goal is blocked and carries on, a bypass-mode design question is denied with the choose-and-carry-on reason, and the injected rules stay under 9,700 characters at a runner-like path.</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -280,11 +280,11 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Roadblock Detection Fix Build Plan",
-  "eyebrow": "Build plan · parent issue #587 · design approved 2026-11-23, based on your three answers",
+  "eyebrow": "Build plan · parent issue #587 · designs approved 2026-11-23, with the audit",
   "pageType": "build-plan",
   "approval": "Build plan approved: roadblock detection fix",
   "short": {
-    "lead": "A roadblock is any reason I give for stopping. The fix for it is built in three steps under parent issue #587. Step 1 is detection, step 2 is the evidence rule, and step 3 is never waiting in unattended or bypass mode. Check how I read your answers in the first card below, because I had to interpret two of them (answers 2 and 3).",
+    "lead": "The fix is built in four steps under parent issue #587: detection, a record check, two model layers, then never waiting in unattended or bypass mode. Check my readings of your answers in the first card, because three are my interpretation.",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -300,14 +300,14 @@ const PAGE = {
       [
         "eye",
         "Readings",
-        "How I read your three answers",
+        "How I read your answers",
         "you",
-        "Answer 1: a first try never counts as \"I can't\". I try again with two different methods, three attempts in total, and only then may I say something could not be verified, tested or done. The reply lists every method tried. Answer 2: the check always flags these nine phrases in my replies: \"can't verify\", \"won't verify\", \"unable to verify\", \"unable to\", \"could not\", \"couldn't\", \"don't have access\", \"not available here\" and \"isn't available\". These four are flagged only in unattended or bypass mode: \"not done\", \"I've stopped\", \"I've stopped here\" and \"next step\". Answer 3: in unattended or bypass mode I make design choices that come up during the build myself; I still wait for your approval before the build starts.",
+        "Always flagged: nine inability phrases. Stall phrases (not done, I've stopped, I've stopped here, next step) are checked only at the end of the turn, in unattended or bypass mode, and then a goal check decides. The goal check may block up to 6 times in a row. A first try never counts; three failed attempts by different methods are listed.",
         "Tell me if a reading is wrong.",
         {
-          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%201:%203%20attempts%2C%20listed%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%202:%209%20always%2C%204%20stall%20only%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%203:%20choose%2C%20record%2C%20carry%20on%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EApproval%20gate%20unchanged%3C/text%3E%3C/svg%3E",
-          "alt": "The three readings",
-          "caption": "My readings of answers 2 and 3 are interpretation, so check those two."
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EPhrase%20scan:%20end%20of%20turn%20only%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EStall%20phrase%20-%3E%20goal%20check%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EGoal%20check:%20up%20to%206%20blocks%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaims:%203%20attempts%2C%20listed%3C/text%3E%3C/svg%3E",
+          "alt": "The readings",
+          "caption": "My readings: the 6-block limit, the end-of-turn timing and the mode gate."
         }
       ],
       [
@@ -315,37 +315,50 @@ const PAGE = {
         "Step 1",
         "#588: detection",
         "",
-        "Step 1 makes the roadblock check match both straight (') and curly (’) apostrophes and adds the new phrases. It reads the session's permission mode, so the four stall phrases are flagged only in unattended or bypass sessions. It also makes the check block a reply twice. Today it never blocks twice: a second block is allowed, but the check exits as soon as it sees the retry.",
+        "Matches both apostrophes, ignores quoted lines, adds the nine phrases and the four stall phrases, reads the permission mode, ignores system messages that are not yours, reads only the end of the transcript, and makes the check really block twice.",
         "Nothing from you.",
         {
-          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ecurly%20%E2%80%99%20matched%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E9%20new%20phrases%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Estall%20phrases:%20unattended/bypass%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eblock%201%2C%20block%202%2C%20then%20warn%3C/text%3E%3C/svg%3E",
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ecurly%20%E2%80%99%20matched%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Equoted%20lines%20ignored%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E9%20%2B%204%20phrases%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eblock%201%2C%20block%202%2C%20then%20warn%3C/text%3E%3C/svg%3E",
           "alt": "What step 1 changes",
-          "caption": "Step 1 changes the pattern that spots roadblock claims and the counter of how many times a reply was blocked."
+          "caption": "Step 1 changes the claim pattern and the counter."
         }
       ],
       [
         "hammer",
         "Step 2",
-        "#589: the evidence rule",
+        "#589: the record check",
         "",
-        "A roadblock claim passes only after three failed attempts: the first try, then two more by different methods from it and from each other. The reply lists each method. If I tried fewer, the block says how many more attempts are needed. A reply where I only ran ls or git ls-files, which list files without trying anything, is blocked. If the claim names no program or other thing to check, any three failed tool results by different methods count. That fallback is a known weakness.",
+        "A claim passes only after three failed attempts in three kinds of method, all about one target, from any tool. The reply lists them. A reply marking NEEDS YOU for a licence, login, purchase or destructive step is exempt.",
         "Nothing from you.",
         {
-          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eclaim%20names%20Blender%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%203%20different%20attempts%20failed%2C%20listed:%20ok%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%201%20or%202%20attempts%2C%20or%20not%20listed:%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%203%20attempts%2C%20same%20method:%20block%3C/text%3E%3C/svg%3E",
-          "alt": "The evidence rule",
-          "caption": "Checking that a program exists, without trying to use it, no longer counts as evidence."
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E3%20failed%20attempts%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E3%20kinds%20of%20method%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E1%20shared%20target%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eall%20named%20in%20the%20reply%3C/text%3E%3C/svg%3E",
+          "alt": "The record check",
+          "caption": "Three existence checks count as one kind."
+        }
+      ],
+      [
+        "scale",
+        "Step 3",
+        "#591: the model judge and the goal check",
+        "",
+        "A small model judges every reply at turn end. When a stall phrase appears, a second check reads the session goal and decides whether work can carry on. Each model call costs about $0.002. Both layers fail open and say so.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EJudge:%20every%20turn%20end%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EGoal%20check:%20only%20on%20a%20stall%20phrase%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eunreached%20-%3E%20continue%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ereached%20or%20blocked%20-%3E%20pass%3C/text%3E%3C/svg%3E",
+          "alt": "The two model layers",
+          "caption": "Measured on three made-up sessions: all three verdicts were right."
         }
       ],
       [
         "clock",
-        "Step 3",
-        "#590: never wait for you in unattended or bypass mode, plus docs, a version bump and a QA page",
+        "Step 4",
+        "#590: never wait, docs, version, QA page",
         "",
-        "In unattended or bypass mode, a design decision is chosen, recorded and carried on. This adds one rule sentence. It also makes the hook that stops me asking questions apply in bypass mode too. A new check blocks replies that hand you a decision. Last, I post a QA page for you to test the result.",
-        "Nothing from you until the QA page is posted. Then you test it.",
+        "In unattended or bypass mode I choose a reversible design and carry on. This adds one rule sentence and extends the no-questions hook to bypass mode. I also update the docs and version, and post a QA page after testing it myself.",
+        "Nothing from you until the QA page.",
         {
-          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eunattended%20or%20bypass:%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20Your%20call%3F%20-%3E%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20choose%20reversible%20option%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20record%20it%2C%20carry%20on%3C/text%3E%3C/svg%3E",
-          "alt": "The never-wait rule",
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eunattended%20or%20bypass:%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20design%20question%20-%3E%20choose%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20record%20it%2C%20carry%20on%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20licence/login:%20that%20part%20only%3C/text%3E%3C/svg%3E",
+          "alt": "Never wait",
           "caption": "This rule applies only in unattended and bypass mode."
         }
       ],
@@ -362,39 +375,48 @@ const PAGE = {
   "changes": [
     [
       "chg",
-      "scripts/house_rules/core.py: the roadblock-claim pattern and the block counter",
+      "scripts/house_rules/core.py: claim pattern, counter and turn window",
       "Step 1 widens detection and fixes the block count.",
       "",
-      "Done when: new verify.py test cases pass for each phrase with both straight and curly apostrophes. The stall phrases must fire only in unattended or bypass mode. A reply that retries must still be blocked a second time, but never a third.",
+      "Done when: new verify.py test cases pass for each phrase with both apostrophes, a quoted claim is ignored, stall phrases are scanned only when unattended or bypass, and a retry is blocked a second time but never a third.",
       null,
       null
     ],
     [
       "chg",
       "scripts/house_rules/core.py: the evidence test",
-      "Step 2 replaces the test that only checks whether a program exists with a test for three failed attempts by different methods, each listed in the reply.",
+      "Step 2 replaces the probe test with three related failed attempts.",
       "",
-      "Done when: a claim made after only git ls-files is blocked. A claim after one or two failed Blender calls is blocked, and the block says how many more methods are needed. A claim after three failed Blender calls by three different methods, all listed in the reply, is accepted. Three failed calls by the same method, or with the methods left out of the reply, are blocked.",
+      "Done when: a claim after only git ls-files is blocked, one after three failed attempts in three kinds of method that are all named in the reply is accepted, and a failed PowerShell or other-server tool call counts as an attempt.",
+      null,
+      null
+    ],
+    [
+      "new",
+      "hooks/hooks.json and a nested goal check",
+      "Step 3 adds the judge hook and the goal check.",
+      "",
+      "Done when: a stall phrase with the goal reached passes, one with the goal unreached blocks with the judge's reason, a missing or failing claude program is announced and never blocks, and the judge hook is listed in hooks.json.",
       null,
       null
     ],
     [
       "chg",
-      "show-dont-tell.md, the no-questions hook, and a new check that runs when I finish a reply (the Stop hook)",
-      "Step 3 stops waiting in unattended and bypass mode.",
+      "show-dont-tell.md, the no-questions hook, docs and version",
+      "Step 4 stops waiting in unattended and bypass mode.",
       "",
-      "Done when: an unattended headless session that ends with \"Your call\" is blocked and carries on. The rules injected at session start must also stay under 9,700 characters when the plugin is installed at a path as long as the CI runner's, for example /home/runner/work/AjsClaudeCodeTools/AjsClaudeCodeTools.",
+      "Done when: an unattended session that ends with next step and an unreached goal is blocked and carries on, a bypass-mode design question is denied with the choose-and-carry-on reason, and the injected rules stay under 9,700 characters at a runner-like path.",
       null,
       null
     ]
   ],
   "wrapup": {
-    "summary": "This plan builds the detection fix in three steps, one issue each, from the readings of your three answers.",
-    "changing": "In core.py: the roadblock-claim pattern, the block counter and the evidence test. Also the no-questions hook, one rules file, the new test cases and the docs.",
+    "summary": "This plan builds the whole roadblock fix in four steps, one issue each, from your approved designs and the audit.",
+    "changing": "In core.py: the claim pattern, counter, turn window and evidence test. Also hooks.json, a nested goal check, the no-questions hook, one rules file, test cases and the docs.",
     "blocking": "Your approval of this plan, or a correction to a reading.",
     "next": "After you approve, I build step 1, the detection fix (#588).",
     "todo": [
-      "Read the three readings in the first card.",
+      "Read the readings in the first card.",
       "Tap <b>Copy my reply<\/b> and send it: \"Build plan approved: roadblock detection fix\", or say what to change."
     ]
   },

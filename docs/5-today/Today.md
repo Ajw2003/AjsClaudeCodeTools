@@ -6,6 +6,8 @@ Wait clocks, visual checks, page sending and working pictures (four fixes) on `a
 
 ## 2026-11-23
 
+Planning for the audit approval is done: parent #587 now has four steps (#588 detection, #589 record check, #591 model judge and goal check, #590 never wait with docs, version and QA), the systems doc has a "Plan after the audit" section, the decisions log has an entry, and the build plan page `docs/plans/2026-11-23-roadblock-detection-fix-plan.html` is rewritten for four steps (editor pass pending), waiting on "Build plan approved: roadblock detection fix". The goal check was tested on three made-up sessions with the small model: unreached blocked, reached passed, and a login-blocked session was told to continue with the docs (the sharper wording was needed); each call about $0.002 and 4 to 5 seconds. Nothing built.
+
 aj approved the audit as "Design approved: roadblock check audit 1B 2A 3A 4* 5A". Answer 4 is aj's own: stall phrases are checked only at the end of the turn, and a separate check reads the session's goal and decides whether the session genuinely cannot move forward unattended or can continue until the goals are reached. The loop stage is Plan. An agent-hook test of that goal check is running in a throwaway folder; planning (systems doc, issues, plan page) follows its result. Nothing built.
 
 The audit page's editor pass is applied and the final page was sent to aj. A count on it was corrected: the old probe test matches 13 program names plus `command -v`, not nine words. Waiting on aj's five picks ("Design approved: roadblock check audit").
