@@ -16,10 +16,10 @@ CI on #574 failed the inject-size check at the runner's longer path (9717 > 9700
 Update: pull request #574 was merged and issues #569 to #572 are closed. Nothing is left to build on this branch.
 
 ## New finding after the merge
-aj's PC session (Castle) let a roadblock claim through. Two bugs reproduced against the merged check: curly apostrophe not matched; `git ls-files` counted as a probe. Possible third cause: that session loaded an older build, not checkable from here. Proposal page `docs/plans/2026-11-23-roadblock-detection-fix.html` awaits aj's "Design approved: roadblock detection fix" with two picks. Nothing built.
+aj's PC session (Castle) let a roadblock claim through. Two bugs reproduced against the merged check: curly apostrophe not matched; `git ls-files` counted as a probe. Possible third cause: that session loaded an older build, not checkable from here. Proposal page `docs/plans/2026-11-23-roadblock-detection-fix.html` (editor pass applied, sent to aj) awaits aj's "Design approved: roadblock detection fix" with two picks. Nothing built.
 
 ## The next step
-Nothing: the work is merged. Optional: aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
+Wait for aj's "Design approved: roadblock detection fix" with two picks (probe test 1A/1B/1C, wording 2A/2B), then plan and build the fix; the follow-up needs new issues, since #569 to #572 are closed. The original work is merged. Optional: aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
 
 ## What is unverified
 The injected rules have only 6 characters of room, so any later rule text needs more cut; the shortened rule in house-rules.md no longer says installs happen without asking in bypass mode (only the detail file does). The new check has only been run against fixture transcripts, not inside a live Claude Code session. The count is kept in a temp-directory file keyed by transcript path and user-message count.
