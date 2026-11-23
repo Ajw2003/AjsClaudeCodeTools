@@ -22,4 +22,4 @@ Nothing: the work is merged. Optional: aj's own test via the QA page ("QA passed
 The injected rules have only 6 characters of room, so any later rule text needs more cut; the shortened rule in house-rules.md no longer says installs happen without asking in bypass mode (only the detail file does). The new check has only been run against fixture transcripts, not inside a live Claude Code session. The count is kept in a temp-directory file keyed by transcript path and user-message count.
 
 ## Issue numbers
-#569 parent; #570, #571, #572 steps.
+#569 parent; #570, #571, #572 steps. All four are closed as completed; pull request #574 is merged.
