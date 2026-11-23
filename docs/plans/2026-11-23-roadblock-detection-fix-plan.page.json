@@ -35,7 +35,7 @@
     "Step 1",
     "#588: detection",
     "",
-    "Step 1 makes the check match both straight (') and curly (\u2019) apostrophes and adds the six new phrases. It reads the session's permission mode, so the four stall phrases are flagged only in unattended or bypass sessions. It also makes the check block a reply twice. Today it never blocks twice. I tested this: a second block is allowed, and the check exits at the retry.",
+    "Step 1 makes the roadblock check match both straight (') and curly (\u2019) apostrophes and adds the new phrases. It reads the session's permission mode, so the four stall phrases are flagged only in unattended or bypass sessions. It also makes the check block a reply twice. Today it never blocks twice: a second block is allowed, but the check exits as soon as it sees the retry.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ecurly%20%E2%80%99%20matched%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E6%20new%20phrases%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Estall%20phrases:%20unattended/bypass%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eblock%201%2C%20block%202%2C%20then%20warn%3C/text%3E%3C/svg%3E",
