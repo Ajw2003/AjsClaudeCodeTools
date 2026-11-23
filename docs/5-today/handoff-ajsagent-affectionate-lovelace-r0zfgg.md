@@ -13,8 +13,10 @@ Live test on the branch build passed (blocked once, then the agent probed and an
 
 CI on #574 failed the inject-size check at the runner's longer path (9717 > 9700); fixed by dropping the roadblocks pointer from house-rules.md (9674 at a runner-like path). Check size at a runner-like path, not only locally: a copy of the repo at `/home/runner/work/AjsClaudeCodeTools/AjsClaudeCodeTools` reproduces CI.
 
+Update: pull request #574 was merged and issues #569 to #572 are closed. Nothing is left to build on this branch.
+
 ## The next step
-Wait for aj's review and merge of pull request #574, or aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
+Nothing: the work is merged. Optional: aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
 
 ## What is unverified
 The injected rules have only 6 characters of room, so any later rule text needs more cut; the shortened rule in house-rules.md no longer says installs happen without asking in bypass mode (only the detail file does). The new check has only been run against fixture transcripts, not inside a live Claude Code session. The count is kept in a temp-directory file keyed by transcript path and user-message count.

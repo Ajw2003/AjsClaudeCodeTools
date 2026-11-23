@@ -4,6 +4,10 @@ Wait clocks, visual checks, page sending and working pictures (four fixes) on `a
 
 ## 2026-11-20
 
+## 2026-11-23
+
+Pull request #574 (clear roadblocks, plugin 2.89.0) was merged by aj after `verify` passed on its CI. Issues #569 to #572 are closed as completed and labelled `AjsAgent completed this`. The work is done; what remains unverified is aj's own test on a PC, a roadblock worded outside the check's phrase list, and bypass-mode installs, which are a rule and not a hook.
+
 ## 2026-11-22
 
 Pull request #574's CI check `verify` failed one check: the injected rules measured 9717 characters at the runner's longer plugin path (9691 locally), against 9700. Reproduced at a runner-like path, then fixed by dropping the roadblocks pointer from `rules/house-rules.md` (the line above it already links users-hands.md, which links roadblocks.md): 9674 at the runner-like path, and verify.py passes locally and there. Local sizes under-count by about 26 characters.
