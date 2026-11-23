@@ -56,3 +56,32 @@ are pre-approved.
      the third, no block after which/ls/pip, new message resets, unusable state file, retry, off-switch.
    - **Case 91 changed:** its example reason (`checks/core.py:1113`) was a missing editor; it is now a
      four-hour suite, because a missing-tool reason is exactly what this check blocks.
+
+## Detection fix (designed 2026-11-23, not built)
+
+Parent issue #587; steps #588 (detection), #589 (evidence rule), #590 (never wait, docs, version).
+aj approved "Design approved: roadblock detection fix 1* 2* 3*" on
+`docs/plans/2026-11-23-roadblock-detection-fix.html`, with three answers of aj's own.
+
+**Why.** On aj's PC the merged check let two replies through in the Castle session, and both
+sessions ran 2.89.0. Two causes were reproduced with the merged code: the pattern in
+`_ROADBLOCK_RE` (`scripts/house_rules/core.py`) needs a straight apostrophe, and
+`_PROBE_CMD_RE` counts any command containing `ls`, `where`, `npm`, `pip` or `apt`, so a turn that
+ran `git ls-files` counts as a probe. A third fault was found while planning: `roadblock_check`
+returns at the `stop_hook_active` retry, so in a real session the second of the "two" blocks never
+happens (the field exists in the Stop payload; its value on a continuation was not observed).
+
+**What aj chose, and how it is read.**
+
+| Answer | aj's words, shortened | Reading |
+|---|---|---|
+| 1 | Only count a probe if it checks the claim and shows the claim cannot run | A claim passes only when the turn has a tool call naming the claimed thing and its result shows failure. `ls` or `git ls-files` alone no longer counts. |
+| 2 | can't, won't or unable to verify, don't have access, not available here, isn't available, not done, I've stopped, the next step, next step | The first six join the claim pattern everywhere. The last four are stall phrases and are flagged only in unattended or bypass sessions, because every normal reply ends with a next step. |
+| 3 | In unattended mode choose a reasonable reversible design; never leave the session waiting in unattended or bypass mode | Mid-build design decisions are chosen, recorded and carried on in both modes. The approval gate before source edits is unchanged. |
+
+**Verified while planning.** The Stop payload carries `permission_mode` (value `default` in a
+normal headless session). The value for bypass mode was not observed, because the safety check
+refused a bypass test run, so it is assumed to be `bypassPermissions` and is checked in step 1.
+
+**Limits to document in step 2.** The thing a claim names is picked out of free text, so a claim
+with no recognisable name falls back to "any failed tool result this turn counts".

@@ -7,6 +7,13 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-23 - Roadblock detection fix: evidence, a longer phrase list, and never waiting in unattended or bypass mode
+
+**Decision.** aj approved "Design approved: roadblock detection fix 1* 2* 3*" with three answers of their own. (1) A roadblock claim passes only when the turn tried the claimed thing and shows evidence it cannot run. (2) The flagged wording grows to include can't, won't or unable to verify, don't have access, not available here, isn't available, not done, I've stopped, the next step and next step. (3) In unattended or bypass-permission mode, a design decision that comes up while building is chosen by the agent (reasonable and reversible), recorded, and work carries on; the session never waits.
+**Why.** The Castle session on aj's PC let two replies through while running 2.89.0. Two causes were reproduced: a curly apostrophe is not matched, and a turn that ran `git ls-files` counts as a probe. Planning also found that the approved "blocks twice" never happens in a real session, because the check returns at the `stop_hook_active` retry. Detail: [roadblocks.md](../4-systems/roadblocks.md), "Detection fix".
+**Replaces.** Refines the 2026-11-22 roadblocks entry (probe test and phrase list). Answer 3 overrides, in those two modes only, the rule that aj makes the design decisions; the approval gate before source edits stays.
+**Status.** Current. Not built.
+
 ## 2026-11-22 - Roadblocks: a rule plus a check that blocks twice, then warns
 
 **Decision.** aj approved "Design approved: clear roadblocks 1C 2A". The agent probes before claiming a blocker, installs missing tools itself (without asking in bypass mode), and tries other routes before stopping. An end-of-reply check blocks a roadblock claim made with no probe twice, then lets it through with a warning line. Only licences, logins, purchases and destructive actions stay aj's. The session-start line for bypass mode was dropped.
