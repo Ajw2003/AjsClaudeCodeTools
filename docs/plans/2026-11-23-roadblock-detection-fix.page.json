@@ -4,7 +4,7 @@
  "pageType": "proposal",
  "approval": "Design approved: roadblock detection fix",
  "short": {
-  "lead": "The roadblocks check let a reply through on your PC, and a second Castle reply stopped to ask you a design question during an unattended run. I reproduced two causes of the first, and you choose how strict the repaired check should be.",
+  "lead": "The roadblocks check let a reply through on your PC, and a second Castle reply stopped to ask you a design question during an unattended run. I reproduced two causes of the first problem, and you choose how strict the repaired check should be.",
   "hint": "Tap a step to see it.",
   "key": [
    [
@@ -45,10 +45,10 @@
    ],
    [
     "pause",
-    "Second example",
+    "Second problem",
     "An unattended run stopped to ask a design question",
     "",
-    "The Castle session said it should pick a reversible default in unattended mode, then ended its reply with \"Your call: where does Krak's crypt go?\" and waited. The existing hook only blocks the formal question tool, not a plain sentence.",
+    "The Castle session said it should pick a reversible default in unattended mode, then ended its reply with \"Your call: where does Krak's crypt go?\" and waited. The existing hook blocks only the formal question tool, so a question written as a plain sentence gets past it.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EUnattended%20run%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%20ends:%20Your%20call:%20...%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EHook%20blocks%20only%20the%20question%20tool%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EResult:%20run%20waits%20for%20you%3C/text%3E%3C/svg%3E",
@@ -95,8 +95,8 @@
   ],
   [
    "new",
-   "A check for decision hand-backs in unattended runs",
-   "Applies the same block-twice-then-warn rule to replies that hand you a decision.",
+   "A check for replies that hand a decision back to you in unattended runs",
+   "Blocks such a reply twice, then lets it through with a warning, as the roadblocks check does.",
    "",
    "Today unattended mode only denies the formal question tool and adds a rule note at session start. The new check would also flag phrases such as \"your call\", \"needs a decision from you\" and \"which do you want\", only when unattended mode is on.",
    null,
@@ -156,7 +156,7 @@
      "A",
      "Block it twice, then let it through with a warning, only when unattended mode is on (my suggestion)",
      1,
-     "Reuses the roadblocks mechanism, never hangs a run, and leaves attended sessions asking you as the design rule requires."
+     "Reuses the roadblocks check, never leaves a run waiting, and leaves sessions where you are present asking you, as the rule that you make design decisions requires."
     ],
     [
      "B",
@@ -166,7 +166,7 @@
     ],
     [
      "C",
-     "Also apply it in attended bypass-permission sessions",
+     "Also apply it in sessions where you are present and permission prompts are bypassed",
      0,
      "Stops more stalls, but it conflicts with the rule that you make the design decisions when you are present."
     ]
@@ -177,13 +177,13 @@
  "wrapup": {
   "summary": "This proposal repairs the roadblocks check so it flags the reply that slipped through on your PC, and asks you to confirm the PC loaded the new version.",
   "changing": "The roadblock check and its phrase list in core.py, its test cases, and the docs.",
-  "blocking": "Your pick for each of the three questions under Your choices, and what you see when you run the new-session check.",
+  "blocking": "Your pick for each of the three questions under Your choices, and what you see when you run the checks in a new session (steps below).",
   "next": "After you approve, I plan the fix and build it with test cases.",
   "todo": [
    "UNTESTED: I have not run this on your PC. Open PowerShell in any folder and run <code>claude plugin list</code>. Find the house-rules entry. It should say Version: 2.89.0.",
    "Close the Castle session and start a new one. Only a new session loads version 2.89.0.",
    "In the new session, type: <code>Is Blender installed on this PC?</code>. The reply should show a command that looks for Blender. It should not say Blender is missing without looking.",
-   "Tap <b>Copy my reply</b> and send it. It reads like \"Design approved: roadblock detection fix 1A 2A 3A\", where each letter is your pick for that numbered question."
+   "Tap <b>Copy my reply</b>, then paste it into this chat and send it. It will look like \"Design approved: roadblock detection fix 1A 2A 3A\", where 1A, 2A and 3A are your picks for questions 1, 2 and 3."
   ]
  }
 }
