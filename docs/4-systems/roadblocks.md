@@ -92,3 +92,29 @@ happens (the field exists in the Stop payload; its value on a continuation was n
 
 **Limits to document in step 2.** The thing a claim names is picked out of free text, so a claim
 with no recognisable name falls back to "any three failed tool results this turn that differ in method count".
+
+## Audit of the planned check (2026-11-23, proposal on `docs/plans/2026-11-23-roadblock-check-audit.html`)
+
+aj asked for an audit of the weaknesses and traps in the plan, with robust fixes. Measured on this
+machine against the merged check and real transcripts (one session, so small samples):
+
+| # | Weak spot | Evidence | Planned fix |
+|---|---|---|---|
+| 1 | Curly apostrophe not matched; blockquote lines flagged; paraphrases unlisted | Fixtures; a phrase list cannot cover paraphrases (reasoned) | Normalise apostrophes, ignore blockquotes and code, optional model judge |
+| 2 | `git ls-files` counts as a probe | Fixture (earlier) | Failed attempts about the claimed target, by method class |
+| 3 | Only the `Bash` tool is read | Fixtures: a PowerShell call and a failed MCP call were both blocked | Read every tool; Windows equivalents per method class |
+| 4 | "Failed" is undefined | In 224 results `is_error` is set on 9; it also fires for hook refusals and harmless exits; 4 failure-like results have it unset | is_error minus hook refusals and harmless exits, plus strong exit-0 failure text |
+| 5 | Fallbacks: unnamed target, fewer than three methods | Reasoned | Attempts must share a target word that appears in the reply or the request; judge checks the reason |
+| 6 | False alarms | `next step` in 2 of 28 final replies; one hit was meta talk | Stall phrases need hand-back wording; NEEDS YOU exemption |
+| 7 | Window and counter reset | 2 of 17 "genuine" messages were system-reminder carriers | Exclude those carriers |
+| 8 | Environment | Handler 0.8 s on 5.3 MB, check +0.08 s; 100 MB about 15 s (estimate); hook time limits unknown | Announce a missing mode, read the tail only |
+
+**Model judge measured once.** A `type: "prompt"` Stop hook (Claude Code supports prompt, agent,
+command and http hooks) flagged "I cannot continue because Unity is not installed", gave an
+actionable reason, and passed once the agent listed its methods. Its call used 232 output tokens
+and cost $0.0041 for two evaluations against $0.2437 for the main model in the same run (one run:
+an estimate, not a rate). An `agent` hook that reads the transcript was not tested.
+
+**Verified in Claude Code's own code.** It overrides a hook after 8 consecutive blocks
+(`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, default 8), and the Stop hook feedback message is excluded from
+the "this turn" window (`_is_genuine_user_message`).
