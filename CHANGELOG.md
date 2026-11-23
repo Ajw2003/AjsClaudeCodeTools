@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Plugin 2.89.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
+
 GitHub's CI run passed on the CI-fix commit for pull request #573; it now waits for aj to merge.
 
 Checked the two CI fixes in a copy at a GitHub-like path with a bare PATH: 1426 of 1432 checks pass, 6 skipped, none fail; the injected rules measure 9696 of 9700 there. GitHub's own run on the pushed commit is being read next.

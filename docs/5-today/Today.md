@@ -4,6 +4,16 @@ Wait clocks, visual checks, page sending and working pictures (four fixes) on `a
 
 ## 2026-11-20
 
+## 2026-11-22
+
+Pull request #574's CI check `verify` failed one check: the injected rules measured 9717 characters at the runner's longer plugin path (9691 locally), against 9700. Reproduced at a runner-like path, then fixed by dropping the roadblocks pointer from `rules/house-rules.md` (the line above it already links users-hands.md, which links roadblocks.md): 9674 at the runner-like path, and verify.py passes locally and there. Local sizes under-count by about 26 characters.
+
+Clear roadblocks live test passed on this machine: a headless session loaded with the branch plugin (house-rules 2.89.0) said "I cannot continue because Unity is not installed", was blocked ("block 1 of 2"), ran `which` probes, and replied with what they found. Pull request #574 is open (`Refs #569`), waiting on aj's review and merge. The QA page's last editor pass is applied.
+
+Clear roadblocks QA found that main already shipped a different 2.88.0 (#573), so main was merged into the branch and the feature moved to 2.89.0. The rule had to fold into the user's-hands section to fit the 9700-character limit (9691 now). verify.py 1443 of 1443, verify_tools.py 55 of 55 pass after the merge.
+
+Clear-roadblocks rule: proposal page `docs/plans/2026-11-22-clear-roadblocks.html` written, aj approved it as "Design approved: clear roadblocks 1C 2A". Planning is done: systems doc `docs/4-systems/roadblocks.md`, parent issue #569 with steps #570, #571 and #572, and a build plan page `docs/plans/2026-11-22-clear-roadblocks-plan.html` waiting on aj's "Build plan approved: clear roadblocks". The editor pass is applied to the plan page. aj then approved the build plan; the stage is Build and step 1 (#570) is done: aj chose to delete the "Plain language and the voice" stub to make room, and verify.py passes (205 of 205 core checks, 9694 characters injected against 9700). Step 2 (#571) is built: the end-of-reply roadblock check blocks twice per user message, then warns; verify.py 213 of 213 core checks and verify_tools.py 55 of 55 pass. Step 3 (#572) is built as plugin 2.88.0 (verify.py 1345 of 1345, verify_tools.py 55 of 55). A live-style run of the branch hook with the same roadblock claim three times gave block, block, then the warning. QA page: `docs/plans/2026-11-22-clear-roadblocks-qa.html`, the editor pass is applied, issues #569 to #572 say `needs review`, and aj's test is next. No issues filed and nothing built. The `@house-rules:editor` pass was applied, a second time to the option C wording, to the page text and the page rebuilt. Handoff: `docs/5-today/handoff-ajsagent-affectionate-lovelace-r0zfgg.md`.
+
 Free issue closing, plugin 2.83.0, built on `AjsAgent/free-issue-closing` (issues #548 to #552). The agent closes an issue on its own when it is labelled `needs review`, `in review` or completed by someone else and is in no GitHub milestone; anything else, milestone issues and milestones need aj's "Close approved". The five issues were made with a command that printed only numbers, so the design loop recorded none of them; aj's "Issues for free issue closing" came after the stage had moved to Build and also recorded nothing. Design: `docs/4-systems/issue-closing.md`, "Free issue closing (2.83.0)".
 
 ## 2026-11-19

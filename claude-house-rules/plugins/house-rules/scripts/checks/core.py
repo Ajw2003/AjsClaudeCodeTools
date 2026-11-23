@@ -1118,7 +1118,7 @@ hand_case(
     "an 'untested' that says in the same sentence why the check cannot run stays quiet (#89)",
     stop_payload(
         transcript_path=_HAND_NO_TOOL,
-        last_assistant_message="This is untested because the Unity editor is not installed here.",
+        last_assistant_message="This is untested because the full suite takes four hours to run.",
     ),
 )
 hand_case(
@@ -1192,6 +1192,63 @@ hand_case(
         last_assistant_message="Fixed the bug, it works now.",
     ),
 )
+
+# --- roadblock claims (#571): blocked twice per user message, then a warning ----------------------
+_RB_STATE = os.path.join(_HAND_ROOT, "roadblock-state.json")
+_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE)
+_RB_CLAIM = "I can't continue: the engine is not installed."
+
+
+def _rb_user(text):
+    return json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": text}})
+
+
+def _rb_tool(cmd):
+    return json.dumps({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Bash", "input": {"command": cmd}}]}})
+
+
+def _rb_run(transcript, retry=False, env=None, reply=_RB_CLAIM):
+    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=reply,
+                                                   stop_hook_active=retry), env=env or _RB_ENV)
+    return out
+
+
+def _rb_fresh():
+    if os.path.exists(_RB_STATE):
+        os.remove(_RB_STATE)
+
+
+_rb_t = _hand_transcript("rb-none", [_rb_user("build it"), _rb_tool("pytest -q")])
+_rb_fresh()
+_rb1, _rb2, _rb3 = _rb_run(_rb_t), _rb_run(_rb_t), _rb_run(_rb_t)
+for _n, _o in ((1, _rb1), (2, _rb2)):
+    report("PASS" if '"decision":"block"' in _o and "roadblocks.md" in _o and "which, ls or uname" in _o else "FAIL",
+           "a roadblock claim with no probe is blocked (block %d of 2), naming the check and the rule file" % _n)
+report("PASS" if '"decision":"block"' not in _rb3 and "roadblock claim" in _rb3 and "unchecked" in _rb3 else "FAIL",
+       "the third time the reply passes with a visible warning line")
+_rb_fresh()
+_rb_ok = [_rb_run(_hand_transcript("rb-%d" % i, [_rb_user("build it"), _rb_tool(c)]))
+          for i, c in enumerate(("which unity", "ls /opt", "pip install foo"))]
+report("PASS" if all('"decision":"block"' not in o and "unchecked" not in o for o in _rb_ok) else "FAIL",
+       "a turn that ran which, ls or an install is not blocked")
+_rb_fresh()
+_rb_run(_rb_t)
+_rb_run(_rb_t)
+_rb_t2 = _hand_transcript("rb-none", [_rb_user("build it"), _rb_tool("pytest -q"), _rb_user("try again"),
+                                      _rb_tool("pytest -q")])
+report("PASS" if '"decision":"block"' in _rb_run(_rb_t2) else "FAIL", "a new user message resets the block count")
+_rb_fresh()
+_rb_bad = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS_STATE=_HAND_ROOT))  # a directory: unwritable
+report("PASS" if '"decision":"block"' not in _rb_bad and "could not read or write" in _rb_bad else "FAIL",
+       "an unusable state file produces a message and no block")
+_rb_fresh()
+_rb_ret = _rb_run(_rb_t, retry=True)
+report("PASS" if '"decision":"block"' not in _rb_ret and "unchecked" in _rb_ret and not os.path.exists(_RB_STATE) else "FAIL",
+       "the retry (stop_hook_active) never blocks and does not count")
+_rb_off = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS="off"))
+report("PASS" if '"decision":"block"' not in _rb_off else "FAIL", "HOUSE_RULES_ROADBLOCKS=off turns the check off")
+_rb_fresh()
 
 # A shell fence always satisfies the evidence check's own "quotes evidence" exemption, so the
 # two checks can never both fire live on one reply - see doc-ref 6534 docs/6-decisions/Decisions.md.

@@ -1,0 +1,154 @@
+{
+ "title": "Clear Roadblocks Yourself",
+ "eyebrow": "Proposal \u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: clear roadblocks",
+ "short": {
+  "lead": "A new rule would make me test every \"I can't\" claim, install missing tools myself, and never hand you a blocker I could clear. You chose option C: a check that runs when I finish a reply, blocks it twice, then warns.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "Probe",
+    "Check the claim before making it",
+    "",
+    "Before I say a tool, engine or machine is missing, I check. I use which (finds a program), ls (lists a folder), uname and hostname (name the machine), or list_computer_folders (lists folders on your PC). Claiming from memory is what went wrong on your PC. The session said Unity was not installed and that it was the wrong PC, and neither was true.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim:%20%22no%20Unity%2C%20wrong%20PC%22%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20-%3E%20run:%20which%20/%20ls%20/%20hostname%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20-%3E%20found%20it%2C%20or%20really%20absent%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EOnly%20then%20may%20I%20say%20so.%3C/text%3E%3C/svg%3E",
+     "alt": "Flow from claim to probe to verdict",
+     "caption": "The probe sits between the claim and the verdict."
+    }
+   ],
+   [
+    "wrench",
+    "Install",
+    "Missing tool: install it, then carry on",
+    "",
+    "In bypass permission mode (where I run without asking you first), I install anything missing (apt, pip, npm or a download) and then re-run the step. In other modes I still install, and the usual permission prompt asks you. Only a purchase, a licence or a login is yours to do.",
+    "Nothing from you, except a purchase, a licence or a login.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ETool%20missing%3F%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20bypass%20mode%20-%3E%20install%2C%20retry%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20other%20mode%20%20-%3E%20install%2C%20prompt%20asks%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20needs%20licence/login%20-%3E%20you%3C/text%3E%3C/svg%3E",
+     "alt": "Install decision by permission mode",
+     "caption": "Who acts, by situation."
+    }
+   ],
+   [
+    "route",
+    "Go around",
+    "Blocked route: take another one",
+    "",
+    "If a route fails, I try the next one: another tool, an attached machine, a script or a different host. I stop only when every route has been tried, and my report lists each attempt.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ERoute%201%20failed%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ERoute%202%20failed%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ERoute%203%20works%20-%3E%20continue%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReport%20lists%20all%20three.%3C/text%3E%3C/svg%3E",
+     "alt": "Routes tried in order",
+     "caption": "A stop must list every route tried."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the proposal",
+    "you",
+    "Your approval is recorded as a line in the decisions log.",
+    "Pick an option under Your choices, then send the approval line with Copy my reply."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Rule: Evidence before claims",
+   "Gains two duties: install what is missing, and try another route.",
+   null,
+   "The existing rule already says a \"can't be done\" claim needs a test. This extends it from claims to actions: a failed test is not the end, the next step is the fix.",
+   [
+    "Today: a claim needs a test. A Stop check (it runs when I finish a reply) flags \"can't\" when no tool ran. A separate rule says I must not hand my labour to you.",
+    "New: a short section, plus a detail file titled \"Roadblocks are mine to clear\", linked from both of those rules.",
+    "You stop being asked to install or switch machines."
+   ],
+   null
+  ],
+  [
+   "new",
+   "Stop check: roadblock phrases",
+   "Included if you pick option B or C under \"How firmly should this be enforced?\"",
+   null,
+   "Flags replies that say \"I can't\", \"not installed\", \"not on your machine\", or \"you need to install\" when no probe or install ran this turn.",
+   [
+    "Today: the evidence check catches \"can't\" claims with no tool run at all.",
+    "New: it also catches those claims when the only tool that ran was unrelated to the claim, and \"you need to install\" hand-offs.",
+    "Option B blocks a reply once. Option C blocks it twice, then lets it through with a warning line. Either way, the block message names the check I should have run."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "How firmly should this be enforced?",
+   [
+    [
+     "A",
+     "Rule text only: a new section and detail file, no hook change",
+     0,
+     "Smallest; relies on me following it, and the session on your PC shows that is not enough."
+    ],
+    [
+     "B",
+     "Rule plus a Stop check that blocks a roadblock claim once",
+     0,
+     "Catches the exact failure and never stalls, but a repeated claim goes through on the retry."
+    ],
+    [
+     "C",
+     "Rule plus a Stop check that blocks twice, then lets the reply through with a visible warning line (your pick)",
+     1,
+     "The strictest option that cannot loop forever: two forced corrections, then a warning you can see. Needs one new test case in verify.py, the script that checks the hooks."
+    ]
+   ],
+   "You chose C: it forces two corrections and still cannot hang a session. The line an earlier draft had, telling every bypass-mode session at start that installs are pre-approved, is dropped."
+  ],
+  [
+   "second",
+   "What counts as yours, not mine?",
+   [
+    [
+     "A",
+     "Licences, logins, purchases and destructive actions only (my suggestion)",
+     1,
+     "Matches the existing destructive-action and users-hands rules."
+    ],
+    [
+     "B",
+     "Also any install over a set size",
+     0,
+     "Safer, but it brings back the stalls you asked me to stop."
+    ]
+   ],
+   "Everything else is labour, which the rules already say is not yours."
+  ]
+ ],
+ "wrapup": {
+  "summary": "This proposal adds a rule so I probe before claiming a blocker, install missing tools, and try other routes. A check that runs when I finish a reply enforces it: it blocks twice, then warns.",
+  "changing": "The file rules/house-rules.md and a new file, rules/detail/roadblocks.md. With option B or C, also the Stop check and one new test case in verify.py.",
+  "blocking": "Your pick of A, B or C on how firmly to enforce this (you chose C), and your pick of A or B on what counts as yours.",
+  "next": "After you approve, I turn this into a build plan.",
+  "todo": [
+   "Read my suggestion under each choice.",
+   "Pick an option under Your choices.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

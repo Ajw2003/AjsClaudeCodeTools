@@ -1,0 +1,108 @@
+{
+ "title": "Clear Roadblocks Build Plan",
+ "eyebrow": "Build plan \u00b7 parent issue #569, design approved 2026-11-22",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: clear roadblocks",
+ "short": {
+  "lead": "A roadblock is any reason I give for stopping, such as a missing tool or the wrong machine. The rule that clears them is built in three steps under parent issue #569: the rule text, a reply check that blocks twice and then warns, then the tests, docs and version number.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Step 1",
+    "#570: the rule text and its detail file",
+    "",
+    "Adds the section \"Roadblocks are mine to clear\" to the rules file and a detail file, linked from the existing \"Evidence before claims\" and users-hands rules.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Erules/house-rules.md%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20%2B%20new%20section%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Erules/detail/roadblocks.md%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20%2B%20new%20file%3C/text%3E%3C/svg%3E",
+     "alt": "The two files step 1 writes",
+     "caption": "Step 1 touches two rule files."
+    }
+   ],
+   [
+    "hammer",
+    "Step 2",
+    "#571: the check that blocks twice, then warns",
+    "",
+    "Extends the check that runs at the end of each reply so it flags a roadblock claim made without first testing it (a probe). It blocks the reply twice, then lets it through with a warning line. A small state file holds the block count and resets when a new message from you arrives.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim%2C%20no%20probe%20-%3E%20block%201%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim%2C%20no%20probe%20-%3E%20block%202%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim%2C%20no%20probe%20-%3E%20warning%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ENew%20message%20-%3E%20count%20resets%3C/text%3E%3C/svg%3E",
+     "alt": "The block-twice sequence",
+     "caption": "Never more than two blocks per message, so a session cannot hang."
+    }
+   ],
+   [
+    "flask",
+    "Step 3",
+    "#572: tests, docs, version and QA page",
+    "",
+    "Adds test cases to verify.py, updates the docs and changelog, raises the plugin version number, and posts a QA page for you to check the result.",
+    "Nothing from you until the QA page.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Everify.py%20cases%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Edocs%20%2B%20CHANGELOG%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eversion%20bump%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EQA%20page%3C/text%3E%3C/svg%3E",
+     "alt": "The four parts of step 3",
+     "caption": "Step 3 proves and records the change."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the plan",
+    "you",
+    "The build starts with step 1 (#570).",
+    "Reply \"Build plan approved: clear roadblocks\"."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "rules/house-rules.md and rules/detail/roadblocks.md",
+   "Step 1 adds the rule.",
+   "",
+   "Done when: the section and detail file exist, verify.py passes its checks for duplicated text and file size, and CLAUDE.md contains no copy of the rule text.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "scripts/house_rules/core.py (handover_evidence_check)",
+   "Step 2 adds the roadblock claim check.",
+   "",
+   "Done when: a roadblock claim made without a probe is blocked twice, then lets the reply through with a warning. A reply that runs a probe first is not blocked. A state file that can't be read is reported with a plain message.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "verify.py, docs and version",
+   "Step 3 proves and records it.",
+   "",
+   "Done when: verify.py and verify_tools.py exit 0, the GitHub verify check passes, and the QA page is linked from parent issue #569.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "This plan builds the roadblocks rule and its check in three steps, one issue each.",
+  "changing": "The rules file, a new detail file, the evidence check in core.py, verify.py, and the docs.",
+  "blocking": "Your approval of this plan.",
+  "next": "After you approve, I build step 1 (#570).",
+  "todo": [
+   "Read the steps in order.",
+   "Tap <b>Copy my reply</b> and send it. It says \"Build plan approved: clear roadblocks\"."
+  ]
+ }
+}

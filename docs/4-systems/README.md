@@ -10,6 +10,7 @@ works, invariants, and traps that have already cost time.
 | [verify-suites.md](verify-suites.md) | Proving the three plugins' hook payloads produce the decisions the docs claim |
 | [plugin-distribution.md](plugin-distribution.md) | Getting the plugins onto a machine, upgrading them, and the settings only a machine-level install can write |
 | [guards.md](guards.md) | Which actions the hooks let through, refuse with the safe way named, or ask aj about |
+| [roadblocks.md](roadblocks.md) | The rule that the agent checks a roadblock claim, installs what is missing and tries other routes, plus the end-of-reply check that enforces it. |
 | [design-loop.md](design-loop.md) | Keeping design aj's job: the stages, the approvals that move them, and the lock on code outside Build |
 | [label-setup.md](label-setup.md) | Making sure a repo has the three house labels before the plugin depends on them (planned) |
 | [clear-writing.md](clear-writing.md) | Making what aj reads proper, human and explicit: the rule, the shared checker, the issue check and the editor helper |

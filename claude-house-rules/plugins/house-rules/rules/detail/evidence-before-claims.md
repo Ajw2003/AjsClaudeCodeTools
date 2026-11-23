@@ -33,7 +33,7 @@ Two claims get the same treatment and are easy to miss:
 - **"It can't be done" is a claim of fact.** "That isn't supported", "there is no setting for
   that", "that API doesn't exist" — each needs the same applied test as a success claim, and is
   the one most often made from memory. Try it, or read the thing that would have it, before
-  saying it isn't there.
+  saying it isn't there. For a missing tool or a blocked route, see `roadblocks.md`.
 - **Checking is the default, not an offer.** When a check can run here and is not prohibitively
   expensive, I run it in the same turn instead of reporting it as "not checked". "Not checked",
   "unverified" and "untested" are right only when the check cannot run here, and then the same

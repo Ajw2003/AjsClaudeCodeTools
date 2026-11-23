@@ -1,0 +1,93 @@
+{
+ "title": "Clear Roadblocks QA",
+ "eyebrow": "QA \u00b7 parent issue #569, plugin 2.89.0",
+ "pageType": "qa",
+ "short": {
+  "lead": "The roadblocks rule and its reply check are built as plugin 2.89.0. Your test is to confirm that when I claim something like \"Unity is not installed\" without checking, my reply is blocked twice and then goes out with a warning.",
+  "hint": "Tap a step to see what to do.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Checked",
+    "Both verify scripts pass, and the check blocks twice, then warns",
+    "",
+    "I ran verify.py (1345 of 1345 checks pass) and verify_tools.py (55 of 55). I also ran the branch's hook.py three times with the same roadblock claim, and I ran no check between the runs. The first two replies were blocked (\"block 1 of 2\", \"block 2 of 2\"). The third printed the warning \"a roadblock claim (i cannot) went out unchecked\".",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%201:%20block%20%281%20of%202%29%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%202:%20block%20%282%20of%202%29%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EReply%203:%20passes%20%2B%20warning%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ENew%20message:%20count%20resets%3C/text%3E%3C/svg%3E",
+     "alt": "The block, block, warn sequence",
+     "caption": "What the check does for one user message."
+    }
+   ],
+   [
+    "hand",
+    "Your test",
+    "Try it in a session on the branch build",
+    "you",
+    "Install the branch build, start a new session, and ask something that might make me say a tool is missing. I should run a check or install the tool instead of saying it is missing. The exact steps are in the Wrap-up section below.",
+    "Follow the steps in the Wrap-up section."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Rule: Roadblocks are mine to clear",
+   "One short section in the rules, with its detail file.",
+   "",
+   "Before I claim a tool or machine is missing, I check. If something is missing, I install it and try the next route. Only purchases, licences, logins and destructive actions are left for you. The rules text injected at the start of each session is now 9,694 characters, against a limit of 9,700.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "The end-of-reply check",
+   "Blocks a roadblock claim twice for each message from you, then lets the reply through with a warning.",
+   "",
+   "The check keeps a small state file in the temp directory to count blocks. The file is named from the transcript path and your message count. If the transcript or state file can't be read, the check prints a message and does not block. Setting HOUSE_RULES_ROADBLOCKS=off turns the check off.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "One older test changed",
+   "The existing test case for the rule that a \"not checked\" must say why (issue #89) now gives a four-hour test suite as its reason for not having been run.",
+   "",
+   "That test's old reason was a missing Unity editor, which is exactly the kind of claim the new check blocks, so the test would have failed.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "clear roadblocks",
+  "base": "origin/main",
+  "unverified": [
+   "No live Claude Code session has run 2.89.0 yet. The session that built it was still running the installed 2.87.0 end-of-reply (Stop) hook, so every check ran the branch's hook.py directly or used saved sample transcripts.",
+   "I did not measure which phrases real replies use when they claim a roadblock. The check looks for a fixed list of phrases, so a roadblock worded any other way goes through unflagged.",
+   "In bypass mode (where Claude Code skips permission prompts), installing a missing tool without asking is a rule I follow. No hook enforces it, and I have not tested it."
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "The roadblocks rule and its end-of-reply check are built as plugin 2.89.0 and wait for your test.",
+  "changing": "One new section in the rules, its detail file, the end-of-reply check, nine new test cases, one changed older test case, and the docs.",
+  "blocking": "Waiting on your test of the branch build.",
+  "next": "If it passes, I open a pull request. If it fails, I fix it on this branch and ask you to test again.",
+  "todo": [
+   "UNTESTED: not run on your PC. Open PowerShell in the repo folder and run <code>python tools/use_branch.py ajsagent/affectionate-lovelace-r0zfgg</code>. It should print the branch name, version 2.89.0 and the commit it installed.",
+   "Start a new Claude Code session in any project.",
+   "Type: <code>Is Unity installed on this PC?</code>. I should run a check, such as <code>which</code>, <code>ls</code> or a file search, and not say it is missing without looking.",
+   "Tap <b>Copy my reply</b> and send me \"QA passed: clear roadblocks\". If something failed, tell me what."
+  ]
+ }
+}

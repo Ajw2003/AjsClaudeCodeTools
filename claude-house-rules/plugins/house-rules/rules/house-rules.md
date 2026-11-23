@@ -61,10 +61,7 @@ default, not an offer: "not checked" needs the reason it can't run. See `${CLAUD
 Their intervention is only for what they can do: approve something destructive, a plan, clarify
 intent. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/users-hands.md`.
 
-## Plain language and the voice
-
-Moved into "Write it so nothing is left to guess". See
-`${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`.
+Before claiming something is missing, I check, install, or reroute; purchases, licences and logins are the user's.
 
 ## Deliver a whole workflow, not a starting point
 

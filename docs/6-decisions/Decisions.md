@@ -7,6 +7,11 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-22 - Roadblocks: a rule plus a check that blocks twice, then warns
+
+**Decision.** aj approved "Design approved: clear roadblocks 1C 2A". The agent probes before claiming a blocker, installs missing tools itself (without asking in bypass mode), and tries other routes before stopping. An end-of-reply check blocks a roadblock claim made with no probe twice, then lets it through with a warning line. Only licences, logins, purchases and destructive actions stay aj's. The session-start line for bypass mode was dropped.
+**Why.** A session on aj's PC claimed Unity was missing and that it was on the wrong machine; both were false. Rule text alone was ignored, and a check that blocks without end would hang a session. Detail: [roadblocks.md](../4-systems/roadblocks.md).
+
 ## 2026-11-22 - Wait clocks and visual checks: three places the build differs from the approved design
 
 **Decision.** (1) An old page whose pictures sit in a folder is repaired by embedding those pictures into the existing page (`_embed_in_place` in `house_rules/design_loop.py`), not by rebuilding it from its `.page.json` as the approved page said. (2) The wait rule is a sentence inside "Nothing fails silently" in `rules/house-rules.md`, not a section of its own. (3) The reviewer helper returns its verdict lines and the main session saves them as `round-N.md`; the reviewer has no write tool.
