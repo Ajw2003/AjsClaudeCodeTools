@@ -22,7 +22,7 @@
     "Readings",
     "How I read your three answers",
     "you",
-    "Answer 1: a roadblock claim (\"I can't do X\" or \"I can't verify X\") is accepted only if, in this turn, I tried two different methods and both failed. Answer 2: six phrases are always flagged: can't verify, won't verify, unable to verify, don't have access, not available here and isn't available. Four phrases, \"not done\", \"I've stopped\", \"I've stopped here\" and \"next step\", are flagged only in unattended or bypass mode, because every reply ends with a next step. Answer 3: in unattended or bypass mode I make design choices during the build myself. I still wait for your approval before the build starts.",
+    "Answer 1: a first try never counts as \"I can't\". I try two different methods, and only then may I say something could not be verified, tested or done, and the reply lists every method tried. Answer 2: these are always flagged: can't, won't or unable to verify, unable to, could not, couldn't, don't have access, not available here, isn't available. Four phrases (not done, I've stopped, I've stopped here, next step) are flagged only in unattended or bypass mode. Answer 3: in those modes I make build-time design choices myself; I still wait for your approval before the build starts.",
     "Tell me if a reading is wrong.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%201:%20attempt%20%2B%20failure%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%202:%206%20always%2C%204%20stall%20only%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%203:%20choose%2C%20record%2C%20carry%20on%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EApproval%20gate%20unchanged%3C/text%3E%3C/svg%3E",
@@ -48,7 +48,7 @@
     "Step 2",
     "#589: the evidence rule",
     "",
-    "A roadblock claim passes only when two different methods tried the thing claimed impossible and both failed. If I tried one, the block asks for a second. A reply is blocked if the turn only ran listing commands such as ls or git ls-files, because those do not try the thing. If I cannot tell what the claim is about, any two failed tool results are accepted as evidence. That fallback is a known weakness: it can let a claim through that it should not.",
+    "A roadblock claim passes only when two different methods tried the thing and both failed, and the reply lists each method. If I tried one, the block asks for a second. A turn that only ran ls or git ls-files is blocked. If I cannot tell what the claim is about, any two failed tool results count. That fallback is a known weakness.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eclaim%20names%20Blender%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20call%20names%20Blender%20%2B%20failed:%20ok%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20only%20git%20ls-files:%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20Blender%20call%20succeeded:%20block%3C/text%3E%3C/svg%3E",
@@ -92,9 +92,9 @@
   [
    "chg",
    "scripts/house_rules/core.py: the evidence test",
-   "Step 2 replaces the test that only looks for a probe program with a test that two different methods were tried and failed.",
+   "Step 2 replaces the test that only looks for a probe program with a test for two different failed methods, each listed in the reply.",
    "",
-   "Done when: a claim after only git ls-files is blocked, one after a single failed Blender call asks for a second method, one after two different failed Blender calls is accepted, and one after a successful Blender call is blocked.",
+   "Done when: a claim after only git ls-files is blocked, one after a single failed Blender call asks for a second method, one after two different failed Blender calls listed in the reply is accepted, and one with the methods unlisted is blocked.",
    null,
    null
   ],
