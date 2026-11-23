@@ -237,7 +237,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">The roadblocks check missed the reply on your PC for two reasons I reproduced, and a third I cannot rule out; you choose how strict the repaired check should be.</p>
+      <p class="lead" id="lead" data-basic="summary">The roadblocks check let a reply through on your PC. I reproduced two causes and cannot rule out a third (an old version still running). You choose how strict the repaired check should be.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -257,8 +257,8 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> UNTESTED: not run on your PC. Open PowerShell anywhere and run <code>claude plugin list</code>. Look at the house-rules entry: it should say Version: 2.89.0.</label></li><li><label><input type="checkbox"> Close the Castle session and start a new one. Only a new session loads the new build.</label></li><li><label><input type="checkbox"> In the new session type: <code>Is Blender installed on this PC?</code>. I should run a check and not say it is missing without looking.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: roadblock detection fix", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Count a command only when a probe program starts it, such as which, ls, uname, hostname, where or an installer (my suggestion)</p></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> UNTESTED: I have not run this on your PC. Open PowerShell in any folder and run <code>claude plugin list</code>. Find the house-rules entry. It should say Version: 2.89.0.</label></li><li><label><input type="checkbox"> Close the Castle session and start a new one. Only a new session loads version 2.89.0.</label></li><li><label><input type="checkbox"> In the new session, type: <code>Is Blender installed on this PC?</code>. The reply should show a command that looks for Blender. It should not say Blender is missing without looking.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: roadblock detection fix", or say what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Count a command only when it starts with a probe program: which, ls, uname, hostname, where or an installer such as npm, pip or apt (my suggestion)</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -284,7 +284,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: roadblock detection fix",
   "short": {
-    "lead": "The roadblocks check missed the reply on your PC for two reasons I reproduced, and a third I cannot rule out; you choose how strict the repaired check should be.",
+    "lead": "The roadblocks check let a reply through on your PC. I reproduced two causes and cannot rule out a third (an old version still running). You choose how strict the repaired check should be.",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -302,7 +302,7 @@ const PAGE = {
         "Found",
         "Two bugs reproduced in test runs",
         "",
-        "I ran the merged check with the claim \"I can't verify here\". A curly apostrophe (can’t) was not flagged. A turn that ran git ls-files counted as a probe, because the check matches the word ls anywhere in a command.",
+        "I ran the merged check on the claim \"I can't verify here\". It found two faults. First, it did not flag a claim written with a curly apostrophe (can’t). Second, it counted a turn that ran git ls-files as a probe (a command that really looks for the thing), because it matches the word ls anywhere in a command.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim:%20I%20can%E2%80%99t%20verify%20here%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ecurly%20apostrophe:%20not%20matched%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Egit%20ls-files:%20counts%20as%20a%20probe%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EResult:%20reply%20goes%20out%3C/text%3E%3C/svg%3E",
@@ -315,8 +315,8 @@ const PAGE = {
         "Unknown",
         "A session opened before the update may still run the old build",
         "",
-        "Plugins load when a session starts, and installing an update does not reach a session that is already open. The Castle session had run for 32 minutes. I cannot see which version it loaded from here.",
-        "Check it in Wrap-up.",
+        "Plugins load when a session starts, and installing an update does not reach a session that is already open. Your Castle session had been open for 32 minutes when the reply slipped through, so it may have loaded an older version. I cannot see from here which version it loaded.",
+        "Check it with the steps in the Wrap-up section below.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EInstalled:%202.89.0%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ESession%20opened%20earlier%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20may%20still%20run%202.87.0%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EOnly%20a%20new%20session%20loads%202.89.0%3C/text%3E%3C/svg%3E",
           "alt": "Installed version versus loaded version",
@@ -329,7 +329,7 @@ const PAGE = {
         "You check the install and re-test in a new session",
         "you",
         "Steps are in Wrap-up. If the new session still lets a claim through, the two bugs above are the cause I can fix.",
-        "Follow the steps in Wrap-up."
+        "Follow the steps in the Wrap-up section below."
       ],
       [
         "lock",
@@ -337,7 +337,7 @@ const PAGE = {
         "You approve the fix",
         "you",
         "Your approval is recorded in the decisions log.",
-        "Pick options under Your choices, then send the approval line with Copy my reply."
+        "Pick one option for each question under Your choices, then tap Copy my reply and send the approval line."
       ]
     ]
   },
@@ -347,7 +347,7 @@ const PAGE = {
       "The roadblock check in core.py",
       "Matches both apostrophes and counts only real probe commands.",
       "",
-      "Today the pattern needs a straight apostrophe, and any command containing ls, where, npm, pip or apt counts as a probe. After the fix, a command counts only when a probe program starts it, and curly apostrophes match.",
+      "Today the phrase pattern matches only a straight apostrophe, and any command containing ls, where, npm, pip or apt counts as a probe. After the fix, a command counts as a probe only when it starts with a probe program, and the pattern matches curly apostrophes too.",
       null,
       null
     ],
@@ -356,7 +356,7 @@ const PAGE = {
       "More phrases to flag",
       "Words the Castle reply used that the list lacks.",
       "",
-      "Today the list has nine phrases such as I can't and not installed. The Castle reply said it could not verify the work here, and that kind of wording is not covered everywhere.",
+      "Today the list has nine phrases, such as \"I can't\" and \"not installed\". The Castle reply said it could not verify the work here, and the list does not cover that kind of wording.",
       null,
       null
     ]
@@ -368,13 +368,13 @@ const PAGE = {
       [
         [
           "A",
-          "Count a command only when a probe program starts it, such as which, ls, uname, hostname, where or an installer (my suggestion)",
+          "Count a command only when it starts with a probe program: which, ls, uname, hostname, where or an installer such as npm, pip or apt (my suggestion)",
           1,
           "Fixes the git ls-files slip with a small change and few wrong blocks."
         ],
         [
           "B",
-          "Also require the command to name the thing claimed missing, such as Blender",
+          "Also require the command to name the thing the reply says is missing, such as Blender",
           0,
           "Strictest, but a wrong guess at the subject would block honest replies."
         ],
@@ -382,7 +382,7 @@ const PAGE = {
           "C",
           "Leave the probe test as it is",
           0,
-          "Keeps the slip: almost any busy turn passes."
+          "Keeps the slip: almost any turn that runs several commands passes the check."
         ]
       ],
       "A closes the observed slip without guessing what a reply is about."
@@ -410,12 +410,12 @@ const PAGE = {
   "wrapup": {
     "summary": "This proposal repairs the roadblocks check so it flags the reply that slipped through on your PC, and asks you to confirm the PC loaded the new version.",
     "changing": "The roadblock check and its phrase list in core.py, its test cases, and the docs.",
-    "blocking": "Your two picks, and your result from the new-session check.",
+    "blocking": "Your pick for each of the two questions under Your choices, and what you see when you run the new-session check.",
     "next": "After you approve, I plan the fix and build it with test cases.",
     "todo": [
-      "UNTESTED: not run on your PC. Open PowerShell anywhere and run <code>claude plugin list<\/code>. Look at the house-rules entry: it should say Version: 2.89.0.",
-      "Close the Castle session and start a new one. Only a new session loads the new build.",
-      "In the new session type: <code>Is Blender installed on this PC?<\/code>. I should run a check and not say it is missing without looking.",
+      "UNTESTED: I have not run this on your PC. Open PowerShell in any folder and run <code>claude plugin list<\/code>. Find the house-rules entry. It should say Version: 2.89.0.",
+      "Close the Castle session and start a new one. Only a new session loads version 2.89.0.",
+      "In the new session, type: <code>Is Blender installed on this PC?<\/code>. The reply should show a command that looks for Blender. It should not say Blender is missing without looking.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: roadblock detection fix\", or say what to change."
     ]
   }
