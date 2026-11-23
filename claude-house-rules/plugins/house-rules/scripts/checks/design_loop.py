@@ -1213,7 +1213,9 @@ def _cl_say(prompt):
 def _cl_merge(tool, tool_input, response, env=None):
     p = {"hook_event_name": "PostToolUse", "tool_name": tool, "session_id": "cl", "cwd": _cl_dir,
          "tool_input": tool_input, "tool_response": response}
-    return run_hook("closablemerge", json.dumps(p), env=env or _cl_env)[1]
+    global _cl_last_log
+    _, out, _, _cl_last_log = run_hook_log("closablemerge", json.dumps(p), env=env or _cl_env)  # #584: traces are in the log
+    return out
 
 
 _cl_issues = [{"repo": "o/r", "number": 7, "labelled": True}, {"repo": "o/r", "number": 8, "labelled": True}]
@@ -1260,7 +1262,7 @@ _cl_cases.append(("with no exit code, gh's success line stamps the entry",
 _cl_set({"stage": "done", "closable": [dict(_cl_open)]})
 _o = _cl_merge("Bash", {"command": "gh pr merge 15"}, {"exit_code": 0}, env=dict(_cl_env, HOUSE_RULES_LOOP="off"))
 _cl_cases.append(("HOUSE_RULES_LOOP=off stamps nothing and says so",
-                  _cl_state()["closable"][0]["merged_pr"] is None and "HOUSE_RULES_LOOP=off" in _o))
+                  _cl_state()["closable"][0]["merged_pr"] is None and "HOUSE_RULES_LOOP=off" in _cl_last_log))
 # #374: the real GitHub tool replies are a list holding one text block (recorded 2026-10-21).
 _w_merge = [{"type": "text", "text": "{\"sha\":\"ed36dc31e8907157117de6a72f48db31de606601\",\"merged\":true,\"message\":\"Pull Request successfully merged\"}"}]
 _w_nomerge = [{"type": "text", "text": "{\"sha\":\"ed36dc31e8907157117de6a72f48db31de606601\",\"merged\":false,\"message\":\"Pull Request not mergeable\"}"}]
