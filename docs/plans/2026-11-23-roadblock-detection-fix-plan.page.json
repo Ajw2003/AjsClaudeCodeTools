@@ -1,0 +1,121 @@
+{
+ "title": "Roadblock Detection Fix Build Plan",
+ "eyebrow": "Build plan \u00b7 parent issue #587, design approved 2026-11-23 with your own three answers",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: roadblock detection fix",
+ "short": {
+  "lead": "The fix is built in three steps under parent issue #587: detection, the evidence rule, then never waiting in unattended or bypass mode. Check how I read your answers below, because two readings are mine.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "I build it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "eye",
+    "Readings",
+    "How I read your three answers",
+    "you",
+    "Answer 1: a claim passes only if this turn tried the claimed thing and it failed. Answer 2: the first six phrases are flagged always; not done, I've stopped, next step are flagged only in unattended or bypass mode, since every reply ends with a next step. Answer 3: mid-build design choices are mine in those modes; the approval gate stays.",
+    "Tell me if a reading is wrong.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%201:%20attempt%20%2B%20failure%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%202:%206%20always%2C%204%20stall%20only%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EAnswer%203:%20choose%2C%20record%2C%20carry%20on%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EApproval%20gate%20unchanged%3C/text%3E%3C/svg%3E",
+     "alt": "The three readings",
+     "caption": "Two readings, on answers 2 and 3, are my interpretation."
+    }
+   ],
+   [
+    "list",
+    "Step 1",
+    "#588: detection",
+    "",
+    "Matches straight and curly apostrophes, adds the six phrases, reads the permission mode, flags the stall phrases only in unattended or bypass sessions, and makes the check really block twice. Today the second block never happens, because the check returns at the retry.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ecurly%20%E2%80%99%20matched%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E6%20new%20phrases%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Estall%20phrases:%20unattended/bypass%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eblock%201%2C%20block%202%2C%20then%20warn%3C/text%3E%3C/svg%3E",
+     "alt": "What step 1 changes",
+     "caption": "Step 1 touches the claim pattern and the block counter."
+    }
+   ],
+   [
+    "hammer",
+    "Step 2",
+    "#589: the evidence rule",
+    "",
+    "A claim passes only when a tool call named the claimed thing and its result shows failure. A turn that ran only ls or git ls-files is blocked. If no thing can be picked out of the claim, any failed tool result counts. That fallback is a known limit.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eclaim%20names%20Blender%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20call%20names%20Blender%20%2B%20failed:%20ok%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20only%20git%20ls-files:%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20Blender%20call%20succeeded:%20block%3C/text%3E%3C/svg%3E",
+     "alt": "The evidence rule",
+     "caption": "A probe program alone no longer counts."
+    }
+   ],
+   [
+    "clock",
+    "Step 3",
+    "#590: never wait, docs, version, QA page",
+    "",
+    "In unattended or bypass mode, a design decision is chosen, recorded and carried on. This adds one rule sentence, extends the no-questions hook to bypass mode, adds a check for replies that hand you a decision, and posts a QA page.",
+    "Nothing from you until the QA page.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eunattended%20or%20bypass:%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20Your%20call%3F%20-%3E%20block%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20choose%20reversible%20option%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20record%20it%2C%20carry%20on%3C/text%3E%3C/svg%3E",
+     "alt": "The never-wait rule",
+     "caption": "Applies only in those two modes."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the plan",
+    "you",
+    "The build starts with step 1 (#588).",
+    "Reply \"Build plan approved: roadblock detection fix\"."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "scripts/house_rules/core.py: the claim pattern and counter",
+   "Step 1 widens detection and fixes the block count.",
+   "",
+   "Done when: new verify.py cases pass for each phrase with both apostrophes, stall phrases fire only when unattended or bypass, and a retry still blocks a second time but never a third.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "scripts/house_rules/core.py: the evidence test",
+   "Step 2 swaps the probe-program test for attempt and failure.",
+   "",
+   "Done when: a claim after only git ls-files is blocked, a claim after a failed Blender call is left alone, and a claim after a successful Blender call is blocked.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "show-dont-tell.md, the no-questions hook, a new Stop check",
+   "Step 3 stops waiting in unattended and bypass mode.",
+   "",
+   "Done when: an unattended headless session that ends with \"Your call\" is blocked and carries on, and injected rules stay under 9,700 characters at a runner-like path.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "This plan builds the detection fix in three steps, one issue each, from the readings of your three answers.",
+  "changing": "The claim pattern, block counter and evidence test in core.py, the no-questions hook, one rule file, test cases and the docs.",
+  "blocking": "Your approval of this plan, or a correction to a reading.",
+  "next": "After you approve, I build step 1 (#588).",
+  "todo": [
+   "Read the three readings in the first card.",
+   "Tap <b>Copy my reply</b>, then paste it into this chat and send it. It says \"Build plan approved: roadblock detection fix\", or tell me which reading to change."
+  ]
+ }
+}

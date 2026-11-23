@@ -20,8 +20,11 @@ aj's PC session (Castle) let a roadblock claim through. Two bugs reproduced agai
 
 (The proposal page's final editor pass is applied and the page was sent to aj.)
 
+## Detection fix plan (2026-11-23)
+aj approved "Design approved: roadblock detection fix 1* 2* 3*" with their own answers. Parent #587; steps #588 (detection and a real block-twice), #589 (evidence rule), #590 (never wait in unattended or bypass mode, docs, version, QA). Build plan page `docs/plans/2026-11-23-roadblock-detection-fix-plan.html` awaits "Build plan approved: roadblock detection fix". Two readings are mine and are on the page: the stall phrases (not done, I've stopped, next step) fire only in unattended or bypass mode; the approval gate before source edits stays. Unverified: the bypass value of `permission_mode`; that stop_hook_active is true on a real continuation. No code built.
+
 ## The next step
-Wait for aj's "Design approved: roadblock detection fix" with three picks (probe test 1A/1B/1C, wording 2A/2B, unattended decision hand-backs 3A/3B/3C), then plan and build the fix; the follow-up needs new issues, since #569 to #572 are closed. The original work is merged. Optional: aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
+Wait for aj's "Build plan approved: roadblock detection fix", then hand step 1 (#588) to a builder, then #589, then #590. The original work (#569 to #572) is merged. Optional: aj's own test via the QA page ("QA passed: clear roadblocks" or what failed). On a pass, open a pull request with `Refs #569` (never Closes); on a fail, fix on this branch (#571, the check), then step 3 (#572, tests, docs, version).
 
 ## What is unverified
 The two bugs are reproduced in test runs, not confirmed on the Castle turn itself. The autosave error on aj's PC (a leftover git `index.lock`) was seen in the screenshots and not investigated. The injected rules have only 6 characters of room, so any later rule text needs more cut; the shortened rule in house-rules.md no longer says installs happen without asking in bypass mode (only the detail file does). The new check has only been run against fixture transcripts, not inside a live Claude Code session. The count is kept in a temp-directory file keyed by transcript path and user-message count.
