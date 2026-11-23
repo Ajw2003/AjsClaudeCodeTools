@@ -76,12 +76,19 @@ happens (the field exists in the Stop payload; its value on a continuation was n
 | Answer | aj's words, shortened | Reading |
 |---|---|---|
 | 1 | Only count a probe if it checks the claim and shows the claim cannot run. Added 2026-11-23: try up to two different methods before saying something can't be done or can't be verified | A claim passes only when the turn has two different tool calls, each naming the claimed thing, and both results show failure (one attempt gets a block asking for a second; if only one method exists the reply says why). `ls` or `git ls-files` alone no longer counts. |
-| 2 | can't, won't or unable to verify, don't have access, not available here, isn't available, not done, I've stopped, the next step, next step | The first six join the claim pattern everywhere. The last four are stall phrases and are flagged only in unattended or bypass sessions, because every normal reply ends with a next step. |
+| 2 | can't, won't or unable to verify, don't have access, not available here, isn't available, not done, I've stopped, the next step, next step. Added 2026-11-23: "I've stopped here" | The first six join the claim pattern everywhere. The last five (not done, I've stopped, I've stopped here, the next step, next step) are stall phrases and are flagged only in unattended or bypass sessions, because every normal reply ends with a next step. |
 | 3 | In unattended mode choose a reasonable reversible design; never leave the session waiting in unattended or bypass mode | Mid-build design decisions are chosen, recorded and carried on in both modes. The approval gate before source edits is unchanged. |
 
-**Verified while planning.** The Stop payload carries `permission_mode` (value `default` in a
-normal headless session). The value for bypass mode was not observed, because the safety check
-refused a bypass test run, so it is assumed to be `bypassPermissions` and is checked in step 1.
+**Verified while planning (2026-11-23).**
+- The Stop payload carries `permission_mode`; a live headless run showed `default`. Claude Code's
+  own program file lists the modes default, acceptEdits, bypassPermissions, plan, dontAsk and auto,
+  so bypass is `bypassPermissions`. That value was read from the list, not observed in a live
+  bypass session, because the safety check refused a bypass test run.
+- A test Stop hook that blocked twice received `stop_hook_active` False on the first call and True
+  on the second and third, and Claude Code allowed the second block. So `roadblock_check`
+  returning at the retry is the only thing preventing a second block. Claude Code overrides a hook
+  after 8 consecutive blocks (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, default 8), so capping at 2 on our
+  own counter is safe.
 
 **Limits to document in step 2.** The thing a claim names is picked out of free text, so a claim
 with no recognisable name falls back to "any two failed tool results this turn count".
