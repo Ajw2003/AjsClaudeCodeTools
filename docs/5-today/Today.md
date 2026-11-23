@@ -6,7 +6,7 @@ Wait clocks, visual checks, page sending and working pictures (four fixes) on `a
 
 ## 2026-11-23
 
-aj tightened answer 1 mid-plan: a first try never counts as "I cannot"; two different methods must fail, and the reply must list every method tried. Step 2 (#589) and step 1 (#588) issue bodies, the plan page, the systems doc and the decisions entry now say so; the phrase list also gains the general inability wording (unable to, genuinely unable, could not, couldn't). Editor pass on the changed page strings is pending.
+aj tightened answer 1 mid-plan: a first try never counts as "I cannot"; two different methods must fail, and the reply must list every method tried. Step 2 (#589) and step 1 (#588) issue bodies, the plan page, the systems doc and the decisions entry now say so; the phrase list also gains the general inability wording (unable to, genuinely unable, could not, couldn't). The editor pass on the changed page strings is applied and the page sent to aj; the page now counts nine always-flagged phrases and four stall phrases.
 
 aj asked to find the unverified facts by other means and to add "I've stopped here" to the phrase list. Done: the retry behaviour was tested with a throwaway hook, the bypass mode value was read from Claude Code's own program file, and the phrase is in the plan, systems doc, decisions entry and issue #588.
 
