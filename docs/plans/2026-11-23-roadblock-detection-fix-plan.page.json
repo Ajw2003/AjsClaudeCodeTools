@@ -4,7 +4,7 @@
  "pageType": "build-plan",
  "approval": "Build plan approved: roadblock detection fix",
  "short": {
-  "lead": "The fix is built in four steps under parent issue #587: detection, a record check, two model layers, then never waiting in unattended or bypass mode. Check my readings of your answers in the first card, because three are my interpretation.",
+  "lead": "I will build the fix in four steps under parent issue #587: better detection, a check of the failed-attempt record, two small-model checks, and a rule to never stop and wait in unattended or bypass mode. Please check the first card: three of the readings of your answers are my interpretation (the limit of 6 blocks, the end-of-turn timing with the mode gate, and where the goal comes from).",
   "hint": "Tap a step to see it.",
   "key": [
    [
@@ -22,8 +22,8 @@
     "Readings",
     "How I read your answers",
     "you",
-    "Always flagged: nine inability phrases. Stall phrases (not done, I've stopped, I've stopped here, next step) are checked only at the end of the turn, in unattended or bypass mode, and then a goal check decides. The goal check may block up to 6 times in a row. A first try never counts; three failed attempts by different methods are listed.",
-    "Tell me if a reading is wrong.",
+    "Nine phrases that say I can't do something are always flagged. Four stall phrases (\"not done\", \"I've stopped\", \"I've stopped here\", \"next step\") are checked only at the end of a turn, and only in unattended or bypass mode. When one appears, a goal check decides whether I may stop. The goal check may block me up to 6 times in a row. A first try never counts as a failed attempt. A claim of \"can't be done\" must list three failed attempts that used different methods.",
+    "Tell me which reading is wrong, if any.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EPhrase%20scan:%20end%20of%20turn%20only%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EStall%20phrase%20-%3E%20goal%20check%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EGoal%20check:%20up%20to%206%20blocks%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaims:%203%20attempts%2C%20listed%3C/text%3E%3C/svg%3E",
      "alt": "The readings",
@@ -33,9 +33,9 @@
    [
     "list",
     "Step 1",
-    "#588: detection",
+    "#588: detection fix",
     "",
-    "Matches both apostrophes, ignores quoted lines, adds the nine phrases and the four stall phrases, reads the permission mode, ignores system messages that are not yours, reads only the end of the transcript, and makes the check really block twice.",
+    "The claim check now matches both straight and curly apostrophes, ignores quoted lines, and adds the nine phrases and four stall phrases. It reads the permission mode, ignores system messages you did not write, and reads only the end of the transcript, not the whole file. It now blocks a retry exactly twice, then warns.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ecurly%20%E2%80%99%20matched%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Equoted%20lines%20ignored%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E9%20%2B%204%20phrases%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eblock%201%2C%20block%202%2C%20then%20warn%3C/text%3E%3C/svg%3E",
@@ -46,9 +46,9 @@
    [
     "hammer",
     "Step 2",
-    "#589: the record check",
+    "#589: failed-attempt record check",
     "",
-    "A claim passes only after three failed attempts in three kinds of method, all about one target, from any tool. The reply lists them. A reply marking NEEDS YOU for a licence, login, purchase or destructive step is exempt.",
+    "A claim that something can't be done passes only if the reply lists three failed attempts. They must use three kinds of method, such as a file check, a disk search and an attempt to run it. All three are aimed at the same target and can come from any tool. A reply that marks NEEDS YOU for a licence, login, purchase or destructive step is exempt.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E3%20failed%20attempts%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E3%20kinds%20of%20method%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E1%20shared%20target%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eall%20named%20in%20the%20reply%3C/text%3E%3C/svg%3E",
@@ -59,22 +59,22 @@
    [
     "scale",
     "Step 3",
-    "#591: the model judge and the goal check",
+    "#591: model judge and goal check",
     "",
-    "A small model judges every reply at turn end. When a stall phrase appears, a second check reads the session goal and decides whether work can carry on. Each model call costs about $0.002. Both layers fail open and say so.",
+    "A small model judges every reply at the end of a turn, looking for claims of inability that list fewer than three methods. When a stall phrase appears, a second check reads the session goal and decides whether work can carry on. Each model call costs about $0.002. If either check cannot run, it lets the reply through and says it could not run.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EJudge:%20every%20turn%20end%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EGoal%20check:%20only%20on%20a%20stall%20phrase%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eunreached%20-%3E%20continue%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ereached%20or%20blocked%20-%3E%20pass%3C/text%3E%3C/svg%3E",
      "alt": "The two model layers",
-     "caption": "Measured on three made-up sessions: all three verdicts were right."
+     "caption": "Tested on three made-up sessions; the checks gave the right verdict in all three."
     }
    ],
    [
     "clock",
     "Step 4",
-    "#590: never wait, docs, version, QA page",
+    "#590: never wait, plus docs, version and QA page",
     "",
-    "In unattended or bypass mode I choose a reversible design and carry on. This adds one rule sentence and extends the no-questions hook to bypass mode. I also update the docs and version, and post a QA page after testing it myself.",
+    "In unattended or bypass mode, when a design question comes up, I choose a reversible option and carry on. This adds one sentence to the rules and extends the hook that blocks questions so it also covers bypass mode. I also update the docs and version. After testing it myself, I post a QA page for you.",
     "Nothing from you until the QA page.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Eunattended%20or%20bypass:%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20design%20question%20-%3E%20choose%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20record%20it%2C%20carry%20on%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20licence/login:%20that%20part%20only%3C/text%3E%3C/svg%3E",
@@ -98,7 +98,7 @@
    "scripts/house_rules/core.py: claim pattern, counter and turn window",
    "Step 1 widens detection and fixes the block count.",
    "",
-   "Done when: new verify.py test cases pass for each phrase with both apostrophes, a quoted claim is ignored, stall phrases are scanned only when unattended or bypass, and a retry is blocked a second time but never a third.",
+   "Done when these new verify.py test cases pass. Each phrase is caught with both straight and curly apostrophes. A quoted claim is ignored. Stall phrases are scanned only in unattended or bypass mode. A retry is blocked a second time but never a third time.",
    null,
    null
   ],
@@ -107,7 +107,7 @@
    "scripts/house_rules/core.py: the evidence test",
    "Step 2 replaces the probe test with three related failed attempts.",
    "",
-   "Done when: a claim after only git ls-files is blocked, one after three failed attempts in three kinds of method that are all named in the reply is accepted, and a failed PowerShell or other-server tool call counts as an attempt.",
+   "Done when these cases pass. A claim made after only a git ls-files check is blocked. A claim made after three failed attempts that use three kinds of method, all named in the reply, is accepted. A failed PowerShell call or a failed tool call to another connected server counts as an attempt.",
    null,
    null
   ],
@@ -116,28 +116,28 @@
    "hooks/hooks.json and a nested goal check",
    "Step 3 adds the judge hook and the goal check.",
    "",
-   "Done when: a stall phrase with the goal reached passes, one with the goal unreached blocks with the judge's reason, a missing or failing claude program is announced and never blocks, and the judge hook is listed in hooks.json.",
+   "Done when these cases pass. A stall phrase with the goal reached passes. A stall phrase with the goal unreached blocks and gives the judge's reason. A missing or failing claude command-line program is announced and never blocks. The judge hook is listed in hooks.json.",
    null,
    null
   ],
   [
    "chg",
    "show-dont-tell.md, the no-questions hook, docs and version",
-   "Step 4 stops waiting in unattended and bypass mode.",
+   "Step 4 stops me waiting for answers in unattended and bypass mode.",
    "",
-   "Done when: an unattended session that ends with next step and an unreached goal is blocked and carries on, a bypass-mode design question is denied with the choose-and-carry-on reason, and the injected rules stay under 9,700 characters at a runner-like path.",
+   "Done when these cases pass. An unattended session that ends with \"next step\" while its goal is unreached is blocked and carries on. A design question in bypass mode is denied, with the reason that I should choose and carry on. The injected rules stay under 9,700 characters when the plugin is installed at a path as long as the test runner's.",
    null,
    null
   ]
  ],
  "wrapup": {
   "summary": "This plan builds the whole roadblock fix in four steps, one issue each, from your approved designs and the audit.",
-  "changing": "In core.py: the claim pattern, counter, turn window and evidence test. Also hooks.json, a nested goal check, the no-questions hook, one rules file, test cases and the docs.",
-  "blocking": "Your approval of this plan, or a correction to a reading.",
+  "changing": "In core.py: the claim pattern, the block counter, the turn window and the evidence test. Also hooks.json, a nested goal check (a second model call started from inside the hook), the hook that blocks questions, one rules file (show-dont-tell.md), test cases and the docs.",
+  "blocking": "Your approval of this plan, or a correction to one of the readings in the first card.",
   "next": "After you approve, I build step 1, the detection fix (#588).",
   "todo": [
    "Read the readings in the first card.",
-   "Tap <b>Copy my reply</b>, then paste it into this chat and send it. The reply reads \"Build plan approved: roadblock detection fix\". If a reading is wrong, tell me which one to change instead."
+   "Tap <b>Copy my reply</b>, then paste it into this chat and send it. The copied reply reads \"Build plan approved: roadblock detection fix\". If a reading is wrong, send me a message saying which one to change instead of approving."
   ]
  }
 }
