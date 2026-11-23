@@ -6,7 +6,7 @@ Wait clocks, visual checks, page sending and working pictures (four fixes) on `a
 
 ## 2026-11-23
 
-aj's screenshot from their PC showed the merged roadblocks check letting through "remaining steps need Blender shell models and Unity scene work that I can't verify here" (Castle session). Reproduced two bugs with the merged code: a curly apostrophe (can’t) is not matched, and a turn that ran `git ls-files` counts as a probe because the pattern matches the word `ls` anywhere in a command. A third cause, a session opened before 2.89.0 was installed still running the old build, cannot be seen from here. Proposal page `docs/plans/2026-11-23-roadblock-detection-fix.html` is waiting on aj's two picks; nothing is built.
+aj's screenshot from their PC showed the merged roadblocks check letting through "remaining steps need Blender shell models and Unity scene work that I can't verify here" (Castle session). Reproduced two bugs with the merged code: a curly apostrophe (can’t) is not matched, and a turn that ran `git ls-files` counts as a probe because the pattern matches the word `ls` anywhere in a command. A third cause, a session opened before 2.89.0 was installed still running the old build, cannot be seen from here. Proposal page `docs/plans/2026-11-23-roadblock-detection-fix.html` (editor pass applied) is waiting on aj's two picks; nothing is built.
 
 Pull request #574 (clear roadblocks, plugin 2.89.0) was merged by aj after `verify` passed on its CI. Issues #569 to #572 are closed as completed, labelled `AjsAgent completed this`, and each has a comment giving the reason. The work is done; what remains unverified is aj's own test on a PC, a roadblock worded outside the check's phrase list, and bypass-mode installs, which are a rule and not a hook.
 
