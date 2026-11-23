@@ -1,0 +1,142 @@
+{
+ "title": "Fix Roadblock Detection",
+ "eyebrow": "Proposal \u00b7 bug found in the merged roadblocks check (issue #569), nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: roadblock detection fix",
+ "short": {
+  "lead": "The roadblocks check missed the reply on your PC for two reasons I reproduced, and a third I cannot rule out; you choose how strict the repaired check should be.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Found",
+    "Two bugs reproduced in test runs",
+    "",
+    "I ran the merged check with the claim \"I can't verify here\". A curly apostrophe (can\u2019t) was not flagged. A turn that ran git ls-files counted as a probe, because the check matches the word ls anywhere in a command.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EClaim:%20I%20can%E2%80%99t%20verify%20here%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Ecurly%20apostrophe:%20not%20matched%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3Egit%20ls-files:%20counts%20as%20a%20probe%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EResult:%20reply%20goes%20out%3C/text%3E%3C/svg%3E",
+     "alt": "The two ways a claim slips through",
+     "caption": "Both slips were reproduced with the merged code."
+    }
+   ],
+   [
+    "search",
+    "Unknown",
+    "A session opened before the update may still run the old build",
+    "",
+    "Plugins load when a session starts, and installing an update does not reach a session that is already open. The Castle session had run for 32 minutes. I cannot see which version it loaded from here.",
+    "Check it in Wrap-up.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EInstalled:%202.89.0%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ESession%20opened%20earlier%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E%20%20may%20still%20run%202.87.0%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3EOnly%20a%20new%20session%20loads%202.89.0%3C/text%3E%3C/svg%3E",
+     "alt": "Installed version versus loaded version",
+     "caption": "An open session keeps the build it started with."
+    }
+   ],
+   [
+    "hand",
+    "Test",
+    "You check the install and re-test in a new session",
+    "you",
+    "Steps are in Wrap-up. If the new session still lets a claim through, the two bugs above are the cause I can fix.",
+    "Follow the steps in Wrap-up."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the fix",
+    "you",
+    "Your approval is recorded in the decisions log.",
+    "Pick options under Your choices, then send the approval line with Copy my reply."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "The roadblock check in core.py",
+   "Matches both apostrophes and counts only real probe commands.",
+   "",
+   "Today the pattern needs a straight apostrophe, and any command containing ls, where, npm, pip or apt counts as a probe. After the fix, a command counts only when a probe program starts it, and curly apostrophes match.",
+   null,
+   null
+  ],
+  [
+   "new",
+   "More phrases to flag",
+   "Words the Castle reply used that the list lacks.",
+   "",
+   "Today the list has nine phrases such as I can't and not installed. The Castle reply said it could not verify the work here, and that kind of wording is not covered everywhere.",
+   null,
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "How should the check decide a turn really probed?",
+   [
+    [
+     "A",
+     "Count a command only when a probe program starts it, such as which, ls, uname, hostname, where or an installer (my suggestion)",
+     1,
+     "Fixes the git ls-files slip with a small change and few wrong blocks."
+    ],
+    [
+     "B",
+     "Also require the command to name the thing claimed missing, such as Blender",
+     0,
+     "Strictest, but a wrong guess at the subject would block honest replies."
+    ],
+    [
+     "C",
+     "Leave the probe test as it is",
+     0,
+     "Keeps the slip: almost any busy turn passes."
+    ]
+   ],
+   "A closes the observed slip without guessing what a reply is about."
+  ],
+  [
+   "second",
+   "Which wording should be flagged?",
+   [
+    [
+     "A",
+     "Curly apostrophes, plus can't verify, unable to, don't have access, not available here and isn't available (my suggestion)",
+     1,
+     "Covers the Castle reply and its close relatives."
+    ],
+    [
+     "B",
+     "Curly apostrophes only",
+     0,
+     "Smallest change; other wordings still slip through."
+    ]
+   ],
+   "A adds only phrases that signal a stop, so honest replies are rarely caught."
+  ]
+ ],
+ "wrapup": {
+  "summary": "This proposal repairs the roadblocks check so it flags the reply that slipped through on your PC, and asks you to confirm the PC loaded the new version.",
+  "changing": "The roadblock check and its phrase list in core.py, its test cases, and the docs.",
+  "blocking": "Your two picks, and your result from the new-session check.",
+  "next": "After you approve, I plan the fix and build it with test cases.",
+  "todo": [
+   "UNTESTED: not run on your PC. Open PowerShell anywhere and run <code>claude plugin list</code>. Look at the house-rules entry: it should say Version: 2.89.0.",
+   "Close the Castle session and start a new one. Only a new session loads the new build.",
+   "In the new session type: <code>Is Blender installed on this PC?</code>. I should run a check and not say it is missing without looking.",
+   "Tap <b>Copy my reply</b> and send it, for example \"Design approved: roadblock detection fix 1A 2A\"."
+  ]
+ }
+}
