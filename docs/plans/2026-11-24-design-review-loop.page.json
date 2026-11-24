@@ -4,7 +4,7 @@
   "pageType": "proposal",
   "approval": "Design approved: design review loop",
   "short": {
-    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Unattended mode already exists; this adds a ledger of every deviation from the build plan, shown to you at the end. Eight choices at the end are yours.",
+    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Unattended mode already exists; this adds a ledger that records every deviation from the build plan and shows it to you on the QA page. The eight choices at the end are yours to make.",
     "hint": "Tap a step to see what it produces. The sections below explain each part, and the choices at the end are yours.",
     "key": [
       [
@@ -91,10 +91,10 @@
       "Questions are parked, not asked mid-work",
       "Work keeps going; you answer once, in a batch.",
       null,
-      "When a question comes up in Build, the agent takes the safest default that can be undone, records it in a parked-decisions ledger with how to undo it, and keeps building. Helpers do the same. Everything parked reaches you together on the QA page, with options. Anything not undoable, or touching money, secrets, other people or deleted data, still asks first.",
+      "When a question comes up in Build, the agent takes the safest default that can be undone, records it in a parked-decisions ledger with how to undo it, and keeps building. Helper agents park their questions the same way. Everything parked reaches you together on the QA page, with options. Anything not undoable, or touching money, secrets, other people or deleted data, still asks first.",
       [
-        "In Build, a reply ending in a question holds code edits until you answer (issue #506). Only in unattended or bypass mode (2.90.0, issue #590, not yet on main) are questions already refused so the agent picks a reversible option.",
-        "The same park-and-carry-on rule for attended sessions, with a ledger file per feature. It reuses 2.90.0's refusal hook and extends it, rather than adding a second one.",
+        "In Build, a reply that ends in a question blocks code edits until you answer (issue #506). Questions are already refused only in unattended or bypass mode, so the agent picks a reversible option. That change is in version 2.90.0 (issue #590) and is not yet merged to main.",
+        "The same park-and-carry-on rule for attended sessions, with a ledger file per feature. It extends the question-refusing hook from version 2.90.0 instead of adding a second hook.",
         "Routine work no longer stops. You answer parked questions once, with the work already done."
       ],
       {
@@ -108,10 +108,10 @@
       "Unattended mode: a deviations ledger on top of what exists",
       "Unattended work already keeps going. This adds a record of every change from the plan.",
       null,
-      "Already built: typing 'unattended on' (2.87.0, merged) and a hook that refuses questions and tells the agent to choose a reversible option and mention it in its report (2.90.0, issue #590, on another branch). New here: the build plan becomes the contract, and every departure from it goes into a deviations ledger that opens the QA page.",
+      "Already built: the 'unattended on' command (version 2.87.0, merged to main), and a hook that refuses questions and tells the agent to choose a reversible option and mention it in its report (version 2.90.0, issue #590, on a branch not yet merged to main). New here: the build plan becomes the contract, and every departure from it goes into a deviations ledger that opens the QA page.",
       [
-        "Unattended runs record a choice 'in the final report', as free text, with no list of what changed from the plan. The 2.90.0 branch has not been merged to main yet.",
-        "A deviations ledger per feature, filled by the agent: what the plan said, what was done, why, how to undo it. A change to what you approved parks that piece and the rest continues.",
+        "Unattended runs record a choice 'in the final report', as free text, with no list of what changed from the plan. Version 2.90.0 has not been merged to main yet.",
+        "A deviations ledger per feature, filled by the agent: what the plan said, what was done, why, how to undo it. If a deviation would change what you approved, that piece is parked and the rest of the build continues.",
         "You review deviations once, as a list at the top of the QA page, not as prose to dig out of a report."
       ],
       {
@@ -214,9 +214,9 @@
       "Safety limits that stay in every mode",
       "Unattended mode never overrides the destructive-action rules.",
       null,
-      "Things that cannot be undone, or that touch money, secrets, other people, outward-facing posts or deleted data, are never done on a guess, even in bypass mode. That step is skipped, logged as owed to you, and the other steps continue. If the session does not report its permission mode, it is treated as attended and a message says so, as 2.90.0 already does.",
+      "Things that cannot be undone, or that touch money, secrets, other people, outward-facing posts or deleted data, are never done on a guess, even in bypass mode (the mode that skips permission prompts). That step is skipped and logged as a decision owed to you, and the other steps continue. If the session does not report its permission mode, it is treated as attended, meaning someone is at the keyboard, and a message says so. Version 2.90.0 already does this.",
       [
-        "The destructive-action rule and the branch guard, both in the rules loaded at the start of every session.",
+        "The destructive-action rule and the branch guard (which refuses commits to main). Both are in the rules loaded at the start of every session.",
         "Nothing changes: they stay on in every mode.",
         "Unattended work cannot do anything you would not have allowed."
       ]
