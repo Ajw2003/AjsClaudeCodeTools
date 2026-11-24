@@ -1,118 +1,172 @@
 $ verify.py --only 'unverified'
-exit 0
+exit 1
 
 
 house-rules hooks - verification (Python)
 ===========================================
-Interpreter: /usr/local/bin/python
-hook.py:     /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/hook.py
-run.sh:      /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/run.sh
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
 no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
-Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (4 at once on 4 core(s))
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (33.7 s)
+PART core - passed (47.8 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: core
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART safe_git - passed (51.0 s)
+PART safe_git - passed (96.3 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: safe_git
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART design_loop - passed (69.8 s)
+PART design_loop - exited 1 without its RESULT line (crashed?) (157.0 s)
 ==============================================================================
+Traceback (most recent call last):
+
+  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
+
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+
+                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-_wq1j1ns\\tmpo1d4buxh\\git\\house-rules-issue-cache.json'
+
+
 
 house-rules hooks - verification (Python) - part: design_loop
+
 ===========================================
 
 
---------------------------------
-RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART writing - passed (2.8 s)
+PART writing - passed (6.4 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: writing
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART delegation - passed (55.3 s)
+PART delegation - passed (130.7 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: delegation
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART docs - passed (16.0 s)
+PART docs - passed (39.6 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: docs
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART make_page - passed (99.0 s)
+PART make_page - passed (139.4 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: make_page
+
 ===========================================
 
-make_page build of the starter:
-make_page: note - approval '<topic> summary' is not a design-loop phrase, so sending it back moves no stage (the phrases are Design approved: <feature> or Build plan approved: <feature>).
-make_page: wrote /tmp/house-rules-verify-make_page-ew0jd4f8/mp-t4jfg2zk/dsum/docs/plans/decision-summary.html (0 picture(s) embedded)
-make_page: /tmp/house-rules-verify-make_page-ew0jd4f8/mp-t4jfg2zk/dsum/docs/plans/decision-summary.html is outside /home/user/AjsClaudeCodeTools; a link to it will not open in the app (#329). Copy it into /home/user/AjsClaudeCodeTools/docs/plans before linking.
-visual check light: page errors 0, overflow none
-visual check dark: page errors 0, overflow none
-visual check alone: broken pictures 0
-make_page: SEND THIS PAGE NOW: /tmp/house-rules-verify-make_page-ew0jd4f8/mp-t4jfg2zk/dsum/docs/plans/decision-summary.html - send it to aj with the file-send tool (display render) as the last action of the turn.
+
 
  1. PASS  make_page: QA mode sets approval to the QA passed phrase and adds the Still unverified item
+
  2. PASS  make_page (#596): QA mode with an empty unverified list builds and says nothing is unverified, 0 things
+
  3. PASS  make_page (#596): a non-empty unverified list is unchanged
+
  4. PASS  page_criteria (#542): a page missing extras unverified fails and names it
 
+
+
 --------------------------------
+
 RESULT: PASS - all 4 checks passed. The hooks are behaving as written.
+
+
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    33.7 s  passed
-  safe_git        0 checks  PASS    51.0 s  passed
-  design_loop     0 checks  PASS    69.8 s  passed
-  writing         0 checks  PASS     2.8 s  passed
-  delegation      0 checks  PASS    55.3 s  passed
-  docs            0 checks  PASS    16.0 s  passed
-  make_page       4 checks  PASS    99.0 s  passed
-  wall-clock 99.0 s
+  core            0 checks  PASS    47.8 s  passed
+  safe_git        0 checks  PASS    96.3 s  passed
+  design_loop     0 checks  FAIL   157.0 s  exited 1 without its RESULT line (crashed?)
+  writing         0 checks  PASS     6.4 s  passed
+  delegation      0 checks  PASS   130.7 s  passed
+  docs            0 checks  PASS    39.6 s  passed
+  make_page       4 checks  PASS   139.4 s  passed
+  wall-clock 157.0 s
 
 --------------------------------
-RESULT: PASS - all 4 checks passed. The hooks are behaving as written.
+RESULT: FAIL - 1 of 4 checks failed. Failing part(s): design_loop. See the FAIL lines above.
+        design_loop: exited 1 without its RESULT line (crashed?)
 
 Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
 No node, no jq required by hook.py itself - stdlib only.

@@ -1,135 +1,206 @@
 $ verify.py --only 'selftest:'
-exit 0
+exit 1
 
 
 house-rules hooks - verification (Python)
 ===========================================
-Interpreter: /usr/local/bin/python
-hook.py:     /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/hook.py
-run.sh:      /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/run.sh
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
 no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
-Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (4 at once on 4 core(s))
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (35.0 s)
+PART core - passed (41.5 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: core
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART safe_git - passed (52.2 s)
+PART safe_git - passed (85.6 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: safe_git
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART design_loop - passed (69.9 s)
+PART design_loop - exited 1 without its RESULT line (crashed?) (142.3 s)
 ==============================================================================
+Traceback (most recent call last):
+
+  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
+
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+
+                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-aq74mq4_\\tmpabx6jvxm\\git\\house-rules-issue-cache.json'
+
+
 
 house-rules hooks - verification (Python) - part: design_loop
+
 ===========================================
 
 
---------------------------------
-RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART writing - passed (2.6 s)
+PART writing - passed (6.7 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: writing
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART delegation - passed (54.0 s)
+PART delegation - passed (119.8 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: delegation
+
 ===========================================
+
+
 
  1. PASS  selftest: a passing set prints RESULT: PASS, exits 0 and writes selftest-result.txt
-          Assumed machine: Linux 6.18.44-fc-v819, python 3.13.18
+
+          Assumed machine: Windows 11, python 3.13.7
+
 PASS a
+
 PASS b
+
 RESULT: PASS
 
+
+
  2. PASS  selftest: one failing check prints RESULT: FAIL (1 failed) and exits 1
-          Assumed machine: Linux 6.18.44-fc-v819, python 3.13.18
+
+          Assumed machine: Windows 11, python 3.13.7
+
 PASS a
+
 FAIL b: broken
+
 RESULT: FAIL (1 failed)
+
+
 
  3. PASS  selftest: a check that raises is a FAIL with its message, not a crash
-          Assumed machine: Linux 6.18.44-fc-v819, python 3.13.18
+
+          Assumed machine: Windows 11, python 3.13.7
+
 FAIL a: raised ValueError: boom
+
 RESULT: FAIL (1 failed)
 
+
+
  4. PASS  selftest: the sample handover card is already in card shape, has a shell fence, UNTESTED: above it and the RESULT line
+
           card shape
+
  5. PASS  selftest: the instruction file is under 40 lines and names UNTESTED: and needs your machine
+
           
 
+
+
 --------------------------------
+
 RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART docs - passed (14.8 s)
+PART docs - passed (33.6 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: docs
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART make_page - passed (99.0 s)
+PART make_page - passed (132.1 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: make_page
+
 ===========================================
 
-make_page build of the starter:
-make_page: note - approval '<topic> summary' is not a design-loop phrase, so sending it back moves no stage (the phrases are Design approved: <feature> or Build plan approved: <feature>).
-make_page: wrote /tmp/house-rules-verify-make_page-nu_i8t5f/mp-v052pkn6/dsum/docs/plans/decision-summary.html (0 picture(s) embedded)
-make_page: /tmp/house-rules-verify-make_page-nu_i8t5f/mp-v052pkn6/dsum/docs/plans/decision-summary.html is outside /home/user/AjsClaudeCodeTools; a link to it will not open in the app (#329). Copy it into /home/user/AjsClaudeCodeTools/docs/plans before linking.
-visual check light: page errors 0, overflow none
-visual check dark: page errors 0, overflow none
-visual check alone: broken pictures 0
-make_page: SEND THIS PAGE NOW: /tmp/house-rules-verify-make_page-nu_i8t5f/mp-v052pkn6/dsum/docs/plans/decision-summary.html - send it to aj with the file-send tool (display render) as the last action of the turn.
+
+
 
 
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    35.0 s  passed
-  safe_git        0 checks  PASS    52.2 s  passed
-  design_loop     0 checks  PASS    69.9 s  passed
-  writing         0 checks  PASS     2.6 s  passed
-  delegation      5 checks  PASS    54.0 s  passed
-  docs            0 checks  PASS    14.8 s  passed
-  make_page       0 checks  PASS    99.0 s  passed
-  wall-clock 99.0 s
+  core            0 checks  PASS    41.5 s  passed
+  safe_git        0 checks  PASS    85.6 s  passed
+  design_loop     0 checks  FAIL   142.3 s  exited 1 without its RESULT line (crashed?)
+  writing         0 checks  PASS     6.7 s  passed
+  delegation      5 checks  PASS   119.8 s  passed
+  docs            0 checks  PASS    33.6 s  passed
+  make_page       0 checks  PASS   132.1 s  passed
+  wall-clock 142.3 s
 
 --------------------------------
-RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
+RESULT: FAIL - 1 of 5 checks failed. Failing part(s): design_loop. See the FAIL lines above.
+        design_loop: exited 1 without its RESULT line (crashed?)
 
 Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
 No node, no jq required by hook.py itself - stdlib only.

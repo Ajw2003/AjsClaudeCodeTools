@@ -1,147 +1,230 @@
 $ verify.py --only 'version'
-exit 0
+exit 1
 
 
 house-rules hooks - verification (Python)
 ===========================================
-Interpreter: /usr/local/bin/python
-hook.py:     /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/hook.py
-run.sh:      /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/run.sh
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
 no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
-Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (4 at once on 4 core(s))
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (34.6 s)
+PART core - passed (42.7 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: core
+
 ===========================================
+
+
 
  1. PASS  ProjectSettings/ProjectVersion.txt injects the C#/Unity document
-          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<plugin> in the paths below is the plugin root: /home/user/AjsClaudeCodeTools/claude-'
+
+          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<plugin> in the paths below is the plugin root: C:\\\\Users\\\\aj\\\\Desktop\\\\ClaudeDev\\\\Aj'
+
  2. PASS  versioncheck is quiet when installed, marketplace and GitHub all agree
+
           no banner, no marker file - matching versions leave nothing to say
+
  3. PASS  unattended: versioncheck says one line, runs no update, writes no marker, never says wait or ask
+
  4. PASS  versioncheck in a synced copy says one plain line with no update command
+
  5. PASS  versioncheck in a synced copy is silent when the version is current
+
  6. PASS  versioncheck outside a synced copy keeps its normal behaviour
+
  7. PASS  A12: versions compare as numbers, so 2.75.0 is newer than 1.0.0 and 2.10.0 newer than 2.9.9
+
  8. PASS  A12: installed ahead of the published version prints no update command
+
  9. PASS  versioncheck reads a branch build's ref and fetches GitHub's version from that branch, not main
+
 10. PASS  versioncheck on a branch build that matches its branch names the branch and runs no update
+
 11. PASS  versioncheck flags installed lagging the marketplace clone, and arms a marker
+
           banner names the update command; marker written for guard's first-call prompt
+
 12. PASS  the versioncheck banner and the rules document state the relay/stop rule the same way, both ways
+
 13. PASS  versioncheck catches a marketplace clone stale against GitHub even when installed matches it
+
           the exact gap `plugin update` alone would miss - the marketplace never re-fetched
+
 14. PASS  HOUSE_RULES_VERSION_CHECK=off disables the freshness check entirely
+
           exits 0 with nothing emitted, even with a manufactured mismatch
+
 15. PASS  versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy
+
           raw route dead, API route reports 99.0.0 - banner fires and the marker is armed
+
 16. PASS  versioncheck tells the model, not just the UI, when neither GitHub route could be reached
+
           additionalContext names both failed routes and the installed version; no banner, no marker
+
 17. PASS  versioncheck adds nothing to the model's context when all three copies agree
+
           a verified-current plugin stays a UI-only trace line
+
 18. PASS  versioncheck says 'start a new session', not 'update', when the newer version is already installed on disk
+
           running copy is old, installed_plugins.json has 99.0.0: no banner, no marker, no update run
+
 19. PASS  versioncheck refreshes the stale marketplace, runs the update itself, and confirms it on disk
+
           both commands ran in order; installed_plugins.json then read 99.0.0, so no banner and no marker
+
 20. PASS  versioncheck does not trust an update's exit code: nothing new on disk still means out of date
+
           only `plugin update` ran (marketplace already current); exit 0 with no new install -> banner and marker
 
+
+
 --------------------------------
+
 RESULT: PASS - all 20 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART safe_git - passed (51.4 s)
+PART safe_git - passed (88.0 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: safe_git
+
 ===========================================
+
+
 
  1. PASS  guard surfaces versioncheck's marker once, on the first shell call, then stops
+
           first `ls` call prompts for the stale plugin alone; the second call is silent
 
+
+
 --------------------------------
+
 RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART design_loop - passed (70.1 s)
+PART design_loop - exited 1 without its RESULT line (crashed?) (144.7 s)
 ==============================================================================
+Traceback (most recent call last):
+
+  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
+
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+
+                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-ft1vwggy\\tmpmd30i9_q\\git\\house-rules-issue-cache.json'
+
+
 
 house-rules hooks - verification (Python) - part: design_loop
+
 ===========================================
 
 
---------------------------------
-RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART writing - passed (2.9 s)
+PART writing - passed (7.4 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: writing
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART delegation - passed (55.1 s)
+PART delegation - passed (121.4 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: delegation
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART docs - passed (16.3 s)
+PART docs - passed (35.1 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: docs
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART make_page - passed (99.8 s)
+PART make_page - passed (133.5 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: make_page
+
 ===========================================
 
-make_page build of the starter:
-make_page: note - approval '<topic> summary' is not a design-loop phrase, so sending it back moves no stage (the phrases are Design approved: <feature> or Build plan approved: <feature>).
-make_page: wrote /tmp/house-rules-verify-make_page-fgjunyor/mp-n_incmiw/dsum/docs/plans/decision-summary.html (0 picture(s) embedded)
-make_page: /tmp/house-rules-verify-make_page-fgjunyor/mp-n_incmiw/dsum/docs/plans/decision-summary.html is outside /home/user/AjsClaudeCodeTools; a link to it will not open in the app (#329). Copy it into /home/user/AjsClaudeCodeTools/docs/plans before linking.
-visual check light: page errors 0, overflow none
-visual check dark: page errors 0, overflow none
-visual check alone: broken pictures 0
-make_page: SEND THIS PAGE NOW: /tmp/house-rules-verify-make_page-fgjunyor/mp-n_incmiw/dsum/docs/plans/decision-summary.html - send it to aj with the file-send tool (display render) as the last action of the turn.
+
+
 
 
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
 
 ==============================================================================
 Parts:
-  core           20 checks  PASS    34.6 s  passed
-  safe_git        1 checks  PASS    51.4 s  passed
-  design_loop     0 checks  PASS    70.1 s  passed
-  writing         0 checks  PASS     2.9 s  passed
-  delegation      0 checks  PASS    55.1 s  passed
-  docs            0 checks  PASS    16.3 s  passed
-  make_page       0 checks  PASS    99.8 s  passed
-  wall-clock 99.8 s
+  core           20 checks  PASS    42.7 s  passed
+  safe_git        1 checks  PASS    88.0 s  passed
+  design_loop     0 checks  FAIL   144.7 s  exited 1 without its RESULT line (crashed?)
+  writing         0 checks  PASS     7.4 s  passed
+  delegation      0 checks  PASS   121.4 s  passed
+  docs            0 checks  PASS    35.1 s  passed
+  make_page       0 checks  PASS   133.5 s  passed
+  wall-clock 144.7 s
 
 --------------------------------
-RESULT: PASS - all 21 checks passed. The hooks are behaving as written.
+RESULT: FAIL - 1 of 21 checks failed. Failing part(s): design_loop. See the FAIL lines above.
+        design_loop: exited 1 without its RESULT line (crashed?)
 
 Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
 No node, no jq required by hook.py itself - stdlib only.

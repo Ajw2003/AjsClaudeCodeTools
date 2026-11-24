@@ -1,168 +1,266 @@
 $ verify.py --only 'stamp'
-exit 0
+exit 1
 
 
 house-rules hooks - verification (Python)
 ===========================================
-Interpreter: /usr/local/bin/python
-hook.py:     /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/hook.py
-run.sh:      /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/run.sh
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
 no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
-Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (4 at once on 4 core(s))
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (33.6 s)
+PART core - passed (39.5 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: core
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART safe_git - passed (50.7 s)
+PART safe_git - passed (83.5 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: safe_git
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART design_loop - passed (69.3 s)
+PART design_loop - exited 1 without its RESULT line (crashed?) (138.8 s)
 ==============================================================================
+Traceback (most recent call last):
+
+  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
+
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+
+                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-e8yyytu5\\tmpj6o0vb9t\\git\\house-rules-issue-cache.json'
+
+
 
 house-rules hooks - verification (Python) - part: design_loop
+
 ===========================================
+
+
 
  1. PASS  closable record: a merge with merged false, or a failing gh pr merge, stamps nothing
+
  2. PASS  closable record: an MCP merge payload with merged true stamps an unstamped entry
+
  3. PASS  closable record: an already-stamped entry is not restamped
+
  4. PASS  closable record: a gh pr merge Bash payload stamps an unstamped entry
+
  5. PASS  closable record: with no exit code, a gh pr merge with no success line, or an auto-merge, stamps nothing
+
  6. PASS  closable record: with no exit code, gh's success line stamps the entry
+
  7. PASS  closable record: HOUSE_RULES_LOOP=off stamps nothing and says so
+
  8. PASS  closable record: a wrapped GitHub tool merge reply with merged false stamps nothing
+
  9. PASS  closable record: a wrapped GitHub tool merge reply stamps a waiting closable entry
+
 10. PASS  closable record: A2: a merge whose pull request links none of the QA-passed issues stamps nothing, and says so
+
 11. PASS  closable record: A2: a pull request opened elsewhere is read once, and its Refs #7 stamps #7's record
+
 12. PASS  closable record: #520: a merged PR that Refs the phase #5 stamps the record of step #7 (Part of #5)
+
 13. PASS  closable record: #520: a step with no Part of line is not stamped by a PR that Refs some other issue
+
 14. PASS  design loop (#600, A2): a combined approval with an unstamped plan page refuses the plan half and keeps the design half
+
 15. PASS  design loop (#600, A2): a combined approval with a stale stamp refuses the plan half and keeps the design half
+
 16. PASS  design loop (#600, A2): a plan approval on its own message is not held to the stamp (speed switches 6A)
+
 17. PASS  clear writing: editor (#594): writing a page under docs/plans with no stamp is owed, naming the reviewer and the stamp
+
 18. PASS  clear writing: editor (#594): a page with a current stamp stays quiet
+
 19. PASS  clear writing: editor (#594): a stamped page edited afterwards is stale and owed
+
 20. PASS  clear writing: editor (#594): the open-risks verdict with 2 rounds is a valid stamp
+
 21. PASS  clear writing: editor (#594): proposal, build-plan, art and a page with no type need a stamp
+
 22. PASS  design loop: proof (#507) A2: a merge that doesn't link the QA-passed issue stamps nothing; one with Refs #7 stamps its record and the note offers the close line
 
---------------------------------
-RESULT: PASS - all 22 checks passed. The hooks are behaving as written.
+==============================================================================
+PART writing - passed (5.8 s)
+==============================================================================
 
-==============================================================================
-PART writing - passed (2.5 s)
-==============================================================================
 
 house-rules hooks - verification (Python) - part: writing
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART delegation - passed (54.1 s)
+PART delegation - passed (115.8 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: delegation
+
 ===========================================
+
+
 
  1. PASS  acceptance: stamp refused when ledger status is not NEXT: done
-          acceptance: refusing to stamp, ledger status for /tmp/house-rules-verify-delegation-ckm9vqy6/acc-9207eoty/repo/docs/qa/f is not NEXT: done:
+
+          acceptance: refusing to stamp, ledger status for C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-s6fn8tfi\acc-eepfonhb\repo\docs\qa\f is not NEXT: done:
+
 rounds: 0 (cap 4)
+
 ledger: nothing to judge yet (no round file)
+
 NEXT: fix
 
+
+
  2. PASS  acceptance: check says missing with no stamp
+
           acceptance stamp missing
 
+
+
  3. PASS  acceptance: stamp written when ledger status is NEXT: done
-          acceptance: stamped /tmp/house-rules-verify-delegation-ckm9vqy6/acc-9207eoty/repo/docs/qa/f/acceptance-stamp.json
+
+          acceptance: stamped C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-s6fn8tfi\acc-eepfonhb\repo\docs\qa\f\acceptance-stamp.json
+
+
 
  4. PASS  acceptance: check says current after the stamp
+
           acceptance stamp current
+
+
 
  5. PASS  acceptance: check is current again after only a docs/qa/ edit (source back to the stamped bytes)
+
           acceptance stamp current
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART docs - passed (15.1 s)
+PART docs - passed (31.9 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: docs
+
 ===========================================
 
 
+
+
+
 --------------------------------
+
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
+
+
 ==============================================================================
-PART make_page - passed (100.3 s)
+PART make_page - passed (131.9 s)
 ==============================================================================
+
 
 house-rules hooks - verification (Python) - part: make_page
+
 ===========================================
 
-make_page build of the starter:
-make_page: note - approval '<topic> summary' is not a design-loop phrase, so sending it back moves no stage (the phrases are Design approved: <feature> or Build plan approved: <feature>).
-make_page: wrote /tmp/house-rules-verify-make_page-yx8xf_5r/mp-6hdtfnsj/dsum/docs/plans/decision-summary.html (0 picture(s) embedded)
-make_page: /tmp/house-rules-verify-make_page-yx8xf_5r/mp-6hdtfnsj/dsum/docs/plans/decision-summary.html is outside /home/user/AjsClaudeCodeTools; a link to it will not open in the app (#329). Copy it into /home/user/AjsClaudeCodeTools/docs/plans before linking.
-visual check light: page errors 0, overflow none
-visual check dark: page errors 0, overflow none
-visual check alone: broken pictures 0
-make_page: SEND THIS PAGE NOW: /tmp/house-rules-verify-make_page-yx8xf_5r/mp-6hdtfnsj/dsum/docs/plans/decision-summary.html - send it to aj with the file-send tool (display render) as the last action of the turn.
+
 
  1. PASS  make_page: style --quick then build succeeds and stamps the mark right after the doctype
+
  2. PASS  make_page (#596): QA mode with no acceptance stamp is refused (exit 2), naming the stamp and the acceptance run
+
  3. PASS  make_page (#596): QA mode with a stale stamp is refused (exit 2)
+
  4. PASS  make_page (#596): building the same QA page twice works (the built page does not stale the stamp)
+
  5. PASS  stamp (#594): build without --reviewed writes no stamp
+
  6. PASS  stamp (#594): build with --reviewed writes a stamp whose hash is the sha256 of the page without that line
+
  7. PASS  stamp (#594): the written stamp checks as current, an edit makes it stale
+
  8. PASS  stamp (#594): --rounds 3 is refused
 
+
+
 --------------------------------
+
 RESULT: PASS - all 8 checks passed. The hooks are behaving as written.
+
+
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    33.6 s  passed
-  safe_git        0 checks  PASS    50.7 s  passed
-  design_loop    22 checks  PASS    69.3 s  passed
-  writing         0 checks  PASS     2.5 s  passed
-  delegation      5 checks  PASS    54.1 s  passed
-  docs            0 checks  PASS    15.1 s  passed
-  make_page       8 checks  PASS   100.3 s  passed
-  wall-clock 100.3 s
+  core            0 checks  PASS    39.5 s  passed
+  safe_git        0 checks  PASS    83.5 s  passed
+  design_loop     0 checks  FAIL   138.8 s  exited 1 without its RESULT line (crashed?)
+  writing         0 checks  PASS     5.8 s  passed
+  delegation      5 checks  PASS   115.8 s  passed
+  docs            0 checks  PASS    31.9 s  passed
+  make_page       8 checks  PASS   131.9 s  passed
+  wall-clock 138.8 s
 
 --------------------------------
-RESULT: PASS - all 35 checks passed. The hooks are behaving as written.
+RESULT: FAIL - 1 of 13 checks failed. Failing part(s): design_loop. See the FAIL lines above.
+        design_loop: exited 1 without its RESULT line (crashed?)
 
 Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
 No node, no jq required by hook.py itself - stdlib only.
 Matching is textual, so a command that merely mentions a tripwire word will also
 prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
 
---only 'stamp' matched 35 check(s).
+--only 'stamp' matched 13 check(s).
 
 --- stderr ---
