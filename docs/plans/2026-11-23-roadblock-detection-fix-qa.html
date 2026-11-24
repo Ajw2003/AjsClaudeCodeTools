@@ -237,7 +237,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">The fix is built and checked in real headless sessions on the branch build 2.90.0; four cases behave correctly, one cannot be tested that way, and you read the result and approve the pull request.</p>
+      <p class="lead" id="lead" data-basic="summary">The fix is built and was checked in real headless sessions on the branch build 2.90.0. Four cases behave correctly and one cannot be tested that way. Your part is to read the result and approve the pull request.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -283,7 +283,7 @@ const PAGE = {
   "eyebrow": "QA Â· steps for you to follow",
   "pageType": "qa",
   "short": {
-    "lead": "The fix is built and checked in real headless sessions on the branch build 2.90.0; four cases behave correctly, one cannot be tested that way, and you read the result and approve the pull request.",
+    "lead": "The fix is built and was checked in real headless sessions on the branch build 2.90.0. Four cases behave correctly and one cannot be tested that way. Your part is to read the result and approve the pull request.",
     "hint": "Tap a step to see what to do.",
     "key": [
       [
@@ -301,7 +301,7 @@ const PAGE = {
         "Checked",
         "Four live sessions on the branch build",
         "",
-        "Curly-apostrophe and git-ls-files-only claims were each blocked twice. Three listed methods were left alone. An unattended stall was blocked twice by the goal check with a correct reason.",
+        "A claim written with a curly apostrophe was blocked twice. A claim backed only by git ls-files was blocked twice. A claim that listed three failed methods was left alone. An unattended stall was blocked twice by the goal check, and the reason it gave was correct.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
@@ -314,7 +314,7 @@ const PAGE = {
         "Checked",
         "verify.py after merging main",
         "",
-        "8 of 994 checks fail, the same safe_git, delegation, design_loop and make_page failures that already fail on this Windows machine before the change.",
+        "8 of 994 checks fail. They are the same safe_git, delegation, design_loop and make_page checks that already failed on this Windows machine before the change.",
         "Nothing from you."
       ],
       [
@@ -342,7 +342,7 @@ const PAGE = {
       "Evidence needed",
       "A claim needs three failed attempts by different methods that named the claimed thing.",
       null,
-      "Live: git ls-files only was blocked twice; three listed methods were not blocked.",
+      "Live: a claim backed only by git ls-files was blocked twice; a claim listing three failed methods was not blocked.",
       null,
       null
     ],
@@ -351,14 +351,14 @@ const PAGE = {
       "Never waiting",
       "In unattended mode a reply that stops with 'Next step' is blocked by the goal check while work can continue.",
       null,
-      "Live: blocked twice, 'Carry on' in the reason. In bypass mode a design question is denied and the agent chooses; this part has fixture checks only.",
+      "Live: the stall was blocked twice, and the reason said 'Carry on'. In bypass mode a design question is denied and the agent chooses; that part was checked with test fixtures only, not in a live session.",
       null,
       null
     ],
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "31 files, +4494 −2849",
+      "33 files, +5500 −2849",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -642,6 +642,30 @@ const PAGE = {
         [
           "docs/plans/2026-11-23-roadblock-detection-fix-plan.page.json",
           143,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-23-roadblock-detection-fix-qa.html",
+          906,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-23-roadblock-detection-fix-qa.page.json",
+          100,
           0,
           [
             [

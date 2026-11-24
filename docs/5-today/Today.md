@@ -309,3 +309,5 @@ overrun that `verify.py` had never measured. See the dated entry in
 **Still 2026-11-22:** GitHub CI passed on the fix commit; PR 573 waits for aj to merge.
 
 Live roadblock sessions on the branch build 2.90.0 (2026-11-23): curly apostrophe, `git ls-files` only, three methods and unattended stall all behave correctly; the bypass question cannot be tested headless (question tool disabled in `claude -p`), fixture cases only. Next: QA page, pull request with `Refs #587`, issues #587 to #591 to `needs review`.
+
+Pull request #602 (roadblock detection fix, Refs #587) is open; QA page `docs/plans/2026-11-23-roadblock-detection-fix-qa.html` sent to aj; issues #587 to #591 are `needs review`; CI pending.
