@@ -1,6 +1,6 @@
 {
  "title": "Roadblock detection fix: QA",
- "eyebrow": "QA \u00c2\u00b7 steps for you to follow",
+ "eyebrow": "QA \u00b7 steps for you to follow",
  "pageType": "qa",
  "short": {
   "lead": "The fix is built and was checked in real headless sessions on the branch build 2.90.0. Four cases behave correctly and one cannot be tested that way. Your part is to read the result and approve the pull request.",
