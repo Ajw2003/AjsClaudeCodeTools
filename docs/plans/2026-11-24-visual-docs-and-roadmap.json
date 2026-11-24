@@ -4,7 +4,7 @@
  "pageType": "proposal",
  "approval": "Design approved: visual docs and visual roadmap skills",
  "short": {
-  "lead": "Proposal: two new house-rules skills. Visual-docs turns the tier docs into one illustrated overview page. Visual-roadmap is a GitHub Action that redraws two roadmap views when issues or merges change. Both are checked by the review command once it is merged. I need your approval and ten picks.",
+  "lead": "Proposal: two new house-rules skills that work in any repo with house rules docs. Visual-docs turns that repo's tier docs into one illustrated overview page. Visual-roadmap installs a GitHub Action that redraws two roadmap views when issues or merges change. Both are checked by the review command once it is merged. I need your approval and ten picks.",
   "hint": "Tap a step to see what it produces and what it needs from you.",
   "key": [
    [
@@ -22,7 +22,7 @@
     "Today",
     "Text docs and a hand-edited roadmap",
     "",
-    "Six tier folders, one plain-English text copy so far (docs/plain/4-systems/hook-engine.md), and docs/2-roadmap/Roadmap.md, which is edited by hand and organised as eight phases worked in order (decided 2026-11-09). Nothing draws a picture, and nothing updates when an issue closes. The visual-loop skill already checks looks with a reviewer helper. The review command (planned, not yet merged) adds /house-rules:review with code, codebase, image and style modes.",
+    "Every house-rules repo has six tier folders (landing, roadmap, state, systems, today, decisions) and a hand-edited docs/2-roadmap/Roadmap.md. In this repo, the first one the skills will be tried on, there is also one plain-English copy so far (docs/plain/4-systems/hook-engine.md), and the roadmap is organised as eight phases worked in order (decided 2026-11-09). Nothing draws a picture, and nothing updates when an issue closes. The visual-loop skill already checks looks with a reviewer helper. The review command (planned, not yet merged) adds /house-rules:review with code, codebase, image and style modes.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2220%22 width=%2280%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2250%22 y=%2241%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3ETier docs%3C/text%3E%3Crect x=%2210%22 y=%2264%22 width=%2280%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2250%22 y=%2285%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPlain copies%3C/text%3E%3Crect x=%2210%22 y=%22108%22 width=%2280%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2250%22 y=%22129%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPage style%3C/text%3E%3Cline x1=%2292%22 y1=%2237%22 x2=%22130%22 y2=%2280%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2292%22 y1=%2281%22 x2=%22130%22 y2=%2285%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2292%22 y1=%22125%22 x2=%22130%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22130%22 y=%2260%22 width=%2290%22 height=%2250%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22175%22 y=%2289%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Evisual-docs%3C/text%3E%3Cline x1=%22222%22 y1=%2285%22 x2=%22240%22 y2=%2285%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22240%22 y=%2245%22 width=%2270%22 height=%2280%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22275%22 y=%2289%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EOne page%3C/text%3E%3C/svg%3E",
@@ -61,7 +61,7 @@
     "Risks",
     "What could sink it",
     "",
-    "The Action may lack write access in this repo (untested); GitHub shows HTML as source code; In dev stays empty until a dev branch exists. Also: the review command is planned, not built (its parent issue 617 and steps 618 to 621), so both skills wait on it. Done when three things hold. Opening an issue here moves a dot on the racetrack picture (an SVG file) within 5 minutes. /house-rules:visual-docs stale names a section after one of its docs is edited. /house-rules:review image mode returns the verdict clean on screenshots of each skill's output at 375px wide, in light and dark.",
+    "The Action may lack write access in a given repo (untested, and I can only reach this repo from here); labels and roadmap layouts may differ in other repos; GitHub shows HTML as source code; In dev stays empty until a dev branch exists. Also: the review command is planned, not built (its parent issue 617 and steps 618 to 621), so both skills wait on it. Done when three things hold. Opening an issue in a repo with the skill installed moves a dot on the racetrack picture (an SVG file) within 5 minutes, tried on this repo and on a second house-rules repo you name. /house-rules:visual-docs stale names a section after one of its docs is edited. /house-rules:review image mode returns the verdict clean on screenshots of each skill's output at 375px wide, in light and dark.",
     "Nothing from you."
    ],
    [
@@ -69,7 +69,7 @@
     "Check",
     "I run both, then you look",
     "you",
-    "I run each on this repo, screenshot the output in light and dark at phone width, and add cases to verify.py.",
+    "I run each on this repo and on a second house-rules repo you name, screenshot the output in light and dark at phone width, and add cases to verify.py.",
     "Look at the overview page and the two roadmap views."
    ],
    [
@@ -88,7 +88,7 @@
    "Skill 1: visual-docs",
    "One illustrated page that reads like a game design document, built from the tier docs.",
    null,
-   "The skill reads docs/1-landing, 2-roadmap, 3-state and 4-systems, and the plain copies under docs/plain/ where one exists; for a doc with no plain copy it writes the plain wording itself. It writes one page to docs/1-landing/overview.html; tell me if you prefer another path. The page has six sections: the pitch in one line, the pillars (what the project promises), how it works as diagrams, each part and its state, the road ahead, and risks. Wording is for a person who has never opened the repo: no file paths in body text, jargon defined on first use. It reuses make_page.py's picture handling and colours (in this repo, the builder's default colours, since docs/page-style.json says only use defaults). Before finishing it runs /house-rules:review on the page and on screenshots of it, and the review command saves the report. Which page template it uses, and when the review runs, are your picks below.",
+   "In any repo that has the six tier folders, the skill reads docs/1-landing, 2-roadmap, 3-state and 4-systems, and the plain copies under docs/plain/ where one exists; for a doc with no plain copy it writes the plain wording itself. It writes one page to docs/1-landing/overview.html; tell me if you prefer another path. The page has six sections: the pitch in one line, the pillars (what the project promises), how it works as diagrams, each part and its state, the road ahead, and risks. Wording is for a person who has never opened the repo: no file paths in body text, jargon defined on first use. It reuses make_page.py's picture handling and colours (each repo's own docs/page-style.json; with none, the builder's default colours). Before finishing it runs /house-rules:review on the page and on screenshots of it, and the review command saves the report. Which page template it uses, and when the review runs, are your picks below.",
    [
     "plain-docs writes text copies only; make_page.py builds handover pages (proposal, build plan, QA, review, art); neither makes a project overview.",
     "A new skill folder, one page layout, and a staleness check that mirrors plain-docs' stale mode.",
@@ -122,7 +122,7 @@
    "Skill 2: visual-roadmap",
    "Two live views of the roadmap, redrawn by a GitHub Action.",
    null,
-   "The Action runs when an issue is opened, closed, or has a label added or removed, and when a pull request is merged into the dev branch or into main. No label is Backlog, in progress is Doing, and needs review or in review is Review. A merge into dev moves the issues its description names (with Closes or Part of) to In dev; a merge into main moves them to Shipped. An issue closed as not planned leaves the views instead of counting as Shipped. It runs on GitHub, so it updates even when no Claude session is open. Runs queue one at a time, so two quick events cannot overwrite each other.\nNone of the 174 branches on GitHub is named dev, so the dev branch name is a setting and In dev stays empty until one exists. A workflow file runs only in the repo that holds it, so the skill copies the workflow and its setting into another project when you run /house-rules:visual-roadmap install; until then it exists only here.",
+   "The Action runs when an issue is opened, closed, or has a label added or removed, and when a pull request is merged into the dev branch or into main. No label is Backlog, in progress is Doing, and needs review or in review is Review. A merge into dev moves the issues its description names (with Closes or Part of) to In dev; a merge into main moves them to Shipped. An issue closed as not planned leaves the views instead of counting as Shipped. It runs on GitHub, so it updates even when no Claude session is open. Runs queue one at a time, so two quick events cannot overwrite each other.\nThe dev branch name is a setting for each repo, because repos differ. This repo has none today (none of its 174 branches on GitHub is named dev), and there In dev stays empty until one exists. The skill works in any repo with house rules docs. A workflow file runs only in the repo that holds it, so you run /house-rules:visual-roadmap install in that repo, and it copies in the workflow and a settings file holding the dev branch name and the label name for each stage. Nothing in the skill is tied to this repo.",
    [
     "docs/2-roadmap/Roadmap.md is edited by hand; the issue labels already say whose move it is.",
     "A GitHub Action (a script GitHub runs by itself when something happens in the repo), one script, one data file and two generated picture files.",
@@ -158,7 +158,7 @@
    null,
    "The gap between the opened line and the in-dev line is work not yet merged; the gap between in-dev and shipped is work waiting for a release to main. It is the clearest picture of the dev-versus-main split. The opened and shipped lines are rebuilt from GitHub on the first run; the in-dev line starts the day the Action is switched on.",
    [
-    "No view shows how many issues were opened, merged and shipped over time; Roadmap.md shows each phase's current percentage and a dated status note.",
+    "No view shows how many issues were opened, merged and shipped over time; each repo's docs/2-roadmap/Roadmap.md shows each milestone's current percentage and a dated status note.",
     "A generated line-chart picture file (SVG) built from the data file's history.",
     "You see pace and the size of the unreleased pile."
    ],
@@ -173,7 +173,7 @@
    "Where the output is written",
    "The Action writes to a roadmap-view branch, never to main.",
    null,
-   "The house rule allows main to change only by pull request, so an Action that pushed straight to main would break it. The Action instead pushes the generated files to a separate roadmap-view branch, and the views are opened from there. The data file is the only source of truth; the views can always be rebuilt from it. Untested: whether the Action has write access in this repo, because the repo's Actions permission settings could not be read from here.",
+   "The house rule allows main to change only by pull request, so an Action that pushed straight to main would break it. The Action instead pushes the generated files to a separate roadmap-view branch, and the views are opened from there. The data file is the only source of truth; the views can always be rebuilt from it. Untested: whether the Action has write access in a given repo; this repo's Actions permission settings could not be read from here, and no other repo is reachable.",
    [
     "The repo rule: main only changes by pull request.",
     "One extra branch, written only by the Action.",
@@ -325,22 +325,22 @@
   ],
   [
    "share",
-   "Do the roadmap views group by phase?",
+   "Do the roadmap views group by the repo's roadmap milestones?",
    [
     [
      "A",
-     "Yes, each view groups dots by phase (suggested)",
+     "Yes, each view groups dots by the milestones in that repo's docs/2-roadmap/Roadmap.md (suggested)",
      1,
-     "Keeps the eight phases that Roadmap.md is built on (decided 2026-11-09)."
+     "Keeps the structure each repo's roadmap tier already defines; in this repo that is the eight phases decided 2026-11-09. A repo with no milestones gets ungrouped views."
     ],
     [
      "B",
      "Stage only",
      0,
-     "Simpler, but the views would not show the phases, and the page would say so."
+     "Simpler, but the views would not show the milestones, and the page would say so."
     ]
    ],
-   "The phase order is a standing decision, so the views should not drop it."
+   "The roadmap tier is where every house-rules repo defines its milestones, so the views should follow it."
   ],
   [
    "share",
@@ -409,7 +409,7 @@
      "No setup, but it can guess wrong when session branches are active."
     ]
    ],
-   "This repo has no dev branch today, so a guess has nothing reliable to find."
+   "Repos differ, and this repo has no dev branch today, so a guess has nothing reliable to find."
   ],
   [
    "share",
@@ -433,7 +433,7 @@
  ],
  "wrapup": {
   "summary": "A proposal for two new house-rules skills: visual-docs, which makes one illustrated overview page from the tier docs, and visual-roadmap, a GitHub Action that redraws two roadmap views when issues or merges change.",
-  "changing": "Nothing is built. After approval, and once the review command is merged, this adds four things. Two skill folders under claude-house-rules/plugins/house-rules/skills/, where the roadmap one also needs an install command for other projects. One workflow file under .github/workflows/. A roadmap data file. Cases in verify.py.",
+  "changing": "Nothing is built. After approval, and once the review command is merged, this adds four things. Two skill folders under claude-house-rules/plugins/house-rules/skills/, where the roadmap one comes with an install command that sets it up in any house-rules repo. One workflow file under .github/workflows/. A roadmap data file. Cases in verify.py.",
   "blocking": "Your approval and ten picks: update trigger, the two views, where views live, how views are opened, when and how the review runs, how the dev branch is found, the docs page scope, the docs page layout, and phase grouping.",
   "next": "I log the decision, then send a build plan page with one parent issue and one child issue per step for you to approve before I build anything.",
   "todo": [
