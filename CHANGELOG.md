@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+The design loop's stage file now records the nine step issues (#593 to #601) of the design review loop plan, so "Build plan approved: design review loop" can be checked against them.
+
 The design review loop was approved and planned (nothing built): parent issue #592, nine step issues #593 to #601, a build plan page, a systems doc and a decisions entry. Detail: `docs/plans/2026-11-24-design-review-loop-plan.html`, `docs/4-systems/review-loop.md`; steps 6 and 7 wait for version 2.90.0 to merge.
 
 The design review loop proposal page now covers unattended mode: when the build plan must change, work keeps going and each deviation is logged for aj at the end. Detail: a new "Unattended mode" item, a deviations picture and an eighth choice in `docs/plans/2026-11-24-design-review-loop.html`; still nothing built.
