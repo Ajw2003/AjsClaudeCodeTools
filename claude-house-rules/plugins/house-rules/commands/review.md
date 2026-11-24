@@ -1,6 +1,6 @@
 ---
 description: Review code, a page, an image, a screen's style, the uncommitted diff or a whole repo with the reviewer agent
-argument-hint: <path|.> [style] [criteria text]
+argument-hint: <path|.> [style] [criteria text] [--model opus|sonnet|haiku|fable] [--effort low|medium|high|xhigh|max]
 ---
 
 `house-rules:reviewer` (the agent) reviews in eight modes. This command picks the mode from the
@@ -8,7 +8,8 @@ path, runs the reviewer, and has the main session save the report. Reviewers wri
 
 First pick the mode with the plugin's own script, never a path you construct by hand. Pass the
 path as TARGET; if the word `style` follows it, pass `--style`; the rest of the text is criteria
-(or the style to compare against) and is not given to the script:
+(or the style to compare against) and is not given to the script. `--model` and `--effort` may
+sit anywhere in the text and are read by the script:
 
 ```
 python "${CLAUDE_PLUGIN_ROOT}/scripts/review_plan.py" mode $ARGUMENTS
@@ -20,11 +21,15 @@ tell the user the plugin root did not resolve. Do not search `~/.claude/plugins`
 guess a path - the cache holds several versions. If the script prints `error:` (exit 2), report
 that line and stop.
 
-It prints `mode:`, `report:` (the folder for the saved report), `criteria:` (the text to pass on, or `none`) and, in plan mode, `design:` (a path, `none`, or `ambiguous` followed by one `candidate:` line each: ask the user which one). Put criteria or style text that contains punctuation in quotes.
+It prints `mode:`, `report:` (the folder for the saved report), `criteria:` (the text to pass on, or `none`), `model:` and `effort:` (an override the user typed, or `default`) and, in plan mode, `design:` (a path, `none`, or `ambiguous` followed by one `candidate:` line each: ask the user which one). Put criteria or style text that contains punctuation in quotes.
 
 ## Every mode except a whole-repo sweep
 
-Spawn ONE `house-rules:reviewer` with the Agent tool. Tell it the mode and the target. For plan
+Spawn ONE `house-rules:reviewer` with the Agent tool. Set the Agent tool's `model` and `effort`
+parameters only when `model:` or `effort:` is not `default`; with `default`, leave the parameter out
+so the reviewer's own setting applies (it does the same for every reviewer in a sweep). Tell it the mode and the target, and give it
+these two absolute paths (an agent file does not expand `${CLAUDE_PLUGIN_ROOT}` itself):
+`${CLAUDE_PLUGIN_ROOT}/rules/detail/review-modes.md` and `${CLAUDE_PLUGIN_ROOT}/scripts/waitfor.py`. For plan
 mode also give the design page from `design:` (or say there is none). For image and style modes
 give the text after the path as the criteria or the style. In style mode with no stated style
 and no project UI guide the reviewer stops and says so; pass that on, do not invent a style.
@@ -35,7 +40,9 @@ and no project UI guide the reviewer stops and says so; pass that on, do not inv
    line, show that line to the user BEFORE starting anything else.
 2. Run `python "${CLAUDE_PLUGIN_ROOT}/scripts/review_plan.py" batches`. Each line is
    `<unit>`, a batch number and a comma-separated file list.
-3. Spawn one `house-rules:reviewer` in codebase mode per batch, ONE AT A TIME, naming its files
+3. Spawn one `house-rules:reviewer` in codebase mode per batch, ONE AT A TIME, with the same
+   `model` and `effort` rule, giving it the same
+   two absolute paths as above, naming its files
    and telling it to start every finding with `[high]`, `[medium]` or `[low]`. There is no
    folder cap.
 4. Check each reviewer's wait every minute with `python "${CLAUDE_PLUGIN_ROOT}/scripts/waitfor.py"`

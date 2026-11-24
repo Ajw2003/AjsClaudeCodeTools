@@ -746,6 +746,7 @@ TIER_TOOLS = {
     "reviewer": ["Read", "Grep", "Glob", "Bash", "Write"],
     "editor": ["Read"],
 }
+TIER_EFFORT = {"scout": "low", "builder": "low", "reviewer": "medium", "editor": "low"}  # reviewer: Decisions.md 2026-11-24
 agentdrift = []
 for _name, _model in TIERS.items():
     _f = os.path.join(AGENTS_DIR, _name + ".md")
@@ -757,6 +758,8 @@ for _name, _model in TIERS.items():
         agentdrift.append(f"{_name}.md does not pin model: {_model}")
     if not re.search(rf"^name: {_name}$", _t, re.MULTILINE):
         agentdrift.append(f"{_name}.md has no name: {_name}")
+    if not re.search(rf"^effort: {TIER_EFFORT[_name]}$", _t, re.MULTILINE):
+        agentdrift.append(f"{_name}.md does not pin effort: {TIER_EFFORT[_name]}")
     _tm = re.search(r"^tools:\s*(.+)$", _t, re.MULTILINE)
     _got = [x.strip() for x in _tm.group(1).split(",")] if _tm else []
     if _got != TIER_TOOLS[_name]:
@@ -1364,6 +1367,44 @@ commit_case(
     "state %r" % open(_cap_state, encoding="utf-8").read()[:200],
 )
 os.remove(_cap_state)
+
+
+# A model typed on the Agent call (/house-rules:review --model) is compared against, not the agent file.
+def _cap_spawn_asking(**asked):
+    pl = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": dict({"prompt": "x"}, **asked)}
+    return run_hook("agentcap", json.dumps(pl), env=_cap_env())
+
+
+_cap_spawn_asking(model="opus", effort="low")
+_ov_start = _cap_start("opus")  # the fixture transcript for agent id "opus" ran on claude-opus-5
+_ov_rec = json.load(open(_cap_state, encoding="utf-8"))["agents"]
+_ov_stop = _cap_stop("opus")
+commit_case(
+    "verdict: a model typed at spawn is the declared model, so Opus on a Sonnet agent reads MATCH and names the override",
+    "override typed at spawn: model opus, effort low" in _ov_start[1]
+    and _ov_rec and _ov_rec[0].get("req") == {"model": "opus", "effort": "low"}
+    and "MATCH" in _ov_stop[1] and "MISMATCH" not in _ov_stop[1]
+    and "override typed at spawn; the agent file declares sonnet" in _ov_stop[1],
+    "start %r record %r stop %r" % (_ov_start[1][:160], _ov_rec, _ov_stop[1][:240]),
+)
+_cap_spawn_asking(model="sonnet")
+_cap_start("opus")
+_ov_stop2 = _cap_stop("opus")
+commit_case(
+    "verdict: asking for Sonnet but running on Opus is still a MISMATCH, and says an override was typed",
+    "MISMATCH" in _ov_stop2[1] and "override typed at spawn" in _ov_stop2[1],
+    "stop %r" % _ov_stop2[1][:240],
+)
+_cap_spawn()
+_cap_start("opus")
+_ov_stop3 = _cap_stop("opus")
+commit_case(
+    "verdict: with no override typed, the agent file's declaration is still the one compared (MISMATCH, no override note)",
+    "MISMATCH" in _ov_stop3[1] and "override typed" not in _ov_stop3[1],
+    "stop %r" % _ov_stop3[1][:240],
+)
+if os.path.exists(_cap_state):
+    os.remove(_cap_state)
 _c7 = _cap_spawn(agent_id="sub9")
 commit_case(
     "agentcap: a spawn made by a subagent (payload carries agent_id) is denied",

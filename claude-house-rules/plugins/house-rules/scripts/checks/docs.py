@@ -2311,6 +2311,29 @@ else:
     for _x in _rv_f:
         print(f"          {_x}")
 
+    # --model / --effort overrides: read from anywhere in the text, `default` when absent, exit 2 when unknown
+    _rv_f = []
+    for _a, _want in (
+        (["b.py"], ("default", "default", "none")),
+        (["b.py", "check", "names", "--model", "sonnet", "--effort", "low"], ("sonnet", "low", "check names")),
+        (["--model=OPUS", "b.py", "--effort=max"], ("opus", "max", "none")),
+    ):
+        _c, _o, _e = _rv_run(["mode"] + _a, _rv_work)
+        _got = tuple((re.search(r"^%s: (.*)$" % _k, _o, re.M) or [None, "?"])[1] for _k in ("model", "effort", "criteria"))
+        if _c != 0 or _got != _want:
+            _rv_f.append(f"args {_a}: wanted {_want}, got exit {_c} {_got}: {_e.strip()[:80]}")
+    for _a in (["--model", "gpt"], ["--effort"], ["--effort", "extreme"]):
+        _c, _o, _e = _rv_run(["mode", "b.py"] + _a, _rv_work)
+        if _c != 2 or not _o.startswith("error:") or "Traceback" in _e:
+            _rv_f.append(f"{_a}: wanted exit 2 and error:, got exit {_c}: {_o.strip()} {_e.strip()[:80]}")
+    _rv_cmd_txt = read(os.path.join(_rv_plug, "commands", "review.md"))
+    if "--model" not in _rv_cmd_txt or "--effort" not in _rv_cmd_txt or "only when" not in _rv_cmd_txt:
+        _rv_f.append("commands/review.md does not document --model, --effort and the leave-default rule")
+    report("PASS" if not _rv_f else "FAIL",
+           "review command: --model and --effort are read from anywhere in the text, print default when absent, and an unknown value exits 2")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
 
 shutil.rmtree(_rv_tmp, ignore_errors=True)  # our own mkdtemp folder; cases above only record FAILs, they do not raise
 

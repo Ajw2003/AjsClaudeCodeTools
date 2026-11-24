@@ -3727,3 +3727,13 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 **Why.** aj's own QA is the sign-off the design loop requires.
 
 **Status.** Standing. Choice 1 as first written (expandable hook messages) was not possible in Claude Code, so option A (a log and a command) replaced it; see the 2026-11-23 entry above.
+
+## 2026-11-24 — Reviewer effort stays medium; effort is now pinned like the model
+
+**Context.** A review of `agents/reviewer.md` (`docs/qa/review-reviewer-2026-11-24/report.md`) found `effort: medium` with no recorded reason and no check, while every other agent is `low` and the model is pinned by `verify.py`. The git history shows it arrived inside an autosave commit (`1b8c776`), not a decision.
+
+**Decision.** `effort: medium` stays for the reviewer, and `verify.py` now pins the effort of all four agents (scout, builder, editor `low`; reviewer `medium`). aj can still override either per run with `/house-rules:review --model ... --effort ...`.
+
+**Why.** The reviewer is the one agent that reads cold and hunts for what is missing, so it keeps a step more effort than the executors. This is judgement: no run compared medium with low, so the entry is revisited when the Sonnet-variant measurement is done.
+
+**Status.** Standing, open to the measurement above.
