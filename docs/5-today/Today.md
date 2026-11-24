@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+`/house-rules:review` now takes `--model` and `--effort` (plugin 2.94.3): typed values go to the Agent tool, otherwise the reviewer's own `opus`/`medium` applies. The command also passes the real `review-modes.md` and `waitfor.py` paths to the reviewer, since an agent file may not expand `${CLAUDE_PLUGIN_ROOT}`. All seven verify parts pass (1,603 checks). Not tested live (sandbox has plugin 2.94.1 installed); the `verdict` hook will call an override a MISMATCH.
+
 Fixed the top three reviewer findings in `agents/reviewer.md` (plugin 2.94.2): it now names the full `review-modes.md` path, calls `waitfor.py` through `${CLAUDE_PLUGIN_ROOT}`, and its description lists its design-gate, acceptance and `/house-rules:review` uses. All seven verify parts pass (1,602 checks). Not tested live: that the path variable expands inside an agent file. Findings 4 to 9 and the Sonnet reviewer variant are still open.
 
 Reviewed the reviewer agent itself (code mode, saved in `docs/qa/review-reviewer-2026-11-24/report.md`): Opus stays right for page mode and the stuck-builder diff; Sonnet looks adequate for the other modes and Haiku for none, but no benchmark was run, so that is judgement. Nine findings, the top one being that `agents/reviewer.md:9` reads a `review-modes.md` path the command never passes. Nothing is fixed yet; waiting on aj to choose between fixing findings 1 and 2 and building a Sonnet reviewer variant.
