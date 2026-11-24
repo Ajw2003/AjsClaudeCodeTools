@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """acceptance.py - whole-feature acceptance evidence and the freshness-checked stamp (#595).
 
-  acceptance.py tree [--root DIR]            fingerprint of the source tree (docs/qa/, docs/plans/*.html and the loop file left out)
+  acceptance.py tree [--root DIR]            fingerprint of the source tree (docs/qa/, docs/plans/*.html, docs/plans/**/*.page.json, docs/5-today/, CHANGELOG.md and the loop file left out)
   acceptance.py run --out DIR [--timeout S] -- CMD...   run CMD, save stdout, stderr, exit code to DIR/run-N.txt
   acceptance.py stamp FEATURE_DIR [--root DIR]   refuse unless `ledger.py status` says NEXT: done; else write FEATURE_DIR/acceptance-stamp.json
   acceptance.py check FEATURE_DIR [--root DIR]   exit 0 if the stamp's tree equals the current tree, else 1
@@ -28,7 +28,9 @@ def tree(root):
     lines = []
     for p in sorted(set(x for x in r.stdout.decode("utf-8").split("\0") if x)):
         # built pages are left out too (P3): building the QA page must not make the stamp stale
-        if p.startswith("docs/qa/") or p == ".claude/house-rules-loop.json" or (p.startswith("docs/plans/") and p.endswith(".html")):
+        # P4: files written after the stamp (QA page content, changelog line, today notes) are left out too
+        if (p.startswith(("docs/qa/", "docs/5-today/")) or p in (".claude/house-rules-loop.json", "CHANGELOG.md")
+                or (p.startswith("docs/plans/") and p.endswith((".html", ".page.json")))):
             continue
         fp = os.path.join(root, p)
         if not os.path.isfile(fp):  # tracked but deleted in the working tree

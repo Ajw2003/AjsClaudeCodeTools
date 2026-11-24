@@ -46,8 +46,9 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
   Since #596:
   - **The gate**: it refuses (exit 2) unless `docs/qa/<folder>/` (folder = `qa.folder`, default the feature name
     lower-cased with hyphens) holds a current `acceptance-stamp.json` (`acceptance.stamp_problem`). No bypass; a
-    docs-only feature needs an acceptance run too. The fingerprint leaves out `docs/qa/`, the loop file and built
-    `docs/plans/*.html`, so building the page twice works (P3).
+    docs-only feature needs an acceptance run too. The fingerprint leaves out `docs/qa/`, the loop file, built
+    `docs/plans/*.html`, `docs/plans/**/*.page.json`, `docs/5-today/` and the root `CHANGELOG.md`, so building the
+    page twice works (P3) and the post-stamp page content, changelog and today notes do not stale it (P4).
   - **The empty list**: `unverified` may be empty; the item then reads "Nothing is unverified: every acceptance item
     passed the acceptance run", "0 things not yet proven". The old refusal of an empty list is gone.
   - **Needs your machine**: optional `needs_machine` entries (title, absolute folder, shell, command, expect,

@@ -2361,6 +2361,15 @@ try:
     _w("docs/qa/f/report.md", "reviewer report")
     code, out = _ac("check", _fd, "--root", _ar)
     commit_case("acceptance: check is current again after only a docs/qa/ edit (source back to the stamped bytes)", code == 0, out)
+    _tb = _ac("tree", "--root", _ar)[1]
+    os.makedirs(os.path.join(_ar, "docs", "plans")); os.makedirs(os.path.join(_ar, "docs", "5-today")); os.makedirs(os.path.join(_ar, "docs", "4-systems"))
+    _w("docs/plans/x.page.json", "{}"); _w("docs/5-today/note.md", "n"); _w("CHANGELOG.md", "c")
+    _w("docs/plans/x.page.json", "{1}"); _w("docs/5-today/note.md", "n2"); _w("CHANGELOG.md", "c2")
+    commit_case("acceptance: tree ignores docs/plans/x.page.json, docs/5-today/ and CHANGELOG.md (P4)", _ac("tree", "--root", _ar)[1] == _tb, "tree moved")
+    for _rel in ("docs/4-systems/x.md", "docs/plans/x.md", "src.py"):
+        _w(_rel, "new")
+        commit_case("acceptance: tree changes when %s changes" % _rel, _ac("tree", "--root", _ar)[1] != _tb, "tree did not move")
+        _w(_rel, "newer"); _tb = _ac("tree", "--root", _ar)[1]
 finally:
     shutil.rmtree(_ac_tmp, ignore_errors=True)
 
