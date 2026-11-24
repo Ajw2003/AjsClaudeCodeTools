@@ -11,7 +11,7 @@ no option given: every part (core, safe_git, design_loop, writing, delegation, d
 Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (4 at once on 4 core(s))
 
 ==============================================================================
-PART core - passed (59.3 s)
+PART core - passed (41.0 s)
 ==============================================================================
 
 house-rules hooks - verification (Python) - part: core
@@ -22,7 +22,7 @@ house-rules hooks - verification (Python) - part: core
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART safe_git - passed (92.3 s)
+PART safe_git - passed (59.3 s)
 ==============================================================================
 
 house-rules hooks - verification (Python) - part: safe_git
@@ -33,7 +33,7 @@ house-rules hooks - verification (Python) - part: safe_git
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART design_loop - passed (117.8 s)
+PART design_loop - passed (79.6 s)
 ==============================================================================
 
 house-rules hooks - verification (Python) - part: design_loop
@@ -44,7 +44,7 @@ house-rules hooks - verification (Python) - part: design_loop
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART writing - passed (2.6 s)
+PART writing - passed (3.0 s)
 ==============================================================================
 
 house-rules hooks - verification (Python) - part: writing
@@ -55,7 +55,7 @@ house-rules hooks - verification (Python) - part: writing
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART delegation - passed (71.5 s)
+PART delegation - passed (56.3 s)
 ==============================================================================
 
 house-rules hooks - verification (Python) - part: delegation
@@ -68,7 +68,7 @@ house-rules hooks - verification (Python) - part: delegation
 RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART docs - passed (19.0 s)
+PART docs - passed (15.8 s)
 ==============================================================================
 
 house-rules hooks - verification (Python) - part: docs
@@ -79,7 +79,7 @@ house-rules hooks - verification (Python) - part: docs
 RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
-PART make_page - passed (125.5 s)
+PART make_page - passed (108.3 s)
 ==============================================================================
 
 house-rules hooks - verification (Python) - part: make_page
@@ -87,12 +87,12 @@ house-rules hooks - verification (Python) - part: make_page
 
 make_page build of the starter:
 make_page: note - approval '<topic> summary' is not a design-loop phrase, so sending it back moves no stage (the phrases are Design approved: <feature> or Build plan approved: <feature>).
-make_page: wrote /tmp/house-rules-verify-make_page-xrfbc97z/mp-bfcowb1m/dsum/docs/plans/decision-summary.html (0 picture(s) embedded)
-make_page: /tmp/house-rules-verify-make_page-xrfbc97z/mp-bfcowb1m/dsum/docs/plans/decision-summary.html is outside /home/user/AjsClaudeCodeTools; a link to it will not open in the app (#329). Copy it into /home/user/AjsClaudeCodeTools/docs/plans before linking.
+make_page: wrote /tmp/house-rules-verify-make_page-eqwqd4b9/mp-hv_uots7/dsum/docs/plans/decision-summary.html (0 picture(s) embedded)
+make_page: /tmp/house-rules-verify-make_page-eqwqd4b9/mp-hv_uots7/dsum/docs/plans/decision-summary.html is outside /home/user/AjsClaudeCodeTools; a link to it will not open in the app (#329). Copy it into /home/user/AjsClaudeCodeTools/docs/plans before linking.
 visual check light: page errors 0, overflow none
 visual check dark: page errors 0, overflow none
 visual check alone: broken pictures 0
-make_page: SEND THIS PAGE NOW: /tmp/house-rules-verify-make_page-xrfbc97z/mp-bfcowb1m/dsum/docs/plans/decision-summary.html - send it to aj with the file-send tool (display render) as the last action of the turn.
+make_page: SEND THIS PAGE NOW: /tmp/house-rules-verify-make_page-eqwqd4b9/mp-hv_uots7/dsum/docs/plans/decision-summary.html - send it to aj with the file-send tool (display render) as the last action of the turn.
 
 
 --------------------------------
@@ -100,14 +100,14 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    59.3 s  passed
-  safe_git        0 checks  PASS    92.3 s  passed
-  design_loop     0 checks  PASS   117.8 s  passed
-  writing         0 checks  PASS     2.6 s  passed
-  delegation      1 checks  PASS    71.5 s  passed
-  docs            0 checks  PASS    19.0 s  passed
-  make_page       0 checks  PASS   125.5 s  passed
-  wall-clock 130.8 s
+  core            0 checks  PASS    41.0 s  passed
+  safe_git        0 checks  PASS    59.3 s  passed
+  design_loop     0 checks  PASS    79.6 s  passed
+  writing         0 checks  PASS     3.0 s  passed
+  delegation      1 checks  PASS    56.3 s  passed
+  docs            0 checks  PASS    15.8 s  passed
+  make_page       0 checks  PASS   108.3 s  passed
+  wall-clock 108.3 s
 
 --------------------------------
 RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
