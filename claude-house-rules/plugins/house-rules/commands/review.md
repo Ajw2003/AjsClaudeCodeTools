@@ -20,7 +20,7 @@ tell the user the plugin root did not resolve. Do not search `~/.claude/plugins`
 guess a path - the cache holds several versions. If the script prints `error:` (exit 2), report
 that line and stop.
 
-It prints `mode:`, `report:` (the folder for the saved report) and, in plan mode, `design:`.
+It prints `mode:`, `report:` (the folder for the saved report), `criteria:` (the text to pass on, or `none`) and, in plan mode, `design:`. Put criteria or style text that contains punctuation in quotes.
 
 ## Every mode except a whole-repo sweep
 
@@ -43,6 +43,8 @@ and no project UI guide the reviewer stops and says so; pass that on, do not inv
    that does not finish is listed as not reviewed, never dropped.
 5. Merge the findings ordered high, medium, low, then by file path, and list every not-reviewed
    batch by unit and number.
+
+If the script prints `error:` for `units` or `batches` (exit 3, not a git repo), report that line and stop.
 
 ## Saving and reporting
 

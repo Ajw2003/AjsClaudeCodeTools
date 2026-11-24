@@ -25,6 +25,12 @@ META = re.compile(r'<meta\s+name=["\']house-rules-page["\']\s+content=["\']build
 
 def cmd_mode(a):
     root = Path(a.root).resolve()
+    words = list(a.words)
+    a.target = words.pop(0) if words else None
+    if words and words[0].lower() == "style":
+        a.style = True
+        words.pop(0)
+    criteria = " ".join(words) or "none"
     if a.target is None:
         mode, tpath = "diff", None
     else:
@@ -54,20 +60,23 @@ def cmd_mode(a):
     name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "target"
     print(f"mode: {mode}")
     print(f"report: docs/qa/review-{name}-{datetime.date.today().isoformat()}")
+    print(f"criteria: {criteria}")
     if mode == "plan":
-        cand = tpath.with_name(re.sub(r"-plan$", "", tpath.stem) + tpath.suffix)
-        print(f"design: {cand if cand != tpath and cand.exists() else 'none'}")
+        base = re.sub(r"-plan$", "", tpath.stem)
+        found = sorted(f for f in tpath.parent.iterdir()
+                       if f.is_file() and f != tpath and f.suffix == tpath.suffix and f.stem.endswith(base))
+        print(f"design: {found[-1] if found else 'none'}")
     return 0
 
 
 def units_of(root):
-    r = subprocess.run(["git", "ls-files", "-co", "--exclude-standard"], cwd=root,
-                       capture_output=True, text=True, encoding="utf-8")
+    r = subprocess.run(["git", "-c", "core.quotepath=off", "ls-files", "-z", "-co", "--exclude-standard"],
+                       cwd=root, capture_output=True, text=True, encoding="utf-8")
     if r.returncode != 0:
         print(f"error: git ls-files failed in {root}: {r.stderr.strip()}")
         sys.exit(3)
     units = {}
-    for f in sorted(set(x for x in r.stdout.splitlines() if x)):
+    for f in sorted(set(x for x in r.stdout.split("\0") if x)):
         if not (Path(root) / f).is_file():
             continue
         u = f.split("/", 1)[0] if "/" in f else "root files"
@@ -110,7 +119,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     s = p.add_subparsers(dest="cmd", required=True)
     m = s.add_parser("mode")
-    m.add_argument("target", nargs="?")
+    m.add_argument("words", nargs="*")
     m.add_argument("--style", action="store_true")
     m.add_argument("--root", default=".")
     m.set_defaults(f=cmd_mode)
@@ -119,7 +128,13 @@ def main():
         q.add_argument("--root", default=".")
         q.set_defaults(f=f)
     a = p.parse_args()
-    return a.f(a)
+    try:
+        rc = a.f(a)
+        sys.stdout.flush()
+        return rc
+    except BrokenPipeError:
+        sys.stderr.close()
+        return 0
 
 
 if __name__ == "__main__":
