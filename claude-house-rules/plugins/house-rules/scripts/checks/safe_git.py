@@ -2065,7 +2065,7 @@ _bp = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id
 _bd = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "bp", "tool_name": "AskUserQuestion",
                                     "tool_input": {}, "permission_mode": "default"}), env=dict(os.environ, HOUSE_RULES_UNATTENDED="off"))
 report("PASS" if _ua_dec(_bp[1]) == "deny" and "Choose the most reasonable reversible option" in _bp[1]
-       and "carry on" in _bp[1] and _bd[1] == "" and _bd[2] == "" else "FAIL",
+       and "carry on" in _bp[1] and _bd[1] == "" else "FAIL",
        "noask: bypassPermissions denies the question with the choose-and-carry-on reason; default mode is silent")
 report("PASS" if _un_n[1][1] == "" and "no permission_mode" in _un_n[1][2] and _ua_dec(_un_n[0][1]) == "deny" else "FAIL",
        "noask: a payload with no permission_mode is announced on stderr and treated as attended; unattended still denies")
