@@ -3540,6 +3540,95 @@ def _roadblock_advice(phrase):
     return "run which, ls or uname"
 
 
+# #591: the goal check. A stall phrase at the end of an unattended or bypass turn: a nested headless claude call
+# decides whether the session genuinely cannot move forward or can carry on until its goal is reached.
+GOALCHECK_BLOCKS = 6  # below Claude Code's own limit of 8 consecutive Stop-hook blocks
+GOALCHECK_TIMEOUT = 22  # seconds; hooks.json gives the roadblocks hook 30
+_GOAL_PROMPT = (
+    "You judge whether an unattended coding session may stop. The session's first user message (its goal) was:\n"
+    "<<<%s>>>\nThe most recent user message was:\n<<<%s>>>\nThe transcript is the JSONL file %s; use the Read "
+    "tool on it (the end of the file is the newest part) to see what is done. The last reply used a stall "
+    "phrase (%r). Decide: is the goal reached, or does the session genuinely have nothing it can do without the "
+    "user, or can it carry on? ANY remaining part of the work that can continue without the user means it can "
+    "carry on; a licence, login, purchase or destructive step blocks only its own part. Answer with one JSON "
+    "object only: {\"ok\": true} when the goal is reached or the session is genuinely stuck, or "
+    "{\"ok\": false, \"reason\": \"<one sentence naming the work to continue with>\"} when it can carry on.")
+
+
+def _first_user_text(transcript_path):
+    with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if line.strip():
+                rec = json.loads(line)
+                if _is_genuine_user_message(rec):
+                    c = rec["message"]["content"]
+                    return c if isinstance(c, str) else " ".join(
+                        b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
+    return ""
+
+
+def _goal_argv(prompt):
+    override = os.environ.get("HOUSE_RULES_GOALCHECK_CMD", "").strip()  # tests only: a stub standing in for claude
+    if override:
+        return ([sys.executable, override] if override.endswith(".py") else [override]) + ["-p", prompt]
+    import shutil
+    exe = shutil.which("claude")
+    if not exe:
+        return None
+    return [exe, "-p", prompt, "--model", "haiku", "--tools", "Read", "--allowedTools", "Read",
+            "--setting-sources", "project", "--no-session-persistence"]
+
+
+def _goal_check(transcript_path, phrase):
+    """(block reason or None, systemMessage or None). Never blocks when it cannot tell, and says so."""
+    import subprocess
+    if os.environ.get("HOUSE_RULES_GOALCHECK", "on").strip().lower() in _TOGGLE_OFF:
+        return None, None
+    try:
+        first, last = _first_user_text(transcript_path), _last_user_text(transcript_path)
+        key = "%s|%d" % (transcript_path, _user_message_count(transcript_path))
+        path = _roadblock_state_path(transcript_path) + ".goal"
+        state = json.loads(_read_text(path)) if os.path.isfile(path) else {}
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return None, "house-rules: goal check could not read the session (%s), so it did not block." % type(exc).__name__
+    done = state.get("count", 0) if state.get("key") == key else 0
+    if done >= GOALCHECK_BLOCKS:
+        return None, "house-rules: the goal check blocked %d times for this user message and now lets the reply go." % done
+    argv = _goal_argv(_GOAL_PROMPT % (first[:1500], last[:1500], transcript_path, phrase))
+    if argv is None:
+        return None, "house-rules: goal check did not run: claude was not found on PATH, so it did not block."
+    try:
+        timeout = float(os.environ.get("HOUSE_RULES_GOALCHECK_TIMEOUT", GOALCHECK_TIMEOUT))
+        env = dict(os.environ, HOUSE_RULES_GOALCHECK="off", HOUSE_RULES_ROADBLOCKS="off")  # no recursion
+        proc = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout, text=True,
+                              encoding="utf-8", errors="replace", env=env,
+                              cwd=os.path.dirname(os.path.abspath(transcript_path)))
+    except subprocess.TimeoutExpired:
+        return None, "house-rules: goal check timed out after %g s, so it did not block." % timeout
+    except (OSError, ValueError) as exc:
+        return None, "house-rules: goal check could not run claude (%s), so it did not block." % type(exc).__name__
+    verdict = None
+    m = re.search(r"\{.*\}", proc.stdout or "", re.DOTALL)
+    if proc.returncode == 0 and m:
+        try:
+            verdict = json.loads(m.group(0))
+        except ValueError:
+            verdict = None  # unparseable: announced just below, never a block
+    if not isinstance(verdict, dict) or "ok" not in verdict:
+        return None, "house-rules: goal check got no usable verdict from claude (exit %d), so it did not block." % proc.returncode
+    if verdict["ok"]:
+        return None, None
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"key": key, "count": done + 1}, f)
+    except OSError as exc:
+        return None, "house-rules: goal check could not write its block count (%s), so it did not block." % type(exc).__name__
+    return ("House rules, goal check: the reply stops (%r) but the goal is not reached and work can continue "
+            "without the user. %s Carry on. (block %d of %d)"
+            % (phrase, str(verdict.get("reason") or "").strip(), done + 1, GOALCHECK_BLOCKS)), None
+
+
 def roadblock_check(payload, reply_text, retry):
     """(block reason or None, systemMessage or None). Blocks an unchecked roadblock claim twice per
     user message, then warns. Anything it cannot read: says so, never blocks."""
@@ -3573,7 +3662,10 @@ def roadblock_check(payload, reply_text, retry):
                 % (len(best), len(best), 3 - len(best)))
     elif claims:  # NEEDS YOU: the licence, login, purchase or destructive part is the user's
         claims = []
-    claims = claims + stalls
+    if stalls:  # #591: a stall phrase is judged against the session goal, not flagged on the phrase alone
+        gblock, gmsg = _goal_check(transcript_path, stalls[0])
+        if gblock or not claims:
+            return gblock, gmsg or note
     if not claims:
         return None, None
     warn = "house-rules: a roadblock claim (%s) went out unchecked." % claims[0]

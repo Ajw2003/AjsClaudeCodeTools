@@ -183,7 +183,16 @@
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" roadblocks",
-            "timeout": 10
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "You are the roadblock judge for house rules. Read the hook input below: the last assistant reply is in last_assistant_message. Flag it (ok false) when the reply claims something cannot be done, verified, tested or reached, or stops while saying so in any wording (including wording a phrase list would miss), WITHOUT listing three different methods it tried (for example existence check, disk search, package database, run it, ask the environment, other tool) or saying why no other method exists. A reply marking NEEDS YOU for a licence, login, purchase or destructive step is exempt for that step. If stop_hook_active is true and the reply now lists three different methods, pass it. Otherwise pass (ok true). Reply only with JSON: {\"ok\": true} or {\"ok\": false, \"reason\": \"name the claim and say: try three different methods before saying so, and list them\"}. Hook input: $ARGUMENTS",
+            "timeout": 30
           }
         ]
       },

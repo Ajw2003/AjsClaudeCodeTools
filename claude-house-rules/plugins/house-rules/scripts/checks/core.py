@@ -1195,7 +1195,21 @@ hand_case(
 
 # --- roadblock claims (#571): blocked twice per user message, then a warning ----------------------
 _RB_STATE = os.path.join(_HAND_ROOT, "roadblock-state.json")
-_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE)
+# #591: stall phrases run the goal check; tests use a stub for claude (HOUSE_RULES_GOALCHECK_CMD), never the real model
+_GC_STUB = os.path.join(_HAND_ROOT, "goalcheck_stub.py")
+_GC_SRC = """import os, sys, time
+m = os.environ.get('GC_STUB_MODE', 'unreached')
+if m == 'sleep': time.sleep(10)
+if m == 'fail': sys.stderr.write('boom'); sys.exit(3)
+if m == 'garbage': print('no json here'); sys.exit(0)
+if os.environ.get('GC_STUB_LOG'):
+    open(os.environ['GC_STUB_LOG'], 'a').write(os.environ.get('HOUSE_RULES_GOALCHECK', '') + sys.argv[2] + chr(10))
+print('{"ok": true}' if m == 'reached' else '{"ok": false, "reason": "continue building castles 2 to 12"}')
+"""
+with open(_GC_STUB, "w", encoding="utf-8") as _f:
+    _f.write(_GC_SRC)
+_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE,
+               HOUSE_RULES_GOALCHECK_CMD=_GC_STUB)
 _RB_CLAIM = "I can't continue: the engine is not installed."
 
 
@@ -1351,6 +1365,59 @@ _rb_run(_rb_car)
 _rb_run(_rb_car)
 report("PASS" if '"decision":"block"' not in _rb_run(_rb_car) else "FAIL",
        "#588: a system-reminder carrier does not reset the turn")
+# --- #591: the goal check (stall phrase, end of turn only, nested claude call via a stub) ---
+_gc_un = dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on")
+_gc_log = os.path.join(_HAND_ROOT, "gc.log")
+_gc_t = _hand_transcript("gc", [_rb_user("build castles 1 to 12"), _rb_tool("pytest -q")])
+
+
+def _gc_run(mode, reply=_rb_stall, env=None, transcript=None):
+    return _rb_run(transcript or _gc_t, reply=reply, env=dict(env or _gc_un, GC_STUB_MODE=mode))
+
+
+def _gc_reset():
+    _rb_fresh()
+    for _g in (_RB_STATE + ".goal", _gc_log):
+        if os.path.exists(_g):
+            os.remove(_g)
+
+
+_gc_reset()
+_o = _gc_run("unreached")
+report("PASS" if '"decision":"block"' in _o and "continue building castles 2 to 12" in _o and "block 1 of 6" in _o else "FAIL",
+       "#591: a goal-unreached verdict blocks with the judge's reason")
+_gc_reset()
+_gc_n = [('"decision":"block"' in _gc_run("unreached")) for _ in range(7)]
+report("PASS" if _gc_n == [True] * 6 + [False] else "FAIL", "#591: the goal check blocks 6 times in a row per user message, the 7th passes (%s)" % _gc_n)
+_gc_reset()
+_o = _gc_run("reached")
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: a goal-reached verdict passes")
+_gc_reset()
+_gc_run("unreached", env=dict(_gc_un, GC_STUB_LOG=_gc_log), reply="All done, nothing left.")
+report("PASS" if not os.path.exists(_gc_log) else "FAIL", "#591: no stall phrase means no goal check")
+_gc_reset()
+_gc_run("unreached", env=dict(_gc_un, GC_STUB_LOG=_gc_log))
+_gc_seen = read(_gc_log) if os.path.exists(_gc_log) else ""
+report("PASS" if _gc_seen.startswith("off") and "build castles 1 to 12" in _gc_seen and "gc" in _gc_seen else "FAIL",
+       "#591: a stall phrase runs the check with the goal and transcript path, plugin hooks off in the nested call")
+_gc_reset()
+_o = _gc_run("unreached", env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="off"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: attended, a stall phrase does not run the goal check")
+for _mode, _word in (("fail", "no usable verdict"), ("garbage", "no usable verdict"), ("sleep", "timed out")):
+    _gc_reset()
+    _o = _gc_run(_mode, env=dict(_gc_un, HOUSE_RULES_GOALCHECK_TIMEOUT="1"))
+    report("PASS" if '"decision":"block"' not in _o and _word in _o else "FAIL", "#591: a %s claude is announced and never blocks" % _mode)
+_gc_reset()
+_o = _gc_run("unreached", env=dict(_gc_un, HOUSE_RULES_GOALCHECK_CMD=os.path.join(_HAND_ROOT, "no-such-claude.exe")))
+report("PASS" if '"decision":"block"' not in _o and "could not run claude" in _o else "FAIL", "#591: a missing claude is announced and never blocks")
+_gc_reset()
+_o = _gc_run("unreached", env=dict(_gc_un, HOUSE_RULES_GOALCHECK="off"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: HOUSE_RULES_GOALCHECK=off turns the goal check off")
+_gc_reset()
+_gc_hooks = json.loads(hooks_json_text)["hooks"]["Stop"]
+_gc_judge = [h for e in _gc_hooks for h in e["hooks"] if h.get("type") == "prompt"]
+report("PASS" if len(_gc_judge) == 1 and "three different methods" in _gc_judge[0]["prompt"] and "$ARGUMENTS" in _gc_judge[0]["prompt"] else "FAIL",
+       "#591: hooks.json has the prompt-type judge on Stop and its prompt names the three-method rule")
 _rb_off = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS="off"))
 report("PASS" if '"decision":"block"' not in _rb_off else "FAIL", "HOUSE_RULES_ROADBLOCKS=off turns the check off")
 _rb_fresh()
