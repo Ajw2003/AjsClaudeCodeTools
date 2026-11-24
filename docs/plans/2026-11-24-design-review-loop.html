@@ -345,7 +345,7 @@ const PAGE = {
       "The reviewer reads a page cold, without the author's reasoning. It hunts for holes, traps, contradictions, reversals and unanswered questions, then checks the wording. It returns before-and-after lines and the main session applies them. It runs on Opus, because judging a design needs more than grammar.",
       [
         "agents/editor.md is Sonnet at low effort, can only read, and fixes wording. agents/reviewer.md is Opus but checks only finished diffs, and only when asked.",
-        "reviewer.md gains a page mode with the six checks. The wording rules from editor.md move into it.",
+        "reviewer.md gains a page mode with five design checks (holes, traps, contradictions, reversals, unanswered questions) plus the wording check. The wording rules from editor.md move into it.",
         "A page reaches you with its flaws already fixed or listed as your choices."
       ],
       {
@@ -373,7 +373,7 @@ const PAGE = {
       null,
       "When a question comes up in Build, the agent takes the safest default that can be undone, records it in a parked-decisions ledger with how to undo it, and keeps building. Helpers do the same. Everything parked reaches you together on the QA page, with options. Anything not undoable, or touching money, secrets, other people or deleted data, still asks first.",
       [
-        "In Build, a reply ending in a question holds code edits until you answer (#506). Helpers' questions go to you, and the 'decided for you' check sends back any reply that settles a point alone.",
+        "In Build, a reply ending in a question holds code edits until you answer (issue #506, which added that hold). Helpers' questions go to you, and the 'decided for you' check sends back any reply that settles a point alone.",
         "A ledger file per feature, and a rule that reversible questions are parked. The hold and the check apply only to what cannot be parked.",
         "Routine work no longer stops. You answer parked questions once, with the work already done."
       ],
@@ -390,7 +390,7 @@ const PAGE = {
       null,
       "Today you approve the design, wait for a plan, then approve the plan, which is two stops. The reviewer would check the design and a draft plan together, and one page would carry both. You send one approval line. If your picks change the plan, the plan is rebuilt and re-reviewed before building starts, with no second stop.",
       [
-        "Stage words 'Design approved' and 'Build plan approved' are separate stops (docs/4-systems/design-loop.md, Approvals row).",
+        "Today 'Design approved' and 'Build plan approved' are two separate stops (docs/4-systems/design-loop.md, Approvals row).",
         "A combined page, and one reply moves the feature from Design to Build, with the plan reviewed.",
         "One approval instead of two before any code."
       ]
@@ -402,7 +402,7 @@ const PAGE = {
       null,
       "The reviewer asks whether every design item has a step, and whether any step has no design behind it. It checks that the steps run in a workable order, and that each issue says what done looks like. It also requires one acceptance test per design item, written now, which the final run executes later.",
       [
-        "The plan page is checked for wording, and for the more-than-three-steps issue rule.",
+        "The plan page is checked for wording, and for the rule that a plan of more than three steps becomes one parent issue plus one issue per step before code is written.",
         "A plan review, and an acceptance list written at plan time.",
         "Gaps between the design and the plan are caught before any code is written."
       ]
@@ -465,10 +465,10 @@ const PAGE = {
       "Reversals, named",
       "This undoes earlier decisions.",
       null,
-      "The editor is no longer the only pass before a page (#249, #325). QA pages no longer must list something unverified (#264, #268). Build no longer holds edits on every question (#506), and helpers park questions instead of passing them to you (#458 to #460). Each gets a dated entry in docs/6-decisions/Decisions.md, with a pointer left where each was written.",
+      "Four earlier decisions are undone. The editor is no longer the only pass before a page (issues #249 and #325, the editor reminder). QA pages no longer must list something unverified (issues #264 and #268, the enforced QA stage). Build no longer holds edits on every question (issue #506). Helpers park questions instead of passing them to you (issues #458, #459 and #460, decisions only from you). Each of the four gets a dated entry in docs/6-decisions/Decisions.md, with a pointer left where each was written.",
       [
-        "docs/6-decisions/Decisions.md holds both earlier entries.",
-        "Two dated reversal entries.",
+        "docs/6-decisions/Decisions.md holds the earlier entries for these reversals.",
+        "Four dated reversal entries.",
         "Nothing for you to do."
       ]
     ],
@@ -634,7 +634,7 @@ const PAGE = {
   ],
   "wrapup": {
     "summary": "A change to the design loop: a reviewer replaces the editor for design and plan pages, and an acceptance run tests the finished feature before QA.",
-    "changing": "Nothing is built. If you approve, this edits the reviewer agent, make_page.py, the page checks in writing.py, the stage tracker and verify.py, and adds docs and two dated reversal entries in Decisions.md.",
+    "changing": "Nothing is built. If you approve, this edits the reviewer agent, make_page.py, the page checks in writing.py, the stage tracker and verify.py, and adds docs and four dated reversal entries in Decisions.md.",
     "blocking": "Your approval and your seven picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, which pages are reviewed, where parked questions land, and how many approvals before building.",
     "next": "I log the decision, write the build plan as a page, put it through the same review, then create one issue per step.",
     "todo": [

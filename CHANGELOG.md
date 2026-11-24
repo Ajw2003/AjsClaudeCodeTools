@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Proposal page for a design review loop (nothing built): a reviewer replaces the editor for design and plan pages, an acceptance run tests the finished feature before QA, and questions are parked and answered in one batch instead of halting work. Detail: `docs/plans/2026-11-24-design-review-loop.html`, awaiting aj's approval and seven picks.
+
 Plugin 2.89.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
 
 GitHub's CI run passed on the CI-fix commit for pull request #573; it now waits for aj to merge.
