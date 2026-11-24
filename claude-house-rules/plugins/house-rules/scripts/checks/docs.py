@@ -2156,6 +2156,7 @@ for _x in _rv_bad:
 import datetime as _rv_dt  # noqa: E402
 _rv_py = os.path.join(_rv_plug, "scripts", "review_plan.py")
 _rv_tmp = tempfile.mkdtemp(prefix="rv-plan-")
+atexit.register(shutil.rmtree, _rv_tmp, ignore_errors=True)  # our own mkdtemp folder: cleaned even if a case raises
 
 
 def _rv_run(args, cwd):
@@ -2197,12 +2198,11 @@ else:
     open(os.path.join(_rv_work, "sub", "a.py"), "w").write("x = 1\n")
     open(os.path.join(_rv_work, "b.py"), "w").write("x = 1\n")
     open(os.path.join(_rv_work, "pic.png"), "wb").write(b"\x89PNG")
-    _rv_plans = os.path.join(ROOT, "docs", "plans")
-    _rv_dsg = "2026-11-22-clear-roadblocks.html"
-    _rv_pln = "2026-11-22-clear-roadblocks-plan.html"
-    for _n in (_rv_dsg, _rv_pln):
-        shutil.copy(os.path.join(_rv_plans, _n), os.path.join(_rv_work, _n))
-    _rv_pages_ok = os.path.isfile(os.path.join(_rv_work, _rv_pln)) and os.path.isfile(os.path.join(_rv_work, _rv_dsg))
+    _rv_dsg = "2026-01-02-demo.html"
+    _rv_pln = "2026-01-02-demo-plan.html"
+    for _n, _kind in ((_rv_dsg, "proposal"), (_rv_pln, "build-plan")):
+        open(os.path.join(_rv_work, _n), "w", encoding="utf-8").write(
+            f'<html><head><meta name="house-rules-page" content="{_kind}"></head><body>demo</body></html>\n')
     _rv_exp = [
         ([], "diff"), (["sub"], "code"), (["b.py"], "code"), (["pic.png"], "image"), (["."], "codebase"),
         ([_rv_dsg], "page"), ([_rv_pln], "plan"), (["sub", "style"], "style"),
@@ -2212,12 +2212,12 @@ else:
         _c, _o, _e = _rv_run(["mode"] + _a, _rv_work)
         if _c != 0 or f"mode: {_mode}\n" not in _o:
             _rv_f.append(f"args {_a}: wanted mode: {_mode}, got exit {_c}: {_o.strip()} {_e.strip()}")
-        if _mode == "plan" and not re.search(r"^design: .*2026-11-22-clear-roadblocks\.html$", _o, re.M):
+        if _mode == "plan" and not re.search(r"^design: .*2026-01-02-demo\.html$", _o, re.M):
             _rv_f.append(f"plan did not name the design page: {_o.strip()}")
     _c, _o, _e = _rv_run(["mode", "no-such-thing"], _rv_work)
     if _c != 2 or not _o.startswith("error:"):
         _rv_f.append(f"missing path: wanted exit 2 and error:, got exit {_c}: {_o.strip()}")
-    report("PASS" if not _rv_f and _rv_pages_ok else "FAIL",
+    report("PASS" if not _rv_f else "FAIL",
            "review command: review_plan.py mode picks diff, code, image, codebase, page, plan, style and exits 2 for a missing path")
     for _x in _rv_f:
         print(f"          {_x}")
@@ -2225,7 +2225,7 @@ else:
     _c, _o, _e = _rv_run(["mode", _rv_dsg], _rv_work)
     _c2, _o2, _e2 = _rv_run(["mode", "sub"], _rv_work)
     _rv_f = []
-    _re_rep = r"^report: docs/qa/review-clear-roadblocks-\d{4}-\d{2}-\d{2}$"
+    _re_rep = r"^report: docs/qa/review-demo-\d{4}-\d{2}-\d{2}$"
     if not re.search(_re_rep, _o, re.M):
         _rv_f.append(f"dated html page: report line wrong: {_o.strip()}")
     if not re.search(r"^report: docs/qa/review-sub-\d{4}-\d{2}-\d{2}$", _o2, re.M):
@@ -2269,5 +2269,7 @@ else:
     for _x in _rv_f:
         print(f"          {_x}")
 
+
+shutil.rmtree(_rv_tmp, ignore_errors=True)  # our own mkdtemp folder; cases above only record FAILs, they do not raise
 
 finish()
