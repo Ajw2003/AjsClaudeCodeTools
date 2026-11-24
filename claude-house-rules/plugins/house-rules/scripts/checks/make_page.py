@@ -347,6 +347,8 @@ _mp_cases.append(("ledger_note (#598): a second park is P2 after P1, and a | or 
                   _rc2 == 0 and _o2.startswith("parked P2 in ") and _ledg.index("| P1 ") < _ledg.index("| P2 ")
                   and "| P2 | 6 | Use a\\|b? second line | d | x |" in _ledg))
 _rc, _o = _mp("build", _mp_qa_content("qa8", _qa), "--project", _d)
+_mp_cases.append(("make_page (#598): an escaped pipe in a parked question is shown whole, as a |",
+                  "P2: Use a|b? second line" in _mp_text("qa8")))
 _mp_cases.append(("ledger_note (#598): the QA page lists the parked rows with 0 deviations, 2 parked",
                   _rc == 0 and "0 deviation(s), 2 parked" in _mp_text("qa8") and "P1: First?" in _mp_text("qa8")))
 _rc, _o = _park()
