@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Step 2 (#619, the review command) is with a builder in `/home/user/wt-review-step2`. One batch was measured for the sweep notice (10 markdown files: 71.3 seconds, 43,991 tokens), so batches are capped at 8 files. I logged deviation D1: a small `scripts/review_plan.py` helper is added beyond the plan so the notice figures are counted. Nothing from step 2 is merged or verified yet.
+
 Step 1 (#618, four reviewer modes) is merged into `AjsAgent/jolly-dirac-fvh4cg` after all seven verify parts passed on it (delegation 204 on both the baseline and the step 1 branch). Step 2 (#619, the command) starts once a measured per-batch time and token figure is in.
 
 Step 1 (#618, four reviewer modes) is built on the branch `AjsAgent/review-command-step1` (commit 8446569) and not merged yet. My own `verify.py` runs on it: core 272, docs 167 and writing 24 checks pass; the make_page and design_loop parts are running in the background and unread. The first builder run stopped because its automatic worktree started from an old commit; I made the worktree by hand from this branch.

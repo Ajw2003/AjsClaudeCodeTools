@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command, measured sweep figures and a logged plan change: one 10-file markdown batch took 71.3 seconds and 43,991 tokens in the reviewer's `codebase` mode (about 7.1 seconds and 4,400 tokens per file), so a sweep batch is capped at 8 files to stay under the 60-second agent deadline (`docs/qa/review-command/batch-measurement.md`). Step 2 will also add a small helper, `scripts/review_plan.py`, that counts files and picks the mode; that is a change from the approved plan, recorded as D1 in `docs/qa/review-command/ledger.md`.
+
 Review command step 1 (#618): the reviewer agent gained four modes, `code`, `codebase`, `image` and `style` (`agents/reviewer.md`, `rules/detail/review-modes.md`); `show-dont-tell.md` now says style mode reads a stated style or a project UI guide, not `docs/page-style.json`.
 
 The review command plan passed two review rounds (15 and 13 findings, all applied) and is stamped open-risks; it now asks aj three questions (how a sweep handles the 60-second agent deadline, whether repo-root files are reviewed, where the mode lists live). The systems doc `docs/4-systems/review-command.md` now says the agent deadline is 60 seconds, not 900, and issue #622 records the same stale figure in `skills/visual-loop/SKILL.md`. Docs only; nothing is built.
