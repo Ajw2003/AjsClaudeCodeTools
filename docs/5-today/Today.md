@@ -1,6 +1,6 @@
 # Today — 2026-11-24
 
-aj asked me to redo the visual skills proposal assuming branch `AjsAgent/jolly-dirac-fvh4cg` (the review command, planned as issues 617 to 621, nothing built there either) is merged. The page now lists what both skills reuse from it, adds a ninth pick (when visual-docs runs the review), and says both skills wait on that command. A page review is in progress.
+aj asked me to redo the visual skills proposal assuming branch `AjsAgent/jolly-dirac-fvh4cg` (the review command, planned as issues 617 to 621, nothing built there either) is merged. The page now lists what both skills reuse from it, adds a ninth pick (when visual-docs runs the review), and says both skills wait on that command. The page was reviewed twice (clean, round 2) and now has ten picks.
 
 aj asked for two new skills: `visual-docs` (an illustrated overview page built from the tier docs) and `visual-roadmap` (a GitHub Action that redraws two roadmap views on issue and merge events). I built a proposal page, `docs/plans/2026-11-24-visual-docs-and-roadmap.html`, with five choices for aj; nothing is built and no issues exist yet. The repo has no dev branch today (only `main` and session branches), so the dev branch name is proposed as a setting.
 
