@@ -728,9 +728,13 @@ shutil.rmtree(_ts, True); shutil.rmtree(_td, True)
 # --- #482 (A16): a failed reinstall says the plugin is now uninstalled, and how to put it back ---
 _fu = tempfile.mkdtemp(prefix="force-update-")
 _fb = os.path.join(_fu, "bin"); os.makedirs(_fb)
-with open(os.path.join(_fb, "claude"), "w") as _f:
-    _f.write('#!/bin/sh\n[ "$2" = install ] && exit 1\nexit 0\n')
-os.chmod(os.path.join(_fb, "claude"), 0o755)
+if os.name == "nt":  # Windows cannot run a #!/bin/sh file as `claude`; a .cmd stub is found by shutil.which
+    with open(os.path.join(_fb, "claude.cmd"), "w") as _f:
+        _f.write('@echo off\r\nif "%2"=="install" exit /b 1\r\nexit /b 0\r\n')
+else:
+    with open(os.path.join(_fb, "claude"), "w") as _f:
+        _f.write('#!/bin/sh\n[ "$2" = install ] && exit 1\nexit 0\n')
+    os.chmod(os.path.join(_fb, "claude"), 0o755)
 _fr = subprocess.run([sys.executable, os.path.join(HERE, "force_update.py"), "--skip-marketplace-update"],
                      capture_output=True, text=True, timeout=60,
                      env=dict(os.environ, PATH=_fb + os.pathsep + os.environ["PATH"], HOME=_fu, USERPROFILE=_fu))

@@ -5,7 +5,7 @@
   ledger.py status DIR      rounds so far, failing criteria of the latest round, and a NEXT: line
   ledger.py new-round DIR   writes the next round-N.md skeleton (refuses after a pass or at the cap)
 
-criteria.md:  C1. <text> | proof: <still|flow|video|frames> | page: <path or url>
+criteria.md:  C1. <text> | proof: <still|flow|video|frames|run> | page: <path or url>
 round-N.md:   # Round N, then one line per criterion
               C1: PASS|FAIL - <what the image shows> - <image path, relative to DIR or the working folder>
               and a last line  STATUS: pass|fail
@@ -18,7 +18,7 @@ import sys
 
 DEFAULTS = {"max_rounds": 4, "ledger_dir": "docs/qa/<feature>"}
 FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rules", "visual.json")
-CRIT = re.compile(r"^C(\d+)\. (.+) \| proof: (still|flow|video|frames) \| page: (\S.*)$")
+CRIT = re.compile(r"^C(\d+)\. (.+) \| proof: (still|flow|video|frames|run) \| page: (\S.*)$")
 VERD = re.compile(r"^C(\d+): (PASS|FAIL) - (.+) - (\S+)$")
 
 
@@ -63,7 +63,7 @@ def read_criteria(d):
             continue
         m = CRIT.match(ln)
         if not m:
-            probs.append("criteria.md line %d is not 'C<n>. <text> | proof: <still|flow|video|frames> | page: <path or url>'" % i)
+            probs.append("criteria.md line %d is not 'C<n>. <text> | proof: <still|flow|video|frames|run> | page: <path or url>'" % i)
         else:
             nums.append(int(m.group(1)))
     if len(set(nums)) != len(nums):

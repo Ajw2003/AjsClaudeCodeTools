@@ -1,0 +1,114 @@
+{
+ "title": "Design Review Loop QA",
+ "eyebrow": "QA · #592: reviewer, acceptance run, parked questions and deviations ledger",
+ "pageType": "qa",
+ "short": {
+  "lead": "The design review loop is built and its acceptance run passes all nine criteria on your Windows PC (round 2). Please check that the results read right, then reply with a pass or say what failed.",
+  "hint": "Tap a row to see what was checked and how.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Run",
+    "All nine criteria pass on your PC",
+    "",
+    "Round 2 ran docs/qa/design-review-loop/run_acceptance.py on your Windows machine, with one output file per search text in the round-2/ folder next to it. Every criterion from C1 to C9 shows PASS, and the STATUS line reads pass. Round 1 (6 passed, 3 failed) is recorded in round-1.md in the same folder.",
+    "Nothing from you."
+   ],
+   [
+    "file",
+    "Windows",
+    "Every Windows failure is fixed",
+    "",
+    "You asked for all pre-existing failures to be fixed before the pull request. A full run of verify.py on your PC now passes 1574 of 1581 checks, and the other 7 are skipped. tools/verify_tools.py passes 55 of 55, docref.py check (do the doc pointers still resolve) reports OK, and docs_drift.py (do cited code lines still exist) finds 0 drifted citations. The nine old failures were three waitfor checks, three guard checks, two page checks and one node check. All nine also failed on a clean main.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Stamp",
+    "Acceptance stamp is current",
+    "",
+    "Running scripts/acceptance.py stamp wrote acceptance-stamp.json after the round passed, and acceptance.py check reports that stamp as current. ledger.py check reports 9 criteria and 2 rounds, and says the ledger is valid.",
+    "Nothing from you."
+   ],
+   [
+    "hand",
+    "Your test",
+    "Read the round and reply",
+    "you",
+    "Open docs/qa/design-review-loop/round-2.md and read the nine PASS lines. Then open one output file, such as docs/qa/design-review-loop/round-2/c6-1.txt, and confirm it ends with the passing checks for the combined approval (a design approval and a build plan approval given in one message).",
+    "Follow the to-do steps in the Wrap-up section."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Windows crash (#592)",
+   "The close-facts tests no longer need a shell script.",
+   [
+    "The tests stood in for gh (the GitHub command-line tool) with a #!/bin/sh shell script, which Windows cannot run. So the design_loop checks crashed and reported no results.",
+    "Those tests now use a Python stand-in for gh, and their six checks pass on Windows."
+   ],
+   "checks/design_loop.py: the close facts (#549) block.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Line endings (#592)",
+   "A page saved with Windows line endings keeps its review stamp.",
+   [
+    "The review stamp is a hash of the page text as read. A page saved with Windows line endings (CRLF) therefore hashed differently from the reviewed version and looked out of date. That made the check refuse the plan half of a combined approval.",
+    "The hash now treats Windows line endings (CRLF) and Unix line endings (LF) as the same."
+   ],
+   "scripts/page_criteria.py: _stamp_hash.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Older Windows failures (#592)",
+   "Nine checks that already failed on main now pass.",
+   [
+    "Four causes. waitfor ran checks under cmd.exe and called os.killpg, which Windows does not have. The guard refused Windows paths and looked for /tmp under C:\tmp. The page writing note lost its page path to JSON escaping. Two tests faked node and claude with shell scripts that Windows cannot run.",
+    "waitfor now uses sh and taskkill. The guard now follows quoted Windows paths and maps /tmp to the Windows Temp folder. The page path is now decoded from the JSON escaping. The fake node is now a Python stand-in and the fake claude is a claude.cmd file."
+   ],
+   "waitfor.py, house_rules/core.py, house_rules/safe_git.py, tools/force_update.py and their checks.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "design review loop",
+  "base": "origin/main",
+  "unverified": [
+   "I did not look at the 7 skipped checks in the full verify.py run. They are designed to skip when a tool is missing.",
+   "One timing-based check, prompttimer (two runs at the same time), failed once in one full run and passed in the next two full runs. It may be sensitive to timing.",
+   "I did not raise the plugin version number for the hook fixes.",
+   "The deviation check works by matching phrases. I have not seen it fire in a live session.",
+   "No test covers the two-round cap, the re-review of changed picks, or running the page-mode check and the plan-mode check separately.",
+   "I wrote round 1 into the ledger afterwards, from report.md. It did not come from a fresh run."
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "The design review loop passes its acceptance run on your PC and waits for your QA.",
+  "changing": "checks/design_loop.py, scripts/page_criteria.py, the changelog, round records and the acceptance stamp under docs/qa/design-review-loop.",
+  "blocking": "Your QA of the design review loop (#592).",
+  "next": "On a pass, the pull request for #592 is ready to merge. On a fail, I fix it on this branch.",
+  "todo": [
+   "Open docs/qa/design-review-loop/round-2.md and expect nine PASS lines and the line STATUS: pass.",
+   "Reply \"QA passed: design review loop\" if it all reads right, or say what failed."
+  ]
+ }
+}

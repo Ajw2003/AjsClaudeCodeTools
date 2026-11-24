@@ -17,6 +17,36 @@ pointer, when a later entry replaces it.
 
 **Status.** Active. Extends, and does not supersede, the modular-tests entry for #575 and the roadblock entries for #587.
 
+## 2026-11-24 - Design review loop reversals (plugin 2.92.0)
+
+**Context.** The design review loop (#592) is built. Four earlier decisions it replaces are recorded here, each in its own paragraph, so the older entries are not left standing unchallenged.
+
+**Decision 1, the editor is no longer the only pass before a page (reverses #249, #325).** A design, plan or other page needs a review stamp from the reviewer helper (hunts for design holes, then checks wording); the editor remains for long replies. Review and QA pages are exempt.
+
+**Decision 2, QA pages may have an empty unverified list (reverses #264, #268).** The QA gate requires a current acceptance stamp instead: the finished feature was run and screenshotted before aj is asked to judge it, so "unverified" is no longer padded to be non-empty.
+
+**Decision 3, a question in Build no longer holds code edits by default (reverses #506).** With someone present, a plain question is refused and parked in the ledger; only a `[HARD STOP]` question (licence, login, purchase, deletion, money, secrets, people) is asked and holds edits.
+
+**Decision 4, helpers no longer pass their questions to aj (reverses #458 to #460).** A helper's reversible question is parked in the ledger and reaches aj as one batch on the QA page.
+
+**Why.** Each reversal removes a stop or a manual test that can wait for a stage boundary, without removing aj's decisions.
+
+**Status.** Standing, plugin 2.92.0.
+
+---
+
+## 2026-11-24 - Design review loop: a reviewer, an acceptance run, parked questions, a deviations ledger
+
+**Context.** The editor checked only wording, aj did the final testing, and routine work stopped for questions and approvals. aj's goal: a smoother loop from idea to finished product, with nothing left for aj to test by hand and no stops mid-work that can wait for a stage boundary. Unattended mode 2.87.0 is in main; "never wait" 2.90.0 (issues #587 to #591) is on branch `AjsAgent/affectionate-lovelace-r0zfgg` and not yet merged.
+
+**Decision.** aj wrote "Design approved: design review loop 1A 2A 3A 4A 5* 6A 7A 8A". 1A: the reviewer answers facts and turns real design choices into options. 2A: a stamp gate. 3A: two review rounds. 4A: the reviewer agent is extended, not duplicated. 5*, aj's own answer: every page gets the full review except review pages and QA pages. 6A: parked questions reach aj as one batch on the QA page. 7A: one combined approval for design and plan. 8A: every departure from a build plan step is logged as a deviation. Plan: parent issue #592, steps #593 to #601, systems doc `docs/4-systems/review-loop.md`.
+
+**Why.** Design flaws live in designs and plans, so that is where review time goes. A gate, unlike a reminder, makes "only after review and testing" true. Parking removes stops without removing aj's decisions, and the build plan stays the contract.
+
+**Reverses (each gets its own entry when built).** The editor as the only pass before a page (#249, #325). The non-empty "unverified" rule on QA pages (#264, #268). The Build hold on every question (#506). Helpers passing questions to aj (#458 to #460).
+
+**Status.** Built in plugin 2.92.0; the four reversals are recorded in the entries below.
+
 ---
 
 ## 2026-11-23 - Roadblock checks get their own Stop hook so unattended mode keeps them

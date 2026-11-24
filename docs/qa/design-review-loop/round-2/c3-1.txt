@@ -1,0 +1,241 @@
+$ verify.py --only 'acceptance:'
+exit 0
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
+
+==============================================================================
+PART core - passed (50.6 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: core
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART safe_git - passed (102.0 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: safe_git
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART design_loop - passed (166.5 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: design_loop
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART writing - passed (7.6 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: writing
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART delegation - passed (122.7 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: delegation
+
+===========================================
+
+
+
+ 1. PASS  acceptance: tree changes when a source file is edited
+
+          5d86e289131a182026b949efac4ccb6aefdfc7a6a08f2dffa1655e9a5147f90d
+
+40086b7a1960df71a7af5a2c56f0def0e6f6021bb02568afe7066c53b17ed7c1
+
+
+
+ 2. PASS  acceptance: tree ignores edits and new files under docs/qa/
+
+          tree moved
+
+ 3. PASS  acceptance: stamp refused when ledger status is not NEXT: done
+
+          acceptance: refusing to stamp, ledger status for C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-7quy7g7q\acc-1emy_vgq\repo\docs\qa\f is not NEXT: done:
+
+rounds: 0 (cap 4)
+
+ledger: nothing to judge yet (no round file)
+
+NEXT: fix
+
+
+
+ 4. PASS  acceptance: check says missing with no stamp
+
+          acceptance stamp missing
+
+
+
+ 5. PASS  acceptance: run saves exit code and output
+
+          C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-7quy7g7q\acc-1emy_vgq\repo\docs\qa\f\round-1\run-1.txt
+
+ 6. PASS  acceptance: stamp written when ledger status is NEXT: done
+
+          acceptance: stamped C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-7quy7g7q\acc-1emy_vgq\repo\docs\qa\f\acceptance-stamp.json
+
+
+
+ 7. PASS  acceptance: check says current after the stamp
+
+          acceptance stamp current
+
+
+
+ 8. PASS  acceptance: check says stale after a source edit
+
+          acceptance stamp is stale: the source changed after the run
+
+
+
+ 9. PASS  acceptance: check is current again after only a docs/qa/ edit (source back to the stamped bytes)
+
+          acceptance stamp current
+
+
+
+10. PASS  acceptance: tree ignores docs/plans/x.page.json, docs/5-today/ and CHANGELOG.md (P4)
+
+          tree moved
+
+11. PASS  acceptance: tree changes when docs/4-systems/x.md changes
+
+          tree did not move
+
+12. PASS  acceptance: tree changes when docs/plans/x.md changes
+
+          tree did not move
+
+13. PASS  acceptance: tree changes when src.py changes
+
+          tree did not move
+
+
+
+--------------------------------
+
+RESULT: PASS - all 13 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART docs - passed (37.4 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: docs
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART make_page - passed (135.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: make_page
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    50.6 s  passed
+  safe_git        0 checks  PASS   102.0 s  passed
+  design_loop     0 checks  PASS   166.5 s  passed
+  writing         0 checks  PASS     7.6 s  passed
+  delegation     13 checks  PASS   122.7 s  passed
+  docs            0 checks  PASS    37.4 s  passed
+  make_page       0 checks  PASS   135.9 s  passed
+  wall-clock 166.5 s
+
+--------------------------------
+RESULT: PASS - all 13 checks passed. The hooks are behaving as written.
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only 'acceptance:' matched 13 check(s).
+
+--- stderr ---

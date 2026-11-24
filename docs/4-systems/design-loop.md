@@ -25,9 +25,9 @@ on its own line. See `speed-switches.md`.
 | Issue labels | `_loop_labels`, `_loop_wrong` | An issue's label says whose move it is: `in progress` is mine, `needs review` is aj's. Read from GitHub every time (`gh api`, in parallel, 5-second limit); if that fails, from the changes `autosave` recorded (`_loop_record_labels`), and the note says why (#235, #236). Design `docs/plans/label-check.html`, plan `docs/plans/label-check-plan.html`. |
 | Label checks | `scope`, `commitgate`, `handover` | "Build plan approved" needs every issue `in progress`. Swapping every issue to `needs review` moves Build to QA and closes code; so does a pull request opening during Build (#267). A QA answer counts only in QA. "QA failed" sends the feature back to Build with its issues kept; code opens once they are back to `in progress`, and the stage does not bounce straight back to QA while they still say `needs review` (`reopened`, #504). A changed design still needs "Design approved", which also needs them back to `in progress`. In Build an edit is refused while any label is wrong. The end-of-reply check names wrong labels (#237, #238). |
 | QA start and page | `autosave`, `make_page.py` QA mode, `handover` (`qa page` row) | A pull request opening during Build moves the stage to QA (#267); the QA page is built by the page builder and its path stored as `qa_page` (#268); a reply in QA is sent back once until that page is linked (#269). See below. |
-| Code lock | `commitgate` (PreToolUse), `_loop_gate` | Refuses Write/Edit/NotebookEdit of source files outside Build. `docs/`, `.claude/` and `.md` files stay open. Holds helpers' edits too. In Build, a reply whose last paragraph asks aj a question holds code edits until aj's next real message (`held`, #506). Since 2.68.1 (#309) a shell command that writes files is reported, never refused: the note names the stage and the file, or says the file couldn't be named. |
-| Helpers | `subagentrules` (SubagentStart), `_loop_helper_note` | A helper starts knowing the feature, stage and issues, and that it only builds approved steps; anything unexpected is a question for aj, which the main session puts on a page and does not answer (#506). The "reads like a go-ahead" guess is off while the loop is on (#232). |
-| Long replies | `handover` (Stop), `_long_reply_words`, `_check_page` | A reply of 160 words or more (code blocks not counted), or one offering choices, with no page or picture link gets the page report. Since 2.68.1 the page row reports instead of blocking (#309), and a flagged page stays owed for every later reply to the same message of aj's until one links a page, counted in the page-blocks file (#310). aj's own "no page" lifts it. Before 2.68.1 it blocked up to three times (#226, #282, #283). The `decided for you` row sends a reply back once when it settles a design point itself ("I went with", "I chose"; #506). |
+| Code lock | `commitgate` (PreToolUse), `_loop_gate` | Refuses Write/Edit/NotebookEdit of source files outside Build. `docs/`, `.claude/` and `.md` files stay open. Holds helpers' edits too. In Build, a reply whose last paragraph asks aj a question holds code edits until aj's next real message (`held`, #506) only when that paragraph contains `[HARD STOP]`; a plain question in Build holds nothing and the end-of-reply output gets a note to park it with `ledger_note.py park` (#598). Outside Build the hold is unchanged. Since 2.68.1 (#309) a shell command that writes files is reported, never refused: the note names the stage and the file, or says the file couldn't be named. |
+| Helpers | `subagentrules` (SubagentStart), `_loop_helper_note` | A helper starts knowing the feature, stage and issues, and that it only builds approved steps; anything unexpected is a question for aj, which the main session puts on a page and does not answer (#506). The "reads like a go-ahead" guess is off while the loop is on (#232). A helper parks a reversible question with `ledger_note.py park`; only a [HARD STOP] goes back as a question (#598). |
+| Long replies | `handover` (Stop), `_long_reply_words`, `_check_page` | A reply of 160 words or more (code blocks not counted), or one offering choices, with no page or picture link gets the page report. Since 2.68.1 the page row reports instead of blocking (#309), and a flagged page stays owed for every later reply to the same message of aj's until one links a page, counted in the page-blocks file (#310). aj's own "no page" lifts it. Before 2.68.1 it blocked up to three times (#226, #282, #283). The `decided for you` row sends a reply back once when it settles a design point itself ("I went with", "I chose"; #506); in Build it stays quiet when the reply mentions the ledger (`ledger`, `ledger_note.py` or an id like `P3`), and otherwise asks for the choice to be parked in the ledger (#598). |
 | Page template | `templates/handover-page.html` | The approved four-part page, filled from one PAGE block; an empty part is left out (#233). A New item carries three labelled boxes (What exists today, What this creates, How it impacts you), and any item can carry a file list shown on open, each file once with its parts and line counts (#240, v2). |
 
 "I review" happens inside Build, because fixing what my own review finds is code. aj's review and
@@ -40,9 +40,21 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
 - **QA starts** when a pull request is opened for the feature (`gh pr create` or the GitHub tool's
   `create_pull_request`, seen by `autosave`, #267) or when every issue says `needs review`, whichever comes first.
   Code is closed from that moment.
-- **The QA page** is built by `make_page.py build` in QA mode (`qa` block: feature, base, unverified, files). It
-  counts each file's added and removed lines from `git diff --numstat <base>...HEAD`, refuses an empty
-  unverified list, fixes the reply to "QA passed: <feature>" and records the path as `qa_page` in the stage file (#268).
+- **The QA page** is built by `make_page.py build` in QA mode (`qa` block: feature, base, unverified, files, and
+  optional folder and needs_machine). It counts each file's added and removed lines from `git diff --numstat
+  <base>...HEAD`, fixes the reply to "QA passed: <feature>" and records the path as `qa_page` in the stage file (#268).
+  Since #596:
+  - **The gate**: it refuses (exit 2) unless `docs/qa/<folder>/` (folder = `qa.folder`, default the feature name
+    lower-cased with hyphens) holds a current `acceptance-stamp.json` (`acceptance.stamp_problem`). No bypass; a
+    docs-only feature needs an acceptance run too. The fingerprint leaves out `docs/qa/`, the loop file, built
+    `docs/plans/*.html`, `docs/plans/**/*.page.json`, `docs/5-today/` and the root `CHANGELOG.md`, so building the
+    page twice works (P3) and the post-stamp page content, changelog and today notes do not stale it (P4).
+  - **The empty list**: `unverified` may be empty; the item then reads "Nothing is unverified: every acceptance item
+    passed the acceptance run", "0 things not yet proven". The old refusal of an empty list is gone.
+  - **Needs your machine**: optional `needs_machine` entries (title, absolute folder, shell, command, expect,
+    untested default true) become one item in handover step-card order, the command as plain text (D9).
+  - **Ledger first**: when `docs/qa/<folder>/ledger.md` exists, the first item is "Deviations and parked decisions"
+    from its D and P rows ("None recorded" when there are none) (D8).
 - **The checkpoint** is a sixth "reply ends" row, `qa page`: in QA a reply is sent back once until `qa_page` is
   set and the page is linked (#269).
 - **The stage survives a new session**: the stage file is committed with the branch (#265).
@@ -75,6 +87,10 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
   `gh issue create`; cloud sessions use the GitHub tool (aj chose to record both, #231).
 - **Writing the tracker on every message** gave a fresh project a file on a bare "approved"; the
   write now happens only on a real change.
+
+## Combined approval (design review loop, #600)
+
+aj can approve the design and the build plan in one reply: two lines, `Design approved: <feature> <picks>` then `Build plan approved: <feature>`. The feature goes from Design straight to Build. The plan's issues (a parent and a step per step, labelled `AjsAgent created this` and `in progress`) cannot exist yet, so the build-plan line is read with the existing owed-work rule (2.80.0): the note says they are owed in this same turn, and the check at the end of the turn holds the agent to it. There is no new phrase (parked decision P1: the two-phrase rule from 2.68.1 is reused). Whether the plan was reviewed is not checked here (D7): the reply-end stamp check sends back any reply that links a page with no current stamp. `make_page.py` accepts a two-line `approval` (design line, then build-plan line, each checked as the loop would), and the copy box shows both lines with the picks after the first. Cases: `checks/design_loop.py` (#600), `checks/make_page.py` (#600).
 
 ## Approvals in natural word order (2026-11-09, "Handoff overwrite" 3A; built in phase 1 step 1, #501)
 

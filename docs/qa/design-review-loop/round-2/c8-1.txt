@@ -1,0 +1,183 @@
+$ verify.py --only '#599'
+exit 0
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
+
+==============================================================================
+PART core - passed (50.5 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: core
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART safe_git - passed (101.8 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: safe_git
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART design_loop - passed (166.5 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: design_loop
+
+===========================================
+
+
+
+ 1. PASS  #599: in bypass mode a reply that deviated from the plan, with no ledger entry, is sent back naming deviate and park
+
+ 2. PASS  #599: the same reply with a ledger_note.py call this turn passes
+
+ 3. PASS  #599: the same reply in default mode (someone present) passes
+
+ 4. PASS  #599: a payload with no permission_mode is treated as attended and passes
+
+ 5. PASS  #599: a bypass reply that does not mention a departure passes
+
+ 6. PASS  #599: the retry (stop_hook_active) passes
+
+
+
+--------------------------------
+
+RESULT: PASS - all 6 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART writing - passed (7.6 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: writing
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART delegation - passed (123.5 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: delegation
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART docs - passed (37.5 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: docs
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART make_page - passed (136.1 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: make_page
+
+===========================================
+
+
+
+ 1. PASS  ledger_note (#599): deviate adds D1 to the Deviations table, above the parked rows, printing where
+
+ 2. PASS  ledger_note (#599): a second deviate is D2 and a | in a cell is escaped
+
+
+
+--------------------------------
+
+RESULT: PASS - all 2 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    50.5 s  passed
+  safe_git        0 checks  PASS   101.8 s  passed
+  design_loop     6 checks  PASS   166.5 s  passed
+  writing         0 checks  PASS     7.6 s  passed
+  delegation      0 checks  PASS   123.5 s  passed
+  docs            0 checks  PASS    37.5 s  passed
+  make_page       2 checks  PASS   136.1 s  passed
+  wall-clock 166.5 s
+
+--------------------------------
+RESULT: PASS - all 8 checks passed. The hooks are behaving as written.
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only '#599' matched 8 check(s).
+
+--- stderr ---

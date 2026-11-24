@@ -1,0 +1,209 @@
+$ verify.py --only 'selftest:'
+exit 0
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
+
+==============================================================================
+PART core - passed (50.7 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: core
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART safe_git - passed (103.1 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: safe_git
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART design_loop - passed (168.7 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: design_loop
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART writing - passed (7.1 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: writing
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART delegation - passed (124.4 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: delegation
+
+===========================================
+
+
+
+ 1. PASS  selftest: a passing set prints RESULT: PASS, exits 0 and writes selftest-result.txt
+
+          Assumed machine: Windows 11, python 3.13.7
+
+PASS a
+
+PASS b
+
+RESULT: PASS
+
+
+
+ 2. PASS  selftest: one failing check prints RESULT: FAIL (1 failed) and exits 1
+
+          Assumed machine: Windows 11, python 3.13.7
+
+PASS a
+
+FAIL b: broken
+
+RESULT: FAIL (1 failed)
+
+
+
+ 3. PASS  selftest: a check that raises is a FAIL with its message, not a crash
+
+          Assumed machine: Windows 11, python 3.13.7
+
+FAIL a: raised ValueError: boom
+
+RESULT: FAIL (1 failed)
+
+
+
+ 4. PASS  selftest: the sample handover card is already in card shape, has a shell fence, UNTESTED: above it and the RESULT line
+
+          card shape
+
+ 5. PASS  selftest: the instruction file is under 40 lines and names UNTESTED: and needs your machine
+
+          
+
+
+
+--------------------------------
+
+RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART docs - passed (37.7 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: docs
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART make_page - passed (136.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: make_page
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    50.7 s  passed
+  safe_git        0 checks  PASS   103.1 s  passed
+  design_loop     0 checks  PASS   168.7 s  passed
+  writing         0 checks  PASS     7.1 s  passed
+  delegation      5 checks  PASS   124.4 s  passed
+  docs            0 checks  PASS    37.7 s  passed
+  make_page       0 checks  PASS   136.9 s  passed
+  wall-clock 168.7 s
+
+--------------------------------
+RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only 'selftest:' matched 5 check(s).
+
+--- stderr ---

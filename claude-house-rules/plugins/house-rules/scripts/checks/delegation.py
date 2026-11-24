@@ -743,7 +743,7 @@ else:
 TIER_TOOLS = {
     "scout": ["Read", "Grep", "Glob"],
     "builder": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
-    "reviewer": ["Read", "Grep", "Glob", "Bash"],
+    "reviewer": ["Read", "Grep", "Glob", "Bash", "Write"],
     "editor": ["Read"],
 }
 agentdrift = []
@@ -774,6 +774,10 @@ if not agentdrift:
 else:
     report("FAIL", "the scout, builder, reviewer and editor agents exist, pinned to haiku, sonnet, opus and sonnet")
     print(f"          {'; '.join(agentdrift)}")
+
+_rv = read(os.path.join(AGENTS_DIR, "reviewer.md"))
+_rv_miss = [w for w in ("page", "plan", "acceptance", "agents/editor.md") if w not in _rv]
+report("PASS" if not _rv_miss else "FAIL", "reviewer.md names the page, plan and acceptance modes and points to agents/editor.md" + (f": missing {_rv_miss}" if _rv_miss else ""))
 
 # --- no live file still names the retired executor agent ----------------------------------------
 _stale = []
@@ -2369,6 +2373,112 @@ _c3, _o3, _e3 = run_hook("autosave", _as_payload("PostToolUse", "Write", os.path
 commit_case("autosave error: a different error text prints again", "autosave hit an error" in _o3 and _o3 != _o1,
             "first %r, third %r" % (_o1, _o3))
 shutil.rmtree(_sn_tmp, ignore_errors=True)
+
+# ---- acceptance.py (#595): tree fingerprint, run evidence, stamp, check ----
+_AC = os.path.join(HERE, "acceptance.py")
+_ac_tmp = tempfile.mkdtemp(prefix="acc-")
+
+
+def _ac(*args, cwd=None):
+    r = subprocess.run([sys.executable, _AC] + list(args), capture_output=True, text=True, cwd=cwd, timeout=300)
+    return r.returncode, r.stdout + r.stderr
+
+
+try:
+    _ar = os.path.join(_ac_tmp, "repo")
+    os.makedirs(os.path.join(_ar, "docs", "qa", "f"))
+    subprocess.run(["git", "init", "-q", _ar], check=True)
+    _w = lambda rel, txt: open(os.path.join(_ar, rel), "w").write(txt)
+    _w("src.py", "a")
+    _w("docs/qa/f/criteria.md", "C1. x | proof: run | page: p\n")
+    _fd = os.path.join(_ar, "docs", "qa", "f")
+    _t0 = _ac("tree", "--root", _ar)[1]
+    _w("src.py", "b")
+    _t1 = _ac("tree", "--root", _ar)[1]
+    commit_case("acceptance: tree changes when a source file is edited", _t0 != _t1, _t0 + _t1)
+    _w("docs/qa/f/note.md", "x")
+    _w("docs/qa/f/criteria.md", "C1. x | proof: run | page: p\n# edited\n")
+    commit_case("acceptance: tree ignores edits and new files under docs/qa/", _ac("tree", "--root", _ar)[1] == _t1, "tree moved")
+    code, out = _ac("stamp", _fd, "--root", _ar)
+    commit_case("acceptance: stamp refused when ledger status is not NEXT: done", code == 2 and "not NEXT: done" in out
+                and not os.path.exists(os.path.join(_fd, "acceptance-stamp.json")), out)
+    code, out = _ac("check", _fd, "--root", _ar)
+    commit_case("acceptance: check says missing with no stamp", code == 1 and "acceptance stamp missing" in out, out)
+    _ev = _ac("run", "--out", os.path.join(_fd, "round-1"), "--", sys.executable, "-c", "import sys; print('hi'); sys.exit(3)")[1].strip()
+    _evt = open(_ev).read() if os.path.isfile(_ev) else ""
+    commit_case("acceptance: run saves exit code and output", "exit code: 3" in _evt and "hi" in _evt and _ev.endswith("run-1.txt"), _ev)
+    _w("docs/qa/f/round-1.md", "# Round 1\nC1: PASS - it ran - round-1/run-1.txt\nSTATUS: pass\n")
+    code, out = _ac("stamp", _fd, "--root", _ar)
+    commit_case("acceptance: stamp written when ledger status is NEXT: done",
+                code == 0 and json.load(open(os.path.join(_fd, "acceptance-stamp.json"))).get("rounds") == 1, out)
+    code, out = _ac("check", _fd, "--root", _ar)
+    commit_case("acceptance: check says current after the stamp", code == 0 and "acceptance stamp current" in out, out)
+    _w("src.py", "c")
+    code, out = _ac("check", _fd, "--root", _ar)
+    commit_case("acceptance: check says stale after a source edit", code == 1 and "stale" in out, out)
+    _w("src.py", "b")
+    _w("docs/qa/f/report.md", "reviewer report")
+    code, out = _ac("check", _fd, "--root", _ar)
+    commit_case("acceptance: check is current again after only a docs/qa/ edit (source back to the stamped bytes)", code == 0, out)
+    _tb = _ac("tree", "--root", _ar)[1]
+    os.makedirs(os.path.join(_ar, "docs", "plans")); os.makedirs(os.path.join(_ar, "docs", "5-today")); os.makedirs(os.path.join(_ar, "docs", "4-systems"))
+    _w("docs/plans/x.page.json", "{}"); _w("docs/5-today/note.md", "n"); _w("CHANGELOG.md", "c")
+    _w("docs/plans/x.page.json", "{1}"); _w("docs/5-today/note.md", "n2"); _w("CHANGELOG.md", "c2")
+    commit_case("acceptance: tree ignores docs/plans/x.page.json, docs/5-today/ and CHANGELOG.md (P4)", _ac("tree", "--root", _ar)[1] == _tb, "tree moved")
+    for _rel in ("docs/4-systems/x.md", "docs/plans/x.md", "src.py"):
+        _w(_rel, "new")
+        commit_case("acceptance: tree changes when %s changes" % _rel, _ac("tree", "--root", _ar)[1] != _tb, "tree did not move")
+        _w(_rel, "newer"); _tb = _ac("tree", "--root", _ar)[1]
+finally:
+    shutil.rmtree(_ac_tmp, ignore_errors=True)
+
+
+# --- selftest template and instructions (#597) ---
+import subprocess as _st_sp
+import tempfile as _st_tf
+_st_tpl = os.path.join(HERE, "..", "templates", "selftest", "selftest.py")
+_st_doc = read(os.path.join(HERE, "..", "rules", "detail", "selftest.md"))
+
+
+def _st_run(block):
+    """Copy the template to a temp dir with `block` as its check block; run it. Returns (code, out, result file)."""
+    src = open(_st_tpl, encoding="utf-8").read()
+    a, b = src.index("# ===== BUILDER"), src.index("# ===== END")
+    d = _st_tf.mkdtemp()
+    try:
+        p = os.path.join(d, "selftest.py")
+        open(p, "w", encoding="utf-8").write(src[:a] + block + "\n" + src[b:])
+        r = _st_sp.run([sys.executable, p], capture_output=True, text=True, stdin=_st_sp.DEVNULL, timeout=60)
+        rf = os.path.join(d, "selftest-result.txt")
+        return r.returncode, r.stdout, (open(rf, encoding="utf-8").read() if os.path.exists(rf) else None)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+_st_ok = "def a():\n    return True, 'fine'\ndef b():\n    return True, 'fine'\nCHECKS = [a, b]\n"
+_st_bad = "def a():\n    return True, 'fine'\ndef b():\n    return False, 'broken'\nCHECKS = [a, b]\n"
+_st_raise = "def a():\n    raise ValueError('boom')\nCHECKS = [a]\n"
+if os.path.exists(_st_tpl):
+    code, out, rf = _st_run(_st_ok)
+    commit_case("selftest: a passing set prints RESULT: PASS, exits 0 and writes selftest-result.txt",
+                code == 0 and out.rstrip().endswith("RESULT: PASS") and rf == out and "PASS a" in out, out)
+    code, out, rf = _st_run(_st_bad)
+    commit_case("selftest: one failing check prints RESULT: FAIL (1 failed) and exits 1",
+                code == 1 and out.rstrip().endswith("RESULT: FAIL (1 failed)") and "FAIL b: broken" in out, out)
+    code, out, rf = _st_run(_st_raise)
+    commit_case("selftest: a check that raises is a FAIL with its message, not a crash",
+                code == 1 and "FAIL a: raised ValueError: boom" in out and "Traceback" not in out, out)
+else:
+    commit_case("selftest: the template exists", False, _st_tpl)
+_st_card = read(os.path.join(HERE, "..", "templates", "selftest", "handover-card.md"))
+sys.path.insert(0, HERE)
+from house_rules import core as _st_core
+commit_case("selftest: the sample handover card is already in card shape, has a shell fence, UNTESTED: above it and the RESULT line",
+            _st_core._reply_is_already_a_card(_st_card) and bool(_st_core._SHELL_FENCE_RE.search(_st_card))
+            and _st_card.index("UNTESTED:") < _st_card.index("```bash") and "RESULT: PASS" in _st_card
+            and "Navigate to" in _st_card and "**bash**" in _st_card, "card shape")
+commit_case("selftest: the instruction file is under 40 lines and names UNTESTED: and needs your machine",
+            len(_st_doc.splitlines()) < 40 and "UNTESTED:" in _st_doc and "needs your machine" in _st_doc, "")
 
 
 finish()
