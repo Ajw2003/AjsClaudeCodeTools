@@ -1,26 +1,27 @@
-# Handoff: AjsAgent/jolly-dirac-fvh4cg (2026-11-24, review command proposal)
+# Handoff: AjsAgent/jolly-dirac-fvh4cg (2026-11-24, review command plan)
 
 ## What the work is for
 
-aj wants a command that sends the reviewer at any target: part of a codebase, images, visual style, or a whole repo, usable in any project the plugin is installed in. aj also asked whether the existing reviewer should grow or a new general critic agent should be made.
+aj wants one `/house-rules:review` command that sends the existing reviewer at code, an image, a screen's style or a whole repo, in any project that has the plugin installed. The reviewer is extended with four modes, not duplicated.
 
 ## Where it stands
 
-- Design only; no code written. The proposal page is `docs/plans/2026-11-24-review-command.html`, built with `make_page.py`.
-- Suggestion on the page: one `/house-rules:review` command, four new reviewer modes (code, codebase, image, style), no new agent.
-- Round one of the page review found 16 problems, all applied. The biggest: a "new critic agent" option would have reversed the 4A decision (`docs/6-decisions/Decisions.md:42`), and a reviewer cannot start other reviewers, so the whole-repo sweep belongs in the command.
-- Round two of the review was started and its result was not read when this note was written.
+- Design approved by aj: "Design approved: review command 1A 2A 3*". 3* means the sweep has no folder cap; over 12 top-level folders the command first states the folder count, estimated time and usage.
+- Stage: Plan. Parent issue #617; steps #618 (modes), #619 (command), #620 (verify.py checks), #621 (docs and version).
+- Written so far, docs only: `docs/plans/2026-11-24-review-command.html` (design), `docs/plans/review-command-plan.html` (build plan), `docs/4-systems/review-command.md`.
+- The plan was reviewed once (15 findings, all applied). It now carries three questions for aj: how a sweep handles the 60-second agent deadline, whether repo-root files are reviewed, and where the mode lists live.
 
 ## The next step
 
-Read the round-two result. If it says clean, rebuild the page with `--reviewed clean --rounds 2`, send it, and wait for aj's approval line naming the two choices (report location, sweep method). Do not build before "Design approved: review command" arrives.
+Run a second plan review, stamp the plan page, send it, and wait for "Build plan approved: review command" with answers to the three questions. Build nothing before that line.
 
 ## What is unverified
 
-- The page is not stamped as reviewed.
-- The claim that Claude Code has its own built-in `/review` came from the reviewer's product knowledge and was not tested.
-- Nothing about the command or the new modes has been run, because none of it exists yet.
+- The per-folder time and token figures in the sweep notice are placeholders until step 2 measures a real folder.
+- `rules/waits.json` says the agent deadline is 60 seconds; `skills/visual-loop/SKILL.md` and the design page say 900. The file was read, not tested with a real sweep.
+- Claude Code's own built-in `/review` was named from product knowledge and not tested.
+- Nothing has been run, because nothing is built.
 
 ## Issue numbers
 
-None opened yet. After approval the plan is over three steps, so a parent issue and one child per step are needed.
+#617 (parent), #618, #619, #620, #621. Related: #610 (the 60-second segments).
