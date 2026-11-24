@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Speed-first proposal page for aj to approve (`docs/plans/speed-first-proposal.html`): five steps to cut per-call hook cost (timing script, load less per event, merge processes, faster label reads, append-only log) and four questions; nothing is built. The review report was corrected: the end-of-reply judge runs only when no roadblock phrase is found, so the earlier "run it only on a phrase" fix would have switched it off.
+
 Whole-repo code review saved (`docs/qa/review-ajsclaudecodetools-2026-11-24/report.md`): seven reviewer runs over the house-rules scripts and `tools/`, nothing in the code changed. Main results: the destructive-command guard is bypassable (proven with real commands), nine files are 2,000 to 4,000 lines of flat code, and every hook call pays about 52 ms of imports plus up to 5 network calls.
 
 Review command round 2 and pull request: acceptance tests 6 (full verify, 1,602 checks) and 7 (findings ranked high, medium, low on a seeded fixture) pass, and test 5 passes for style and for image mode (the image run was pointed at the repo's own rules file, because the sandbox's installed plugin is the older 2.93.0). Results are in `docs/qa/review-command/round-2/results.md`; the work is in pull request 623 (`Refs #617`).
