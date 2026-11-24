@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Step 7 of the design review loop (issue #599, the deviations ledger) was handed to a helper and is not built or checked yet: it adds `ledger_note.py deviate`, a rule line and helper note about logging departures from the plan, and a one-shot end-of-reply check that is a phrase heuristic.
+
 Step 6 of the design review loop (issue #598) is built: in Build with someone present, a plain question is refused and the agent parks it in the ledger; only a [HARD STOP] question is asked, and only a [HARD STOP] last paragraph holds code edits. The QA page parser also reads a pipe inside a ledger cell. My own runs: `verify.py` 1559 of 1559, `tools/verify_tools.py` exit 0, and the real hook fired in every stage and mode. A standalone-only test failure that also exists on `main` is noted in the ledger.
 
 Step 6 of the design review loop (issue #598), second half: in Build, with someone present, a question that can be undone is denied and the agent is told to park it with `ledger_note.py park`; only a question marked [HARD STOP] still stops the work or holds code edits, and the `decided for you` row stays quiet when the reply names the ledger. The QA page parser now reads a `\|` in a ledger cell as a `|`. Other stages are unchanged.
