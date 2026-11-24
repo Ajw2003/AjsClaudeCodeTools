@@ -1,0 +1,101 @@
+{
+ "title": "Design Review Loop QA",
+ "eyebrow": "QA · #592: reviewer, acceptance run, parked questions and deviations ledger",
+ "pageType": "qa",
+ "short": {
+  "lead": "The design review loop is built and its acceptance run passes all nine criteria on your Windows PC (round 2). You check that the results read right, then reply with a pass or what failed.",
+  "hint": "Tap a row to see what was checked and how.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Run",
+    "All nine criteria pass on your PC",
+    "",
+    "Round 2 ran docs/qa/design-review-loop/run_acceptance.py on your Windows machine, one output file per search text under round-2/. Every criterion C1 to C9 shows PASS and STATUS is pass. Round 1 (6 pass, 3 fail) is recorded beside it in round-1.md.",
+    "Nothing from you."
+   ],
+   [
+    "file",
+    "Windows",
+    "Two Windows-only bugs fixed",
+    "",
+    "Your first PC run failed everything: the design_loop part crashed because a test faked gh with a shell script Windows cannot run, and a plan page saved with Windows line endings looked changed after review. Both are fixed and covered by the passing run.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Stamp",
+    "Acceptance stamp is current",
+    "",
+    "scripts/acceptance.py stamp wrote acceptance-stamp.json after the round passed, and acceptance.py check reports it current. ledger.py check reports 9 criteria, 2 rounds, valid.",
+    "Nothing from you."
+   ],
+   [
+    "hand",
+    "Your test",
+    "Read the round and reply",
+    "you",
+    "Open docs/qa/design-review-loop/round-2.md and read the nine PASS lines. Open one output file, such as round-2/c6-1.txt, and confirm it ends with the passing checks for the combined approval.",
+    "Follow the steps in Wrap-up."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Windows crash (#592)",
+   "The close-facts tests no longer need a shell script.",
+   [
+    "The tests faked gh with a #!/bin/sh file, which Windows cannot run, so design_loop crashed with no checks reported.",
+    "A Python stand-in replaces gh in those tests; six checks pass on Windows."
+   ],
+   "checks/design_loop.py: the close facts (#549) block.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Line endings (#592)",
+   "A page saved with Windows line endings keeps its review stamp.",
+   [
+    "The stamp hashed the page as read, so CRLF made a reviewed plan page look stale and refused the plan half of a combined approval.",
+    "The hash treats CRLF and LF alike."
+   ],
+   "scripts/page_criteria.py: _stamp_hash.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "design review loop",
+  "base": "origin/main",
+  "unverified": [
+   "Nine other checks still fail on Windows only (guard cwd, a delete under the temp folder, waitfor, two page checks, one node check); they were not investigated and sit outside this feature",
+   "The full verify.py was not rerun after the stamp fix; only the acceptance criteria were",
+   "The deviation check is a phrase heuristic and has not been seen firing in a live session",
+   "No test covers the two-round cap, re-review of changed picks, or page-mode and plan-mode checks separately",
+   "Round 1 was written into ledger form afterwards from report.md, not from a fresh run"
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "The design review loop passes its acceptance run on your PC and waits for your QA.",
+  "changing": "checks/design_loop.py, scripts/page_criteria.py, the changelog, round records and the acceptance stamp under docs/qa/design-review-loop.",
+  "blocking": "Your QA of #592.",
+  "next": "On a pass, the pull request for #592 is ready to merge. On a fail, I fix it on this branch.",
+  "todo": [
+   "Do step 1: open docs/qa/design-review-loop/round-2.md and expect nine PASS lines and STATUS: pass.",
+   "Reply \"QA passed: design review loop\", or say what failed."
+  ]
+ }
+}
