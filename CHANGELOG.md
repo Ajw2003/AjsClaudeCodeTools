@@ -4,7 +4,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-Note only, nothing changed: `docs/guard-friction-2026-11-24.md` records six cases from one session where the guards (mostly the roadblock judge) looked over-zealous and may have wasted usage; the token cost was not measured.
+Note only, nothing changed: `docs/roadblock-judge-friction-2026-11-24.md` records three cases from one session where the roadblock judge looked over-zealous and may have wasted usage; the token cost was not measured.
 
 Design review loop (#592): `docs/qa/design-review-loop/run_acceptance.py` runs each acceptance criterion C1 to C9 through `verify.py --only` and saves each one's own output under `docs/qa/design-review-loop/round-2/`, so aj can run it and the acceptance rounds can be recorded from real output (aj chose option A). A search text that matches no check counts as a failure.
 

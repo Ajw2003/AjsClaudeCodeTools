@@ -1,6 +1,6 @@
 # Today — 2026-11-24
 
-aj asked me to note that the guards look over-zealous and may waste usage: recorded in `docs/guard-friction-2026-11-24.md` (six cases, four open questions, nothing changed).
+aj asked me to note that the roadblock judge looks over-zealous and may waste usage: recorded in `docs/roadblock-judge-friction-2026-11-24.md` (the roadblock judge, three cases, three open questions, nothing changed).
 
 aj chose A for recording the acceptance rounds: `docs/qa/design-review-loop/run_acceptance.py` runs C1 to C9 one by one and saves each output. A first test run here is in progress; its result is not yet read. Nothing is recorded or stamped.
 
