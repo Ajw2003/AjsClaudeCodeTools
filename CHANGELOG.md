@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Revised the visual skills proposal (`docs/plans/2026-11-24-visual-docs-and-roadmap.html`) to assume the review command on branch `AjsAgent/jolly-dirac-fvh4cg` is merged: both skills now check their output with `/house-rules:review` (page, image and style modes), no new agent is added, and a ninth pick says when visual-docs runs the review. Still nothing built.
+
 Added a proposal page for two new skills, `visual-docs` (one illustrated overview page built from the tier docs) and `visual-roadmap` (a GitHub Action that redraws two roadmap views on issue and merge events): `docs/plans/2026-11-24-visual-docs-and-roadmap.html`. Nothing is built; it waits on aj's approval and five picks.
 
 Follow-up to the Windows fixes (Refs #592): the `waitfor` test in `checks/delegation.py` now builds its flag path with forward slashes, because the check runs under `sh`. That one-line fix was in my working tree for the green runs reported on the first pull request but was never committed, so `main` still failed that check on a fresh Windows checkout and left stray `wf-flag.t` files.

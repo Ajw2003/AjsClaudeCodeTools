@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj asked me to redo the visual skills proposal assuming branch `AjsAgent/jolly-dirac-fvh4cg` (the review command, planned as issues 617 to 621, nothing built there either) is merged. The page now lists what both skills reuse from it, adds a ninth pick (when visual-docs runs the review), and says both skills wait on that command. A page review is in progress.
+
 aj asked for two new skills: `visual-docs` (an illustrated overview page built from the tier docs) and `visual-roadmap` (a GitHub Action that redraws two roadmap views on issue and merge events). I built a proposal page, `docs/plans/2026-11-24-visual-docs-and-roadmap.html`, with five choices for aj; nothing is built and no issues exist yet. The repo has no dev branch today (only `main` and session branches), so the dev branch name is proposed as a setting.
 
 Pull request 614 (design review loop, acceptance round 2, Windows fixes) is merged. I found one test fix, in `checks/delegation.py`, that was never committed and opened pull request 615 for it. The judge branch (`AjsAgent/judge-blocking-audit`) has #613 done except the 60-second flag in #611, which waits on #578 and #579 (both open, nothing built); its pull request into main is not open yet.
