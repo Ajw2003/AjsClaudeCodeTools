@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.93.0 -->
 <meta charset="utf-8">
+<meta name="house-rules-reviewed" content="6c9c754eb932613cc73881fbfe473957c93d1e9b56e61ef1763a95a0f18d04b4;open-risks;2">
 <meta name="house-rules-page" content="build-plan">
 <title>Build plan: review command</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -259,7 +260,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the steps in order.</label></li><li><label><input type="checkbox"> Answer the three questions under Your choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: review command", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Split each folder into segments of 60 seconds or less, and estimate time from the segment count</p></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Split each folder into batches of files, one reviewer per batch, each batch sized to finish within 60 seconds, and estimate time from the batch count</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -375,7 +376,7 @@ const PAGE = {
       "Step 2: the command",
       "commands/review.md, using the braced ${CLAUDE_PLUGIN_ROOT}.",
       null,
-      "Depends on step 1; step 3 depends on it. Detection order: the path . on its own means codebase; an image extension means image; a page tagged build-plan means plan (with its design page); any other HTML page means page; any other file or folder means code; no argument means the uncommitted diff. The word style after the path selects style mode; text after it is the image criteria. Reports are saved by the main session to docs/qa/review-<target name>-<date>/. The sweep has no folder cap and skips .git and anything git ignores, which the notice says. With more than 12 top-level folders, the command first tells you the folder count, an estimated time and an estimated token use, then runs. This step first measures one real folder of this repo and takes the per-folder time and token figures from that run, and the notice says so. The agent deadline in rules/waits.json is 60 seconds (one segment), so the command writes a segment plan as rules/detail/waits.md requires; see the first question. A folder that does not finish is listed as not reviewed. Findings are ranked by severity, then file. Each step's commit adds a CHANGELOG.md line. Done when: a run on a folder, an image and a test folder with 14 one-file subfolders each names its mode, and the 14-folder run prints the notice and ends with every folder in the merged list or the not-reviewed list.",
+      "Depends on step 1; step 3 depends on it. Detection order: the path . on its own means codebase; an image extension means image; a page tagged build-plan means plan (with its design page); any other HTML page means page; any other file or folder means code; no argument means the uncommitted diff. The word style after the path selects style mode; text after it is the image criteria. Reports are saved by the main session to docs/qa/review-<target name>-<date>/. The sweep has no folder cap and skips .git and anything git ignores, which the notice says. With more than 12 top-level folders, the command first tells you the folder count, an estimated time and an estimated token use, then runs. This step first measures one real batch (or, with 1B, one real folder) of this repo and takes the time and token figures from that run, multiplied by the batch or folder count, and the notice says so. The agent deadline in rules/waits.json is 60 seconds (one segment), If you pick 1A, the command splits a folder into batches of files, one reviewer per batch, writes a segment plan as rules/detail/waits.md requires, and checks each reviewer wait every minute with scripts/waitfor.py; if you pick 1B, each folder gets the raised deadline from waits.json. A batch or folder that does not finish is listed as not reviewed. If you pick 2A, files at the repo root are reviewed as one extra unit called root files; if 2B, they are listed as not reviewed. Findings are ranked by severity, then file. Each step's commit adds a CHANGELOG.md line. Done when: a run on a folder, an image and a test folder with 14 one-file subfolders each names its mode, and the 14-folder run prints the notice and ends with every folder in the merged list or the not-reviewed list.",
       null,
       null
     ],
@@ -384,7 +385,7 @@ const PAGE = {
       "Step 3: verify.py cases",
       "Cases for the modes, the command and the notice.",
       null,
-      "Depends on steps 1 and 2; step 4 depends on it. Cases check that every mode name appears in reviewer.md, the modes file, verify.py and review-loop.md, that commands/review.md exists with a braced plugin root, and that the over-12-folders notice text is present. Each step's commit adds a CHANGELOG.md line. Done when: a full verify.py exits 0 and the visual-loop cases still pass.",
+      "Depends on steps 1 and 2; step 4 depends on it. Cases check that every mode name appears in reviewer.md, the modes file and review-loop.md, that commands/review.md exists with a braced plugin root, and that the over-12-folders notice text is present. Each step's commit adds a CHANGELOG.md line. Done when: a full verify.py exits 0 and the visual-loop cases still pass.",
       null,
       null
     ],
@@ -393,7 +394,7 @@ const PAGE = {
       "Step 4: docs and version",
       "Systems doc, Decisions, CHANGELOG, Today, version.",
       null,
-      "Depends on steps 1 to 3. Updates the mode lists in docs/4-systems/review-loop.md, which the approved design names, and keeps the new docs/4-systems/review-command.md for the command itself (a deviation from the design, logged here: one file per system). Writes a dated Decisions entry quoting your line 'Design approved: review command 1A 2A 3*' and the 3* text word for word, updates docs/5-today/Today.md, and bumps the plugin version. Done when: docref.py check and docs_drift.py both pass.",
+      "Depends on steps 1 to 3. Updates the mode lists in docs/4-systems/review-loop.md, which the approved design names, and updates the existing docs/4-systems/review-command.md for the command itself and corrects its deadline line from 900 to 60 seconds (keeping a separate file is a change from the design that question 3 asks you about; once you answer, it is logged with ledger_note.py deviate). Writes a dated Decisions entry quoting your line 'Design approved: review command 1A 2A 3*' and the 3* text word for word, updates docs/5-today/Today.md, and bumps the plugin version. Done when: docref.py check and docs_drift.py both pass.",
       null,
       null
     ],
@@ -402,7 +403,7 @@ const PAGE = {
       "Acceptance tests",
       "One test per design item, run before QA.",
       null,
-      "1. Command picks the mode: run it on src, a single file, logo.png, ., a plan page (check its design page is passed along) and another HTML page; each prints the right mode. 2. Reviewer has eight modes: grep reviewer.md, the modes file, verify.py and review-loop.md for all eight names. 3. Reports save to docs/qa/review-<name>-<date>/: run one review and list the folder. 4. Sweep is uncapped with a notice: run on a test folder with 14 one-file subfolders; the notice shows 14 folders and the measured time and token figures, and the run ends with every folder in the merged list or the not-reviewed list. 5. Extra input: no argument reviews the diff; style with no style stops and says so; image with no criteria uses hierarchy, contrast, alignment and consistency. 6. Visual loop unchanged: its verify.py cases pass. 7. Ranking: the merged list is ordered by severity, then file.",
+      "1. Command picks the mode: run it on fixtures the build creates in a test folder (a source folder, a single file, a small PNG, a copy of this build plan page, another HTML page) and on . in that folder; each prints the right mode, and the plan run passes its design page along. 2. Reviewer has eight modes: grep reviewer.md, the modes file and review-loop.md for all eight names. 3. Reports save to docs/qa/review-<name>-<date>/: run one review; chat shows only a short verdict and the full report is in that folder. 4. Sweep is uncapped with a notice: run on a test folder the build creates, with 14 one-file subfolders and one file at its root; the notice shows 14 folders and the measured time and token figures, and the run ends with every folder in the merged list or the not-reviewed list. 5. Extra input: no argument reviews the diff; style with no style stops and says so; image with no criteria uses hierarchy, contrast, alignment and consistency. 6. Visual loop unchanged: its verify.py cases pass. 7. Ranking: the merged list is ordered by severity, then file.",
       null,
       null
     ]
@@ -414,7 +415,7 @@ const PAGE = {
       [
         [
           "A",
-          "Split each folder into segments of 60 seconds or less, and estimate time from the segment count",
+          "Split each folder into batches of files, one reviewer per batch, each batch sized to finish within 60 seconds, and estimate time from the batch count",
           1,
           "Keeps the deadline rule as it is; the time estimate grows with folder size."
         ],
@@ -469,7 +470,7 @@ const PAGE = {
   "wrapup": {
     "summary": "This plan builds the review command and four reviewer modes in four steps.",
     "changing": "commands/review.md (new), the reviewer's two files, show-dont-tell.md, verify.py, four doc files (review-loop.md, review-command.md, Decisions.md, docs/5-today/Today.md), CHANGELOG.md and the plugin version.",
-    "blocking": "Your build plan approval line. Your answers to the three questions below. The design page quoted a 900-second agent deadline; the real figure in waits.json is 60 seconds, which is why the first question exists.",
+    "blocking": "Your build plan approval line. Your answers to the three questions under Your choices. The design page quoted a 900-second agent deadline; the real figure in waits.json is 60 seconds, which is why the first question exists.",
     "next": "After you approve, I build step 1.",
     "todo": [
       "Read the steps in order.",
