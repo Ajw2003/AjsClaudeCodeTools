@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Reviewer model review: the reviewer agent was reviewed in code mode and the report is saved in `docs/qa/review-reviewer-2026-11-24/report.md`. It keeps Opus for page and stuck-builder diff, suggests Sonnet for the other modes, and lists 9 findings (1 high: `agents/reviewer.md:9` reads a `review-modes.md` path that `commands/review.md` never passes). No plugin code changed.
+
 Review command round 2 and pull request: acceptance tests 6 (full verify, 1,602 checks) and 7 (findings ranked high, medium, low on a seeded fixture) pass, and test 5 passes for style and for image mode (the image run was pointed at the repo's own rules file, because the sandbox's installed plugin is the older 2.93.0). Results are in `docs/qa/review-command/round-2/results.md`; the work is in pull request 623 (`Refs #617`).
 
 Review command, plugin 2.94.1: `scripts/review_plan.py` now fixes the 2 high and 7 medium problems from acceptance test 3. It finds the design page for `-build-plan` and folder-style plans by exact name (several matches print `design: ambiguous` and a `candidate:` line each), names folder-style reports after their folder, treats `./` and the repo's absolute path as the whole repo, resolves the target against `--root`, exits 3 with a clean `error:` for a bad `--root` or missing git, and caps batches at 6 files. The sweep token estimate is now 10,000 per batch plus 3,400 per file (deviation D2). The new cases sit in one check, `review command: review_plan.py finds designs by exact name...`; the 8 low findings are left for aj at QA (deviation D3 in `docs/qa/review-command/ledger.md`).
