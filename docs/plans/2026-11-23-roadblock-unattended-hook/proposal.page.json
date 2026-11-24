@@ -1,0 +1,96 @@
+{
+ "title": "Roadblock fix: keep the checks running in unattended mode",
+ "eyebrow": "Proposal \u00c2\u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: unattended stop checks 1A",
+ "short": {
+  "lead": "Unattended mode switches off the end-of-turn hook that holds the roadblock and goal checks, so I need you to pick how they stay on.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "Idea",
+    "Keep the checks on",
+    "",
+    "The Stop hook keeps running roadblock_check in unattended mode.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2220%22%20width=%22130%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2220%22%20y=%2245%22%3EUnattended%20on%3C/text%3E%3Cpath%20d=%22M140%2040%20H175%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%22175%22%20y=%2220%22%20width=%22135%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%22183%22%20y=%2245%22%3EStop%20hook%20switched%20off%3C/text%3E%3Cpath%20d=%22M242%2060%20V90%22%20stroke=%22%23c33%22%20stroke-width=%222%22/%3E%3Crect%20x=%22175%22%20y=%2290%22%20width=%22135%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fdd%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%22183%22%20y=%22112%22%3ERoadblock%20%2B%20goal%3C/text%3E%3Ctext%20x=%22183%22%20y=%22128%22%3Echecks%20never%20run%3C/text%3E%3Ctext%20x=%2210%22%20y=%22165%22%3EFix:%20keep%20just%20those%20checks%20on%3C/text%3E%3C/svg%3E",
+     "alt": "Unattended on switches the Stop hook off, so the roadblock and goal checks never run",
+     "caption": "What happens today in unattended mode"
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve it",
+    "you",
+    "A line in the decisions log.",
+    "Pick an option, then send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "changed",
+   "Unattended switch list",
+   "Stop hook roadblock check stays on",
+   null,
+   "Today `unattended on` turns every switch off except autosave, including the handover switch that gates the Stop hook where roadblock_check runs (core.py 2749, hook.py 101). The stall scan and the goal check from #588 to #591 therefore never run in a real unattended session; bypass mode is unaffected.",
+   [
+    "Unattended mode turns the Stop hook off.",
+    "The roadblock and goal checks keep running there, split from the handover command check.",
+    "Unattended runs stop stalling, which is the point of the fix."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "How should the roadblock and goal checks run in unattended mode?",
+   [
+    [
+     "A",
+     "Keep them on inside the Stop hook, with the rest of the hook off",
+     1,
+     "Smallest change; matches your goal that unattended runs never stall."
+    ],
+    [
+     "B",
+     "Run them from a different hook that unattended leaves on",
+     0,
+     "Works, but adds a second hook to keep in step."
+    ],
+    [
+     "C",
+     "Drop them from unattended; keep only the bypass behaviour",
+     0,
+     "Leaves unattended runs able to stall, which this fix exists to stop."
+    ]
+   ],
+   "A is one split in the switch list and no new hook."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Step 1 (#588) is built but its unattended part cannot run until the Stop hook stays on in unattended mode.",
+  "changing": "The unattended switch list in scripts/house_rules/core.py and the Stop hook toggle in hook.py.",
+  "blocking": "Your pick of A, B or C; steps #589, #591 and #590 wait on it.",
+  "next": "After you approve, I add the split and carry on with step 2 (#589).",
+  "todo": [
+   "Read the suggestion.",
+   "Pick an option under Your choices.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

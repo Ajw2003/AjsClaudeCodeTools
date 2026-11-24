@@ -21,6 +21,29 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-23 - Roadblock checks get their own Stop hook so unattended mode keeps them
+
+**Decision.** aj chose option B on the page `docs/plans/2026-11-23-roadblock-unattended-hook/proposal.html`: the roadblock check (and later the goal check) runs from a second Stop hook that unattended mode leaves on. Options A (keep them inside the handover hook with the rest off) and C (drop them from unattended) were not chosen.
+**Why.** Step 1 (#588) found that `unattended on` sets `HOUSE_RULES_HANDOVER=off` (`core.py` line 2749) and `event_handover` returns at once on that toggle (`hook.py` line 101), so the stall scan could never run in the mode it was written for. `HOUSE_RULES_ROADBLOCKS` is in no mode group, so a hook gated only by it survives unattended mode.
+**Replaces.** Adjusts where the check runs in the detection-fix and audit entries below; their rules are unchanged.
+**Status.** Current. Being built under #588.
+
+---
+
+## 2026-11-23 - Roadblock check audit: model judge, method classes, and a goal check for stalls
+
+**Decision.** aj approved "Design approved: roadblock check audit 1B 2A 3A 4* 5A". (1B) A model judge runs on every turn end. (2A) A different method means a different class from a closed table. (3A) A licence, login, purchase or destructive step is marked NEEDS YOU and exempts that part only. (4, aj's own) Stall phrases are checked only at the end of the turn, then a separate goal check reads the session's goal and decides whether the session genuinely cannot move forward unattended or can carry on until the goals are reached. (5A) Unattended runs and bypass mode only.
+**Why.** An audit of the plan found eight weak spots, measured on real transcripts: a curly apostrophe and blockquotes, the loose probe test, tools other than `Bash` being invisible, an undefined failure, weak fallbacks, false alarms (`next step` in 2 of 28 final replies), non-human messages resetting the turn, and environment limits. A model judge and a goal check were tested and worked; see [roadblocks.md](../4-systems/roadblocks.md), "Plan after the audit".
+**Replaces.** Refines the detection-fix entry below: the "any three failed results" fallback and the plain stall-phrase flag are replaced by related attempts, method classes and the goal check.
+**Status.** Current. Not built.
+
+## 2026-11-23 - Roadblock detection fix: evidence, a longer phrase list, and never waiting in unattended or bypass mode
+
+**Decision.** aj approved "Design approved: roadblock detection fix 1* 2* 3*" with three answers of their own. (1) A roadblock claim passes only when the turn tried the claimed thing and shows evidence it cannot run. (2) The flagged wording grows to include can't, won't or unable to verify, don't have access, not available here, isn't available, not done, I've stopped, I've stopped here, the next step and next step. (3) In unattended or bypass-permission mode, a design decision that comes up while building is chosen by the agent (reasonable and reversible), recorded, and work carries on; the session never waits.
+**Why.** The Castle session on aj's PC let two replies through while running 2.89.0. Two causes were reproduced: a curly apostrophe is not matched, and a turn that ran `git ls-files` counts as a probe. Planning also found that the approved "blocks twice" never happens in a real session, because the check returns at the `stop_hook_active` retry (confirmed with a test hook: a second block is allowed, and Claude Code itself caps consecutive blocks at 8). aj also added, twice on 2026-11-23: a first try never counts as "I cannot"; only after the first try and two further attempts by different methods all fail (three attempts in total, corrected by aj the same day from "two") may the agent say something could not be verified, tested or done, and the reply must list every method tried; and the wording list gains the general inability phrases (unable to, genuinely unable, could not, couldn't). Detail: [roadblocks.md](../4-systems/roadblocks.md), "Detection fix".
+**Replaces.** Refines the 2026-11-22 roadblocks entry (probe test and phrase list). Answer 3 overrides, in those two modes only, the rule that aj makes the design decisions; the approval gate before source edits stays.
+**Status.** Current. Not built.
+
 ## 2026-11-22 - Roadblocks: a rule plus a check that blocks twice, then warns
 
 **Decision.** aj approved "Design approved: clear roadblocks 1C 2A". The agent probes before claiming a blocker, installs missing tools itself (without asking in bypass mode), and tries other routes before stopping. An end-of-reply check blocks a roadblock claim made with no probe twice, then lets it through with a warning line. Only licences, logins, purchases and destructive actions stay aj's. The session-start line for bypass mode was dropped.
