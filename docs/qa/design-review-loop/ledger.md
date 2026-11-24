@@ -27,3 +27,6 @@ Every change from the approved build plan, and every question parked instead of 
 
 ## Incident: the Build-stage question hold stopped the builder (issue #506)
 My reply ended with a question, so the hook held all code edits until aj's next real message. The step 4 builder's first three edits were refused and no work was done. This is the stop the design review loop is meant to remove; step 6 (#598) removes the hold for parkable questions. Until it is built, a reply during Build must end with a statement of the next step, never a question.
+
+## Finding outside this feature
+The check "pagecheck: HOUSE_RULES_LOOP=off allows a hand-written Write and a hand-written publish" in `scripts/checks/design_loop.py` fails every time when that file is run alone, and passes in the full `verify.py` (which CI runs). It fails the same way on a clean copy of `main` (498 checks, 1 failed), so it is older than this feature and not flaky: it depends on something the full run sets up. Not fixed here; it is outside the request.
