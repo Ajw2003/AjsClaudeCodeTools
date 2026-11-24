@@ -1257,7 +1257,7 @@ print('{"ok": true}' if m == 'reached' else '{"ok": false, "reason": "continue b
 """
 with open(_GC_STUB, "w", encoding="utf-8") as _f:
     _f.write(_GC_SRC)
-_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE,
+_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_JUDGE="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE,
                HOUSE_RULES_GOALCHECK_CMD=_GC_STUB)
 _RB_CLAIM = "I can't continue: the engine is not installed."
 
@@ -1475,8 +1475,20 @@ report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: HOUSE_RULES_
 _gc_reset()
 _gc_hooks = json.loads(hooks_json_text)["hooks"]["Stop"]
 _gc_judge = [h for e in _gc_hooks for h in e["hooks"] if h.get("type") == "prompt"]
-report("PASS" if len(_gc_judge) == 1 and "three different methods" in _gc_judge[0]["prompt"] and "$ARGUMENTS" in _gc_judge[0]["prompt"] else "FAIL",
-       "#591: hooks.json has the prompt-type judge on Stop and its prompt names the three-method rule")
+report("PASS" if not _gc_judge else "FAIL", "#607: hooks.json has no prompt-type judge on Stop (the scripted roadblocks hook runs it)")
+_JG_STUB = os.path.join(_HAND_ROOT, "judge_stub.py")
+with open(_JG_STUB, "w", encoding="utf-8") as _f:
+    _f.write("import os\nprint('{\"ok\": true}' if os.environ.get('JG_MODE') == 'pass' else "
+             "'{\"ok\": false, \"criterion\": \"C2\", \"reason\": \"one attempt only\"}')\n")
+_jg_env = dict(_RB_ENV, HOUSE_RULES_JUDGE="on", HOUSE_RULES_JUDGE_CMD=_JG_STUB)
+_jg_reply = "Done. The graphics engine is simply out of reach from here, so the render step is skipped."
+_rb_fresh()
+_o = _rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="flag"))
+report("PASS" if '"decision":"block"' in _o and "criterion C2" in _o and "Roadblock record:" in _o and "Cannot split:" in _o else "FAIL",
+       "#607: a reply the judge flags gets a block naming the criterion and showing the six reply forms")
+_rb_fresh()
+_o = _rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="pass"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#607: a reply the judge passes is left alone")
 _rb_off = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS="off"))
 report("PASS" if '"decision":"block"' not in _rb_off else "FAIL", "HOUSE_RULES_ROADBLOCKS=off turns the check off")
 _rb_fresh()

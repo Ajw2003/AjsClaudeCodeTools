@@ -3683,6 +3683,69 @@ def _goal_check(transcript_path, phrase):
             % (phrase, str(verdict.get("reason") or "").strip(), done + 1, GOALCHECK_BLOCKS)), None
 
 
+_JUDGE_FORMS = (
+    "Roadblock record: tried 1) <check>, returned <result>; 2) ...; 3) ... Target: <thing>. | "
+    "No other method: <why nothing else can show it>. | NEEDS YOU: <the licence, login, purchase or destructive "
+    "step, and what was run to reach it>. | Goal status: blocked. <what was run and returned>. | "
+    "Cannot split: <why one piece, what was run, a progress signal each minute>. | "
+    "Unverified: <what, and why it could not be checked>.")
+_JUDGE_PROMPT = (
+    "You are the roadblock judge for house rules. The last assistant reply was:\n<<<%s>>>\n"
+    "The transcript is the JSONL file %s; use the Read tool on it (the end is the newest part) to see the "
+    "REAL tool calls of this turn. Criteria. C1 trigger: the reply claims something is missing, unreachable or "
+    "impossible and that stops the task (a plain 'Unverified:' note is not a trigger). C2 what passes: three "
+    "attempts this turn, each aimed at the claimed thing, each from a different method class (existence check, "
+    "disk search, package database, run it, ask the environment, other source such as CI, git history or "
+    "docs); one output read three ways is one method. C3 proof: the attempts appear in the real tool calls, "
+    "and every reason gives the check run, what it returned, and the logic from that to the claim. C4 ways out: "
+    "'No other method', 'NEEDS YOU', 'Unverified', 'Goal status' or 'Cannot split', each with a reason that meets "
+    "C3. C5 Cannot split: only for a genuine impossibility to split the work, with a progress signal each "
+    "minute; slowness or habit is never a reason. Flag the reply only when C1 triggers and neither C2 nor C4 is "
+    "met. Answer with one JSON object only: {\"ok\": true} or {\"ok\": false, \"criterion\": \"C2\", "
+    "\"reason\": \"<the claim and what is missing>\"}.")
+
+
+def _judge_check(transcript_path, reply_text):
+    """(block reason or None, systemMessage or None). Model judge of C1 to C5 for a reply the phrase list
+    passed (#607). Never blocks when it cannot tell, and says so."""
+    import subprocess
+    if os.environ.get("HOUSE_RULES_JUDGE", "on").strip().lower() in _TOGGLE_OFF:
+        return None, None
+    override = os.environ.get("HOUSE_RULES_JUDGE_CMD", "").strip()  # tests only: a stub standing in for claude
+    prompt = _JUDGE_PROMPT % (reply_text[:6000], transcript_path)
+    if override:
+        argv = ([sys.executable, override] if override.endswith(".py") else [override]) + ["-p", prompt]
+    else:
+        argv = _goal_argv(prompt)
+    if argv is None:
+        return None, "house-rules: roadblock judge did not run: claude was not found on PATH, so it did not block."
+    try:
+        timeout = float(os.environ.get("HOUSE_RULES_GOALCHECK_TIMEOUT", GOALCHECK_TIMEOUT))
+        env = dict(os.environ, HOUSE_RULES_GOALCHECK="off", HOUSE_RULES_ROADBLOCKS="off", HOUSE_RULES_JUDGE="off")
+        proc = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout, text=True,
+                              encoding="utf-8", errors="replace", env=env,
+                              cwd=os.path.dirname(os.path.abspath(transcript_path)))
+    except subprocess.TimeoutExpired:
+        return None, "house-rules: roadblock judge timed out after %g s, so it did not block." % timeout
+    except (OSError, ValueError) as exc:
+        return None, "house-rules: roadblock judge could not run claude (%s), so it did not block." % type(exc).__name__
+    verdict = None
+    m = re.search(r"\{.*\}", proc.stdout or "", re.DOTALL)
+    if proc.returncode == 0 and m:
+        try:
+            verdict = json.loads(m.group(0))
+        except ValueError:
+            verdict = None
+    if not isinstance(verdict, dict) or "ok" not in verdict:
+        return None, "house-rules: roadblock judge got no usable verdict from claude (exit %d), so it did not block." % proc.returncode
+    if verdict["ok"]:
+        return None, None
+    return ("House rules, roadblock judge (rules/detail/roadblocks.md): this reply fails criterion %s. %s "
+            "Rewrite the reply in one of the accepted forms: %s"
+            % (str(verdict.get("criterion") or "C2").strip(), str(verdict.get("reason") or "").strip(),
+               _JUDGE_FORMS)), None
+
+
 def roadblock_check(payload, reply_text, retry):
     """(block reason or None, systemMessage or None). Blocks an unchecked roadblock claim twice per
     user message, then warns. Anything it cannot read: says so, never blocks."""
@@ -3698,9 +3761,12 @@ def roadblock_check(payload, reply_text, retry):
         if not mode and _roadblock_claims(reply_text, _STALL_RE):
             note = ("house-rules: the Stop payload carried no permission_mode, so stall phrases were not "
                     "scanned (treated as attended).")
-    if not claims and not stalls:
-        return None, note
     transcript_path = _field(_TRANSCRIPT_RE, payload)
+    if not claims and not stalls:
+        if retry or not transcript_path or "NEEDS YOU" in reply_text:  # a retry is not judged again (cap: #608)
+            return None, note
+        jblock, jmsg = _judge_check(transcript_path, reply_text)
+        return jblock, jmsg or note
     if not transcript_path:
         return None, "house-rules: roadblock check could not run (the Stop payload carried no transcript_path)."
     need = ""
