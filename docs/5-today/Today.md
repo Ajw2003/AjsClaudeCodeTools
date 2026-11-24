@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Step 1 (#618, four reviewer modes) is built on the branch `AjsAgent/review-command-step1` (commit 8446569) and not merged yet. My own `verify.py` runs on it: core 272, docs 167 and writing 24 checks pass; the make_page and design_loop parts are running in the background and unread. The first builder run stopped because its automatic worktree started from an old commit; I made the worktree by hand from this branch.
+
 aj approved the build plan ("Build plan approved: review command 1A 2A 3A"); the stage is Build. Issues #618 to #621 say `in progress`, the Decisions entry is written, and a builder is working on step 1 (#618, four new reviewer modes) in its own worktree; steps 2 to 4 wait on it one at a time. Nothing is merged or verified yet.
 
 The systems doc `docs/4-systems/review-command.md` had a 900-second agent deadline in its invariants; it now says 60 seconds (the value in `rules/waits.json`), and the final plan page was re-sent after two review rounds. Still waiting on aj's three answers and "Build plan approved: review command".
