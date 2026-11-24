@@ -4,10 +4,10 @@
 Make the house-rules design loop smoother: a reviewer that checks designs and plans for flaws (not only wording), an acceptance run that tests and screenshots the finished feature before QA, no manual testing for aj, and questions parked and answered in one batch instead of halting work. In unattended mode, every departure from the build plan is logged in a deviations ledger shown first on the QA page.
 
 ## Where it stands
-Design approved by aj (1A 2A 3A 4A 5* 6A 7A 8A; 5*: every page except review and QA pages is fully reviewed). Stage: Plan. Done: decisions entry, `docs/4-systems/review-loop.md`, parent issue #592 and steps #593 to #601, and the build plan page `docs/plans/2026-11-24-design-review-loop-plan.html` (editor pass applied, sent). Nothing is built. Overlap: unattended mode 2.87.0 is in main; 2.90.0 (#587 to #591) is only on `AjsAgent/affectionate-lovelace-r0zfgg`.
+Build stage, approved by aj ("Build plan approved: design review loop"). Step 1 (#593, reviewer modes) is built and committed (`b7072bc`); my own full `verify.py` run passed 1444 of 1444 and a real page-mode run found seven findings. Step 2 (#594, review stamp) is being built by a helper and is NOT committed; check `git status` for its partial edits before doing anything else. Deviations D1 to D4 and parked decisions P1 and P2 are in `docs/qa/design-review-loop/ledger.md`. Steps 6 and 7 wait for 2.90.0 to merge.
 
 ## The next step
-aj answers "Build plan approved: design review loop". Then build step 1 (#593) with a builder helper, then steps 2, 3, 5 and 8 one at a time. Stop before step 6 until 2.90.0 merges and record steps 6 and 7 as owed.
+When the step 2 helper reports, check its files and re-run `python claude-house-rules/plugins/house-rules/scripts/verify.py` yourself, then commit. Then build steps 3, 5 and 8 one at a time, record steps 6 and 7 as owed, then 4 and 9.
 
 ## What is unverified
 The other branch was read from its diffs, not run. Whether the agent sees the permission mode on every surface is unconfirmed (2.90.0's own note says the bypass value was not seen live). The 60-words-per-block limit was not counted, and other cited line numbers were not re-checked. Review cost and the two-round cap are unmeasured.

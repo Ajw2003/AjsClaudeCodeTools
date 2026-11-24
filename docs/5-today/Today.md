@@ -2,7 +2,7 @@
 
 ## 2026-11-24
 
-aj approved the build plan ("Build plan approved: design review loop"); the stage is Build. Step 1 (#593) is built and checked: my own full run `verify.py` passed 1444 of 1444, and a real page-mode run of the new reviewer on the approved design page returned seven findings and a verdict. Deviations D1 to D4 and parked decisions P1 and P2 are in `docs/qa/design-review-loop/ledger.md`. Next: step 2 (#594, the review stamp).
+aj approved the build plan ("Build plan approved: design review loop"); the stage is Build. Step 1 (#593) is built and checked: my own full run `verify.py` passed 1444 of 1444, and a real page-mode run of the new reviewer on the approved design page returned seven findings and a verdict. Deviations D1 to D4 and parked decisions P1 and P2 are in `docs/qa/design-review-loop/ledger.md`. Step 2 (#594, the review stamp) is being built by a helper and is not committed yet.
 
 aj approved the design as "Design approved: design review loop 1A 2A 3A 4A 5* 6A 7A 8A" (5*: every page except review and QA pages gets the full review). The stage is Plan. Done: decisions entry, systems doc `docs/4-systems/review-loop.md`, parent issue #592 with steps #593 to #601 (all `in progress`), and the build plan page `docs/plans/2026-11-24-design-review-loop-plan.html` after the editor pass. Waiting on "Build plan approved: design review loop"; steps 6 and 7 also wait for 2.90.0 to merge.
 
