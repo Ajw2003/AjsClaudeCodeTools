@@ -1791,6 +1791,21 @@ def _ma_say(prompt):
     return note, state
 
 
+def _ma_plan(slug, stamped=True, stale=False):
+    """#600 A2: a build-plan page in docs/plans, with a current review stamp (or none, or a stale one)."""
+    sys.path.insert(0, HERE)
+    import page_criteria
+    d = os.path.join(_ma_dir, "docs", "plans")
+    os.makedirs(d, exist_ok=True)
+    html = '<!doctype html>\n<meta name="house-rules-page" content="build-plan">\n<p>plan for %s</p>\n' % slug
+    if stamped:
+        html = html.replace("<p>", page_criteria.stamp_line(html, "clean", 1) + "<p>", 1)
+        if stale:
+            html += "<p>edited after review</p>\n"
+    with open(os.path.join(d, "2026-11-24-%s-plan.html" % slug), "w", encoding="utf-8") as f:
+        f.write(html)
+
+
 _ma_set({"feature": "", "stage": "design"})
 _n, _s = _ma_say("What would happen if I said Design approved: login page? Don't do it yet.")
 _ma_set({"feature": "x", "stage": "plan"})
@@ -1801,6 +1816,7 @@ report("PASS" if (_s["stage"] == "design" and not _s2.get("skip") and _s3["stage
                   and _s3.get("feature") == "login page") else "FAIL",
        "design loop (D2): a question or a don't moves nothing; an approval after a sentence or a tag still counts")
 _ma_set({"feature": "Label setup", "stage": "design"})
+_ma_plan("importer")
 _n, _s = _ma_say("Design approved: importer.  Build plan approved: Importer")
 report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "importer"
                   and 'Design approved: importer' in _n and "build plan approved: importer" in _n.lower()) else "FAIL",
@@ -1810,6 +1826,7 @@ if _s["stage"] != "build":
 
 # #600: two lines in one message, Design then Build plan, no plan issues yet: Build, both approvals, issues owed.
 _ma_set({"feature": "", "stage": "design"})
+_ma_plan("combo")
 _n, _s = _ma_say("Design approved: combo 1A 2B\nBuild plan approved: combo")
 _ma_names = [a.get("stage") for a in _s.get("approvals", [])]
 report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "combo"
@@ -1820,6 +1837,28 @@ report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "combo"
        "and the plan's issues owed in the same turn")
 print("          #600 state: stage %r, feature %r, approvals %r\n          #600 note: %s"
       % (_s["stage"], _s.get("feature"), _ma_names, _n))
+
+# #600 A2: the combined line carries the plan only when the plan page has a current review stamp.
+for _why, _kw, _expect in (("no plan page", None, "no build plan page"), ("an unstamped plan page", {"stamped": False}, "no review stamp"),
+                           ("a stale stamp", {"stale": True}, "stamp is stale")):
+    _ma_set({"feature": "", "stage": "design"})
+    _pd = os.path.join(_ma_dir, "docs", "plans")
+    for _f in (os.listdir(_pd) if os.path.isdir(_pd) else []):
+        if _f.endswith("-plan.html"):
+            os.remove(os.path.join(_pd, _f))
+    if _kw is not None:
+        _ma_plan("combo", **_kw)
+    _n, _s = _ma_say("Design approved: combo\nBuild plan approved: combo")
+    _nm = [a.get("stage") for a in _s.get("approvals", [])]
+    report("PASS" if (_s["stage"] == "plan" and _expect in _n and "was not applied" in _n
+                      and "Design approved" in _nm and "Build plan approved" not in _nm) else "FAIL",
+           "design loop (#600, A2): a combined approval with %s refuses the plan half and keeps the design half" % _why)
+    if _s["stage"] != "plan":
+        print("          stage %r, note %r" % (_s["stage"], _n[:300]))
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("Build plan approved: combo")
+report("PASS" if "was not applied" not in _n else "FAIL",
+       "design loop (#600, A2): a plan approval on its own message is not held to the stamp (speed switches 6A)")
 
 _ma_set({"feature": "Label setup", "stage": "design", "redo": True,
          "approvals": [{"stage": "QA failed", "name": "Importer", "at": 1}],
