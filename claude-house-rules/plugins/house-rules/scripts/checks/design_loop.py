@@ -3151,9 +3151,13 @@ _d = _p5_repo(_hq_build)
 _hq_cases.append(("a Build edit is allowed before any question", _p5_edit(_d)[0] == "allow"))
 run_hook("handover", stop_payload(last_assistant_message="Step done.", cwd=_d), env=_loop_env)
 _hq_cases.append(("a Build reply with no question holds nothing", not _ma_stage(_d).get("held") and _p5_edit(_d)[0] == "allow"))
-run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
+_, _hq_out, _ = run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
+_hq_cases.append(("#598: a plain question in Build holds nothing, edits stay allowed, and the end-of-reply output carries the park note",
+                  not _ma_stage(_d).get("held") and _p5_edit(_d)[0] == "allow"
+                  and "Build stage: park a reversible question with ledger_note.py park" in _hq_out))
+run_hook("handover", stop_payload(last_assistant_message="Step done.\n\n[HARD STOP] Delete the user table?", cwd=_d), env=_loop_env)
 _dec, _why = _p5_edit(_d)
-_hq_cases.append(("a Build reply ending with a question to aj sets held and the next code edit is refused with the note",
+_hq_cases.append(("#598: a [HARD STOP] question in Build sets held and the next code edit is refused with the note",
                   _ma_stage(_d).get("held") is True and _dec == "deny"
                   and "the last reply asked aj a question, so code edits wait for their answer." in _why))
 _ma_say(_d, "[Subagent hand-back] The builder finished.")
@@ -3179,6 +3183,59 @@ _hq_cases.append(("the retry (stop_hook_active) passes", not _hq_stop("I went wi
 _hq_cases.append(("a quoted line or a code fence does not fire",
                   not _hq_stop("> I went with option B\n\n```\nI chose x\n```", False)))
 _hq_cases.append(("a reply that deals in options does not fire", not _hq_stop("Option A or B? I suggest A.", False)))
+_d = _p5_repo(_hq_build)
+_p5_root, _p5_old = _hq_root, _p5_root
+
+
+def _hq_build_stop(reply):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=_d, session_id="verify-decided-b"), env=_loop_env)
+    return out
+
+
+_o = _hq_build_stop("I went with option B for the layout.")
+_hq_cases.append(("#598: in Build, 'I went with' fires and says to park it in the ledger", "decided for you" in _o and "ledger_note.py" in _o))
+_hq_cases.append(("#598: in Build, a reply naming the ledger, ledger_note.py or P7 does not fire",
+                  all("decided for you" not in _hq_build_stop("I went with option B (see the ledger).") + _hq_build_stop(
+                      "I chose X, parked with ledger_note.py.") + _hq_build_stop("I chose X, row P7.") for _ in (0,))))
+_p5_root = _p5_old
+# ---- #598: noask in the Build stage, with someone present ----
+_na_root = tempfile.mkdtemp(prefix="noask-build-")
+_na_cases = []
+_na_p5, _p5_root = _p5_root, _na_root
+
+
+def _na(stage, tool="AskUserQuestion", mode="default", q="Blue or green?", env=None):
+    d = _p5_repo(dict(_hq_build, stage=stage))
+    p = {"hook_event_name": "PreToolUse", "session_id": "na", "cwd": d, "tool_name": tool,
+         "tool_input": {"questions": [{"question": q, "header": "Colour"}]}}
+    if mode:
+        p["permission_mode"] = mode
+    e = dict(_loop_env, HOUSE_RULES_UNATTENDED="off")
+    e.update(env or {})
+    return run_hook("noask", json.dumps(p), env=e)
+
+
+_o = _na("build")
+_na_cases.append(("attended Build plain question is denied with the park text naming ledger_note.py",
+                  '"permissionDecision":"deny"' in _o[1] and "Build stage" in _o[1] and "ledger_note.py" in _o[1] and "[HARD STOP]" in _o[1]))
+_na_cases.append(("attended Build question with [HARD STOP] is allowed", _na("build", q="[HARD STOP] Delete the data?")[1] == ""))
+for _s in ("design", "plan", "qa"):
+    _na_cases.append(("attended %s question is allowed as before" % _s, _na(_s)[1] == ""))
+_na_cases.append(("attended Build ExitPlanMode is untouched", _na("build", tool="ExitPlanMode")[1] == ""))
+_na_cases.append(("unattended denies with the old text and names ledger_note.py park",
+                  all(t in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1] for t in ("nobody is there to answer", "ledger_note.py park"))))
+_na_cases.append(("bypassPermissions denies with the old text and names ledger_note.py park",
+                  all(t in _na("design", mode="bypassPermissions")[1] for t in ("nobody is there to answer", "ledger_note.py park"))))
+_o = _na("design", mode=None)
+_na_cases.append(("missing permission_mode: allowed outside Build (said on stderr)", _o[1] == "" and "no permission_mode" in _o[2]))
+_na_cases.append(("missing permission_mode: a plain question in Build is denied", '"permissionDecision":"deny"' in _na("build", mode=None)[1]))
+_o = _na("build", env={"HOUSE_RULES_LOOP": "off"})
+_na_cases.append(("loop off: nothing, said on stderr", _o[1] == "" and "could not be read" in _o[2] and "HOUSE_RULES_LOOP=off" in _o[2]))
+for _t, _ok in _na_cases:
+    report("PASS" if _ok else "FAIL", "noask in Build (#598): " + _t)
+_p5_root = _na_p5
+shutil.rmtree(_na_root, True)
+
 for _t, _ok in _hq_cases:
     report("PASS" if _ok else "FAIL", "held question and decided-for-you (#459, #460): " + _t)
 shutil.rmtree(_hq_root, True)

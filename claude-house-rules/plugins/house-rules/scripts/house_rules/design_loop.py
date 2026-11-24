@@ -1367,9 +1367,14 @@ def handover_record_offers(payload, have_reply, reply_text, trace_lines):
         if changed:
             _st["offered"] = offered
         # #459: a reply in Build that asks aj something holds code edits until aj's next message
-        if _st.get("stage") == "build" and _asks_aj(reply_text) and not _st.get("held"):
-            _st["held"] = True
-            changed = True
+        if _st.get("stage") == "build" and _asks_aj(reply_text):
+            if "[HARD STOP]" in _MD_FENCED_BLOCK_RE.sub("", reply_text or "").strip().split("\n\n")[-1]:
+                if not _st.get("held"):
+                    _st["held"] = True
+                    changed = True
+            else:  # #598: a plain question in Build parks instead of holding
+                trace_lines.append("Build stage: park a reversible question with ledger_note.py park and end the "
+                                   "reply with the next step; use [HARD STOP] only for what cannot be undone.")
         if changed:
             _loop_write(_gd, _st)
     except Exception as exc:
@@ -2805,8 +2810,15 @@ _DECIDED_RE = re.compile(r"(?i)\bI (?:went with|chose|picked|decided on|settled 
 def _check_decided(ctx):
     """#460: a reply that settles a design point on its own is sent back once."""
     text = _MD_FENCED_BLOCK_RE.sub("", ctx.get("reply") or "")
+    build = ctx.get("qa_stage") == "build"
+    if build and re.search(r"(?i:ledger)|\bP\d+\b", text):  # #598: a parked choice is on the ledger
+        return ""
     for line in text.split("\n"):
         if not line.lstrip().startswith(">") and _DECIDED_RE.search(line):
+            if build:
+                return ("a design point is aj's to review; park the choice in the ledger with "
+                        "`python3 %s park ...` instead of only saying \"I went with ...\""
+                        % os.path.join(SCRIPTS_DIR, "ledger_note.py"))
             return ("a design point is aj's to decide; put the choice to aj as options with one marked as the "
                     "suggestion instead of saying \"I went with ...\"")
     return ""
@@ -3515,6 +3527,20 @@ def handover_qa_retry(payload, have_reply, reply_text, trace_lines):
                            % (type(exc).__name__, exc))
 
 
+def _noask_stage(payload):
+    """#598: (stage, "") for event_noask, or (None, why it could not be read)."""
+    if not _loop_enabled():
+        return None, "the design loop is off (HOUSE_RULES_LOOP=off)"
+    _top, gd = _issues_locate(_payload_cwd(payload))
+    if not gd:
+        return None, "no git project found from the payload's cwd"
+    state, problem = _loop_read_merged(gd)
+    if problem:
+        return None, problem
+    return state["stage"], ""
+
+
+core.register_noask_stage(_noask_stage)
 core.register_guard_issue(_author_guard)
 core.register_guard_issue(_issues_guard)
 core.register_github_write(_guardgithub_issue_checks)

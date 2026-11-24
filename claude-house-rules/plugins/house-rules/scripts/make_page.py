@@ -312,7 +312,8 @@ def apply_qa(page, project):
     if os.path.isfile(lp):
         with open(lp, encoding="utf-8") as f:
             for ln in f.read().splitlines():
-                c = [x.strip() for x in ln.split("|")]
+                # split on an unescaped pipe only; ledger_note.py writes a pipe in a cell as \|
+                c = [x.strip().replace("\\|", "|") for x in re.split(r"(?<!\\)\|", ln)]
                 if ln.startswith("| D") and len(c) > 4:
                     ledger.append(("D", "%s: %s" % (c[1], c[4])))
                 elif ln.startswith("| P") and len(c) > 3:
