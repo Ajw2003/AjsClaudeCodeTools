@@ -368,10 +368,12 @@ def event_announce():
         effort = _field(_EFFORT_RE, payload, problems)
         version = _plugin_version(problems)
         model, decl_effort, digest = _declared(agent_type, problems)
+        asked = {}
         if agent_id:
             cap_note = _agentcap_update(add=(agent_id, agent_type))
             if cap_note:
                 problems.append(cap_note)
+            asked = _agentcap_requested(agent_id)
 
         bits = ["house-rules: subagent starting - %s" % (agent_type or "agent type not in payload")]
         if agent_id:
@@ -383,6 +385,11 @@ def event_announce():
             )
         else:
             bits.append("no declaration shipped by this plugin to compare against")
+        if asked:
+            bits.append(
+                "override typed at spawn: %s (the agent file declares %s)"
+                % (", ".join("%s %s" % (k, v) for k, v in asked.items()), model or "no model")
+            )
         if effort:
             # The docs do not say whether this is the subagent's effort or the session's.
             # Name the field it came from and claim nothing more.
@@ -720,6 +727,13 @@ def _write_subagent_ledger(transcript_path, payload):
         )
 
 
+def _override_note(asked, file_declared):
+    """" (override typed at spawn; the agent file says X)" when the parent asked for a model, else nothing."""
+    if not asked.get("model"):
+        return ""
+    return " (override typed at spawn; the agent file declares %s)" % (file_declared or "no model")
+
+
 def event_verdict():
     """SubagentStop: say which model ACTUALLY served the subagent, from its transcript."""
     try:
@@ -741,6 +755,10 @@ def event_verdict():
         agent_type = raw_type or "agent type not in payload"
         declared, _decl_effort, _digest = _declared(raw_type, problems)
         stop_id = _field(_AGENT_ID_RE, payload)
+        asked = _agentcap_requested(stop_id)  # read before the record is removed just below
+        file_declared = declared
+        if asked.get("model"):
+            declared = asked["model"]  # an override typed on the Agent call beats the agent file
         if stop_id:
             cap_note = _agentcap_update(remove=stop_id)
             if cap_note:
@@ -811,11 +829,11 @@ def event_verdict():
             # declared model and fell back mid-run still reads as a mismatch.
             low = declared.lower()
             if models and all(low in m.lower() for m in models):
-                bits.append("declared %s - MATCH" % declared)
+                bits.append("declared %s - MATCH" % declared + _override_note(asked, file_declared))
             else:
                 bits.append(
                     "declared %s - MISMATCH, the delegation did not run on what it declares"
-                    % declared
+                    % declared + _override_note(asked, file_declared)
                 )
         else:
             bits.append("no declared model shipped for this agent, so nothing to compare")
@@ -911,12 +929,31 @@ def _agentcap_live(recs, now=None):
                                                     else AGENT_STALE_SECONDS)]
 
 
+def _agentcap_requested(agent_id):
+    """The model/effort the parent typed when it spawned this agent ({} when none, or unreadable)."""
+    try:
+        path = _agentcap_path()
+        if not path or not agent_id:
+            return {}
+        for r in _agentcap_load(path):
+            if r.get("id") == agent_id and isinstance(r.get("req"), dict):
+                return r["req"]
+    except (ValueError, OSError):
+        pass
+    return {}
+
+
 def _agentcap_save(path, recs):
     _write_atomic(path, json.dumps({"agents": recs}))
 
 
-def _agentcap_update(add=None, remove=None):
-    """Add or remove one record. Returns "" or a one-line problem (never raises)."""
+def _agentcap_update(add=None, remove=None, requested=None):
+    """Add or remove one record. Returns "" or a one-line problem (never raises).
+
+    `requested` is the model/effort the parent typed on the Agent call (`req` on the record). A launch's
+    pending record holds it, and the helper that takes the placeholder inherits it, so verdict can compare
+    against what was asked for, not only what the agent file declares.
+    """
     if not _agentcap_enabled():
         return ""
     note = ""
@@ -935,9 +972,15 @@ def _agentcap_update(add=None, remove=None):
         if add:
             recs = [r for r in recs if r.get("id") != add[0]]
             pending = [r for r in recs if str(r.get("id", "")).startswith("pending:")]
+            taken = {}
             if pending and not str(add[0]).startswith("pending:"):
-                recs.remove(min(pending, key=lambda r: r["start"]))  # A10: this agent takes its launch's place
-            recs.append({"id": add[0], "type": add[1], "start": time.time()})
+                first = min(pending, key=lambda r: r["start"])
+                recs.remove(first)  # A10: this agent takes its launch's place
+                taken = first.get("req") or {}
+            rec = {"id": add[0], "type": add[1], "start": time.time()}
+            if requested or taken:
+                rec["req"] = requested or taken
+            recs.append(rec)
         _agentcap_save(path, recs)
     except Exception as exc:
         return "agent cap: could not update the running-subagent list (%s: %s)" % (type(exc).__name__, exc)
@@ -972,7 +1015,10 @@ def event_agentcap():
                       "allowed, the cap is not enforced this time." % (path, type(exc).__name__)})
                 return 0
             if len(recs) < AGENT_CAP:
-                note = _agentcap_update(add=("pending:%s" % (data.get("tool_use_id") or time.time()), "starting"))
+                tin = data.get("tool_input") if isinstance(data.get("tool_input"), dict) else {}
+                asked = {k: str(tin[k]).strip() for k in ("model", "effort") if str(tin.get(k) or "").strip()}
+                note = _agentcap_update(add=("pending:%s" % (data.get("tool_use_id") or time.time()), "starting"),
+                                        requested=asked or None)
                 if note:
                     emit({"systemMessage": "house-rules: " + note})
                 return 0
