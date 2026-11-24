@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command step 4 (#621) is merged: plugin 2.94.0, the eight reviewer modes in `review-loop.md`, `review-command.md` marked built, and the mode-list check now covers `review-loop.md`; all seven verify parts pass on it (docs 174, core 272, writing 24, safe_git 282, delegation 204, design_loop 529, make_page 116). The plan's acceptance tests have started: test 1 (mode choice, 9 cases) and test 2 (eight modes in three files) pass, and the 14-folder sweep fixture prints its notice; outputs are in `docs/qa/review-command/round-1/`.
+
 Review command step 4 (#621) came back from its builder on `AjsAgent/review-command-step4` (commit 7771b57): the reviewer's eight modes are in `review-loop.md`, `review-command.md` says built, the plugin version is 2.94.0, and the mode-list check covers `review-loop.md`. My own `docref.py`, `docs_drift.py` and `plain_docs_check.py` runs pass on it; the seven-part verify run is in progress and it is not merged yet.
 
 Review command step 3 (#620) is merged: seven new `verify.py` cases (checks/docs.py) keep the reviewer's eight modes, the command file and the sweep helper in step, and each was shown failing against a deliberately broken file. All seven verify parts pass on it (docs 174, core 272, writing 24, safe_git 282, delegation 204, design_loop 529, make_page 116). Step 4 (#621, docs and version 2.94.0) is with a builder.
