@@ -1,5 +1,5 @@
 $ verify.py --only '#598'
-exit 1
+exit 0
 
 
 house-rules hooks - verification (Python)
@@ -11,7 +11,7 @@ no option given: every part (core, safe_git, design_loop, writing, delegation, d
 Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (38.2 s)
+PART core - passed (77.0 s)
 ==============================================================================
 
 
@@ -30,7 +30,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART safe_git - passed (82.9 s)
+PART safe_git - passed (143.6 s)
 ==============================================================================
 
 
@@ -49,18 +49,8 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART design_loop - exited 1 without its RESULT line (crashed?) (140.4 s)
+PART design_loop - passed (224.6 s)
 ==============================================================================
-Traceback (most recent call last):
-
-  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
-
-    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
-
-                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-_vu4a5xz\\tmp138l3xn5\\git\\house-rules-issue-cache.json'
-
 
 
 house-rules hooks - verification (Python) - part: design_loop
@@ -101,8 +91,16 @@ house-rules hooks - verification (Python) - part: design_loop
 
 16. PASS  held question and decided-for-you (#459, #460): #598: in Build, a reply naming the ledger, ledger_note.py or P7 does not fire
 
+
+
+--------------------------------
+
+RESULT: PASS - all 16 checks passed. The hooks are behaving as written.
+
+
+
 ==============================================================================
-PART writing - passed (6.3 s)
+PART writing - passed (11.6 s)
 ==============================================================================
 
 
@@ -121,7 +119,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART delegation - passed (116.4 s)
+PART delegation - passed (183.4 s)
 ==============================================================================
 
 
@@ -140,7 +138,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART docs - passed (31.0 s)
+PART docs - passed (62.8 s)
 ==============================================================================
 
 
@@ -159,7 +157,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART make_page - passed (131.3 s)
+PART make_page - passed (178.7 s)
 ==============================================================================
 
 
@@ -191,24 +189,23 @@ RESULT: PASS - all 6 checks passed. The hooks are behaving as written.
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    38.2 s  passed
-  safe_git        0 checks  PASS    82.9 s  passed
-  design_loop     0 checks  FAIL   140.4 s  exited 1 without its RESULT line (crashed?)
-  writing         0 checks  PASS     6.3 s  passed
-  delegation      0 checks  PASS   116.4 s  passed
-  docs            0 checks  PASS    31.0 s  passed
-  make_page       6 checks  PASS   131.3 s  passed
-  wall-clock 140.4 s
+  core            0 checks  PASS    77.0 s  passed
+  safe_git        0 checks  PASS   143.6 s  passed
+  design_loop    16 checks  PASS   224.6 s  passed
+  writing         0 checks  PASS    11.6 s  passed
+  delegation      0 checks  PASS   183.4 s  passed
+  docs            0 checks  PASS    62.8 s  passed
+  make_page       6 checks  PASS   178.7 s  passed
+  wall-clock 224.6 s
 
 --------------------------------
-RESULT: FAIL - 1 of 6 checks failed. Failing part(s): design_loop. See the FAIL lines above.
-        design_loop: exited 1 without its RESULT line (crashed?)
+RESULT: PASS - all 22 checks passed. The hooks are behaving as written.
 
 Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
 No node, no jq required by hook.py itself - stdlib only.
 Matching is textual, so a command that merely mentions a tripwire word will also
 prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
 
---only '#598' matched 6 check(s).
+--only '#598' matched 22 check(s).
 
 --- stderr ---

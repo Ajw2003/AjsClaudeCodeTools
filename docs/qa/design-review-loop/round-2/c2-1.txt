@@ -1,5 +1,5 @@
 $ verify.py --only 'stamp'
-exit 1
+exit 0
 
 
 house-rules hooks - verification (Python)
@@ -11,7 +11,7 @@ no option given: every part (core, safe_git, design_loop, writing, delegation, d
 Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (39.5 s)
+PART core - passed (42.5 s)
 ==============================================================================
 
 
@@ -30,7 +30,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART safe_git - passed (83.5 s)
+PART safe_git - passed (88.3 s)
 ==============================================================================
 
 
@@ -49,18 +49,8 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART design_loop - exited 1 without its RESULT line (crashed?) (138.8 s)
+PART design_loop - passed (147.5 s)
 ==============================================================================
-Traceback (most recent call last):
-
-  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
-
-    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
-
-                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-e8yyytu5\\tmpj6o0vb9t\\git\\house-rules-issue-cache.json'
-
 
 
 house-rules hooks - verification (Python) - part: design_loop
@@ -113,8 +103,16 @@ house-rules hooks - verification (Python) - part: design_loop
 
 22. PASS  design loop: proof (#507) A2: a merge that doesn't link the QA-passed issue stamps nothing; one with Refs #7 stamps its record and the note offers the close line
 
+
+
+--------------------------------
+
+RESULT: PASS - all 22 checks passed. The hooks are behaving as written.
+
+
+
 ==============================================================================
-PART writing - passed (5.8 s)
+PART writing - passed (6.9 s)
 ==============================================================================
 
 
@@ -133,7 +131,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART delegation - passed (115.8 s)
+PART delegation - passed (127.3 s)
 ==============================================================================
 
 
@@ -145,7 +143,7 @@ house-rules hooks - verification (Python) - part: delegation
 
  1. PASS  acceptance: stamp refused when ledger status is not NEXT: done
 
-          acceptance: refusing to stamp, ledger status for C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-s6fn8tfi\acc-eepfonhb\repo\docs\qa\f is not NEXT: done:
+          acceptance: refusing to stamp, ledger status for C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-oo4hqj4a\acc-kthjdroi\repo\docs\qa\f is not NEXT: done:
 
 rounds: 0 (cap 4)
 
@@ -163,7 +161,7 @@ NEXT: fix
 
  3. PASS  acceptance: stamp written when ledger status is NEXT: done
 
-          acceptance: stamped C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-s6fn8tfi\acc-eepfonhb\repo\docs\qa\f\acceptance-stamp.json
+          acceptance: stamped C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-oo4hqj4a\acc-kthjdroi\repo\docs\qa\f\acceptance-stamp.json
 
 
 
@@ -188,7 +186,7 @@ RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART docs - passed (31.9 s)
+PART docs - passed (34.9 s)
 ==============================================================================
 
 
@@ -207,7 +205,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART make_page - passed (131.9 s)
+PART make_page - passed (134.9 s)
 ==============================================================================
 
 
@@ -243,24 +241,23 @@ RESULT: PASS - all 8 checks passed. The hooks are behaving as written.
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    39.5 s  passed
-  safe_git        0 checks  PASS    83.5 s  passed
-  design_loop     0 checks  FAIL   138.8 s  exited 1 without its RESULT line (crashed?)
-  writing         0 checks  PASS     5.8 s  passed
-  delegation      5 checks  PASS   115.8 s  passed
-  docs            0 checks  PASS    31.9 s  passed
-  make_page       8 checks  PASS   131.9 s  passed
-  wall-clock 138.8 s
+  core            0 checks  PASS    42.5 s  passed
+  safe_git        0 checks  PASS    88.3 s  passed
+  design_loop    22 checks  PASS   147.5 s  passed
+  writing         0 checks  PASS     6.9 s  passed
+  delegation      5 checks  PASS   127.3 s  passed
+  docs            0 checks  PASS    34.9 s  passed
+  make_page       8 checks  PASS   134.9 s  passed
+  wall-clock 147.5 s
 
 --------------------------------
-RESULT: FAIL - 1 of 13 checks failed. Failing part(s): design_loop. See the FAIL lines above.
-        design_loop: exited 1 without its RESULT line (crashed?)
+RESULT: PASS - all 35 checks passed. The hooks are behaving as written.
 
 Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
 No node, no jq required by hook.py itself - stdlib only.
 Matching is textual, so a command that merely mentions a tripwire word will also
 prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
 
---only 'stamp' matched 13 check(s).
+--only 'stamp' matched 35 check(s).
 
 --- stderr ---

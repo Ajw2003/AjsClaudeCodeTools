@@ -1,5 +1,5 @@
 $ verify.py --only 'agents exist, pinned'
-exit 1
+exit 0
 
 
 house-rules hooks - verification (Python)
@@ -11,7 +11,7 @@ no option given: every part (core, safe_git, design_loop, writing, delegation, d
 Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (38.2 s)
+PART core - passed (44.9 s)
 ==============================================================================
 
 
@@ -30,7 +30,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART safe_git - passed (82.1 s)
+PART safe_git - passed (95.0 s)
 ==============================================================================
 
 
@@ -49,18 +49,8 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART design_loop - exited 1 without its RESULT line (crashed?) (136.9 s)
+PART design_loop - passed (154.2 s)
 ==============================================================================
-Traceback (most recent call last):
-
-  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
-
-    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
-
-                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-aiuxrf0r\\tmpmtr2xfbw\\git\\house-rules-issue-cache.json'
-
 
 
 house-rules hooks - verification (Python) - part: design_loop
@@ -69,8 +59,16 @@ house-rules hooks - verification (Python) - part: design_loop
 
 
 
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
 ==============================================================================
-PART writing - passed (5.0 s)
+PART writing - passed (6.6 s)
 ==============================================================================
 
 
@@ -89,7 +87,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART delegation - passed (115.5 s)
+PART delegation - passed (132.0 s)
 ==============================================================================
 
 
@@ -112,7 +110,7 @@ RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART docs - passed (30.3 s)
+PART docs - passed (37.7 s)
 ==============================================================================
 
 
@@ -131,7 +129,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART make_page - passed (130.9 s)
+PART make_page - passed (139.1 s)
 ==============================================================================
 
 
@@ -151,18 +149,17 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    38.2 s  passed
-  safe_git        0 checks  PASS    82.1 s  passed
-  design_loop     0 checks  FAIL   136.9 s  exited 1 without its RESULT line (crashed?)
-  writing         0 checks  PASS     5.0 s  passed
-  delegation      1 checks  PASS   115.5 s  passed
-  docs            0 checks  PASS    30.3 s  passed
-  make_page       0 checks  PASS   130.9 s  passed
-  wall-clock 136.9 s
+  core            0 checks  PASS    44.9 s  passed
+  safe_git        0 checks  PASS    95.0 s  passed
+  design_loop     0 checks  PASS   154.2 s  passed
+  writing         0 checks  PASS     6.6 s  passed
+  delegation      1 checks  PASS   132.0 s  passed
+  docs            0 checks  PASS    37.7 s  passed
+  make_page       0 checks  PASS   139.1 s  passed
+  wall-clock 154.2 s
 
 --------------------------------
-RESULT: FAIL - 1 of 1 checks failed. Failing part(s): design_loop. See the FAIL lines above.
-        design_loop: exited 1 without its RESULT line (crashed?)
+RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
 
 Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
 No node, no jq required by hook.py itself - stdlib only.
