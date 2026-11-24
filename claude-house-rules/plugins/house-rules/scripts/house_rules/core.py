@@ -3474,6 +3474,17 @@ def _attempt_class(name, text):
     return "other tool"
 
 
+_NO_OUTPUT_RE = re.compile(r"^\W*(?:(?:Bash|PowerShell) )?completed with no output\W*$", re.IGNORECASE)
+_FILTER_RE = re.compile(r"\b(?:grep|egrep|rg|findstr|Select-String|find|locate)\b", re.IGNORECASE)
+
+
+def _empty_search(name, cmd, res):
+    """A filtered search (grep, find, locate ...) that found nothing exits 0 with no output; that is a failed
+    attempt (found live on 2026-11-23: `ls /usr/bin | grep tool` was reported as a success)."""
+    return (name in ("Bash", "PowerShell") and bool(_FILTER_RE.search(cmd))
+            and (not res.strip() or bool(_NO_OUTPUT_RE.match(res.strip()))))
+
+
 def _failed_attempts(records):
     """[(class, head word, set of words)] for every failed tool call of the turn."""
     uses = {b.get("id"): b for b in _turn_tool_uses(records)}
@@ -3492,7 +3503,7 @@ def _failed_attempts(records):
                 if _HOOK_REFUSAL_RE.search(res) or (_HARMLESS_RE.search(cmd) and name in ("Bash", "PowerShell")) \
                         or _HARMLESS_RE.search(res):
                     continue
-            elif not (len(res) < 600 and _FAIL_TEXT_RE.search(res)):
+            elif not (len(res) < 600 and (_FAIL_TEXT_RE.search(res) or _empty_search(name, cmd, res))):
                 continue
             head = (cmd.split() or [name])[0].lower() if name in ("Bash", "PowerShell") else name.lower()
             words = {w for w in re.findall(r"[a-z0-9][a-z0-9_.-]{2,}", (cmd + " " + name).lower()) if w not in _WORD_STOP}

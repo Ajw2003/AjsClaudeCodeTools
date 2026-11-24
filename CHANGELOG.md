@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+The roadblock record check now counts a filtered search that finds nothing (for example `ls /usr/bin | grep tool`, which the tool reports as a success with no output) as a failed attempt; a real headless session showed it counted only two of three methods; two new `verify.py` cases cover it, and their first run had not finished when this line was written.
+
 A live test script for the roadblock fix, `docs/plans/2026-11-23-roadblock-unattended-hook/live_roadblocks.py`, starts five real headless sessions on the branch build (curly apostrophe, `git ls-files` only, three methods listed, unattended stall, bypass question); its first run was under way when this line was written, so no result is recorded yet.
 
 Plugin 2.90.0: roadblock detection fix (#587, steps #588 to #591). A reply that says it cannot do something now passes only after three failed attempts by different methods, curly apostrophes and more wordings are caught, and a model judge plus a goal check stop a reply that ends with "Next step" while work can carry on; in unattended or bypass-permission mode a design question is chosen by the agent and recorded, never waited on (the `noask` hook now covers `bypassPermissions`), and a licence, login, purchase or destructive step blocks only its own part. `HOUSE_RULES_ROADBLOCKS=off` and `HOUSE_RULES_GOALCHECK=off` switch the parts off. Detail: `docs/4-systems/roadblocks.md`.
