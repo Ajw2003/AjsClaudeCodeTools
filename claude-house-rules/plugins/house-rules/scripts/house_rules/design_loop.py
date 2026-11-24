@@ -1057,6 +1057,28 @@ def _loop_issues_for_apply(state, text, top):
             "issue's labels on GitHub." % (name, ", ".join(added) or "nothing new"))
 
 
+def _plan_unreviewed(top, name):
+    """#600, A2: "" when docs/plans holds a build-plan page for this feature with a current review stamp; else
+    why the combined approval cannot carry the plan. A page that cannot be read counts as unreviewed."""
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    plans = os.path.join(top or "", "docs", "plans")
+    try:
+        names = sorted(n for n in os.listdir(plans) if n.lower().endswith("-plan.html") and slug and slug in n.lower())
+    except OSError:
+        names = []
+    if not names:
+        return 'no build plan page for "%s" (a docs/plans file ending -plan.html and naming it) was found' % name
+    try:
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import page_criteria
+        with open(os.path.join(plans, names[-1]), encoding="utf-8", newline="") as f:
+            problem = page_criteria.stamp_problem(f.read())
+    except Exception as exc:
+        return "the plan page could not be checked (%s: %s)" % (type(exc).__name__, exc)
+    return "%s has %s" % (names[-1], problem) if problem else ""
+
+
 def _loop_apply_stage(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
     message approves nothing. Mutates state.
@@ -1069,7 +1091,17 @@ def _loop_apply_stage(state, text, top):
         return _loop_apply_one(state, text, top)
     pieces = [(order, text[start:found[i + 1][0] if i + 1 < len(found) else len(text)])
               for i, (start, order) in enumerate(found)]
-    notes = [_loop_apply_one(state, piece, top) for _order, piece in pieces]  # D5: in the order aj wrote them
+    notes = []
+    for order, piece in pieces:  # D5: in the order aj wrote them
+        if order == 1:  # #600, A2: the combined line carries the plan only when its page was reviewed
+            m = _LOOP_PLAN_RE.search(piece)
+            why = _plan_unreviewed(top, _loop_name(m.group(1))) if m else ""
+            if why:
+                notes.append('Design loop: aj wrote "Build plan approved" in the same message as another approval, '
+                             "but %s, so the build plan approval was not applied. Run the reviewer on the plan "
+                             "page and rebuild it with --reviewed, or aj approves the plan in its own message." % why)
+                continue
+        notes.append(_loop_apply_one(state, piece, top))
     return " ".join(n for n in notes if n)
 
 
