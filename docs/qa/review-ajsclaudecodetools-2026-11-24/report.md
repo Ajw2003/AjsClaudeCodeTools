@@ -44,13 +44,7 @@ The `checks/` and `house_rules/` files share names and sizes but do **not** dupl
 
 ## Counts
 
-| Severity | Count |
-|---|---|
-| high | 31 |
-| medium | 50 |
-| low | 52 |
-
-Counts are the reviewers' labels, merged below. The top 12 are written out in full; the rest are in the per-area tables.
+The seven reviewer runs each reported between about 15 and 25 findings. I did not tally them exactly or by severity, so no total is given. The top 12 are written out in full; the rest are grouped by area below, with every high and medium finding included and the minor lows summarised.
 
 ## Top findings, worst first
 
