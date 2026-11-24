@@ -373,7 +373,7 @@ def event_announce():
             cap_note = _agentcap_update(add=(agent_id, agent_type))
             if cap_note:
                 problems.append(cap_note)
-            asked = _agentcap_requested(agent_id)
+            asked = _agentcap_requested(agent_id, problems)
 
         bits = ["house-rules: subagent starting - %s" % (agent_type or "agent type not in payload")]
         if agent_id:
@@ -755,7 +755,7 @@ def event_verdict():
         agent_type = raw_type or "agent type not in payload"
         declared, _decl_effort, _digest = _declared(raw_type, problems)
         stop_id = _field(_AGENT_ID_RE, payload)
-        asked = _agentcap_requested(stop_id)  # read before the record is removed just below
+        asked = _agentcap_requested(stop_id, problems)  # read before the record is removed just below
         file_declared = declared
         if asked.get("model"):
             declared = asked["model"]  # an override typed on the Agent call beats the agent file
@@ -929,8 +929,9 @@ def _agentcap_live(recs, now=None):
                                                     else AGENT_STALE_SECONDS)]
 
 
-def _agentcap_requested(agent_id):
-    """The model/effort the parent typed when it spawned this agent ({} when none, or unreadable)."""
+def _agentcap_requested(agent_id, problems):
+    """The model/effort the parent typed when it spawned this agent ({} when none). A state file that
+    cannot be read adds a line to `problems`, so the report says the override could not be checked."""
     try:
         path = _agentcap_path()
         if not path or not agent_id:
@@ -938,8 +939,8 @@ def _agentcap_requested(agent_id):
         for r in _agentcap_load(path):
             if r.get("id") == agent_id and isinstance(r.get("req"), dict):
                 return r["req"]
-    except (ValueError, OSError):
-        pass
+    except (ValueError, OSError) as exc:
+        problems.append("could not read the typed model override (%s), so it was not compared" % type(exc).__name__)
     return {}
 
 
