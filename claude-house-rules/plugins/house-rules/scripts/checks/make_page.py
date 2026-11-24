@@ -304,6 +304,18 @@ _pw = {n: _mp_page_of(os.path.join(_d, "docs", "plans", n + ".html")) for n in (
 _mp_cases.append(("make_page: the last to-do line carries the approval phrase, HTML-escaped",
                   bool(_pw) and all(pg["wrapup"]["todo"][-1] == 'Tap <b>Copy my reply</b> and send it: "Build plan approved: guards &lt;audit&gt; &amp; more", or say what to change.'
                                     for pg in _pw.values())))
+# #600: a two-line approval, the design line then the build-plan line.
+_two = "Design approved: combo\nBuild plan approved: combo"
+_rc, _o = _mp("build", _mp_content("two", approval=_two, choices=_ch), "--project", _d)
+_pg2 = _mp_page_of(os.path.join(_d, "docs", "plans", "two.html")) if _rc == 0 else None
+_mp_cases.append(("make_page (#600): a two-line approval (design, then build plan) builds and the page holds both lines",
+                  bool(_pg2) and _pg2["approval"] == _two and "Design approved: combo" in _pg2["wrapup"]["todo"][-1]
+                  and "Build plan approved: combo" in _pg2["wrapup"]["todo"][-1]))
+_rc, _o = _mp("build", _mp_content("twobad", approval="Design approved: combo\nGuards audit"), "--project", _d)
+_mp_cases.append(("make_page (#600): a bad second approval line is refused and the message names it",
+                  _rc != 0 and "'Guards audit'" in _o))
+_rc, _o = _mp("build", _mp_content("tworev", approval="Build plan approved: combo\nDesign approved: combo"), "--project", _d)
+_mp_cases.append(("make_page (#600): the two lines in the wrong order are refused", _rc != 0 and "Design approved" in _o))
 _NODE = shutil.which("node") or "/opt/node22/bin/node"
 _PWMOD = "/opt/node22/lib/node_modules"
 _JS = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const out={};
