@@ -28,14 +28,14 @@ One command, `/house-rules:review`, that sends the existing reviewer helper at c
 ## Report folder and batches
 
 - The report folder is `docs/qa/review-<name>-<date>`. The name is the file stem with any leading date dropped (`2026-11-24-foo.html` gives `foo`), or the folder name.
-- A batch is at most 8 files of one top-level folder. The cap comes from `docs/qa/review-command/batch-measurement.md`: one 10-file markdown batch took 71.3 seconds and 43,991 tokens, about 7.1 seconds and 4,400 tokens per file, so 8 files is about 57 seconds, under the agent deadline.
+- A batch is at most 6 files of one top-level folder. `docs/qa/review-command/batch-measurement.md` measured one 10-file markdown batch at 71.3 seconds, about 7.1 seconds a file; 8 files (57 seconds) sat right at the 60-second agent deadline and code files run slower, so 6 files (43 seconds on markdown) leaves headroom (deviation D3).
 - That deadline is 60 seconds (`rules/waits.json`). The 900 seconds on the design page and in `skills/visual-loop/SKILL.md` was stale (issue #622).
 
 ## Mode detection order
 
-1. The path `.` on its own: codebase.
+1. The repo root itself (`.`, `./`, or its absolute path): codebase. The target is resolved against `--root`.
 2. An image extension: image.
-3. A page whose `house-rules-page` tag says `build-plan`: plan (the approved design page is passed too).
+3. A page whose `house-rules-page` tag says `build-plan`: plan. Its design is the page with the same name minus `-plan` or `-build-plan` (dates ignored), or the `proposal.html`/`design.html` beside a folder-style `build-plan.html`; several matches print `design: ambiguous` and one `candidate:` line each.
 4. Any other HTML page: page.
 5. Any other file or folder: code.
 6. The word `style` after the path: style (needs a stated style or a project UI guide; otherwise it stops and says so).
@@ -49,6 +49,6 @@ One command, `/house-rules:review`, that sends the existing reviewer helper at c
 
 ## Known unknowns
 
-- The sweep notice now uses the per-file figures above (7.1 seconds, 4,400 tokens), measured on markdown only. Code files take longer, so the figures are a floor, not a forecast.
+- The sweep notice counts time at 7.1 seconds a file and tokens at 10,000 per batch plus 3,400 per file. The token rule was fitted to the real 15-batch sweep (203,394 tokens; the old 4,400-a-file figure said 66,000, 3.1 times low, deviation D2). Code files take longer, so both are a floor.
 - A sweep of this repo is 9 folders but 96 batches, so the notice (printed over 12 folders, per aj's answer) does not print for it. aj is asked at QA whether it should also print when batches pass 12. The rule is not changed in code.
 - Claude Code's own built-in `/review` was named by the reviewer from product knowledge and was not tested here; that is why the command is always written with its `house-rules:` prefix.

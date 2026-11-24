@@ -2257,9 +2257,9 @@ else:
     _c, _o, _e = _rv_run(["batches"], _r20)
     _rows = [l.split("\t") for l in _o.splitlines() if l.startswith("big\t")]
     _sizes = [len(r[2].split(",")) for r in _rows]
-    if len(_rows) != 3 or max(_sizes or [0]) > 8 or sum(_sizes) != 20:
-        _rv_f.append(f"20 files in one unit: wanted 3 batches of at most 8, got sizes {_sizes}: {_o.strip()[:200]}")
-    report("PASS" if not _rv_f else "FAIL", "review command: review_plan.py batches never hold more than 8 files (20 files make 3 batches)")
+    if len(_rows) != 4 or max(_sizes or [0]) > 6 or sum(_sizes) != 20:
+        _rv_f.append(f"20 files in one unit: wanted 4 batches of at most 6, got sizes {_sizes}: {_o.strip()[:200]}")
+    report("PASS" if not _rv_f else "FAIL", "review command: review_plan.py batches never hold more than 6 files (20 files make 4 batches)")
     for _x in _rv_f:
         print(f"          {_x}")
 
@@ -2269,6 +2269,45 @@ else:
     if "unit: ünï files: 1" not in _o:
         _rv_f.append(f"non-ASCII folder not printed plainly: {_o.strip()!r}")
     report("PASS" if not _rv_f else "FAIL", "review command: review_plan.py prints a non-ASCII folder name without quotes")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
+    # D3 fixes: design lookup, report name, codebase aliases, error exits, estimate (acceptance test 3 findings)
+    _rv_f = []
+    _p = os.path.join(_rv_work, "plans")
+    os.makedirs(os.path.join(_p, "2026-02-03-feat"))
+    _pg = '<html><head><meta name="house-rules-page" content="%s"></head><body>x</body></html>\n'
+    for _rel, _kind in (("2026-01-01-feat.html", "proposal"), ("2026-01-05-feat-build-plan.html", "build-plan"),
+                        ("old-feat.html", "proposal"), ("2026-02-03-feat/proposal.html", "proposal"),
+                        ("2026-02-03-feat/build-plan.html", "build-plan"), ("2026-03-01-two.html", "proposal"),
+                        ("2026-03-02-two.html", "proposal"), ("2026-03-03-two-plan.html", "build-plan")):
+        open(os.path.join(_p, _rel), "w", encoding="utf-8").write(_pg % _kind)
+    _c, _o, _e = _rv_run(["mode", "plans/2026-01-05-feat-build-plan.html"], _rv_work)
+    if not re.search(r"^design: .*2026-01-01-feat\.html$", _o, re.M):
+        _rv_f.append(f"-build-plan page, design with another date (old-feat.html must not match): {_o.strip()}")
+    _c, _o, _e = _rv_run(["mode", "plans/2026-02-03-feat/build-plan.html"], _rv_work)
+    if not re.search(r"^design: .*proposal\.html$", _o, re.M) or "report: docs/qa/review-feat-" not in _o:
+        _rv_f.append(f"folder-style plan: wanted its proposal.html and report named after the folder: {_o.strip()}")
+    _c, _o, _e = _rv_run(["mode", "plans/2026-03-03-two-plan.html"], _rv_work)
+    if "design: ambiguous" not in _o or _o.count("candidate: ") != 2:
+        _rv_f.append(f"two designs: wanted 'design: ambiguous' and two candidate: lines: {_o.strip()}")
+    for _t in ("./", _rv_work):
+        _c, _o, _e = _rv_run(["mode", _t], _rv_work)
+        if "mode: codebase\n" not in _o:
+            _rv_f.append(f"target {_t!r}: wanted mode: codebase, got {_o.strip()}")
+    _c, _o, _e = _rv_run(["mode", "sub", "--root", _rv_work], _rv_tmp)
+    if "mode: code\n" not in _o:
+        _rv_f.append(f"target is resolved against --root, not the cwd: {_o.strip()} {_e.strip()}")
+    for _a in (["units", "--root", os.path.join(_rv_tmp, "nope")], ["mode", "--root", os.path.join(_rv_tmp, "nope")]):
+        _c, _o, _e = _rv_run(_a, _rv_work)
+        if _c != 3 or not _o.startswith("error:") or "Traceback" in _e:
+            _rv_f.append(f"{_a[0]} with a missing --root: wanted exit 3 and error:, got exit {_c}: {_o.strip()} {_e.strip()[:80]}")
+    _c, _o, _e = _rv_run(["units"], _r14)  # 15 files in 15 batches: 15 x 10,000 + 15 x 3,400
+    _m = re.search(r"about ([\d,]+) tokens", _o)
+    if not _m or _m.group(1) != "201,000":
+        _rv_f.append(f"estimate: wanted 201,000 tokens (15 batches x 10,000 + 15 files x 3,400), got {_m and _m.group(1)}: {_o.strip()[:160]}")
+    report("PASS" if not _rv_f else "FAIL",
+           "review command: review_plan.py finds designs by exact name, names folder-style reports, treats ./ and the repo path as codebase, exits 3 on a bad --root, estimates tokens per batch plus per file")
     for _x in _rv_f:
         print(f"          {_x}")
 
