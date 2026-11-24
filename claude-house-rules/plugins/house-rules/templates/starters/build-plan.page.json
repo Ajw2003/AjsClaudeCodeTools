@@ -66,6 +66,15 @@
    "Done when: <replace: what you can see working>",
    null,
    null
+  ],
+  [
+   "chg",
+   "Acceptance tests",
+   "<replace: one test per design item, run before QA>",
+   null,
+   "<replace: for each design item, what is run and what must be seen>",
+   null,
+   null
   ]
  ],
  "wrapup": {

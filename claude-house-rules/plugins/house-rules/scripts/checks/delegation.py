@@ -2315,4 +2315,54 @@ commit_case("visual-loop skill exists with frontmatter and names ledger.py, wait
             and all(w in _skt for w in ("ledger.py", "waitfor.py", "visualcheck.py", "@house-rules:reviewer")), "skill text missing pieces")
 
 
+# ---- acceptance.py (#595): tree fingerprint, run evidence, stamp, check ----
+_AC = os.path.join(HERE, "acceptance.py")
+_ac_tmp = tempfile.mkdtemp(prefix="acc-")
+
+
+def _ac(*args, cwd=None):
+    r = subprocess.run([sys.executable, _AC] + list(args), capture_output=True, text=True, cwd=cwd, timeout=300)
+    return r.returncode, r.stdout + r.stderr
+
+
+try:
+    _ar = os.path.join(_ac_tmp, "repo")
+    os.makedirs(os.path.join(_ar, "docs", "qa", "f"))
+    subprocess.run(["git", "init", "-q", _ar], check=True)
+    _w = lambda rel, txt: open(os.path.join(_ar, rel), "w").write(txt)
+    _w("src.py", "a")
+    _w("docs/qa/f/criteria.md", "C1. x | proof: run | page: p\n")
+    _fd = os.path.join(_ar, "docs", "qa", "f")
+    _t0 = _ac("tree", "--root", _ar)[1]
+    _w("src.py", "b")
+    _t1 = _ac("tree", "--root", _ar)[1]
+    commit_case("acceptance: tree changes when a source file is edited", _t0 != _t1, _t0 + _t1)
+    _w("docs/qa/f/note.md", "x")
+    _w("docs/qa/f/criteria.md", "C1. x | proof: run | page: p\n# edited\n")
+    commit_case("acceptance: tree ignores edits and new files under docs/qa/", _ac("tree", "--root", _ar)[1] == _t1)
+    code, out = _ac("stamp", _fd, "--root", _ar)
+    commit_case("acceptance: stamp refused when ledger status is not NEXT: done", code == 2 and "not NEXT: done" in out
+                and not os.path.exists(os.path.join(_fd, "acceptance-stamp.json")), out)
+    code, out = _ac("check", _fd, "--root", _ar)
+    commit_case("acceptance: check says missing with no stamp", code == 1 and "acceptance stamp missing" in out, out)
+    _ev = _ac("run", "--out", os.path.join(_fd, "round-1"), "--", sys.executable, "-c", "import sys; print('hi'); sys.exit(3)")[1].strip()
+    _evt = open(_ev).read() if os.path.isfile(_ev) else ""
+    commit_case("acceptance: run saves exit code and output", "exit code: 3" in _evt and "hi" in _evt and _ev.endswith("run-1.txt"), _ev)
+    _w("docs/qa/f/round-1.md", "# Round 1\nC1: PASS - it ran - round-1/run-1.txt\nSTATUS: pass\n")
+    code, out = _ac("stamp", _fd, "--root", _ar)
+    commit_case("acceptance: stamp written when ledger status is NEXT: done",
+                code == 0 and json.load(open(os.path.join(_fd, "acceptance-stamp.json"))).get("rounds") == 1, out)
+    code, out = _ac("check", _fd, "--root", _ar)
+    commit_case("acceptance: check says current after the stamp", code == 0 and "acceptance stamp current" in out, out)
+    _w("src.py", "c")
+    code, out = _ac("check", _fd, "--root", _ar)
+    commit_case("acceptance: check says stale after a source edit", code == 1 and "stale" in out, out)
+    _w("src.py", "b")
+    _w("docs/qa/f/report.md", "reviewer report")
+    code, out = _ac("check", _fd, "--root", _ar)
+    commit_case("acceptance: check is current again after only a docs/qa/ edit (source back to the stamped bytes)", code == 0, out)
+finally:
+    shutil.rmtree(_ac_tmp, ignore_errors=True)
+
+
 finish()

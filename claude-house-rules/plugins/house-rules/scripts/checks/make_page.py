@@ -627,6 +627,23 @@ _mp_cases.append(("stamp (#594): the written stamp checks as current, an edit ma
                   _pc.stamp_problem(_rv1) == "" and "stale" in _pc.stamp_problem(_rv1 + "<p>x</p>")))
 _rc2, _o2 = _mp("build", _c1, "--project", _sp, "--out", _rv_out, "--reviewed", "clean", "--rounds", "3")
 _mp_cases.append(("stamp (#594): --rounds 3 is refused", _rc2 == 2 and "cap is 2" in _o2))
+# ---- build plan needs an Acceptance tests item (#595) ----
+_ap = _mp_proj("acc-plan", {"use": "defaults"})
+_apc = _mp_content("acc-plan1")
+_apj = json.load(open(_apc, encoding="utf-8"))
+_apj["pageType"] = "build-plan"
+json.dump(_apj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("acceptance (#595): a build plan with no Acceptance item is refused, naming the rule",
+                  _rc == 2 and "needs an Acceptance tests item: one test per design item" in _o))
+_apj["changes"].append(["chg", "Acceptance tests", "One per item.", None, "", None, None])
+json.dump(_apj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("acceptance (#595): an Acceptance item with empty detail is refused", _rc == 2))
+_apj["changes"][-1][4] = "Run each design item and see it work."
+json.dump(_apj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("acceptance (#595): a build plan with a filled Acceptance item builds", _rc == 0, _o))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

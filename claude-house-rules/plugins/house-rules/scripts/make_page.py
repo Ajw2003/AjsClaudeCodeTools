@@ -489,6 +489,10 @@ def build(args):
         apply_sweep(page)
     if "pageType" in page and page["pageType"] not in PAGE_TYPES:
         die("content 'pageType' is %r; the allowed values are: %s" % (page["pageType"], ", ".join(PAGE_TYPES)))
+    if page.get("pageType") == "build-plan" and not any(
+            isinstance(c, list) and len(c) > 4 and str(c[1]).startswith("Acceptance") and str(c[4] or "").strip()
+            for c in page.get("changes") or []):
+        die("a build plan page needs an Acceptance tests item: one test per design item")
     check_approval(page)
     apply_approval_todo(page)
     page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one
