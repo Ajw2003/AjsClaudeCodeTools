@@ -13,4 +13,7 @@ aj answers with "Design approved: design review loop" plus eight picks. Then log
 The editor pass was applied and the page rebuilt. The 60-words-per-block limit was not counted. The claim that the QA builder refuses an empty unverified list was confirmed in `make_page.py:281`; the other cited line references were not re-checked. Review cost and the two-round cap are unmeasured.
 
 ## The issue numbers
-None yet. Issues are created after the design is approved.
+None yet for this proposal. Overlap: unattended mode 2.87.0 is in main; "never wait" 2.90.0 (issues #587 to #591) is only on branch AjsAgent/affectionate-lovelace-r0zfgg and is not merged. Build this on top of that branch after it merges.
+
+## Overlap found with other sessions
+`event_noask` (house_rules/core.py) already refuses AskUserQuestion and ExitPlanMode in unattended or bypass sessions and says to choose a reversible option and record it in the report (branch AjsAgent/affectionate-lovelace-r0zfgg, 2.90.0). The proposal was trimmed to what is new: the deviations ledger, the plan as contract, attended-mode parking, the reviewer and the acceptance run.

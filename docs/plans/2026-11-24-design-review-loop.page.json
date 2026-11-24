@@ -93,8 +93,8 @@
       null,
       "When a question comes up in Build, the agent takes the safest default that can be undone, records it in a parked-decisions ledger with how to undo it, and keeps building. Helpers do the same. Everything parked reaches you together on the QA page, with options. Anything not undoable, or touching money, secrets, other people or deleted data, still asks first.",
       [
-        "In Build, a reply ending in a question holds code edits until you answer (issue #506, which added that hold). Helpers' questions go to you, and the 'decided for you' check sends back any reply that settles a point alone.",
-        "A ledger file per feature, and a rule that reversible questions are parked. The hold and the check apply only to what cannot be parked.",
+        "In Build, a reply ending in a question holds code edits until you answer (issue #506). Only in unattended or bypass mode (2.90.0, issue #590, not yet on main) are questions already refused so the agent picks a reversible option.",
+        "The same park-and-carry-on rule for attended sessions, with a ledger file per feature. It reuses 2.90.0's refusal hook and extends it, rather than adding a second one.",
         "Routine work no longer stops. You answer parked questions once, with the work already done."
       ],
       {
