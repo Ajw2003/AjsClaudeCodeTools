@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Step 3 (#620, seven new verify.py cases) is merged into `AjsAgent/jolly-dirac-fvh4cg`; all seven verify parts pass on it. Step 4 (#621, docs and plugin version 2.94.0) is with a builder in `/home/user/wt-review-step4`. Still to do: merge step 4, run the plan's seven acceptance tests, swap `in progress` for `needs review`, and build the QA page.
+
 Step 3 (#620, seven new verify.py cases) is built on `AjsAgent/review-command-step3` (final commit 1d979ba) after one round of fixes; my own seven-part verify run on it is in progress and not read yet. Step 4 (#621, docs and version) and the acceptance tests remain.
 
 Step 2 (#619, the review command and its helper script) is merged into `AjsAgent/jolly-dirac-fvh4cg`; all seven verify parts passed on its final commit. Step 3 (#620, verify.py cases) is with a builder in `/home/user/wt-review-step3`. Step 4 (#621, docs and version) and the acceptance tests are still to do.
