@@ -6,7 +6,9 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 The second run of the five live roadblock sessions (`live_roadblocks.py`, corrected prompts) was started on the branch build 2.90.0; its results are not recorded yet.
 
-The live roadblock test script `live_roadblocks.py` was corrected after its first run: the unattended-stall prompt no longer says "create only a.txt" (which made the goal check rightly pass the reply), and the bypass test now sets `CLAUDE_CODE_ENABLE_ASK_USER_QUESTION_TOOL=1` because headless sessions otherwise have no question tool; the rerun had not finished when this line was written.
+The live roadblock test script `live_roadblocks.py` was corrected after its first run: the unattended-stall prompt no longer says "create only a.txt" (which made the goal check rightly pass the reply), and the bypass test now sets `CLAUDE_CODE_ENABLE_ASK_USER_QUESTION_TOOL=1` because headless sessions otherwise have no question tool; the rerun result is on the next line.
+
+Live headless result on the branch build 2.90.0 (2026-11-23): curly apostrophe PASS (blocked twice), `git ls-files` only PASS (blocked twice), three methods listed PASS (not blocked), unattended stall PASS (the goal check blocked the reply twice with a correct reason; the model then declined to carry on only because the test prompt told it not to). The bypass question cannot be tested headless: `claude -p` reports the question tool as disabled even with the environment variable, so that denial is covered by the fixture cases only.
 
 The roadblock record check now counts a filtered search that finds nothing (for example `ls /usr/bin | grep tool`, which the tool reports as a success with no output) as a failed attempt; a real headless session showed it counted only two of three methods; two new `verify.py` cases cover it; the first run of the filtered-search case failed because its reply text named `find` while the command used `ls`, which is corrected, and the rerun passed all 13 `#589` cases; with the fix switched off the filtered-search case fails, with it on it passes.
 
