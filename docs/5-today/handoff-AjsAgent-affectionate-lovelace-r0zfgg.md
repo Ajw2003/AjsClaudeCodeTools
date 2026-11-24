@@ -73,3 +73,6 @@ What the work is for: stop a reply claiming a roadblock without evidence, and ne
 
 ## Auto-fix on, pages final (2026-11-23, night)
 What the work is for: the roadblock detection fix (#587). Where it stands: pull request #602 is open with Auto-fix on, the QA page and the status page (marked superseded) have had the editor pass. Next step: aj reads the QA page; Auto-fix handles CI failures, the inject-size check at a runner-like path is the first suspect. Unverified: the bypass-mode denial live, the Castle transcript, verify_tools check A16. Issues: #587 parent, #588 to #591 steps, pull request #602.
+
+## Final state (2026-11-23, night)
+What the work is for: the roadblock detection fix (#587). Where it stands: pull request #602 is open with Auto-fix on; the QA page and the superseded status page are final after their editor passes and are pushed (5ee6e14c). Next step: aj reads the QA page and approves; if CI fails, Auto-fix handles it. Unverified: the bypass-mode denial live (headless disables the question tool), the Castle transcript, verify_tools check A16 (plugin not installed here). Issues: #587 parent, #588 to #591 steps, all `needs review`; pull request #602.
