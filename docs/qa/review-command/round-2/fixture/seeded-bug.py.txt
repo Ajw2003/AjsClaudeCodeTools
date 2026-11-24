@@ -1,0 +1,16 @@
+"""Tiny user store used as a review fixture. Three problems are planted on purpose."""
+
+
+def delete_user(db, name):
+    # planted: builds SQL from the caller's text (injection)
+    db.execute("DELETE FROM users WHERE name = '%s'" % name)
+
+
+def average_age(users):
+    # planted: divides by zero when there are no users
+    return sum(u["age"] for u in users) / len(users)
+
+
+def greet(name):
+    # planted: comment says it shouts, code does not
+    return "Hello, " + name
