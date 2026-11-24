@@ -56,7 +56,7 @@ def cmd_mode(a):
     elif a.target == ".":
         name = Path.cwd().resolve().name if a.root == "." else root.name
     else:
-        name = tpath.name
+        name = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", tpath.stem) if tpath.is_file() else tpath.name
     name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "target"
     print(f"mode: {mode}")
     print(f"report: docs/qa/review-{name}-{datetime.date.today().isoformat()}")
