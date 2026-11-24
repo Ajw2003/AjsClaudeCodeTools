@@ -3200,6 +3200,34 @@ _hq_cases.append(("#598: in Build, a reply naming the ledger, ledger_note.py or 
                   all("decided for you" not in _hq_build_stop("I went with option B (see the ledger).") + _hq_build_stop(
                       "I chose X, parked with ledger_note.py.") + _hq_build_stop("I chose X, row P7.") for _ in (0,))))
 _p5_root = _p5_old
+# ---- #599: with nobody present, a reply admitting a departure from the plan needs a ledger entry ----
+_dv_reply = "Step 3 deviated from the plan: I used a script instead of a hook."
+
+
+def _dv_stop(reply, mode, transcript=None, active=False):
+    extra = {"permission_mode": mode} if mode else {}
+    if transcript:
+        extra["transcript_path"] = transcript
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=_loop_dir, stop_hook_active=active,
+                                                  session_id="verify-deviation", **extra), env=_loop_env)
+    return out
+
+
+_dv_logged = _turn_transcript("dv-logged", "build it", [("Bash", "python3 ledger_note.py deviate F --step 3 --plan p --done d --why w --undo u")])
+_dv_unlogged = _turn_transcript("dv-unlogged", "build it", [("Bash", "ls")])
+_dv_o = _dv_stop(_dv_reply, "bypassPermissions", _dv_unlogged)
+_dv_cases = [
+    ("#599: in bypass mode a reply that deviated from the plan, with no ledger entry, is sent back naming deviate and park",
+     "deviation" in _dv_o and "ledger_note.py" in _dv_o and "deviate" in _dv_o),
+    ("#599: the same reply with a ledger_note.py call this turn passes", "deviation" not in _dv_stop(_dv_reply, "bypassPermissions", _dv_logged)),
+    ("#599: the same reply in default mode (someone present) passes", "deviation" not in _dv_stop(_dv_reply, "default", _dv_unlogged)),
+    ("#599: a payload with no permission_mode is treated as attended and passes", "deviation" not in _dv_stop(_dv_reply, "", _dv_unlogged)),
+    ("#599: a bypass reply that does not mention a departure passes",
+     "deviation" not in _dv_stop("Step 3 is built as planned.", "bypassPermissions", _dv_unlogged)),
+    ("#599: the retry (stop_hook_active) passes", "deviation" not in _dv_stop(_dv_reply, "bypassPermissions", _dv_unlogged, True)),
+]
+for _t, _ok in _dv_cases:
+    report("PASS" if _ok else "FAIL", _t)
 # ---- #598: noask in the Build stage, with someone present ----
 _na_root = tempfile.mkdtemp(prefix="noask-build-")
 _na_cases = []
