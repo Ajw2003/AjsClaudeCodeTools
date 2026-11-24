@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Step 5 of the design review loop (issue #597) is built: a self-judging test template (`templates/selftest/selftest.py`) that prints one RESULT line and exits 0, 1 or 2, plus the instructions for when and how to hand it to aj (`rules/detail/selftest.md`). My own `verify.py` run passed 1469 of 1469, and I ran the template three ways (pass, one failing check, a missing library). Not tested on Windows or Python 3.8.
+
 Step 3 of the design review loop (issue #595) is built: a whole feature can be run and judged through the existing visual loop, then stamped with `scripts/acceptance.py stamp`; the stamp goes stale when the source changes (reports under `docs/qa/` are left out of the fingerprint). Every build plan page now needs an "Acceptance tests" item. My own `verify.py` run passed 1465 of 1465; the stamp was refused in this repo where no passing ledger exists. Not tried: a live run with the reviewer in acceptance mode.
 
 Step 2 of the design review loop (issue #594) is built: a design, plan or other page now needs a review stamp, and a reply linking a page with no stamp or a stale one is sent back. Review and QA pages are exempt. Detail: `make_page.py build --reviewed clean|open-risks --rounds 1|2`, `page_criteria.py`, `house_rules/writing.py`; my own `verify.py` run passed 1453 of 1453, and a real stamp on a copy of the plan page went stale after one edit. Detail: `docs/qa/design-review-loop/ledger.md` lists the deviations and parked decisions so far.
