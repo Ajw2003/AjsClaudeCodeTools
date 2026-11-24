@@ -80,7 +80,7 @@
   "feature": "design review loop",
   "base": "origin/main",
   "unverified": [
-   "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard (branch by cwd, audit entries, a delete under the temp folder), two page checks, three waitfor checks and one node check. The same nine failed before the line-ending fix, so neither fix caused them. They were not investigated, and whether they also fail on a clean main was not checked.",
+   "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. Their causes were not investigated. Main also crashes the design_loop part on Windows, which this branch fixes.",
    "The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures.",
    "The deviation check works by matching phrases, and it has not been seen firing in a live session.",
    "No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately.",
