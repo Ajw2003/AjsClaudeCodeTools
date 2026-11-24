@@ -2315,7 +2315,6 @@ commit_case("visual-loop skill exists with frontmatter and names ledger.py, wait
             and all(w in _skt for w in ("ledger.py", "waitfor.py", "visualcheck.py", "@house-rules:reviewer")), "skill text missing pieces")
 
 
-<<<<<<< HEAD
 # --- #585: the scratch index is per run; an autosave error is one line, once per session ----------
 _sn_d, _ = _as_repo("worktree-agent-x")
 _as_write(_sn_d, "new.py")
@@ -2374,7 +2373,7 @@ _c3, _o3, _e3 = run_hook("autosave", _as_payload("PostToolUse", "Write", os.path
 commit_case("autosave error: a different error text prints again", "autosave hit an error" in _o3 and _o3 != _o1,
             "first %r, third %r" % (_o1, _o3))
 shutil.rmtree(_sn_tmp, ignore_errors=True)
-=======
+
 # ---- acceptance.py (#595): tree fingerprint, run evidence, stamp, check ----
 _AC = os.path.join(HERE, "acceptance.py")
 _ac_tmp = tempfile.mkdtemp(prefix="acc-")
@@ -2473,7 +2472,6 @@ else:
     commit_case("selftest: the template exists", False, _st_tpl)
 commit_case("selftest: the instruction file is under 40 lines and names UNTESTED: and needs your machine",
             len(_st_doc.splitlines()) < 40 and "UNTESTED:" in _st_doc and "needs your machine" in _st_doc, "")
->>>>>>> origin/AjsAgent/sleepy-albattani-bxj5wx
 
 
 finish()
