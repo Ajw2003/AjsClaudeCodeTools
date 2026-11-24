@@ -2,6 +2,8 @@
 
 ## 2026-11-24
 
+aj approved the build plan ("Build plan approved: design review loop"); the stage is Build. Step 1 (#593) is built and checked: my own full run `verify.py` passed 1444 of 1444, and a real page-mode run of the new reviewer on the approved design page returned seven findings and a verdict. Deviations D1 to D4 and parked decisions P1 and P2 are in `docs/qa/design-review-loop/ledger.md`. Next: step 2 (#594, the review stamp).
+
 aj approved the design as "Design approved: design review loop 1A 2A 3A 4A 5* 6A 7A 8A" (5*: every page except review and QA pages gets the full review). The stage is Plan. Done: decisions entry, systems doc `docs/4-systems/review-loop.md`, parent issue #592 with steps #593 to #601 (all `in progress`), and the build plan page `docs/plans/2026-11-24-design-review-loop-plan.html` after the editor pass. Waiting on "Build plan approved: design review loop"; steps 6 and 7 also wait for 2.90.0 to merge.
 
 Editor pass applied to the trimmed page and the page resent. Overlap checked 2026-11-24: unattended mode (2.87.0) is in main, "never wait" (2.90.0, #587 to #591) is only on affectionate-lovelace; the proposal was trimmed to what is new. Design review loop proposal written on `AjsAgent/sleepy-albattani-bxj5wx`: page `docs/plans/2026-11-24-design-review-loop.html` (source `.page.json`, three diagrams plus a fourth in `-pics/`). It proposes a reviewer in place of the editor, an acceptance run before QA, parked questions, one combined approval, and unattended mode that keeps working and logs each plan deviation. Nothing built, no issues filed; waiting on aj's "Design approved: design review loop" and eight picks. The editor pass was applied and the page rebuilt.
