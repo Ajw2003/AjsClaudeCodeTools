@@ -9,6 +9,8 @@ suggested) whenever an issue opens or closes or a pull request merges into the d
 
 ## Where it stands
 
+- 2026-11-24, latest: aj's answers to choices 1 to 8 are recovered and saved (`docs/plans/2026-11-24-visual-docs-and-roadmap-answers.md` and the new artifact's `answers/current`). Choices 9 and 10 were lost and are still open. Cause of the breakage: the content file used the id `share` for all ten choices, so they were one radio group; `make_page.py` has no check for duplicate ids (found by reading it). The answers imply changes to the design (hourglass plus dependency graph, GitHub Pages on, two labelled roadmaps for In dev and Shipped) that are not yet applied to the page.
+
 - 2026-11-24, later: aj's answers on the first published page (artifact `1YozUZzaaPAhnwhwFpnKG8`) could not be copied. Cause: all ten choices used one radio-group name. Fixed in `docs/plans/2026-11-24-visual-docs-and-roadmap.json` (ids c1 to c10). A second artifact (`THgBL8SamiG6HzkfbYpJz2`, file `docs/generated/visual-skills-proposal-with-saved-answers.html`) saves answers to its `answers/current` document. Do NOT republish the first artifact while aj's tab is open: it holds their typed answers. Ask aj for screenshots of that tab, or read `answers/current` from the new artifact with ArtifactData.
 
 - aj's second correction (2026-11-24): the roadmap must not depend on GitHub Actions (their budget may run out, or the Action could exhaust it). It now runs locally only, with GitHub Pages as an optional publish step (a `roadmap-view` branch served by Pages, off by default; whether Pages deploys draw on the Actions allowance is unverified). Refresh triggers: the plugin's session hook (it already matches `issue_write`, `merge_pull_request` and Bash), a new git post-merge hook added after any existing one, session start, `/house-rules:visual-roadmap update`, and, if aj picks it, a prompt-time refresh at most every 5 minutes. The script reads GitHub with `gh api` because `gh issue list` is refused in cloud sessions. The page now has ten picks (the "how views are opened" pick went away because local and Pages views are both HTML; a pick for issues closed without a merge was added).
@@ -24,6 +26,10 @@ suggested) whenever an issue opens or closes or a pull request merges into the d
   findings became new picks (how views are opened, the docs page layout, phase grouping). Later rounds found 15 and then 20 more; the findings that still applied to the local-first design are applied. The page has no review stamp yet.
 
 ## The next step
+
+Get aj's answers to choices 9 and 10 on the new artifact (id THgBL8SamiG6HzkfbYpJz2). Then update the proposal page to match all ten answers and send it for the approval line. Ask aj whether to add a duplicate-id check to `make_page.py` with a `verify.py` case.
+
+Older next step:
 
 Wait for aj's picks and the line "Design approved: visual docs and visual roadmap skills". Then log the
 decision in `docs/6-decisions/Decisions.md`, create one parent issue and one child issue per step

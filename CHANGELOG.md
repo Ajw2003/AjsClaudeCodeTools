@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Found why the proposal page lost answers: its content file gave all ten choices the same id, `share`, which `make_page.py` uses as the radio-group name, so only one pick could be kept; the builder does not check that ids are different. Not yet fixed in the plugin: `make_page.py` should refuse duplicate choice ids, and `verify.py` should have a case for it.
+
 Saved aj's recovered answers to the visual skills proposal (choices 1 to 8) in `docs/plans/2026-11-24-visual-docs-and-roadmap-answers.md` and in the new page's database, so they appear pre-filled; choices 9 and 10 are still open.
 
 Fixed the visual skills proposal page: its ten choices shared one radio-group name, so only one answer could be kept and the reply was wrong. Each choice now has its own name. Added `docs/generated/answers-save.js`, which saves a handover page's answers to the artifact database as they change, and a copy of the proposal page that uses it.
