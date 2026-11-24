@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+The design review loop build is paused at step 4 (issue #596): the Build-stage hold on a reply that ends in a question (issue #506) refused the builder's edits, and nothing of step 4 was written. The incident, a parked decision about the stamp fingerprint (P3) and a deviation about command display (D9) are in `docs/qa/design-review-loop/ledger.md`.
+
 Step 8 of the design review loop (issue #600) is built: one page and one reply can approve the design and the build plan together, as two lines in one message. The approval reader already handled that (no code change, one new test); the page builder now accepts and shows a two-line approval. My own `verify.py` run passed 1473 of 1473, and the copy button on a two-line page, clicked in a real browser, put both lines on the clipboard.
 
 Step 8 of the design review loop (issue #600) is built: one reply can approve the design and the build plan together (two lines), and a page may offer both lines. The approval reader needed no change; the plan's issues are owed in the same turn by the existing rule. Detail: `docs/4-systems/design-loop.md`, "Combined approval".
