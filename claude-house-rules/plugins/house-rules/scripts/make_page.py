@@ -35,6 +35,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.parse
+import xml.dom.minidom
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGIN = os.path.abspath(os.path.join(HERE, ".."))
