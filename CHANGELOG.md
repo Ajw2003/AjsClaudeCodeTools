@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command step 2 (#619): added the `/house-rules:review` command (`commands/review.md`) and `scripts/review_plan.py`; the script is a small addition beyond the plan, it counts files and picks the mode so the sweep notice figures are counted, not guessed.
+
 Review command step 1 (#618): the reviewer agent gained four modes, `code`, `codebase`, `image` and `style` (`agents/reviewer.md`, `rules/detail/review-modes.md`); `show-dont-tell.md` now says style mode reads a stated style or a project UI guide, not `docs/page-style.json`.
 
 The review command plan passed two review rounds (15 and 13 findings, all applied) and is stamped open-risks; it now asks aj three questions (how a sweep handles the 60-second agent deadline, whether repo-root files are reviewed, where the mode lists live). The systems doc `docs/4-systems/review-command.md` now says the agent deadline is 60 seconds, not 900, and issue #622 records the same stale figure in `skills/visual-loop/SKILL.md`. Docs only; nothing is built.
