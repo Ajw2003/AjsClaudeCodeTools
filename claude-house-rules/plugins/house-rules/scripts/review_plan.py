@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """review_plan.py - pick the review mode and count the sweep, so numbers are counted, not guessed (#619).
 
-  review_plan.py mode [TARGET] [--style] [--root DIR]   -> mode:, report:, (plan) design:
+  review_plan.py mode [TARGET] [--style] [--root DIR] [--model M] [--effort E]
+                                                        -> mode:, report:, model:, effort:, (plan) design:
   review_plan.py units [--root DIR]                     -> unit lines, folders, files, batches, notice
   review_plan.py batches [--root DIR]                   -> <unit><TAB><n><TAB><file,file,...>
 
@@ -9,7 +10,8 @@ Files come from `git ls-files -co --exclude-standard`, so .git and ignored files
 A batch is at most 6 files of one unit: markdown ran at 7.1 s a file (8 x 7.1 = 57 s, right at the 60 s agent
 deadline), and code files run slower, so 6 files (43 s on markdown) leaves headroom.
 Sweep token estimate: 10,000 per batch plus 3,400 per file, fitted to the real 15-batch sweep (203,394 tokens).
-Exit 0 on success, 2 when the TARGET does not exist, 3 when --root or git cannot be used. STDLIB ONLY.
+--model and --effort may sit anywhere in the text; each prints its value, or `default` (the reviewer's own setting).
+Exit 0 on success, 2 when the TARGET does not exist or --model/--effort is not a known value, 3 when --root or git cannot be used. STDLIB ONLY.
 """
 import argparse
 import datetime
@@ -23,6 +25,8 @@ IMAGES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"}
 BATCH = 6
 SEC, TOK_BATCH, TOK_FILE = 7.1, 10000, 3400
 GENERIC = {"build-plan", "proposal", "design"}  # folder-style pages named by their folder, not by themselves
+MODELS = ("opus", "sonnet", "haiku", "fable")
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
 META = re.compile(r'<meta\s+name=["\']house-rules-page["\']\s+content=["\']build-plan["\']', re.I)
 
 
@@ -80,6 +84,8 @@ def cmd_mode(a):
     print(f"mode: {mode}")
     print(f"report: docs/qa/review-{name}-{datetime.date.today().isoformat()}")
     print(f"criteria: {criteria}")
+    print(f"model: {a.overrides.get('model', 'default')}")
+    print(f"effort: {a.overrides.get('effort', 'default')}")
     if mode == "plan":
         found = designs_of(tpath)
         print(f"design: {found[0] if len(found) == 1 else 'ambiguous' if found else 'none'}")
@@ -141,7 +147,25 @@ def cmd_batches(a):
     return 0
 
 
+def pull_overrides(argv):
+    """Take --model/--effort (also --flag=value) out of a `mode` call, wherever they sit in the criteria text."""
+    out, found, i = [], {}, 0
+    while i < len(argv):
+        w = argv[i]
+        name, eq, val = w.partition("=")
+        if argv[:1] == ["mode"] and name in ("--model", "--effort"):
+            if not eq:
+                i += 1
+                val = argv[i] if i < len(argv) else ""
+            found[name[2:]] = val.lower()
+        else:
+            out.append(w)
+        i += 1
+    return out, found
+
+
 def main():
+    argv, found = pull_overrides(sys.argv[1:])
     p = argparse.ArgumentParser(description=__doc__)
     s = p.add_subparsers(dest="cmd", required=True)
     m = s.add_parser("mode")
@@ -153,7 +177,12 @@ def main():
         q = s.add_parser(n)
         q.add_argument("--root", default=".")
         q.set_defaults(f=f)
-    a = p.parse_args()
+    a = p.parse_args(argv)
+    for key, allowed in (('model', MODELS), ('effort', EFFORTS)):
+        if key in found and found[key] not in allowed:
+            print(f"error: --{key} {found[key] or '(missing)'} is not one of {', '.join(allowed)}")
+            return 2
+    a.overrides = found
     try:
         rc = a.f(a)
         sys.stdout.flush()
