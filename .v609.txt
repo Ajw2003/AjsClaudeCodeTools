@@ -1,0 +1,471 @@
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\.claude\worktrees\agent-ad1974dcae5c0f66a\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\.claude\worktrees\agent-ad1974dcae5c0f66a\claude-house-rules\plugins\house-rules\scripts\run.sh
+--parts named: core.
+Ran: core (1 at once on 12 core(s))
+
+==============================================================================
+PART core - 7 check(s) failed (61.7 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: core
+===========================================
+
+ 1. FAIL  inject stays under the per-hook additionalContext limit
+          9708 chars > 9700 margin - Claude Code will truncate this
+ 2. PASS  showrule stays under the per-hook additionalContext limit
+          2170 chars <= 9500 margin (hard limit 10,000)
+ 3. PASS  standards stays under the per-hook additionalContext limit
+          3693 chars <= 9500 margin (hard limit 10,000)
+ 4. PASS  profile stays under the per-hook additionalContext limit
+          4315 chars <= 9500 margin (hard limit 10,000)
+ 5. PASS  showrule injects the show-don't-tell rule, once, with a live detail pointer
+          5386 chars; every approved clause present
+ 6. PASS  showrule injects the clear-writing rule, once, and the old plain-language homes point to it
+ 7. PASS  SessionStart injects every rule heading into context
+          9914 characters injected
+ 8. PASS  inject expands ${CLAUDE_PLUGIN_ROOT} to a real path
+          C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\.claude\worktrees\agent-ad1974dcae5c0f66a\claude-house-rules\plugins\house-rules\rules\detail\edit-place.md exists on disk
+ 9. PASS  inject states the plugin root once, so its size is independent of the install path
+          root appears once; 9216 chars total
+10. PASS  SessionStart injects the step-card pointer into context
+          the card heading and a pointer to handover-cards.md arrive in additionalContext
+11. PASS  inject that cannot read the rules file still prints a visible warning
+          said: {"systemMessage":"house-rules plugin: cannot read rules/house-rules.md. The rules were NOT loaded into this session."}
+12. PASS  a command-shaped prompt gets the full reminder
+          998 characters of reminder injected (long form)
+13. PASS  a plain prompt gets the short reminder
+          345 characters of reminder injected (short form)
+14. PASS  a payload with no prompt field at all still exits 0 with the short reminder - the path that would erase the user's prompt if it regressed
+          345 characters of reminder injected (short form)
+15. PASS  the short reminder still works with PATH empty (it depends on nothing)
+          345 characters of reminder injected (short form)
+16. PASS  scope's long form stays within +10% of its baseline size
+          908 chars <= 999 (baseline 909)
+17. PASS  scope's short form stays within +10% of its baseline size
+          263 chars <= 286 (baseline 260)
+18. PASS  plan written to ~/.claude/plans is flagged for copying into the project
+          expected remind, got remind
+19. PASS  document written to the session scratchpad is flagged
+          expected remind, got remind
+20. PASS  document written inside the project is left alone
+          expected trace, got trace
+21. PASS  file whose CONTENTS mention a temp path is left alone
+          expected trace, got trace
+22. PASS  script in a temp directory is scratch work, not an artifact
+          expected trace, got trace
+23. PASS  an .html report written to the scratchpad is flagged - the case that shipped unguarded
+          expected remind, got remind
+24. PASS  an .html report written inside the project but outside docs/ is left alone
+          expected trace, got trace
+25. PASS  a .csv deliverable written outside the project is flagged
+          expected remind, got remind
+26. PASS  a .json deliverable written outside the project is flagged
+          expected remind, got remind
+27. PASS  a .svg deliverable written outside the project is flagged
+          expected remind, got remind
+28. PASS  a .pdf deliverable written outside the project is flagged
+          expected remind, got remind
+29. PASS  a .ps1 in the scratchpad is still scratch work - runnables stay out of the artifact list
+          expected trace, got trace
+30. PASS  docs/generated has not drifted across house-rules.md, SKILL.md, and the emitted ARTIFACT_NOTE
+          all three name docs/generated/ for generated artifacts
+31. PASS  the repo-only checks can tell a repo checkout from an installed copy
+          running from the repo working tree; marketplace.json and tools/verify_tools.py agree
+32. PASS  repo CLAUDE.md is not a second copy of the rules
+          it is a pointer (3848 bytes), not a copy
+33. PASS  CLAUDE.md stays at or under 4000 bytes
+          3848 bytes <= 4000
+34. PASS  SessionStart injects the recorded machine profile
+          rules + machine profile = 357 characters
+35. PASS  a missing machine profile becomes an instruction to discover it
+          the session is told to go and find the facts, not to assume them
+36. PASS  a local session's injection carries no handover-target block
+          no CLAUDE_CODE_REMOTE in the test env, no handover block emitted
+37. PASS  a remote session with no recorded handover target is told to find one out
+          the injection points at docs/example-environment.md / asking, then recording
+38. PASS  a remote session injects a recorded handover-target file's content
+          fixture content reached additionalContext
+39. PASS  the handover-target clause has not drifted between house-rules.md and hook.py
+          both name rules/handover-target.md and the handed-over-command distinction
+40. PASS  a runnable .sh created in the project is flagged to be run
+          expected remind, got remind
+41. PASS  a runnable .ps1 created in the project is flagged to be run
+          expected remind, got remind
+42. PASS  a bare Dockerfile counts as runnable
+          expected remind, got remind
+43. PASS  a document is not a runnable file
+          expected trace, got trace
+44. PASS  a script written to a temp directory is scratch work, not a delivery
+          expected trace, got trace
+45. PASS  a script written to the session scratchpad is scratch work
+          expected trace, got trace
+46. PASS  a file whose CONTENTS mention a temp path is judged on where it actually is
+          expected trace, got trace
+47. PASS  a .cs file created in the project is flagged to compile against the real toolchain
+          expected remind, got remind
+48. PASS  a .cs file written to a temp directory is scratch work, not compiled
+          expected trace, got trace
+49. PASS  the shim-is-not-a-compiler rule states the check, the fallback, and the honest-gap case
+          real toolchain, dotnet build fallback, and the UNTESTED label are all named
+50. PASS  the green-suite rule names the conditions each real defect was found under
+          scale, repetition, the shipped artifact, and run-beats-test
+51. PASS  the disclosure rule states attribution, continuations, and check-the-record
+          all three failures it was written for are named
+52. PASS  HOUSE_RULES_VOICE=off removes the voice and no rule around it
+          on: 5920 chars, off: 5747 chars; every neighbouring rule survives
+53. PASS  artifact traces its decision on a file that is not a document extension
+          says what it looked at and what it concluded; names 'a.cs'
+54. PASS  artifact traces its decision on a document that is already in the project
+          says what it looked at and what it concluded; names 'inside the project'
+55. PASS  runnable traces its decision on a file that cannot be run
+          says what it looked at and what it concluded; names 'not a runnable file'
+56. PASS  artifact is silent by default on a file that is not a document extension
+          no-op decision, nothing emitted (HOUSE_RULES_TRACE unset)
+57. PASS  HOUSE_RULES_TRACE=verbose logs the artifact trace on a file that is not a document extension
+58. PASS  artifact is silent by default on a document that is already in the project
+          no-op decision, nothing emitted (HOUSE_RULES_TRACE unset)
+59. PASS  HOUSE_RULES_TRACE=verbose logs the artifact trace on a document that is already in the project
+60. PASS  runnable is silent by default on a file that cannot be run
+          no-op decision, nothing emitted (HOUSE_RULES_TRACE unset)
+61. PASS  HOUSE_RULES_TRACE=verbose logs the runnable trace on a file that cannot be run
+62. PASS  HOUSE_RULES_TRACE=off silences every trace and no reminder
+          one lever for the diagnostic; the decisions themselves still speak
+63. PASS  #584: a trace lands in the hook log and not in stdout
+64. PASS  #584: HOUSE_RULES_TRACE=chat prints the trace in chat as well as logging it
+65. PASS  #584: HOUSE_RULES_TRACE=off writes no log line and prints nothing
+66. PASS  #584: trace_noop writes only under HOUSE_RULES_TRACE=verbose (default and off write nothing)
+67. PASS  #584: the hook log is capped at its newest 500 lines
+68. PASS  #584: an unwritable hook log gives the one-line message, not silence
+69. PASS  handover stays silent on its stand-down, and the rule that requires it still stands
+          the one handler where tracing would break a rule rather than cost tokens
+70. PASS  run.sh: the first run probes and writes the cache
+          exit 0, out 'ran', cache 'python'
+71. PASS  run.sh: the second run uses the cache and skips probing
+          exit 0, out 'ran', stderr 'house-rules run.sh: HERE=C:/Users/aj/AppData/Local/Temp/house-rules-verify-core-ugh39m12/house-rules'
+72. PASS  run.sh: a stale cache (missing binary) is dropped, the probe order runs, and the cache is rewritten
+          exit 0, out 'ran', cache now 'python'
+73. PASS  run.sh: an interpreter stub that prints a nag instead of running code is never cached
+          exit 0, out 'ran', cache 'python'
+74. PASS  run.sh: a cache that cannot be written is skipped, never a failure
+          exit 0, out 'ran', stderr 'house-rules run.sh: HERE=C:/Users/aj/AppData/Local/Temp/house-rules-verify-core-ugh39m12/house-rules'
+75. PASS  run.sh: HOUSE_RULES_PYTHON still wins over the cache and is still probed
+          exit 0, out 'ran', stderr 'house-rules run.sh: HERE=C:/Users/aj/AppData/Local/Temp/house-rules-verify-core-ugh39m12/house-rules'
+76. PASS  run.sh: a bad HOUSE_RULES_PYTHON is still rejected by the probe and falls through to the normal order
+          exit 0, out 'ran'
+77. PASS  no except block in hook.py swallows a failure without saying so
+          every handler announces a failure it caught; nothing fails silently
+78. PASS  an internal crash in scope is announced rather than swallowed
+          exits 0 without obstructing, but does not go quiet
+79. PASS  an internal crash in artifact is announced rather than swallowed
+          exits 0 without obstructing, but does not go quiet
+80. PASS  an internal crash in runnable is announced rather than swallowed
+          exits 0 without obstructing, but does not go quiet
+81. PASS  an internal crash in handover is announced rather than swallowed
+          exits 0 without obstructing, but does not go quiet
+82. PASS  a reply containing a fenced block gets the handover checklist
+          expected feedback, got feedback
+83. PASS  a reply with no fenced block handed over nothing, so the check stays quiet
+          expected silent, got silent
+84. PASS  a reply already in card shape is not re-checked - firing there can only produce the compliance announcement the rules forbid
+          expected silent, got silent
+85. PASS  a fenced command that is not in card shape is still checked - the gate is card markers, not the mere presence of a fence
+          expected feedback, got feedback
+86. PASS  a payload with no last_assistant_message still fires - a CLI without it must not silently disable the check
+          expected feedback, got feedback
+87. PASS  the retry after the check is allowed to finish - it cannot loop
+          expected silent, got silent
+88. PASS  the toggle switches the check off without touching any file
+          expected silent, got silent
+89. PASS  an empty payload is a check that could not run, and says so
+          expected offline, got offline
+90. PASS  a shell-labelled fence (bash) still fires the card check
+          expected feedback, got feedback
+91. PASS  a python-labelled fence is not a command handover, so the card check stays quiet
+          expected silent, got silent
+92. PASS  an unlabelled fence is not a command handover, so the card check stays quiet
+          expected silent, got silent
+93. PASS  a success claim with no tool run since the last real message gets the evidence reminder
+          expected feedback, got feedback
+94. PASS  a success claim backed by a tool call since the last real message stays quiet
+          expected silent, got silent
+95. PASS  a success claim that quotes real RESULT: output stays quiet, even with no tool this turn
+          expected silent, got silent
+96. PASS  a bare 'untested' with no reason the check could not run gets told to run it (#89)
+          expected feedback, got feedback
+97. PASS  an 'untested' that says in the same sentence why the check cannot run stays quiet (#89)
+          expected silent, got silent
+98. PASS  a 'not checked' with no reason fires even when tools ran this turn (#89)
+          expected feedback, got feedback
+99. PASS  a handover card's own UNTESTED: marker is not what the not-checked check trips on (#89)
+          expected silent, got silent
+100. PASS  'that can't be done' with no tool run this turn gets the evidence reminder (#92)
+          expected feedback, got feedback
+101. PASS  'that can't be done' after a tool ran this turn stays quiet (#92)
+          expected silent, got silent
+102. PASS  'it is possible' is not an impossibility claim (#92)
+          expected silent, got silent
+103. PASS  a phrase in quotation marks is being talked about, not asserted, so neither check fires
+          expected silent, got silent
+104. PASS  the #92 note names the impossibility phrase it caught
+          '{"hookSpecificOutput":{"hookEventName":"Stop","additionalContext":"House rules, evidence before claims: this reply says something cannot be done or does not exi'
+105. PASS  a reply naming no claim word at all is untouched by the evidence check
+          expected silent, got silent
+106. PASS  a success claim whose transcript cannot be read fails open with a systemMessage, never a block
+          expected trace, got trace
+107. FAIL  a roadblock claim with no probe is blocked (block 1 of 2), naming the check and the rule file
+108. FAIL  a roadblock claim with no probe is blocked (block 2 of 2), naming the check and the rule file
+109. PASS  the third time the reply passes with a visible warning line
+110. PASS  #589: a claim after only git ls-files is blocked
+111. PASS  #589: 1 failed attempt(s) are blocked, saying 2 more are needed
+112. PASS  #589: 2 failed attempt(s) are blocked, saying 1 more are needed
+113. PASS  #589: three failed attempts in three classes, related and all named, are accepted
+114. PASS  #589: a filtered search that finds nothing (exit 0, no output) counts as a failed attempt
+115. PASS  #589: a plain ls of an empty folder (no filter) does not count as a failed attempt
+116. PASS  #589: three existence checks count once and are blocked
+117. PASS  #589: three failures unrelated to the claimed thing are blocked
+118. PASS  #589: a PowerShell and an MCP failure count as attempts
+119. PASS  #589: a PreToolUse hook refusal does not count as an attempt
+120. PASS  #589: a NEEDS YOU reply is exempt
+121. PASS  #589: fewer than three methods with a stated reason is accepted here (the judge in #591 checks it)
+122. PASS  #589: an unreadable transcript is announced and never blocks
+123. PASS  a new user message resets the block count
+124. PASS  an unusable state file produces a message and no block
+125. PASS  #588: a retry (stop_hook_active) still blocks a second time and never a third
+126. PASS  #588: "I can't verify it" is flagged
+127. PASS  #588: 'I can\u2019t verify it' is flagged
+128. PASS  #588: "we won't verify it" is flagged
+129. PASS  #588: 'we won\u2019t verify it' is flagged
+130. FAIL  #588: 'I am unable to verify it' is flagged
+131. FAIL  #588: 'I am unable to run it' is flagged
+132. FAIL  #588: 'I could not run it' is flagged
+133. PASS  #588: "I couldn't run it" is flagged
+134. PASS  #588: 'I couldn\u2019t run it' is flagged
+135. PASS  #588: "I don't have access" is flagged
+136. PASS  #588: 'I don\u2019t have access' is flagged
+137. PASS  #588: 'That is not available here' is flagged
+138. PASS  #588: "It isn't available" is flagged
+139. PASS  #588: 'It isn\u2019t available' is flagged
+140. FAIL  #588: 'I can\u2019t continue' is flagged
+141. PASS  #588: a blockquoted claim is ignored
+142. PASS  #588: a stall phrase is not scanned when attended
+143. PASS  #588: a stall phrase is flagged when unattended (the roadblocks hook, via apply_switches)
+144. PASS  #588: unattended really turns the handover hook off (so only the roadblocks hook can catch it)
+145. PASS  #588: attended, the handover hook leaves the roadblock check alone, so a turn blocks twice and not once more
+146. PASS  #588: a stall phrase is flagged when permission_mode is bypassPermissions
+147. PASS  #588: a stall phrase is not scanned in default mode
+148. PASS  #588: a missing permission_mode is announced
+149. PASS  #588: a system-reminder carrier does not reset the turn
+150. PASS  #591: a goal-unreached verdict blocks with the judge's reason
+151. PASS  #591/#608: the goal check shares the cap, 2 blocks in a row then it passes ([True, True, False, False, False, False, False])
+152. PASS  #591: a goal-reached verdict passes
+153. PASS  #591: no stall phrase means no goal check
+154. PASS  #591: a stall phrase runs the check with the goal and transcript path, plugin hooks off in the nested call
+155. PASS  #591: attended, a stall phrase does not run the goal check
+156. PASS  #591: a fail claude is announced and never blocks
+157. PASS  #591: a garbage claude is announced and never blocks
+158. PASS  #591: a sleep claude is announced and never blocks
+159. PASS  #591: a missing claude is announced and never blocks
+160. PASS  #591: HOUSE_RULES_GOALCHECK=off turns the goal check off
+161. PASS  #607: hooks.json has no prompt-type judge on Stop (the scripted roadblocks hook runs it)
+162. PASS  #607: a reply the judge flags gets a block naming the criterion and showing the six reply forms
+163. PASS  #607: a reply the judge passes is left alone
+164. PASS  #608: 12 identical flagged replies give 2 blocks then a warning saying what was unverified ([True, True, False, False, False, False, False, False, False, False, False, False])
+165. PASS  #608: a tool call between blocks resets the count, so the check runs again
+166. PASS  HOUSE_RULES_ROADBLOCKS=off turns the check off
+167. PASS  a reply with both a shell fence and a claim still emits exactly one valid JSON object
+          the fence's own evidence-quote exemption means only the card note fires here
+168. PASS  Stop: a port that wrote files but names nothing kept or dropped gets the parity report note (#90)
+          parity=True
+169. PASS  Stop (#309): the parity note is report-only - it demands no inventory or issues before the turn ends
+          note="re-creating existing behaviour (report only, #309): aj's message reads like a port and this turn wrote files, but the reply names nothing kept or dropped. Nothing is required this turn; the note is ke"
+170. PASS  Stop: a port whose reply names what was kept and dropped gets no parity note
+          parity=False
+171. PASS  Stop: HOUSE_RULES_PARITY=off switches the parity check off
+          parity=False
+172. PASS  Stop: an everyday 'replace' edit to a non-visual file trips neither check
+          parity=False visual=False
+173. PASS  scope: a prompt that reads like a rewrite gets the inventory-first clause
+          clause=True
+174. PASS  scope: an everyday 'replace' prompt does not
+          clause=False
+175. PASS  issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command
+          12 Pre/PostToolUse entries; issuelist is on SessionStart
+176. PASS  profile: a memory restating the old commit rule is flagged by file and line at session start
+          found: yes
+177. PASS  profile: a memory that agrees with the commit rule adds nothing
+          flagged: no
+178. PASS  the handover check emits Stop feedback, not a blocking hook error
+          additionalContext on hookEventName Stop; no decision field
+179. PASS  the scope reminder (long form) matches the rules document, both ways
+          every phrase appears in house-rules.md AND in what it emits
+180. PASS  the compile-verification note (runnable handler, .cs files) matches the rules document, both ways
+          every phrase appears in house-rules.md AND in what it emits
+181. PASS  the runnable note (runnable handler, scripts) matches the rules document, both ways
+          every phrase appears in house-rules.md AND in what it emits
+182. PASS  the command-handover checklist (Stop hook) matches the rules document, both ways
+          every phrase appears in house-rules.md AND in what it emits
+183. PASS  the stateful deliverable machinery and the old .sh hooks are gone
+          every hook is stateless; hooks.json calls only run.sh
+184. PASS  house-rules.md states the card format once, alongside the six items
+          one '#### The card' heading; item 6 and the UNTESTED: placement intact
+185. PASS  the handover-cards output style is forced, so it applies without a picker
+          keeps the coding instructions; applies on surfaces with no way to select one
+186. PASS  the core's card section points at the output style instead of restating it
+          house-rules.md names handover-cards.md; the six-field text lives there only
+187. PASS  the step-card page template is self-contained and carries every card field
+          no external script, stylesheet or fetch; STEPS mirrors the markdown card
+188. PASS  the rules show the anti-patterns, not only the correct forms
+          item-1 counter-example, path notation, redundant cd, sequence vs menu
+189. PASS  every surface in the architecture.md table has a check in desktop-verification.md
+          8 surfaces claimed, 8 covered: CLI, IDE extension, Desktop **Code** tab, web / cloud session, web / desktop, iOS / Android, WSL session, Desktop **Cowork** tab
+190. PASS  the card template was not duplicated into CLAUDE.md
+          CLAUDE.md describes the format and points at rules/house-rules.md for it
+191. PASS  the claude.ai chat block exists and matches the rules document
+          one paste-able block; every phrase in it also appears in house-rules.md
+192. PASS  install.py sets model = opusplan and the docs scope it correctly
+          opusplan on the CLI and IDE; every other surface via @house-rules:builder
+193. PASS  SessionStart preflight warns when git is missing and points at /house-rules:doctor
+          a broken PATH produces a visible, actionable preflight warning
+194. PASS  SessionStart preflight is silent when there is nothing to warn about
+          a clean machine adds nothing to the injection
+195. PASS  profile truncates only the environment body, never preflight or the handover block
+          9913 chars total; handover block and preflight both intact
+196. PASS  /house-rules:doctor maps every interpreter gap to an OS-specific install command
+          winget/brew/apt/dnf all covered
+197. PASS  the architecture tables in docs/architecture.md and the README match hooks.json
+          every registered hook event is documented and no stray .sh script exists
+198. PASS  a bare directory injects coding-philosophy and neither ecosystem document
+          philosophy-only preamble: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Only `coding-philosophy.md` applies to this project \\u2014 no ecosystem-specific mark'
+199. PASS  ProjectSettings/ProjectVersion.txt injects the C#/Unity document
+          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<plugin> in the paths below is the plugin root: C:\\\\Users\\\\aj\\\\Desktop\\\\ClaudeDev\\\\Aj'
+200. PASS  package.json injects the web document
+          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"One coding standards document applies to this project. `web-js-ts-node-standards.md` '
+201. PASS  both markers at the root injects all three documents
+          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<plugin> in the paths below is the plugin root: C:\\\\Users\\\\aj\\\\Desktop\\\\ClaudeDev\\\\Aj'
+202. PASS  the mixed-repo case (Node at root, Unity one level down) injects all three and names Game/
+          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<plugin> in the paths below is the plugin root: C:\\\\Users\\\\aj\\\\Desktop\\\\ClaudeDev\\\\AjsClaudeCodeTools\\\\.claude\\\\worktrees\\\\agent-ad1974dcae5c0f66a\\\\claude-house-rules\\\\plugins\\\\house-rules\\n\\nTwo coding standards documents apply to this project. `csharp-unity-standards.md` governs C# and Unity code \\u2014 selected because U'
+203. PASS  node_modules/package.json in an otherwise bare directory does not select the web document
+          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Only `coding-philosophy.md` applies to this project \\u2014 no ecosystem-specific mark'
+204. PASS  .claude/standards naming only the web document in a Unity-shaped directory overrides detection
+          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"One coding standards document applies to this project. `web-js-ts-node-standards.md` '
+205. PASS  .claude/standards naming a nonexistent document produces a systemMessage, not silence
+          got: '{"systemMessage":"house-rules plugin: could not load nonexistent-doc.md \\u2014 named in .claude/standards but not found in rules/standards/."}'
+206. PASS  a project rooted at a Unity project's Assets/ folder injects both Unity and a sibling Node service's standards
+          got: '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<plugin> in the paths below is the plugin root: C:\\\\Users\\\\aj\\\\Desktop\\\\ClaudeDev\\\\AjsClaudeCodeTools\\\\.claude\\\\worktrees\\\\agent-ad1974dcae5c0f66a\\\\claude-house-rules\\\\plugins\\\\house-rules\\n\\nTwo coding standards documents ap'
+207. PASS  standards stays under its 9,500-char budget in a Unity-only project
+          5826 chars (budget 9500, hard limit 10,000)
+208. PASS  standards stays under its 9,500-char budget in a Unity + Node project
+          9370 chars (budget 9500, hard limit 10,000)
+209. PASS  the Unity tools-first rule reaches a Unity project through standards, with both pointers
+          got: 5826 chars; heading=True
+210. PASS  the Unity tools-first rule does not reach a project with no Unity markers
+          absent, as intended
+211. PASS  the Unity tools-first rule is not in the always-injected core
+          neither house-rules.md nor the inject output carries it
+212. PASS  rules/standards/csharp-unity-detail.md holds the Unity sections moved out of the core
+          all five named sections are present
+213. SKIP  the profile names CPU, RAM, GPU, free disk and Claude plan (the fakes are POSIX shell scripts)
+214. SKIP  a missing nvidia-smi is reported as 'GPU: not detected (...)' (the fakes are POSIX shell scripts)
+215. SKIP  a claude that reports no plan field is 'Claude plan: not detected (...)' (the fakes are POSIX shell scripts)
+216. SKIP  a claude that reports a plan field has it shown (the fakes are POSIX shell scripts)
+217. SKIP  nvidia-smi output is reported as GPU name and VRAM (the fakes are POSIX shell scripts)
+218. PASS  a remote profile labels detected hardware as the sandbox's and asks for the user's
+          sandbox label, handover-target pointer and hardware question present
+219. PASS  a local profile calls the detected hardware the local build budget
+          local label present, no sandbox caveat
+220. PASS  the open-source-first rule and rules/detail/free-first.md exist and agree
+          heading, pointer, ladder order in both files, estimate table terms all present
+221. PASS  run.sh standards with no working interpreter still warns visibly and exits 0
+          said: {"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. No coding standards were loaded into this session. Run /house-rules:doctor."}
+222. PASS  CLAUDE_PROJECT_DIR unset falls back to the current directory and still detects
+          detected the web document from os.getcwd() alone
+223. PASS  the standards rule heading and its SCOPE_REMINDER phrasing have not drifted
+          house-rules.md states the rule and the scope reminder echoes it
+224. PASS  promptran: an action that ran while its prompt was waiting stops the timer with no decision and no entry
+          timer elapsed 1.19s out '' stderr 'house-rules prompttimer: the action ran (approved without stopping this hook); removed its entry, no decision.\r\n' state []
+225. PASS  promptran: a timed-out action that ran anyway is removed from the list and reported to aj and Claude
+          out '{"systemMessage":"house-rules: \'git push -q\' ran although its permission prompt was refused as unanswered at 11:48; something approved it afterwards (possibly a late answer on the old dialog). Removed' state []
+226. PASS  promptran: with no waiting-on-you list, or a bad payload, it says nothing and exits 0
+          quiet '' bad ''
+227. PASS  promptran: wired on PostToolUse and PostToolUseFailure, matched to the tools that raise permission prompts
+          entries [{'matcher': 'Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|mcp__.*', 'hooks': [{'type': 'command', 'command': 'sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" promptran', 'timeout': 10}]}, {'matcher': 'Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|mcp__.*', 'hooks': [{'type': 'command', 'command': 'sh "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" promptran', 'timeout': 10}]}]
+228. PASS  versioncheck is quiet when installed, marketplace and GitHub all agree
+          no banner, no marker file - matching versions leave nothing to say
+229. PASS  unattended: versioncheck says one line, runs no update, writes no marker, never says wait or ask
+230. PASS  unattended: the session note overrides the hand-over-then-wait and ask-before rule text
+231. PASS  versioncheck in a synced copy says one plain line with no update command
+232. PASS  versioncheck in a synced copy is silent when the version is current
+233. PASS  versioncheck outside a synced copy keeps its normal behaviour
+234. PASS  A12: versions compare as numbers, so 2.75.0 is newer than 1.0.0 and 2.10.0 newer than 2.9.9
+235. PASS  A12: installed ahead of the published version prints no update command
+236. PASS  versioncheck reads a branch build's ref and fetches GitHub's version from that branch, not main
+237. PASS  versioncheck on a branch build that matches its branch names the branch and runs no update
+238. PASS  inject from an older folder loads the newer installed folder's rules and says so in one line
+239. PASS  showrule from an older folder loads the newer installed folder's rules and says so in one line
+240. PASS  inject with installed_plugins.json missing loads its own rules and says why in one line
+241. PASS  showrule with installed_plugins.json missing loads its own rules and says why in one line
+242. PASS  inject with installed_plugins.json unreadable loads its own rules and says why in one line
+243. PASS  showrule with installed_plugins.json unreadable loads its own rules and says why in one line
+244. PASS  versioncheck flags installed lagging the marketplace clone, and arms a marker
+          banner names the update command; marker written for guard's first-call prompt
+245. PASS  when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait
+          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the stop-and-wait instruction
+246. PASS  the versioncheck banner and the rules document state the relay/stop rule the same way, both ways
+247. PASS  versioncheck catches a marketplace clone stale against GitHub even when installed matches it
+          the exact gap `plugin update` alone would miss - the marketplace never re-fetched
+248. PASS  HOUSE_RULES_VERSION_CHECK=off disables the freshness check entirely
+          exits 0 with nothing emitted, even with a manufactured mismatch
+249. PASS  versioncheck falls back to the GitHub API when the raw URL fails, and still flags a stale copy
+          raw route dead, API route reports 99.0.0 - banner fires and the marker is armed
+250. PASS  versioncheck tells the model, not just the UI, when neither GitHub route could be reached
+          additionalContext names both failed routes and the installed version; no banner, no marker
+251. PASS  versioncheck adds nothing to the model's context when all three copies agree
+          a verified-current plugin stays a UI-only trace line
+252. PASS  versioncheck says 'start a new session', not 'update', when the newer version is already installed on disk
+          running copy is old, installed_plugins.json has 99.0.0: no banner, no marker, no update run
+253. PASS  versioncheck refreshes the stale marketplace, runs the update itself, and confirms it on disk
+          both commands ran in order; installed_plugins.json then read 99.0.0, so no banner and no marker
+254. PASS  versioncheck does not trust an update's exit code: nothing new on disk still means out of date
+          only `plugin update` ran (marketplace already current); exit 0 with no new install -> banner and marker
+255. PASS  HOUSE_RULES_AUTO_UPDATE=off keeps the check but never runs the update
+          no `claude` call; the banner says automatic updating is off
+256. PASS  A7: _write_atomic replaces the file whole and leaves no temp file behind
+257. PASS  feature switches (a): 'pages off' in a non-git folder is saved there and a later hook call sees PAGES=off
+258. PASS  feature switches (b): 'builders off everywhere' applies in a different folder
+259. PASS  feature switches (c): a folder 'builders on' beats an everywhere 'builders off'
+260. PASS  feature switches (waits): 'waits off' is saved and a later hook call sees WAITS=off
+261. PASS  feature switches (d): 'house rules off' leaves the guard refusing git reset --hard and a commit on main
+262. PASS  feature switches (e): a switch quoted in a sentence saves nothing
+263. PASS  feature switches (f): an old file {"design": "off"} still turns the loop off
+264. PASS  feature switches (g): a file listed in HOUSE_RULES_MODE_IGNORE is read as no switches
+265. PASS  unattended: apply_switches sets PAGES off, leaves AUTOSAVE alone (HANDOFF too), and a typed 'pages on' still wins
+266. PASS  typed unattended (a): 'unattended on' is saved, turns the other switches off and leaves autosave alone
+267. PASS  typed unattended (b): the prompt that turns it on already carries the unattended note, the never-main line and 'do not commit the file'
+268. PASS  typed unattended (c): once typed, AskUserQuestion is denied in later hook calls (no environment variable needed)
+269. PASS  typed unattended (d): a commit on main is still refused while unattended
+270. PASS  typed unattended (e): 'unattended off' switches it back and leaves the other switches as they were
+271. PASS  typed unattended (f): 'house rules off' does not switch unattended on or off
+
+--------------------------------
+RESULT: FAIL - 7 of 271 checks failed. See the FAIL lines above.
+        5 more were skipped as repo-only; see the SKIP lines.
+
+==============================================================================
+Parts:
+  core          271 checks  FAIL    61.7 s  7 check(s) failed
+  wall-clock 61.7 s
+
+--------------------------------
+RESULT: FAIL - 7 of 271 checks failed. Failing part(s): core. See the FAIL lines above.
+        core: 7 check(s) failed
+        5 more were skipped as repo-only; see the SKIP lines.
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
