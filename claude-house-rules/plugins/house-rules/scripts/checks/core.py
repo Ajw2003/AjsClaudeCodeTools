@@ -1209,8 +1209,8 @@ def _rb_tool(cmd):
 
 
 def _rb_run(transcript, retry=False, env=None, reply=_RB_CLAIM):
-    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=reply,
-                                                   stop_hook_active=retry), env=env or _RB_ENV)
+    _, out, _ = run_hook("roadblocks", stop_payload(transcript_path=transcript, last_assistant_message=reply,
+                                                    stop_hook_active=retry), env=env or _RB_ENV)
     return out
 
 
@@ -1261,18 +1261,26 @@ _rb_stall = "I've stopped here; next step is yours."
 report("PASS" if '"decision":"block"' not in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
        "#588: a stall phrase is not scanned when attended")
 _rb_fresh()
-# in-process: a real unattended run turns the whole handover hook off (apply_switches), so the hook cannot show it
-os.environ.update(HOUSE_RULES_UNATTENDED="on", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE)
-_rb_m = _cc_mod.core.roadblock_check(stop_payload(transcript_path=_rb_t), _rb_stall, False)[0]
-del os.environ["HOUSE_RULES_UNATTENDED"]
-report("PASS" if _rb_m else "FAIL", "#588: a stall phrase is flagged when unattended")
+# the real path: HOUSE_RULES_UNATTENDED=on makes the hook's own apply_switches turn HANDOVER off; roadblocks must still run
+_rb_un = _rb_run(_rb_t, reply=_rb_stall, env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if '"decision":"block"' in _rb_un else "FAIL", "#588: a stall phrase is flagged when unattended (the roadblocks hook, via apply_switches)")
+_rb_fresh()
+_, _rb_un_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM),
+                          env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if _rb_un_h.strip() == "" else "FAIL", "#588: unattended really turns the handover hook off (so only the roadblocks hook can catch it)")
+_rb_fresh()
+# attended: the handover hook no longer runs the check, so one turn is counted once, not twice
+_, _rb_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM), env=_RB_ENV)
+_rb_c = [_rb_run(_rb_t) for _ in range(3)]
+report("PASS" if "roadblocks.md" not in _rb_h and ['"decision":"block"' in o for o in _rb_c] == [True, True, False] else "FAIL",
+       "#588: attended, the handover hook leaves the roadblock check alone, so a turn blocks twice and not once more")
 _rb_fresh()
 _rb_pm = lambda m: _rb_run_pm(_rb_t, m)
 
 
 def _rb_run_pm(transcript, mode):
-    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=_rb_stall,
-                                                   permission_mode=mode), env=_RB_ENV)
+    _, out, _ = run_hook("roadblocks", stop_payload(transcript_path=transcript, last_assistant_message=_rb_stall,
+                                                    permission_mode=mode), env=_RB_ENV)
     return out
 
 
