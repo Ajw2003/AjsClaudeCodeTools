@@ -743,7 +743,7 @@ else:
 TIER_TOOLS = {
     "scout": ["Read", "Grep", "Glob"],
     "builder": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
-    "reviewer": ["Read", "Grep", "Glob", "Bash"],
+    "reviewer": ["Read", "Grep", "Glob", "Bash", "Write"],
     "editor": ["Read"],
 }
 agentdrift = []
@@ -774,6 +774,10 @@ if not agentdrift:
 else:
     report("FAIL", "the scout, builder, reviewer and editor agents exist, pinned to haiku, sonnet, opus and sonnet")
     print(f"          {'; '.join(agentdrift)}")
+
+_rv = read(os.path.join(AGENTS_DIR, "reviewer.md"))
+_rv_miss = [w for w in ("page", "plan", "acceptance", "agents/editor.md") if w not in _rv]
+report("PASS" if not _rv_miss else "FAIL", "reviewer.md names the page, plan and acceptance modes and points to agents/editor.md" + (f": missing {_rv_miss}" if _rv_miss else ""))
 
 # --- no live file still names the retired executor agent ----------------------------------------
 _stale = []
