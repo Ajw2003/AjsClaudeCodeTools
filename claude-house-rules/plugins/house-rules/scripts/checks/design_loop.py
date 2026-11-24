@@ -3857,20 +3857,25 @@ import json as _cf_json  # noqa: E402
 import tempfile as _cf_tmp  # noqa: E402
 import time as _cf_time  # noqa: E402
 _cf_dir = _cf_tmp.mkdtemp()
-_cf_bin = os.path.join(_cf_dir, "bin")
-os.makedirs(_cf_bin)
 _cf_log = os.path.join(_cf_dir, "gh.log")
-with open(os.path.join(_cf_bin, "gh"), "w", encoding="utf-8") as _f:
-    _f.write("#!/bin/sh\necho \"$*\" >> \"%s\"\n[ -n \"$FAKE_GH_FAIL\" ] && { echo boom >&2; exit 1; }\n"
-             "case \"$2\" in\n*issues/99) echo '{\"labels\":[\"needs review\"],\"milestone\":7}';;\n"
-             "*) for n in 1 2 3 4 5 6 7 8 9 10; do echo \"{\\\"number\\\":$n,\\\"labels\\\":[\\\"bug\\\"],"
-             "\\\"milestone\\\":null}\"; done;;\nesac\n" % _cf_log)
-os.chmod(os.path.join(_cf_bin, "gh"), 0o755)
 _cf_git = os.path.join(_cf_dir, "git")
 os.makedirs(_cf_git)
 _cf_cache = os.path.join(_cf_git, "house-rules-issue-cache.json")
-_cf_path, _cf_stand = os.environ["PATH"], os.environ.pop("HOUSE_RULES_CLOSE_ISSUES_FILE", None)
-os.environ["PATH"] = _cf_bin + os.pathsep + _cf_path
+_cf_stand = os.environ.pop("HOUSE_RULES_CLOSE_ISSUES_FILE", None)
+
+
+def _cf_fake_gh(args):
+    # A Python stand-in, not a #!/bin/sh file: Windows cannot run an extensionless script as `gh`.
+    with open(_cf_log, "a", encoding="utf-8") as f:
+        f.write(" ".join(args) + chr(10))
+    if os.environ.get("FAKE_GH_FAIL"):
+        raise RuntimeError("boom")
+    if args[1].endswith("issues/99"):
+        return _cf_json.dumps({"labels": ["needs review"], "milestone": 7})
+    return "".join(_cf_json.dumps({"number": n, "labels": ["bug"], "milestone": None}) + chr(10) for n in range(1, 11))
+
+
+_cf_real_gh, _u2b_dl._close_gh = _u2b_dl._close_gh, _cf_fake_gh
 
 
 def _cf_calls():
@@ -3898,7 +3903,7 @@ try:
            "close facts (#549): a failing gh gives a problem sentence and no facts")
 finally:
     os.environ.pop("FAKE_GH_FAIL", None)
-    os.environ["PATH"] = _cf_path
+    _u2b_dl._close_gh = _cf_real_gh
 _cf_file = os.path.join(_cf_dir, "issues.json")
 _cf_json.dump({"o/r#5": {"labels": ["in review"], "milestone": None}}, open(_cf_file, "w", encoding="utf-8"))
 os.environ["HOUSE_RULES_CLOSE_ISSUES_FILE"] = _cf_file

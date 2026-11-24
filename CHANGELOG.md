@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Fixed two Windows-only failures that aj's PC acceptance run (round 2) exposed (Refs #592): (1) the page review stamp hashed the page text as read, so a page saved with Windows line endings (CRLF) looked changed after review and refused the plan half of a combined approval; `page_criteria._stamp_hash` now hashes CRLF and LF alike. (2) The "close facts" tests faked `gh` with a `#!/bin/sh` script that Windows cannot run, which crashed the whole `design_loop` part before it reported a single check; they now replace `_close_gh` with a Python stand-in. Nine other checks still fail on Windows (guard cwd and `rm -rf /tmp`, `waitfor`, two page checks, one node check; counted from one full `verify.py` run); they are outside this feature and unchanged.
+
 `run_acceptance.py` now prints a `still running` line every 20 seconds, a line before and after each run, and takes optional criterion ids (`C1 C5`) to run only those; aj's rule is that a handed-over test prints progress at least every minute. Tested here with `C1` (five progress lines, then PASS).
 
 Acceptance runner test run passed here (all nine criteria, Linux); aj gave the clone path on their PC and was handed a three-step PowerShell card to run it there and push the outputs. The path is recorded in the gitignored `rules/handover-target.md`, not in the repo. A throwaway-folder install of the branch build (`CLAUDE_CONFIG_DIR`) worked: plugin 2.92.0 at commit 184dcf9 with a reviewer that has Write.
