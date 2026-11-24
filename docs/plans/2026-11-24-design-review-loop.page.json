@@ -4,102 +4,411 @@
   "pageType": "proposal",
   "approval": "Design approved: design review loop",
   "short": {
-    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. In auto or unattended mode it keeps going when the plan must change and logs each deviation for you. Eight choices at the end are yours.",
+    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Unattended mode already exists; this adds a ledger of every deviation from the build plan, shown to you at the end. Eight choices at the end are yours.",
     "hint": "Tap a step to see what it produces. The sections below explain each part, and the choices at the end are yours.",
-    "key": [["I do it", ""], ["You decide", "you"]],
+    "key": [
+      [
+        "I do it",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
     "items": [
-      ["bulb", "Review the design", "A reviewer reads each design page and build plan", "", "A reviewed page: every flaw fixed, or turned into a choice for you.", "Nothing from you.", {"src": "docs/plans/2026-11-24-design-review-loop-pics/flow.svg", "alt": "Two rows of boxes. Today: design page, editor, you approve, build, QA page, you test. Proposed: design page, reviewer, you approve, plan page, reviewer, you approve, build, acceptance run, QA page, you say pass or fail.", "caption": "The loop today and as proposed. Red boxes are new, yellow are adapted, green are reused, blue are your moves."}],
-      ["hammer", "Build", "Builders build the approved plan", "", "The same steps as today, with one test per design item written alongside.", "Nothing from you."],
-      ["flask", "Acceptance run", "The reviewer runs and screenshots the whole feature", "", "A report with screenshots under docs/qa/<feature>/ and a stamp for the current commit.", "Nothing from you."],
-      ["eye", "QA", "You answer QA passed or QA failed", "you", "The QA page, which can only be built once the stamp matches.", "Your verdict. No manual testing."]
+      [
+        "bulb",
+        "Review the design",
+        "A reviewer reads each design page and build plan",
+        "",
+        "A reviewed page: every flaw fixed, or turned into a choice for you.",
+        "Nothing from you.",
+        {
+          "src": "docs/plans/2026-11-24-design-review-loop-pics/flow.svg",
+          "alt": "Two rows of boxes. Today: design page, editor, you approve, build, QA page, you test. Proposed: design page, reviewer, you approve, plan page, reviewer, you approve, build, acceptance run, QA page, you say pass or fail.",
+          "caption": "The loop today and as proposed. Red boxes are new, yellow are adapted, green are reused, blue are your moves."
+        }
+      ],
+      [
+        "hammer",
+        "Build",
+        "Builders build the approved plan",
+        "",
+        "The same steps as today, with one test per design item written alongside.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "Acceptance run",
+        "The reviewer runs and screenshots the whole feature",
+        "",
+        "A report with screenshots under docs/qa/<feature>/ and a stamp for the current commit.",
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "QA",
+        "You answer QA passed or QA failed",
+        "you",
+        "The QA page, which can only be built once the stamp matches.",
+        "Your verdict. No manual testing."
+      ]
     ]
   },
   "changes": [
-    ["change", "The editor becomes a reviewer", "One helper reads each page for flaws and for words.", null,
-     "The reviewer reads a page cold, without the author's reasoning. It hunts for holes, traps, contradictions, reversals and unanswered questions, then checks the wording. It returns before-and-after lines and the main session applies them. It runs on Opus, because judging a design needs more than grammar.",
-     ["agents/editor.md is Sonnet at low effort, can only read, and fixes wording. agents/reviewer.md is Opus but checks only finished diffs, and only when asked.", "reviewer.md gains a page mode with five design checks (holes, traps, contradictions, reversals, unanswered questions) plus the wording check. The wording rules from editor.md move into it.", "A page reaches you with its flaws already fixed or listed as your choices."],
-     {"src": "docs/plans/2026-11-24-design-review-loop-pics/checks.svg", "alt": "Five problem types on the left, each with an arrow to the action the reviewer takes: add the missing case, rewrite the step, fix the wrong part, cite the old decision, answer the fact or offer the choice.", "caption": "What the reviewer looks for and what it does about each find."}],
-    ["change", "Questions get answered, not passed along", "Facts are looked up. Choices become your options.", null,
-     "A question the code or docs can answer, such as whether the QA builder accepts an empty list, the reviewer looks up and writes into the page. A question that is really a design choice cannot be settled by a helper, because decisions come only from you. The reviewer turns it into a lettered option with its suggestion marked.",
-     ["The 'decided for you' check sends back any reply that settles a design point alone (docs/4-systems/design-loop.md, Long replies row).", "A rule for the reviewer: facts get answered, choices become options.", "Fewer loose questions reach you, and the number of real decisions stays the same."]],
-    ["change", "Questions are parked, not asked mid-work", "Work keeps going; you answer once, in a batch.", null,
-     "When a question comes up in Build, the agent takes the safest default that can be undone, records it in a parked-decisions ledger with how to undo it, and keeps building. Helpers do the same. Everything parked reaches you together on the QA page, with options. Anything not undoable, or touching money, secrets, other people or deleted data, still asks first.",
-     ["In Build, a reply ending in a question holds code edits until you answer (issue #506, which added that hold). Helpers' questions go to you, and the 'decided for you' check sends back any reply that settles a point alone.", "A ledger file per feature, and a rule that reversible questions are parked. The hold and the check apply only to what cannot be parked.", "Routine work no longer stops. You answer parked questions once, with the work already done."],
-     {"src": "docs/plans/2026-11-24-design-review-loop-pics/parked.svg", "alt": "A question appears. If it can be undone, take the safe default, write it in the ledger, keep building, and bring it to you in one batch on the QA page. If not, ask now.", "caption": "Only questions that cannot be undone still stop the work."}],
-    ["new", "Unattended mode: keep going, log every deviation", "The build plan is a contract. Breaking it needs a reason, and the reason is written down.", null,
-     "In auto, bypass-permissions or unattended mode, the agent does not stop when the plan has to change. It builds the safest alternative, keeps working, and records each deviation: what the plan said, what was done, why, and how to undo it. The ledger opens the QA page, so every deviation is owed to you at the end.",
-     ["Today a surprise in Build becomes a question that holds edits until you answer (issue #506), and a helper that finds one asks you.", "A deviations ledger per feature, shown first on the QA page. A deviation changes how a step is built, never what you approved: a change to the design's intent parks that piece and the rest continues.", "You review deviations once, at the end, instead of being asked at each one."],
-     {"src": "docs/plans/2026-11-24-design-review-loop-pics/deviations.svg", "alt": "A plan step hits a problem. If it only changes how the step is built, build the safe alternative and log it. If it changes what you approved or cannot be undone, park that piece and carry on with the rest. Both lists reach you at the end.", "caption": "Auto mode never stops on a deviation, and never widens what you approved."}],
-    ["change", "Fewer approval stops before building", "The design and the build plan can be approved in one reply.", null,
-     "Today you approve the design, wait for a plan, then approve the plan, which is two stops. The reviewer would check the design and a draft plan together, and one page would carry both. You send one approval line. If your picks change the plan, the plan is rebuilt and re-reviewed before building starts, with no second stop.",
-     ["Today 'Design approved' and 'Build plan approved' are two separate stops (docs/4-systems/design-loop.md, Approvals row).", "A combined page, and one reply moves the feature from Design to Build, with the plan reviewed.", "One approval instead of two before any code."]],
-    ["change", "The build plan gets the same review", "The plan is checked against the design it came from.", null,
-     "The reviewer asks whether every design item has a step, and whether any step has no design behind it. It checks that the steps run in a workable order, and that each issue says what done looks like. It also requires one acceptance test per design item, written now, which the final run executes later.",
-     ["The plan page is checked for wording, and for the rule that a plan of more than three steps becomes one parent issue plus one issue per step before code is written.", "A plan review, and an acceptance list written at plan time.", "Gaps between the design and the plan are caught before any code is written."]],
-    ["new", "Acceptance run before QA", "The reviewer tests the whole feature, not one step.", null,
-     "At the end of Build the reviewer starts the product, drives each flow, screenshots each state and compares it with the approved design page. A failed item goes back to a builder, for at most four rounds, the cap the visual loop already uses. A pass writes a report and a stamp for the current commit.",
-     ["skills/visual-loop already captures, critiques and fixes in up to 4 rounds (max_rounds in rules/visual.json), for visual changes only.", "The visual loop widened to whole features. A product with no screen, such as this plugin's hooks, is judged on run output: verify.py plus real hook payloads.", "You get pictures of the finished feature before you are asked anything."]],
-    ["new", "No QA without the stamp", "A page or a build only moves on once its review is current.", null,
-     "A page carries a stamp: a fingerprint of its content plus the reviewer's verdict. Editing the page afterwards makes the stamp stale. A reply that links a design or plan page with no current stamp is sent back once. The QA page builder refuses to build without an acceptance stamp for the current commit.",
-     ["The editor check is a reminder at reply end (EDITOR_NOTE, scripts/house_rules/writing.py:126). make_page.py's QA mode only checks that the 'unverified' list is not empty (make_page.py:281).", "Stamps recorded by a hook, the way qa_page is today, never by hand.", "A page that reaches you has been reviewed in its final form."]],
-    ["new", "Untestable here: one self-judging test", "You run one command and read PASS or FAIL.", null,
-     "If the reviewer truly cannot test something here, such as phone sensors, a GPU or your own accounts, a builder writes an automated test that decides pass or fail itself. It runs here first against stand-ins. You get one command in the step-card format. QA's 'still unverified' list may then be empty.",
-     ["make_page.py refuses an empty unverified list (make_page.py:281).", "That rule is reversed, and a 'needs your machine' step with one command is added.", "The most you ever run is one command. Nothing is ticked or judged by hand."],
-     {"src": "docs/plans/2026-11-24-design-review-loop-pics/untestable.svg", "alt": "Four boxes in a row: the reviewer says it cannot run the feature here, a builder writes a self-judging test, the test is run here against stand-ins, then you run one command and read PASS or FAIL.", "caption": "The fallback path when this machine cannot test something."}],
-    ["keep", "What stays the same", "Your approvals, labels, branches and QA verdict.", null,
-     "Only your messages move a stage, and QA passed or QA failed stays your answer. The wording-only editor stays for long replies when HOUSE_RULES_EDITOR=on, because a reply has no design to review. Turning the design loop off still turns all of this off.",
-     ["docs/4-systems/design-loop.md, Invariants.", "Nothing changes here.", "You approve and judge exactly as you do now."]],
-    ["keep", "Reversals, named", "This undoes earlier decisions.", null,
-     "Four earlier decisions are undone. The editor is no longer the only pass before a page (issues #249 and #325, the editor reminder). QA pages no longer must list something unverified (issues #264 and #268, the enforced QA stage). Build no longer holds edits on every question (issue #506). Helpers park questions instead of passing them to you (issues #458, #459 and #460, decisions only from you). Each of the four gets a dated entry in docs/6-decisions/Decisions.md, with a pointer left where each was written.",
-     ["docs/6-decisions/Decisions.md holds the earlier entries for these reversals.", "Four dated reversal entries.", "Nothing for you to do."]],
-    ["keep", "Safety limits that stay in every mode", "Unattended mode never overrides the destructive-action rules.", null,
-     "Things that cannot be undone, or that touch money, secrets, other people, outward-facing posts or deleted data, are never done on a guess, even in bypass mode. That step is skipped, logged as owed to you, and the other steps continue. The agent also cannot see the permission mode on every surface. Where it cannot tell, it treats the session as attended.",
-     ["The destructive-action rule and the branch guard, both in the rules loaded at the start of every session.", "Nothing changes: they stay on in every mode.", "Unattended work cannot do anything you would not have allowed."]],
-    ["keep", "Risks I would flag", "Cost, shared blind spots, and judging pictures.", null,
-     "Opus on every design and plan page costs more than Sonnet, and I have not measured how much. The reviewer is still a Claude model reading Claude's work, so a cold read and a fixed checklist reduce shared blind spots but do not remove them. A model judging screenshots can pass a bad one, so each design item should also carry a mechanical check where one exists.",
-     ["tools/measure_footprint.py measures the installed plugin's token cost.", "A measured cost per review, reported after the first real run.", "You see the real number before deciding to keep Opus."]]
+    [
+      "change",
+      "The editor becomes a reviewer",
+      "One helper reads each page for flaws and for words.",
+      null,
+      "The reviewer reads a page cold, without the author's reasoning. It hunts for holes, traps, contradictions, reversals and unanswered questions, then checks the wording. It returns before-and-after lines and the main session applies them. It runs on Opus, because judging a design needs more than grammar.",
+      [
+        "agents/editor.md is Sonnet at low effort, can only read, and fixes wording. agents/reviewer.md is Opus but checks only finished diffs, and only when asked.",
+        "reviewer.md gains a page mode with five design checks (holes, traps, contradictions, reversals, unanswered questions) plus the wording check. The wording rules from editor.md move into it.",
+        "A page reaches you with its flaws already fixed or listed as your choices."
+      ],
+      {
+        "src": "docs/plans/2026-11-24-design-review-loop-pics/checks.svg",
+        "alt": "Five problem types on the left, each with an arrow to the action the reviewer takes: add the missing case, rewrite the step, fix the wrong part, cite the old decision, answer the fact or offer the choice.",
+        "caption": "What the reviewer looks for and what it does about each find."
+      }
+    ],
+    [
+      "change",
+      "Questions get answered, not passed along",
+      "Facts are looked up. Choices become your options.",
+      null,
+      "A question the code or docs can answer, such as whether the QA builder accepts an empty list, the reviewer looks up and writes into the page. A question that is really a design choice cannot be settled by a helper, because decisions come only from you. The reviewer turns it into a lettered option with its suggestion marked.",
+      [
+        "The 'decided for you' check sends back any reply that settles a design point alone (docs/4-systems/design-loop.md, Long replies row).",
+        "A rule for the reviewer: facts get answered, choices become options.",
+        "Fewer loose questions reach you, and the number of real decisions stays the same."
+      ]
+    ],
+    [
+      "change",
+      "Questions are parked, not asked mid-work",
+      "Work keeps going; you answer once, in a batch.",
+      null,
+      "When a question comes up in Build, the agent takes the safest default that can be undone, records it in a parked-decisions ledger with how to undo it, and keeps building. Helpers do the same. Everything parked reaches you together on the QA page, with options. Anything not undoable, or touching money, secrets, other people or deleted data, still asks first.",
+      [
+        "In Build, a reply ending in a question holds code edits until you answer (issue #506, which added that hold). Helpers' questions go to you, and the 'decided for you' check sends back any reply that settles a point alone.",
+        "A ledger file per feature, and a rule that reversible questions are parked. The hold and the check apply only to what cannot be parked.",
+        "Routine work no longer stops. You answer parked questions once, with the work already done."
+      ],
+      {
+        "src": "docs/plans/2026-11-24-design-review-loop-pics/parked.svg",
+        "alt": "A question appears. If it can be undone, take the safe default, write it in the ledger, keep building, and bring it to you in one batch on the QA page. If not, ask now.",
+        "caption": "Only questions that cannot be undone still stop the work."
+      }
+    ],
+    [
+      "new",
+      "Unattended mode: a deviations ledger on top of what exists",
+      "Unattended work already keeps going. This adds a record of every change from the plan.",
+      null,
+      "Already built: typing 'unattended on' (2.87.0, merged) and a hook that refuses questions and tells the agent to choose a reversible option and mention it in its report (2.90.0, issue #590, on another branch). New here: the build plan becomes the contract, and every departure from it goes into a deviations ledger that opens the QA page.",
+      [
+        "Unattended runs record a choice 'in the final report', as free text, with no list of what changed from the plan. The 2.90.0 branch has not been merged to main yet.",
+        "A deviations ledger per feature, filled by the agent: what the plan said, what was done, why, how to undo it. A change to what you approved parks that piece and the rest continues.",
+        "You review deviations once, as a list at the top of the QA page, not as prose to dig out of a report."
+      ],
+      {
+        "src": "docs/plans/2026-11-24-design-review-loop-pics/deviations.svg",
+        "alt": "A plan step hits a problem. If it only changes how the step is built, build the safe alternative and log it. If it changes what you approved or cannot be undone, park that piece and carry on with the rest. Both lists reach you at the end.",
+        "caption": "Auto mode never stops on a deviation, and never widens what you approved."
+      }
+    ],
+    [
+      "change",
+      "Fewer approval stops before building",
+      "The design and the build plan can be approved in one reply.",
+      null,
+      "Today you approve the design, wait for a plan, then approve the plan, which is two stops. The reviewer would check the design and a draft plan together, and one page would carry both. You send one approval line. If your picks change the plan, the plan is rebuilt and re-reviewed before building starts, with no second stop.",
+      [
+        "Today 'Design approved' and 'Build plan approved' are two separate stops (docs/4-systems/design-loop.md, Approvals row).",
+        "A combined page, and one reply moves the feature from Design to Build, with the plan reviewed.",
+        "One approval instead of two before any code."
+      ]
+    ],
+    [
+      "change",
+      "The build plan gets the same review",
+      "The plan is checked against the design it came from.",
+      null,
+      "The reviewer asks whether every design item has a step, and whether any step has no design behind it. It checks that the steps run in a workable order, and that each issue says what done looks like. It also requires one acceptance test per design item, written now, which the final run executes later.",
+      [
+        "The plan page is checked for wording, and for the rule that a plan of more than three steps becomes one parent issue plus one issue per step before code is written.",
+        "A plan review, and an acceptance list written at plan time.",
+        "Gaps between the design and the plan are caught before any code is written."
+      ]
+    ],
+    [
+      "new",
+      "Acceptance run before QA",
+      "The reviewer tests the whole feature, not one step.",
+      null,
+      "At the end of Build the reviewer starts the product, drives each flow, screenshots each state and compares it with the approved design page. A failed item goes back to a builder, for at most four rounds, the cap the visual loop already uses. A pass writes a report and a stamp for the current commit.",
+      [
+        "skills/visual-loop already captures, critiques and fixes in up to 4 rounds (max_rounds in rules/visual.json), for visual changes only.",
+        "The visual loop widened to whole features. A product with no screen, such as this plugin's hooks, is judged on run output: verify.py plus real hook payloads.",
+        "You get pictures of the finished feature before you are asked anything."
+      ]
+    ],
+    [
+      "new",
+      "No QA without the stamp",
+      "A page or a build only moves on once its review is current.",
+      null,
+      "A page carries a stamp: a fingerprint of its content plus the reviewer's verdict. Editing the page afterwards makes the stamp stale. A reply that links a design or plan page with no current stamp is sent back once. The QA page builder refuses to build without an acceptance stamp for the current commit.",
+      [
+        "The editor check is a reminder at reply end (EDITOR_NOTE, scripts/house_rules/writing.py:126). make_page.py's QA mode only checks that the 'unverified' list is not empty (make_page.py:281).",
+        "Stamps recorded by a hook, the way qa_page is today, never by hand.",
+        "A page that reaches you has been reviewed in its final form."
+      ]
+    ],
+    [
+      "new",
+      "Untestable here: one self-judging test",
+      "You run one command and read PASS or FAIL.",
+      null,
+      "If the reviewer truly cannot test something here, such as phone sensors, a GPU or your own accounts, a builder writes an automated test that decides pass or fail itself. It runs here first against stand-ins. You get one command in the step-card format. QA's 'still unverified' list may then be empty.",
+      [
+        "make_page.py refuses an empty unverified list (make_page.py:281).",
+        "That rule is reversed, and a 'needs your machine' step with one command is added.",
+        "The most you ever run is one command. Nothing is ticked or judged by hand."
+      ],
+      {
+        "src": "docs/plans/2026-11-24-design-review-loop-pics/untestable.svg",
+        "alt": "Four boxes in a row: the reviewer says it cannot run the feature here, a builder writes a self-judging test, the test is run here against stand-ins, then you run one command and read PASS or FAIL.",
+        "caption": "The fallback path when this machine cannot test something."
+      }
+    ],
+    [
+      "keep",
+      "What stays the same",
+      "Your approvals, labels, branches and QA verdict.",
+      null,
+      "Only your messages move a stage, and QA passed or QA failed stays your answer. The wording-only editor stays for long replies when HOUSE_RULES_EDITOR=on, because a reply has no design to review. Turning the design loop off still turns all of this off.",
+      [
+        "docs/4-systems/design-loop.md, Invariants.",
+        "Nothing changes here.",
+        "You approve and judge exactly as you do now."
+      ]
+    ],
+    [
+      "keep",
+      "Reversals, named",
+      "This undoes earlier decisions.",
+      null,
+      "Four earlier decisions are undone. The editor is no longer the only pass before a page (issues #249 and #325, the editor reminder). QA pages no longer must list something unverified (issues #264 and #268, the enforced QA stage). Build no longer holds edits on every question (issue #506). Helpers park questions instead of passing them to you (issues #458, #459 and #460, decisions only from you). Each of the four gets a dated entry in docs/6-decisions/Decisions.md, with a pointer left where each was written.",
+      [
+        "docs/6-decisions/Decisions.md holds the earlier entries for these reversals.",
+        "Four dated reversal entries.",
+        "Nothing for you to do."
+      ]
+    ],
+    [
+      "keep",
+      "Safety limits that stay in every mode",
+      "Unattended mode never overrides the destructive-action rules.",
+      null,
+      "Things that cannot be undone, or that touch money, secrets, other people, outward-facing posts or deleted data, are never done on a guess, even in bypass mode. That step is skipped, logged as owed to you, and the other steps continue. If the session does not report its permission mode, it is treated as attended and a message says so, as 2.90.0 already does.",
+      [
+        "The destructive-action rule and the branch guard, both in the rules loaded at the start of every session.",
+        "Nothing changes: they stay on in every mode.",
+        "Unattended work cannot do anything you would not have allowed."
+      ]
+    ],
+    [
+      "keep",
+      "Risks I would flag",
+      "Cost, shared blind spots, and judging pictures.",
+      null,
+      "Opus on every design and plan page costs more than Sonnet, and I have not measured how much. The reviewer is still a Claude model reading Claude's work, so a cold read and a fixed checklist reduce shared blind spots but do not remove them. A model judging screenshots can pass a bad one, so each design item should also carry a mechanical check where one exists.",
+      [
+        "tools/measure_footprint.py measures the installed plugin's token cost.",
+        "A measured cost per review, reported after the first real run.",
+        "You see the real number before deciding to keep Opus."
+      ]
+    ]
   ],
   "choices": [
-    ["share", "What does the reviewer do with an unanswered question?", [
-      ["A", "Answer facts, turn choices into options", 1, "A fact is looked up and written in. A real design choice becomes a lettered option with a suggestion."],
-      ["B", "Decide everything and log it", 0, "Fastest for you, but it reverses the rule that decisions come only from you."],
-      ["C", "Only list the questions", 0, "Safe, but it hands you the same loose questions you get today."]],
-      "A keeps the rule that you design, and still removes the questions the code can answer."],
-    ["lock", "How hard is the gate?", [
-      ["A", "Stamp gate", 1, "An unreviewed or stale page is sent back once, and the QA page will not build without a current acceptance stamp."],
-      ["B", "Reminder only", 0, "A note at reply end, like the editor today. It can be ignored."]],
-      "Only a gate makes 'only after review and testing' true. A reminder was easy to skip."],
-    ["swings", "How many review rounds before the leftovers go on the page?", [
-      ["A", "Two rounds", 1, "Leftover findings are shown on the page as open risks, not hidden."],
-      ["B", "Four rounds", 0, "Matches the visual loop's cap, and costs more Opus time."],
-      ["C", "One round", 0, "Cheapest, but a fix is never re-read."]],
-      "Each fix can create a new flaw, so a re-read is needed and a cap stops endless loops. Two is my estimate and is not measured."],
-    ["grip", "One agent file or two?", [
-      ["A", "Extend reviewer.md with page, plan and acceptance modes", 1, "One file to maintain. It gains write access for screenshots and reports, limited to docs/."],
-      ["B", "New design-reviewer agent, reviewer.md unchanged", 0, "reviewer.md stays read-only for diffs, at the cost of a second file with overlapping rules."]],
-      "A follows the repo's reuse rule. B is safer if you want the diff reviewer to stay read-only."],
-    ["block", "Which pages get the full review?", [
-      ["A", "Proposal and build-plan pages only", 1, "QA, review and art pages keep a wording pass."],
-      ["B", "Every page", 0, "Simplest rule, but a QA page has no design to find flaws in."]],
-      "Design flaws live in designs and plans, so that is where the Opus time goes."],
-    ["swings", "Where do parked questions reach you?", [
-      ["A", "One batch on the QA page", 1, "Work runs to QA uninterrupted. You answer all parked items once, and a changed answer goes back through QA failed."],
-      ["B", "At the end of each build step", 0, "Smaller batches and earlier answers, but one stop per step."]],
-      "A removes the stops. The cost is that a wrong default can cost rework, which is why only undoable ones park."],
-    ["lock", "How many approvals before building?", [
-      ["A", "One combined reply for design and plan", 1, "Both are reviewed together on one page."],
-      ["B", "Two replies, as today", 0, "You see the plan before approving it, at the cost of a second stop."]],
-      "A matches your goal of fewer stops. If your picks change the plan, it is rebuilt and re-reviewed before building."],
-    ["share", "In unattended mode, what counts as a deviation worth logging?", [
-      ["A", "Any change from a plan step, however small", 1, "Every difference from what the build plan says is logged with its reason, so the plan stays a contract."],
-      ["B", "Only changes to behaviour, files or tests the plan names", 0, "A shorter ledger, but small departures from the plan would go unrecorded."]],
-      "A keeps the contract honest. The ledger is shown first on the QA page, so a long one still takes you one pass."]
+    [
+      "share",
+      "What does the reviewer do with an unanswered question?",
+      [
+        [
+          "A",
+          "Answer facts, turn choices into options",
+          1,
+          "A fact is looked up and written in. A real design choice becomes a lettered option with a suggestion."
+        ],
+        [
+          "B",
+          "Decide everything and log it",
+          0,
+          "Fastest for you, but it reverses the rule that decisions come only from you."
+        ],
+        [
+          "C",
+          "Only list the questions",
+          0,
+          "Safe, but it hands you the same loose questions you get today."
+        ]
+      ],
+      "A keeps the rule that you design, and still removes the questions the code can answer."
+    ],
+    [
+      "lock",
+      "How hard is the gate?",
+      [
+        [
+          "A",
+          "Stamp gate",
+          1,
+          "An unreviewed or stale page is sent back once, and the QA page will not build without a current acceptance stamp."
+        ],
+        [
+          "B",
+          "Reminder only",
+          0,
+          "A note at reply end, like the editor today. It can be ignored."
+        ]
+      ],
+      "Only a gate makes 'only after review and testing' true. A reminder was easy to skip."
+    ],
+    [
+      "swings",
+      "How many review rounds before the leftovers go on the page?",
+      [
+        [
+          "A",
+          "Two rounds",
+          1,
+          "Leftover findings are shown on the page as open risks, not hidden."
+        ],
+        [
+          "B",
+          "Four rounds",
+          0,
+          "Matches the visual loop's cap, and costs more Opus time."
+        ],
+        [
+          "C",
+          "One round",
+          0,
+          "Cheapest, but a fix is never re-read."
+        ]
+      ],
+      "Each fix can create a new flaw, so a re-read is needed and a cap stops endless loops. Two is my estimate and is not measured."
+    ],
+    [
+      "grip",
+      "One agent file or two?",
+      [
+        [
+          "A",
+          "Extend reviewer.md with page, plan and acceptance modes",
+          1,
+          "One file to maintain. It gains write access for screenshots and reports, limited to docs/."
+        ],
+        [
+          "B",
+          "New design-reviewer agent, reviewer.md unchanged",
+          0,
+          "reviewer.md stays read-only for diffs, at the cost of a second file with overlapping rules."
+        ]
+      ],
+      "A follows the repo's reuse rule. B is safer if you want the diff reviewer to stay read-only."
+    ],
+    [
+      "block",
+      "Which pages get the full review?",
+      [
+        [
+          "A",
+          "Proposal and build-plan pages only",
+          1,
+          "QA, review and art pages keep a wording pass."
+        ],
+        [
+          "B",
+          "Every page",
+          0,
+          "Simplest rule, but a QA page has no design to find flaws in."
+        ]
+      ],
+      "Design flaws live in designs and plans, so that is where the Opus time goes."
+    ],
+    [
+      "swings",
+      "Where do parked questions reach you?",
+      [
+        [
+          "A",
+          "One batch on the QA page",
+          1,
+          "Work runs to QA uninterrupted. You answer all parked items once, and a changed answer goes back through QA failed."
+        ],
+        [
+          "B",
+          "At the end of each build step",
+          0,
+          "Smaller batches and earlier answers, but one stop per step."
+        ]
+      ],
+      "A removes the stops. The cost is that a wrong default can cost rework, which is why only undoable ones park."
+    ],
+    [
+      "lock",
+      "How many approvals before building?",
+      [
+        [
+          "A",
+          "One combined reply for design and plan",
+          1,
+          "Both are reviewed together on one page."
+        ],
+        [
+          "B",
+          "Two replies, as today",
+          0,
+          "You see the plan before approving it, at the cost of a second stop."
+        ]
+      ],
+      "A matches your goal of fewer stops. If your picks change the plan, it is rebuilt and re-reviewed before building."
+    ],
+    [
+      "share",
+      "In unattended mode, what counts as a deviation worth logging?",
+      [
+        [
+          "A",
+          "Any change from a plan step, however small",
+          1,
+          "Every difference from what the build plan says is logged with its reason, so the plan stays a contract."
+        ],
+        [
+          "B",
+          "Only changes to behaviour, files or tests the plan names",
+          0,
+          "A shorter ledger, but small departures from the plan would go unrecorded."
+        ]
+      ],
+      "A keeps the contract honest. The ledger is shown first on the QA page, so a long one still takes you one pass."
+    ]
   ],
   "wrapup": {
     "summary": "A change to the design loop: a reviewer replaces the editor for design and plan pages, and an acceptance run tests the finished feature before QA.",
     "changing": "Nothing is built. If you approve, this edits the reviewer agent, make_page.py, the page checks in writing.py, the stage tracker and verify.py, and adds docs and four dated reversal entries in Decisions.md.",
     "blocking": "Your approval and your eight picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, which pages are reviewed, where parked questions land, how many approvals before building, and what counts as a logged deviation.",
     "next": "I log the decision, write the build plan as a page, put it through the same review, then create one issue per step.",
-    "todo": ["Pick your answers in Choices.", "Tap <b>Copy my reply</b>.", "Send it with \"Design approved: design review loop\", or tell me what to change."]
+    "todo": [
+      "Pick your answers in Choices.",
+      "Tap <b>Copy my reply</b>.",
+      "Send it with \"Design approved: design review loop\", or tell me what to change."
+    ]
   }
 }
