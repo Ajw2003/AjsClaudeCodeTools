@@ -609,6 +609,16 @@ with open(_bp, "w", encoding="utf-8") as _f:
 _rc, _o = _mp("build", _bp, "--project", _sp)
 _mp_cases.append(("starters (#544): build with an unknown pageType dies naming the five types",
                   _rc == 2 and "proposal, build-plan, qa, review, art" in _o))
+import urllib.parse
+_svg = lambda s: {"src": "data:image/svg+xml," + urllib.parse.quote(s), "alt": "a", "caption": "c"}
+_cb = _mp_content("svgbad", [["chg", "Broken picture", "Looks new.", None, "Detail.", None, None, {"visual": True},
+                              _svg("<svg xmlns='http://www.w3.org/2000/svg'><text>a < b</text></svg>")]])
+_rc, _o = _mp("build", _cb, "--project", _d)
+_cg = _mp_content("svggood", [["chg", "Good picture", "Looks new.", None, "Detail.", None, None, {"visual": True},
+                               _svg("<svg xmlns='http://www.w3.org/2000/svg'><text>a &lt; b</text></svg>")]])
+_rc2, _o2 = _mp("build", _cg, "--project", _d)
+_mp_cases.append(("make_page (#612): an svg picture with a raw angle bracket makes the build refuse, naming the item; a well-formed one builds",
+                  _rc == 2 and "Broken picture" in _o and _rc2 == 0))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

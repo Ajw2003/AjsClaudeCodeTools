@@ -120,5 +120,14 @@ pv_case("Stop: a turn that changed nothing is not a work report, so a technical 
 pv_case("Stop: HOUSE_RULES_PLAIN_SUMMARY=off switches it off",
         not _ps(_ps_wrote, _PS_TECH, HOUSE_RULES_PLAIN_SUMMARY="off"), "")
 
+import clarity as _cl
+_SVGU = "data:image/svg+xml,%3Csvg xmlns=%27x%27 width=%2710%27 height=%2710%27 fill=%27red%27 stroke=%27black%27%3E"
+_SVGP = ('<p>Hi there all</p><script>const PAGE = {\n pic: "%s",\n lead: "Plain words about the page here."\n};</script>'
+         '<svg width="9"><text>mangled wordy picture label</text></svg>' % _SVGU)
+_SVGT = _cl.page_text(_SVGP)
+pv_case("page text (#612): an inline picture whose data address has raw spaces, and an inline <svg>, give no findings or text",
+        "stroke" not in _SVGT and "mangled" not in _SVGT and "Plain words about the page here." in _SVGT
+        and not _cl.findings(_SVGT), _SVGT[:80])
+
 
 finish()
