@@ -678,37 +678,71 @@ WAIT_DENY = (
 )
 
 
+SPLIT_FORM = ("Cannot split: check: <the command you ran to see whether it splits>; evidence: <what it actually returned>; "
+              "logic: <why that evidence means it cannot be split>; progress: <the signal you will read each minute>")
 BG_DENY = (
     "This background command has %s, so nothing would stop it if it hung (the tool default is 30 minutes). "
-    "Run it again with the timeout parameter set to %d or less (milliseconds; the longest wait in rules/waits.json). "
-    "To check the wait every minute, run scripts/waitfor.py."
+    "Run it again with the timeout parameter set to %d or less (milliseconds; one 60-second segment in rules/waits.json), "
+    "or split it into segments of 60 seconds each (segment plan in rules/detail/waits.md). "
+    "If it genuinely cannot be split, put this in the launch description and fill it in: " + SPLIT_FORM + ". "
+    "A generic reason such as 'it takes a while' is refused. To check the wait every minute, run scripts/waitfor.py."
 )
+_SPLIT_PARTS = ("check", "evidence", "logic", "progress")
+
+
+def _split_reason_ok(desc):
+    """True when the description is `Cannot split:` with a check, evidence, logic and progress part, each with content."""
+    m = re.match(r"\s*Cannot split:(.*)$", desc or "", re.I | re.S)
+    if not m:
+        return False
+    body = m.group(1)
+    return all(re.search(r"%s\s*:\s*[^;\s][^;]{2,}" % p, body, re.I) for p in _SPLIT_PARTS)
+
+
+def _known_runner(cmd):
+    for r in waits.load_waits()["long_runners"]:
+        if re.search(r"(?<![\w.-])%s(?![\w-])" % re.escape(r), cmd, re.I):
+            return True
+    return False
 
 
 def _wait_check(payload, subject):
-    """A deny reason for a foreground sleep loop or a timeout over the foreground limit (rules/waits.json); else None."""
+    """A deny reason for a launch over 60 seconds, a long runner with no timeout, or a foreground sleep loop; else None."""
     try:
         ti = json.loads(payload).get("tool_input") or {}
     except (ValueError, AttributeError) as exc:
-        sys.stderr.write("house-rules guard: the wait check could not read the payload (%s), so it was skipped.\n" % exc)
+        sys.stderr.write("house-rules guard: the wait check could not read the payload (%s), so it was skipped.
+" % exc)
         return None
     if not isinstance(ti, dict):
         return None
+    cfg = waits.load_waits()
+    split_ok = _split_reason_ok(ti.get("description"))
+    got = ti.get("timeout")
+    has_to = isinstance(got, (int, float)) and not isinstance(got, bool) and got > 0
+    top_ms = int(cfg["foreground_limit_seconds"] * 1000)
     if ti.get("run_in_background") is True:
         if os.environ.get("HOUSE_RULES_WAITS", "on").strip().lower() in core._TOGGLE_OFF:
             return None
         # #562: a hook cannot stop a hung tool, so the launch is the only point where a limit holds.
-        top_ms = int(max(waits.load_waits()["deadline_seconds"].values()) * 1000)
-        got = ti.get("timeout")
-        if isinstance(got, (int, float)) and not isinstance(got, bool) and 0 < got <= top_ms:
+        runner = _known_runner(str(ti.get("command", "")))
+        if split_ok and (has_to or runner):
+            return None
+        if has_to and got <= top_ms:
             return None
         return BG_DENY % (("a timeout of %s ms, over the %d ms limit" % (got, top_ms)) if got is not None
-                          else "no timeout", top_ms)
+                          else "no timeout" + (" and is a known long runner, counted as over 60 seconds" if runner else ""), top_ms)
     cmd = _rerun_command(payload, subject) or ""
-    limit = waits.load_waits()["foreground_limit_seconds"]
+    limit = cfg["foreground_limit_seconds"]
     if _WAIT_LOOP_RE.search(cmd):
         return WAIT_DENY % "a loop that sleeps until something happens"
-    for amount, unit in _WAIT_TIMEOUT_RE.findall(_HEREDOC_RE.sub(r"\1", cmd)):
+    if split_ok:
+        return None
+    if has_to and got > top_ms:
+        return BG_DENY % ("a foreground timeout of %s ms, over the %d ms limit" % (got, top_ms), top_ms)
+    if not has_to and _known_runner(cmd):
+        return BG_DENY % ("no timeout and is a known long runner, counted as over 60 seconds", top_ms)
+    for amount, unit in _WAIT_TIMEOUT_RE.findall(_HEREDOC_RE.sub(r"", cmd)):
         secs = float(amount) * {"": 1, "s": 1, "m": 60, "h": 3600, "d": 86400}[unit]
         if secs > limit:
             return WAIT_DENY % ("timeout %s%s, over %g seconds" % (amount, unit, limit))

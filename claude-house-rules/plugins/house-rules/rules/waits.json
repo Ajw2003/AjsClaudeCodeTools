@@ -1,8 +1,9 @@
 {
-  "_about": "Wait clock numbers, in seconds. first_check_seconds: when a wait is first checked. interval_seconds: how often it is checked after that. stalled_after_quiet_checks: how many checks in a row with no new output before a wait counts as stalled. foreground_limit_seconds: the longest a command may hold the turn in the foreground; longer ones must run in the background. deadline_seconds: the longest each kind of wait may run before it is given up on (command, agent, build, ci). Environment variables HOUSE_RULES_WAIT_* override each number.",
+  "_about": "Wait clock numbers, in seconds. first_check_seconds: when a wait is first checked. interval_seconds: how often it is checked after that. stalled_after_quiet_checks: how many checks in a row with no new output before a wait counts as stalled. foreground_limit_seconds: the longest a command may hold the turn in the foreground; longer ones must run in the background. deadline_seconds: the longest each kind of wait may run before it is given up on (command, agent, build, ci). long_runners: commands known to run past a minute; one launched with no timeout counts as over 60 seconds. Every deadline is one 60-second segment; a longer job is split into segments (rules/detail/waits.md). Environment variables HOUSE_RULES_WAIT_* override each number.",
   "first_check_seconds": 60,
   "interval_seconds": 60,
   "stalled_after_quiet_checks": 3,
   "foreground_limit_seconds": 60,
-  "deadline_seconds": {"command": 600, "agent": 900, "build": 1200, "ci": 900}
+  "deadline_seconds": {"command": 60, "agent": 60, "build": 60, "ci": 60},
+  "long_runners": ["unity", "dotnet build", "dotnet test", "msbuild", "gradle", "docker build", "npm run build", "npm test", "pytest", "verify.py", "cargo build"]
 }
