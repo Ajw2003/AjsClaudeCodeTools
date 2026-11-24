@@ -1,14 +1,14 @@
 # aj's answers to the visual skills proposal (recovered 2026-11-24)
 
 Source: five screenshots of the first published page and the text aj typed for choice 8. Choices 1 to 3
-were not in the screenshots, and choices 9 and 10 were lost when the browser tab was closed. This file
+came in a second set of screenshots, and choices 9 and 10 were lost when the browser tab was closed. This file
 and the `answers/current` document in the artifact database (`THgBL8SamiG6HzkfbYpJz2`) hold the same answers.
 
 | Choice | Question | Answer |
 |---|---|---|
-| 1 | How fresh should the views be? | Not recovered |
-| 2 | Which two views? | Not recovered |
-| 3 | Where do the views live by default? | Not recovered |
+| 1 | How fresh should the views be? | Own answer: "Refresh on session start and the 4 triggers" (session start is already one of the four triggers, so this reads as option B, the four triggers only; to be confirmed) |
+| 2 | Which two views? | B, hourglass plus dependency graph |
+| 3 | Where do the views live by default? | B, local files plus GitHub Pages from a roadmap-view branch |
 | 4 | How is the visual-docs page laid out? | A, a new page template for the six sections |
 | 5 | Do the roadmap views group by the repo's roadmap milestones? | A, yes, group by the milestones in that repo's `docs/2-roadmap/Roadmap.md` |
 | 6 | How is the visual-docs page checked for wording? | B, the editor helper plus image review of screenshots |
@@ -22,6 +22,12 @@ and the `answers/current` document in the artifact database (`THgBL8SamiG6HzkfbY
 "Two different roadmaps exist one tracking only main with merged commits, and another tracking the latest
 branch with commit history above 1 commit, label them as such so we can tell in dev from shipped both on the
 same page."
+
+## What the answers imply together (not yet applied to the page)
+
+- Choice 2 B (hourglass plus dependency graph) replaces the racetrack and burn-up chart. The dependency graph needs clean parent and child links between issues, which the page said is a condition.
+- Choice 8 asks for In dev and Shipped to be labelled apart on one page, which the hourglass can show.
+- Choice 3 B turns GitHub Pages on, so the page's unverified Actions-allowance question matters now.
 
 ## What choice 8 changes in the design (not yet applied to the page)
 
