@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-24 - Design review loop: a reviewer, an acceptance run, parked questions, a deviations ledger
+
+**Context.** The editor checked only wording, aj did the final testing, and routine work stopped for questions and approvals. aj's goal: a smoother loop from idea to finished product, with nothing left for aj to test by hand and no stops mid-work that can wait for a stage boundary. Unattended mode 2.87.0 is in main; "never wait" 2.90.0 (issues #587 to #591) is on branch `AjsAgent/affectionate-lovelace-r0zfgg` and not yet merged.
+
+**Decision.** aj wrote "Design approved: design review loop 1A 2A 3A 4A 5* 6A 7A 8A". 1A: the reviewer answers facts and turns real design choices into options. 2A: a stamp gate. 3A: two review rounds. 4A: the reviewer agent is extended, not duplicated. 5*, aj's own answer: every page gets the full review except review pages and QA pages. 6A: parked questions reach aj as one batch on the QA page. 7A: one combined approval for design and plan. 8A: every departure from a build plan step is logged as a deviation. Plan: parent issue #592, steps #593 to #601, systems doc `docs/4-systems/review-loop.md`.
+
+**Why.** Design flaws live in designs and plans, so that is where review time goes. A gate, unlike a reminder, makes "only after review and testing" true. Parking removes stops without removing aj's decisions, and the build plan stays the contract.
+
+**Reverses (each gets its own entry when built).** The editor as the only pass before a page (#249, #325). The non-empty "unverified" rule on QA pages (#264, #268). The Build hold on every question (#506). Helpers passing questions to aj (#458 to #460).
+
+**Status.** Standing once built. Nothing is built yet; steps 6 and 7 wait for 2.90.0 to merge.
+
+---
+
 ## 2026-11-22 - Roadblocks: a rule plus a check that blocks twice, then warns
 
 **Decision.** aj approved "Design approved: clear roadblocks 1C 2A". The agent probes before claiming a blocker, installs missing tools itself (without asking in bypass mode), and tries other routes before stopping. An end-of-reply check blocks a roadblock claim made with no probe twice, then lets it through with a warning line. Only licences, logins, purchases and destructive actions stay aj's. The session-start line for bypass mode was dropped.
