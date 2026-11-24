@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command step 2 is built on its own branch, not merged: I read the builder's first version and sent it back for four fixes (the design page lookup for dated names, extra words after the path, non-ASCII file names, and a closed-pipe traceback in `scripts/review_plan.py`). Nothing from it is verified yet.
+
 Review command, measured sweep figures and a logged plan change: one 10-file markdown batch took 71.3 seconds and 43,991 tokens in the reviewer's `codebase` mode (about 7.1 seconds and 4,400 tokens per file), so a sweep batch is capped at 8 files to stay under the 60-second agent deadline (`docs/qa/review-command/batch-measurement.md`). Step 2 will also add a small helper, `scripts/review_plan.py`, that counts files and picks the mode; that is a change from the approved plan, recorded as D1 in `docs/qa/review-command/ledger.md`.
 
 Review command step 1 (#618): the reviewer agent gained four modes, `code`, `codebase`, `image` and `style` (`agents/reviewer.md`, `rules/detail/review-modes.md`); `show-dont-tell.md` now says style mode reads a stated style or a project UI guide, not `docs/page-style.json`.
