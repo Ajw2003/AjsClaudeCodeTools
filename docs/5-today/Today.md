@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Fixed the top three reviewer findings in `agents/reviewer.md` (plugin 2.94.2): it now names the full `review-modes.md` path, calls `waitfor.py` through `${CLAUDE_PLUGIN_ROOT}`, and its description lists its design-gate, acceptance and `/house-rules:review` uses. All seven verify parts pass (1,602 checks). Not tested live: that the path variable expands inside an agent file. Findings 4 to 9 and the Sonnet reviewer variant are still open.
+
 Reviewed the reviewer agent itself (code mode, saved in `docs/qa/review-reviewer-2026-11-24/report.md`): Opus stays right for page mode and the stuck-builder diff; Sonnet looks adequate for the other modes and Haiku for none, but no benchmark was run, so that is judgement. Nine findings, the top one being that `agents/reviewer.md:9` reads a `review-modes.md` path the command never passes. Nothing is fixed yet; waiting on aj to choose between fixing findings 1 and 2 and building a Sonnet reviewer variant.
 
 The review command is finished on this branch (plugin 2.94.1) and open as pull request 623: the sweep token estimate is fixed (10,000 per batch plus 3,400 per file), the 2 high and 7 medium findings of test 3 are fixed in `scripts/review_plan.py`, and batches are capped at 6 files. All seven verify parts pass (1,602 checks). Acceptance tests 1 to 7 pass; the image-mode run was pointed at the repo's own rules file because the sandbox's installed plugin is the older 2.93.0 (`docs/qa/review-command/round-2/results.md`). The 8 low findings wait for aj at QA.

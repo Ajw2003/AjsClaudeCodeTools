@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Reviewer fixes, plugin 2.94.2: `agents/reviewer.md` now names the full `${CLAUDE_PLUGIN_ROOT}/rules/detail/review-modes.md` path (before, nothing ever passed it, so the mode detail went unread), runs `${CLAUDE_PLUGIN_ROOT}/scripts/waitfor.py` instead of a relative path that resolved inside the user's project, and its description now lists the design-gate, acceptance and `/house-rules:review` uses. All 7 verify parts pass (1,602 checks). Not run: a live reviewer spawn to confirm the path variable expands inside an agent file (the archivist already relies on it).
+
 Reviewer model review: the reviewer agent was reviewed in code mode and the report is saved in `docs/qa/review-reviewer-2026-11-24/report.md`. It keeps Opus for page and stuck-builder diff, suggests Sonnet for the other modes, and lists 9 findings (1 high: `agents/reviewer.md:9` reads a `review-modes.md` path that `commands/review.md` never passes). No plugin code changed.
 
 Review command round 2 and pull request: acceptance tests 6 (full verify, 1,602 checks) and 7 (findings ranked high, medium, low on a seeded fixture) pass, and test 5 passes for style and for image mode (the image run was pointed at the repo's own rules file, because the sandbox's installed plugin is the older 2.93.0). Results are in `docs/qa/review-command/round-2/results.md`; the work is in pull request 623 (`Refs #617`).
