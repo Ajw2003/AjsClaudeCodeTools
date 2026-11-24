@@ -49,6 +49,9 @@ Step 2 (#589, dd9d85fa) the record check; step 3 (#591, 23ef6601) the model judg
 ## Live headless sessions, first run (2026-11-23, night)
 `docs/plans/2026-11-23-roadblock-unattended-hook/live_roadblocks.py` ran five real sessions on the branch build (2.90.0): curly apostrophe PASS (blocked twice), `git ls-files` only PASS (blocked twice), three methods listed FAIL, unattended stall FAIL, bypass question FAIL. Causes found: (3) `ls /usr/bin | grep tool` found nothing and the tool reported it as a success (is_error false, "completed with no output"), so the record check counted 2 methods, not 3: a real bug, fixed in `_failed_attempts` (new `_empty_search`) with two new core cases, committed; the two new cases pass (13 of 13 `#589` cases) and the filtered-search case fails with the fix switched off (removal check run); (4) my test prompt said "create only a.txt now", so the goal check correctly judged the goal reached (checked by hand: `{"ok": true}`, 15.7 s for the nested call, close to the 22 s timeout); the prompt needs rewording; (5) not yet diagnosed.
 
+## Live run 2 (2026-11-23, night)
+The script's unattended-stall prompt and bypass test (question tool enabled by environment variable) were corrected and committed; run 2 of all five sessions was started and its results were not yet read when this note was written. Unverified until then: whether the unattended goal check blocks live, and whether the bypass denial fires (the question tool does not exist in headless sessions without the variable).
+
 ## The next step
 Read my step 4 verify result; run live headless sessions on the branch build (unattended stall blocked and carries on, bypass question denied, curly-apostrophe claim blocked, git ls-files-only claim blocked, three-method reply left alone); build the QA page and link it from #587; merge main in; push; open the pull request to main with `Refs #587`; swap issues #587 to #591 to `needs review`.
 
