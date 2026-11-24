@@ -9,20 +9,17 @@ suggested) whenever an issue opens or closes or a pull request merges into the d
 
 ## Where it stands
 
-- aj's second correction (2026-11-24): the roadmap must not depend on GitHub Actions (their budget may run out, or the Action could exhaust it). It now runs locally only, with GitHub Pages as an optional publish step (a `roadmap-view` branch served by Pages, off by default). Refresh triggers: the plugin's session hook (it already matches `issue_write`, `merge_pull_request` and Bash), a new git post-merge hook, session start, and `/house-rules:visual-roadmap update`. The page now has nine picks (the "how views are opened" pick went away because local and Pages views are both HTML).
+- aj's second correction (2026-11-24): the roadmap must not depend on GitHub Actions (their budget may run out, or the Action could exhaust it). It now runs locally only, with GitHub Pages as an optional publish step (a `roadmap-view` branch served by Pages, off by default). Refresh triggers: the plugin's session hook (it already matches `issue_write`, `merge_pull_request` and Bash), a new git post-merge hook, session start, and `/house-rules:visual-roadmap update`. The page now has ten picks (the "how views are opened" pick went away because local and Pages views are both HTML; a pick for issues closed without a merge was added).
 
 - aj's correction (2026-11-24): both skills must work in any repo with house rules docs, not only this one. The page now says so: visual-roadmap ships an install command (`/house-rules:visual-roadmap install`) that adds the workflow and a per-repo settings file (dev branch name, label per stage), and repo facts are labelled as examples. A round-3 review and an editor pass were started on that revision.
 
 - Nothing is built. The only output is a proposal page,
   `docs/plans/2026-11-24-visual-docs-and-roadmap.html`, with its content file beside it, and a
   `CHANGELOG.md` line and `docs/5-today/Today.md` entry. Committed and pushed on this branch.
-- The page holds ten choices (five original, three from the first review, two added when it was revised to assume the review command on branch `AjsAgent/jolly-dirac-fvh4cg`, parent issue 617 and steps 618 to 621, is merged and built) for aj: what drives the updates (a GitHub Action is suggested), which
-  two views, where the views live (a `roadmap-view` branch is suggested, so main stays
-  pull-request-only), how the dev branch is found (a setting), and the scope of the docs page.
+- The page holds ten choices for aj, including: what refreshes the roadmap (local triggers only are suggested), which two views, where the views live (local files by default, GitHub Pages optional), how the branch names are set, where an issue closed without a merge goes, grouping by roadmap milestone, how and when the review runs on visual-docs, and the scope and layout of the docs page. It assumes the review command on branch `AjsAgent/jolly-dirac-fvh4cg` (parent issue 617, steps 618 to 621) is merged and built.
 - This repo has no dev branch today: `git branch -r` shows only `main` and session branches.
-- The page passed `make_page.py`'s own visual check in light and dark with no overflow, and loads
-  seven of seven pictures at 375px. `@house-rules:reviewer` reviewed the page (22 findings); all are applied, and three design
-  findings became new picks (how views are opened, the docs page layout, phase grouping). A second review of the revised page found 15 more; all are applied. The page now has ten picks and carries the review stamp (clean, round 2).
+- The page passed `make_page.py`'s own visual check in light and dark with no overflow, and carries ten pictures (not rechecked at 375px since the local-first rework). `@house-rules:reviewer` reviewed the page (22 findings); all are applied, and three design
+  findings became new picks (how views are opened, the docs page layout, phase grouping). Later rounds found 15 and then 20 more; the findings that still applied to the local-first design are applied. The page has no review stamp yet.
 
 ## The next step
 
