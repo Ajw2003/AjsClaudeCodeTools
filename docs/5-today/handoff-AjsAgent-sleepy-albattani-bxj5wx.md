@@ -7,7 +7,7 @@ Make the house-rules design loop smoother: a reviewer that checks designs and pl
 Proposal page written and built: `docs/plans/2026-11-24-design-review-loop.html`, source `docs/plans/2026-11-24-design-review-loop.page.json`, pictures in `docs/plans/2026-11-24-design-review-loop-pics/`. Nothing is built and the loop is still at Design. The page builder reported no page errors or overflow in light and dark.
 
 ## The next step
-aj answers with "Design approved: design review loop" plus seven picks. Then log the decision in `docs/6-decisions/Decisions.md` (including the four named reversals), write the build plan page, review it, and create one issue per step.
+aj answers with "Design approved: design review loop" plus eight picks. Then log the decision in `docs/6-decisions/Decisions.md` (including the four named reversals), write the build plan page, review it, and create one issue per step.
 
 ## What is unverified
 The editor pass was applied and the page rebuilt. The 60-words-per-block limit was not counted. The claim that the QA builder refuses an empty unverified list was confirmed in `make_page.py:281`; the other cited line references were not re-checked. Review cost and the two-round cap are unmeasured.

@@ -237,7 +237,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Seven choices at the end are yours.</p>
+      <p class="lead" id="lead" data-basic="summary">Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. In auto or unattended mode it keeps going when the plan must change and logs each deviation for you. Eight choices at the end are yours.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -284,7 +284,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: design review loop",
   "short": {
-    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Seven choices at the end are yours.",
+    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. In auto or unattended mode it keeps going when the plan must change and logs each deviation for you. Eight choices at the end are yours.",
     "hint": "Tap a step to see what it produces. The sections below explain each part, and the choices at the end are yours.",
     "key": [
       [
@@ -384,6 +384,23 @@ const PAGE = {
       }
     ],
     [
+      "new",
+      "Unattended mode: keep going, log every deviation",
+      "The build plan is a contract. Breaking it needs a reason, and the reason is written down.",
+      null,
+      "In auto, bypass-permissions or unattended mode, the agent does not stop when the plan has to change. It builds the safest alternative, keeps working, and records each deviation: what the plan said, what was done, why, and how to undo it. The ledger opens the QA page, so every deviation is owed to you at the end.",
+      [
+        "Today a surprise in Build becomes a question that holds edits until you answer (issue #506), and a helper that finds one asks you.",
+        "A deviations ledger per feature, shown first on the QA page. A deviation changes how a step is built, never what you approved: a change to the design's intent parks that piece and the rest continues.",
+        "You review deviations once, at the end, instead of being asked at each one."
+      ],
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2ODAgMjUwIiB3aWR0aD0iNjgwIiBoZWlnaHQ9IjI1MCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxTZWdvZSBVSSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIj4KPHN0eWxlPgouYmd7ZmlsbDojZmZmfS50e2ZpbGw6IzFiMWYyYX0ubXtmaWxsOiM1YjYyNzV9Lmxue3N0cm9rZTojOGE5MmE2O2ZpbGw6bm9uZTtzdHJva2Utd2lkdGg6MS41fQoubmV3e2ZpbGw6I2ZkZTBkYztzdHJva2U6I2MwMzkyYn0ueW91e2ZpbGw6I2RiZTdmZjtzdHJva2U6IzJmNWZkMH0ucmV1c2V7ZmlsbDojZGZmM2U0O3N0cm9rZTojMmU4YjU3fS5hZGFwdHtmaWxsOiNmZmYxY2M7c3Ryb2tlOiNiODg2MGJ9CkBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6ZGFyayl7LmJne2ZpbGw6IzE0MTcxZn0udHtmaWxsOiNlZWYwZjZ9Lm17ZmlsbDojYTRhYmJkfS5sbntzdHJva2U6IzZjNzQ4YX0ubmV3e2ZpbGw6IzRhMWYxYjtzdHJva2U6I2ZmOGE3YX0ueW91e2ZpbGw6IzFkMmM1NTtzdHJva2U6IzdhYTJmZn0ucmV1c2V7ZmlsbDojMWYzYTJhO3N0cm9rZTojNWZjZjhjfS5hZGFwdHtmaWxsOiM0YTNkMTI7c3Ryb2tlOiNlMGI5NGF9fQo8L3N0eWxlPgo8cmVjdCBjbGFzcz0iYmciIHdpZHRoPSI2ODAiIGhlaWdodD0iMjUwIi8+Cjx0ZXh0IGNsYXNzPSJ0IiB4PSIxNiIgeT0iMjQiIGZvbnQtd2VpZ2h0PSI3MDAiPlRoZSBwbGFuIGhpdHMgYSBwcm9ibGVtIGluIHVuYXR0ZW5kZWQgbW9kZTwvdGV4dD4KPGcgc3Ryb2tlLXdpZHRoPSIxLjUiPgo8cmVjdCBjbGFzcz0iYWRhcHQiIHg9IjE2IiB5PSI5NiIgd2lkdGg9IjE0MCIgaGVpZ2h0PSI1NiIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iODYiIHk9IjEyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UGxhbiBzdGVwIGNhbm5vdDwvdGV4dD48dGV4dCBjbGFzcz0idCIgeD0iODYiIHk9IjEzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Z28gYXMgd3JpdHRlbjwvdGV4dD4KPHJlY3QgY2xhc3M9InJldXNlIiB4PSIyMzYiIHk9IjM4IiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjYwIiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIzNDYiIHk9IjYyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5Pbmx5IHRoZSBob3cgY2hhbmdlczo8L3RleHQ+PHRleHQgY2xhc3M9InQiIHg9IjM0NiIgeT0iODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPmJ1aWxkIHRoZSBzYWZlIGFsdGVybmF0aXZlPC90ZXh0Pgo8cmVjdCBjbGFzcz0ibmV3IiB4PSIyMzYiIHk9IjE1MCIgd2lkdGg9IjIyMCIgaGVpZ2h0PSI2MCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iMzQ2IiB5PSIxNzQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPldoYXQgeW91IGFwcHJvdmVkIGNoYW5nZXMsPC90ZXh0Pjx0ZXh0IGNsYXNzPSJ0IiB4PSIzNDYiIHk9IjE5MiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+b3IgY2Fubm90IGJlIHVuZG9uZTogcGFyayBpdDwvdGV4dD4KPHJlY3QgY2xhc3M9InlvdSIgeD0iNTIwIiB5PSIzOCIgd2lkdGg9IjE0NCIgaGVpZ2h0PSI2MCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iNTkyIiB5PSI2MiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+RGV2aWF0aW9ucyBsZWRnZXI8L3RleHQ+PHRleHQgY2xhc3M9Im0iIHg9IjU5MiIgeT0iODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTEiPndoeSwgYW5kIGhvdyB0byB1bmRvPC90ZXh0Pgo8cmVjdCBjbGFzcz0ieW91IiB4PSI1MjAiIHk9IjE1MCIgd2lkdGg9IjE0NCIgaGVpZ2h0PSI2MCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iNTkyIiB5PSIxNzQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlBhcmtlZCBhbmQgb3dlZDwvdGV4dD48dGV4dCBjbGFzcz0ibSIgeD0iNTkyIiB5PSIxOTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTEiPnJlc3Qgb2YgdGhlIHdvcmsgZ29lcyBvbjwvdGV4dD4KPC9nPgo8ZyBjbGFzcz0ibG4iPjxwYXRoIGQ9Ik0xNTYgMTEybDgwLTQ0TTE1NiAxMzZsODAgNDRNNDU2IDY4aDY0TTQ1NiAxODBoNjQiLz48L2c+Cjx0ZXh0IGNsYXNzPSJtIiB4PSIxNiIgeT0iMjM2IiBmb250LXNpemU9IjEyIj5Cb3RoIGxpc3RzIG9wZW4gdGhlIFFBIHBhZ2UuIE5vdGhpbmcgc3RvcHMgdGhlIHdvcmsuPC90ZXh0Pgo8L3N2Zz4K",
+        "alt": "A plan step hits a problem. If it only changes how the step is built, build the safe alternative and log it. If it changes what you approved or cannot be undone, park that piece and carry on with the rest. Both lists reach you at the end.",
+        "caption": "Auto mode never stops on a deviation, and never widens what you approved."
+      }
+    ],
+    [
       "change",
       "Fewer approval stops before building",
       "The design and the build plan can be approved in one reply.",
@@ -470,6 +487,18 @@ const PAGE = {
         "docs/6-decisions/Decisions.md holds the earlier entries for these reversals.",
         "Four dated reversal entries.",
         "Nothing for you to do."
+      ]
+    ],
+    [
+      "keep",
+      "Safety limits that stay in every mode",
+      "Unattended mode never overrides the destructive-action rules.",
+      null,
+      "Things that cannot be undone, or that touch money, secrets, other people, outward-facing posts or deleted data, are never done on a guess, even in bypass mode. That step is skipped, logged as owed to you, and the other steps continue. The agent also cannot see the permission mode on every surface. Where it cannot tell, it treats the session as attended.",
+      [
+        "The destructive-action rule and the branch guard, both in the rules loaded at the start of every session.",
+        "Nothing changes: they stay on in every mode.",
+        "Unattended work cannot do anything you would not have allowed."
       ]
     ],
     [
@@ -630,12 +659,31 @@ const PAGE = {
         ]
       ],
       "A matches your goal of fewer stops. If your picks change the plan, it is rebuilt and re-reviewed before building."
+    ],
+    [
+      "share",
+      "In unattended mode, what counts as a deviation worth logging?",
+      [
+        [
+          "A",
+          "Any change from a plan step, however small",
+          1,
+          "Every difference from what the build plan says is logged with its reason, so the plan stays a contract."
+        ],
+        [
+          "B",
+          "Only changes to behaviour, files or tests the plan names",
+          0,
+          "A shorter ledger, but small departures from the plan would go unrecorded."
+        ]
+      ],
+      "A keeps the contract honest. The ledger is shown first on the QA page, so a long one still takes you one pass."
     ]
   ],
   "wrapup": {
     "summary": "A change to the design loop: a reviewer replaces the editor for design and plan pages, and an acceptance run tests the finished feature before QA.",
     "changing": "Nothing is built. If you approve, this edits the reviewer agent, make_page.py, the page checks in writing.py, the stage tracker and verify.py, and adds docs and four dated reversal entries in Decisions.md.",
-    "blocking": "Your approval and your seven picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, which pages are reviewed, where parked questions land, and how many approvals before building.",
+    "blocking": "Your approval and your eight picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, which pages are reviewed, where parked questions land, how many approvals before building, and what counts as a logged deviation.",
     "next": "I log the decision, write the build plan as a page, put it through the same review, then create one issue per step.",
     "todo": [
       "Pick your answers in Choices.",

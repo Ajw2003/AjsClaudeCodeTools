@@ -4,7 +4,7 @@
   "pageType": "proposal",
   "approval": "Design approved: design review loop",
   "short": {
-    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Seven choices at the end are yours.",
+    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. In auto or unattended mode it keeps going when the plan must change and logs each deviation for you. Eight choices at the end are yours.",
     "hint": "Tap a step to see what it produces. The sections below explain each part, and the choices at the end are yours.",
     "key": [["I do it", ""], ["You decide", "you"]],
     "items": [
@@ -28,7 +28,7 @@
      {"src": "docs/plans/2026-11-24-design-review-loop-pics/parked.svg", "alt": "A question appears. If it can be undone, take the safe default, write it in the ledger, keep building, and bring it to you in one batch on the QA page. If not, ask now.", "caption": "Only questions that cannot be undone still stop the work."}],
     ["new", "Unattended mode: keep going, log every deviation", "The build plan is a contract. Breaking it needs a reason, and the reason is written down.", null,
      "In auto, bypass-permissions or unattended mode, the agent does not stop when the plan has to change. It builds the safest alternative, keeps working, and records each deviation: what the plan said, what was done, why, and how to undo it. The ledger opens the QA page, so every deviation is owed to you at the end.",
-     ["Today a surprise in Build becomes a question that holds edits until you answer (#506), and a helper that finds one asks you.", "A deviations ledger per feature, shown first on the QA page. A deviation changes how a step is built, never what you approved: a change to the design's intent parks that piece and the rest continues.", "You review deviations once, at the end, instead of being asked at each one."],
+     ["Today a surprise in Build becomes a question that holds edits until you answer (issue #506), and a helper that finds one asks you.", "A deviations ledger per feature, shown first on the QA page. A deviation changes how a step is built, never what you approved: a change to the design's intent parks that piece and the rest continues.", "You review deviations once, at the end, instead of being asked at each one."],
      {"src": "docs/plans/2026-11-24-design-review-loop-pics/deviations.svg", "alt": "A plan step hits a problem. If it only changes how the step is built, build the safe alternative and log it. If it changes what you approved or cannot be undone, park that piece and carry on with the rest. Both lists reach you at the end.", "caption": "Auto mode never stops on a deviation, and never widens what you approved."}],
     ["change", "Fewer approval stops before building", "The design and the build plan can be approved in one reply.", null,
      "Today you approve the design, wait for a plan, then approve the plan, which is two stops. The reviewer would check the design and a draft plan together, and one page would carry both. You send one approval line. If your picks change the plan, the plan is rebuilt and re-reviewed before building starts, with no second stop.",
@@ -52,6 +52,9 @@
     ["keep", "Reversals, named", "This undoes earlier decisions.", null,
      "Four earlier decisions are undone. The editor is no longer the only pass before a page (issues #249 and #325, the editor reminder). QA pages no longer must list something unverified (issues #264 and #268, the enforced QA stage). Build no longer holds edits on every question (issue #506). Helpers park questions instead of passing them to you (issues #458, #459 and #460, decisions only from you). Each of the four gets a dated entry in docs/6-decisions/Decisions.md, with a pointer left where each was written.",
      ["docs/6-decisions/Decisions.md holds the earlier entries for these reversals.", "Four dated reversal entries.", "Nothing for you to do."]],
+    ["keep", "Safety limits that stay in every mode", "Unattended mode never overrides the destructive-action rules.", null,
+     "Things that cannot be undone, or that touch money, secrets, other people, outward-facing posts or deleted data, are never done on a guess, even in bypass mode. That step is skipped, logged as owed to you, and the other steps continue. The agent also cannot see the permission mode on every surface. Where it cannot tell, it treats the session as attended.",
+     ["The destructive-action rule and the branch guard, both in the rules loaded at the start of every session.", "Nothing changes: they stay on in every mode.", "Unattended work cannot do anything you would not have allowed."]],
     ["keep", "Risks I would flag", "Cost, shared blind spots, and judging pictures.", null,
      "Opus on every design and plan page costs more than Sonnet, and I have not measured how much. The reviewer is still a Claude model reading Claude's work, so a cold read and a fixed checklist reduce shared blind spots but do not remove them. A model judging screenshots can pass a bad one, so each design item should also carry a mechanical check where one exists.",
      ["tools/measure_footprint.py measures the installed plugin's token cost.", "A measured cost per review, reported after the first real run.", "You see the real number before deciding to keep Opus."]]
@@ -86,12 +89,16 @@
     ["lock", "How many approvals before building?", [
       ["A", "One combined reply for design and plan", 1, "Both are reviewed together on one page."],
       ["B", "Two replies, as today", 0, "You see the plan before approving it, at the cost of a second stop."]],
-      "A matches your goal of fewer stops. If your picks change the plan, it is rebuilt and re-reviewed before building."]
+      "A matches your goal of fewer stops. If your picks change the plan, it is rebuilt and re-reviewed before building."],
+    ["share", "In unattended mode, what counts as a deviation worth logging?", [
+      ["A", "Any change from a plan step, however small", 1, "Every difference from what the build plan says is logged with its reason, so the plan stays a contract."],
+      ["B", "Only changes to behaviour, files or tests the plan names", 0, "A shorter ledger, but small departures from the plan would go unrecorded."]],
+      "A keeps the contract honest. The ledger is shown first on the QA page, so a long one still takes you one pass."]
   ],
   "wrapup": {
     "summary": "A change to the design loop: a reviewer replaces the editor for design and plan pages, and an acceptance run tests the finished feature before QA.",
     "changing": "Nothing is built. If you approve, this edits the reviewer agent, make_page.py, the page checks in writing.py, the stage tracker and verify.py, and adds docs and four dated reversal entries in Decisions.md.",
-    "blocking": "Your approval and your seven picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, which pages are reviewed, where parked questions land, and how many approvals before building.",
+    "blocking": "Your approval and your eight picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, which pages are reviewed, where parked questions land, how many approvals before building, and what counts as a logged deviation.",
     "next": "I log the decision, write the build plan as a page, put it through the same review, then create one issue per step.",
     "todo": ["Pick your answers in Choices.", "Tap <b>Copy my reply</b>.", "Send it with \"Design approved: design review loop\", or tell me what to change."]
   }
