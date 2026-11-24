@@ -60,3 +60,6 @@ The two bugs are reproduced in test runs, not confirmed on the Castle turn itsel
 
 ## Issue numbers
 #569 parent; #570, #571, #572 steps. All four are closed as completed; pull request #574 is merged.
+
+## Pickup after the usage limit (2026-11-23, evening)
+Live run 2 results had not been saved, so the script was run again: all five sessions exited 1 at once because `claude -p` answered "You've hit your 5-hour limit, resets 9:20pm". The "three methods" PASS in that run is not evidence (it saw no hook at all). Main (7f178304 plus one commit) is merged in and the branch is pushed (accdfae9). verify.py after the merge: 8 of 994 failed, the same known Windows list; verify_tools.py 54 of 55 (A16 fails because house-rules@aj-house-rules is not installed on this machine, unrelated to the merge). Next: after 9:20pm rerun live_roadblocks.py, then the QA page, the pull request with `Refs #587`, and issues #587 to #591 to `needs review`.
