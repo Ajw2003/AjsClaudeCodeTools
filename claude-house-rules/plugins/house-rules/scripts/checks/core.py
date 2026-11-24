@@ -1228,10 +1228,63 @@ for _n, _o in ((1, _rb1), (2, _rb2)):
 report("PASS" if '"decision":"block"' not in _rb3 and "roadblock claim" in _rb3 and "unchecked" in _rb3 else "FAIL",
        "the third time the reply passes with a visible warning line")
 _rb_fresh()
-_rb_ok = [_rb_run(_hand_transcript("rb-%d" % i, [_rb_user("build it"), _rb_tool(c)]))
-          for i, c in enumerate(("which unity", "ls /opt", "pip install foo"))]
-report("PASS" if all('"decision":"block"' not in o and "unchecked" not in o for o in _rb_ok) else "FAIL",
-       "a turn that ran which, ls or an install is not blocked")
+# #589: the record check. Older case "a turn that ran which, ls or an install is not blocked" changed: a probe
+# alone no longer passes; the turn needs three failed attempts in three classes (cases below).
+_rb_n = [0]
+
+
+def _rb_rec(tag, calls, user="where is unity"):
+    """calls: (tool name, input, result text, is_error). Writes the transcript, returns its path."""
+    recs = [_rb_user(user)]
+    for i, (name, inp, res, err) in enumerate(calls):
+        tid = "t%d" % i
+        recs.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": tid, "name": name, "input": inp}]}}))
+        recs.append(json.dumps({"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": tid, "content": res, "is_error": err}]}}))
+    _rb_n[0] += 1
+    return _hand_transcript("rb589-%s-%d" % (tag, _rb_n[0]), recs)
+
+
+def _rb_blocked(transcript, reply):
+    _rb_fresh()
+    return '"decision":"block"' in _rb_run(transcript, reply=reply)
+
+
+_RB_B = lambda c, r="not found", e=True: ("Bash", {"command": c}, r, e)
+_RB_R = "I can't continue, unity is not installed."
+_RB_R3 = _RB_R + " I tried which unity, find for unity and pip show unity."
+_RB_3 = [_RB_B("which unity"), _RB_B("find / -name unity"), _RB_B("pip show unity")]
+report("PASS" if _rb_blocked(_rb_rec("ls", [("Bash", {"command": "git ls-files"}, "a.py", False)]), _RB_R) else "FAIL",
+       "#589: a claim after only git ls-files is blocked")
+for _k in (1, 2):
+    _rb_fresh()
+    _o = _rb_run(_rb_rec("n%d" % _k, _RB_3[:_k]), reply=_RB_R3)
+    report("PASS" if '"decision":"block"' in _o and "%d more different" % (3 - _k) in _o else "FAIL",
+           "#589: %d failed attempt(s) are blocked, saying %d more are needed" % (_k, 3 - _k))
+report("PASS" if not _rb_blocked(_rb_rec("ok", _RB_3), _RB_R3) else "FAIL",
+       "#589: three failed attempts in three classes, related and all named, are accepted")
+report("PASS" if _rb_blocked(_rb_rec("ex", [_RB_B("which unity"), _RB_B("where unity"), _RB_B("command -v unity")]),
+                              _RB_R + " I tried which, where and command -v for unity.") else "FAIL",
+       "#589: three existence checks count once and are blocked")
+report("PASS" if _rb_blocked(_rb_rec("unrel", [_RB_B("which foo"), _RB_B("find / -name bar"), _RB_B("pip show baz")]), _RB_R3) else "FAIL",
+       "#589: three failures unrelated to the claimed thing are blocked")
+report("PASS" if not _rb_blocked(_rb_rec("ps", [("PowerShell", {"command": "Get-Command unity"}, "x", True),
+                                                _RB_3[1], ("mcp__x__list_computer_folders", {"q": "unity"}, "none", True)]),
+                                  _RB_R + " I tried Get-Command, find and mcp__x__list_computer_folders for unity.") else "FAIL",
+       "#589: a PowerShell and an MCP failure count as attempts")
+report("PASS" if _rb_blocked(_rb_rec("hook", [_RB_B("which unity"), _RB_B("find / -name unity"),
+                                              _RB_B("pip show unity", "PreToolUse:Bash hook error: denied")]), _RB_R3) else "FAIL",
+       "#589: a PreToolUse hook refusal does not count as an attempt")
+report("PASS" if not _rb_blocked(_rb_rec("needs", []), _RB_R + " NEEDS YOU: the licence.") else "FAIL",
+       "#589: a NEEDS YOU reply is exempt")
+report("PASS" if not _rb_blocked(_rb_rec("why", _RB_3[:1]), _RB_R + " which unity failed; there is no other way to check.") else "FAIL",
+       "#589: fewer than three methods with a stated reason is accepted here (the judge in #591 checks it)")
+_rb_fresh()
+_o = _rb_run(os.path.join(_HAND_ROOT, "does-not-exist.jsonl"), reply=_RB_R)
+report("PASS" if '"decision":"block"' not in _o and "could not" in _o else "FAIL",
+       "#589: an unreadable transcript is announced and never blocks")
+_rb_fresh()
 _rb_fresh()
 _rb_run(_rb_t)
 _rb_run(_rb_t)

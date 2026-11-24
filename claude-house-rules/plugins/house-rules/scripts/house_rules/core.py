@@ -3414,11 +3414,6 @@ _ROADBLOCK_RE = re.compile(
 # #588: stall phrases, scanned only when unattended or permission_mode is bypassPermissions
 _STALL_RE = re.compile(r"\b(not done|i['’]ve stopped(?: here)?|next step)\b", re.IGNORECASE)
 _MODE_RE = re.compile(r'"permission_mode"\s*:\s*"([^"]*)"')
-_PROBE_CMD_RE = re.compile(
-    r"\b(which|ls|uname|hostname|where|apt|apt-get|pip|pip3|npm|brew|winget|choco)\b|command\s+-v",
-    re.IGNORECASE,
-)
-_PROBE_TOOLS = ("list_computer_folders", "request_computer_folder")
 ROADBLOCK_BLOCKS = 2
 
 
@@ -3435,19 +3430,87 @@ def _in_blockquote(text, start):
     return text[text.rfind("\n", 0, start) + 1:].lstrip().startswith(">")
 
 
-def _probe_since_last_user_message(transcript_path):
-    """(True/False/None, detail): did a tool this turn probe or install? None = could not tell."""
+# #589: the record check. A failed attempt is a tool_result with is_error (not a hook refusal, not a harmless
+# non-zero exit) or an exit-0 result with clear failure text. Three attempts, three method classes, one shared
+# target word that is also in the reply or the request, every method named in the reply.
+_HOOK_REFUSAL_RE = re.compile(r"PreToolUse[:\w]*\s+hook|\bhook\s+(?:error|denied|blocked)|denied this tool", re.IGNORECASE)
+_HARMLESS_RE = re.compile(r"^\s*(?:git\s+(?:commit|diff|status)|grep|egrep|rg|diff|test)\b|nothing to commit", re.IGNORECASE)
+_FAIL_TEXT_RE = re.compile(
+    r"command not found|is not recognized|cannot find path|no such file or directory|not found|"
+    r"modulenotfounderror|cannot find|does not exist|no matching|unable to locate|could not find",
+    re.IGNORECASE)
+_CLASS_RES = (
+    ("package database", re.compile(r"\b(?:pip3?\s+(?:show|list|freeze)|npm\s+(?:ls|list)|apt(?:-get)?\s+list|apt-cache|dpkg\s+-l|brew\s+(?:list|info)|winget\s+list|choco\s+list)\b", re.I)),
+    ("existence check", re.compile(r"\b(?:which|where|type|Get-Command|gcm|Test-Path)\b|command\s+-v", re.I)),
+    ("disk search", re.compile(r"\b(?:find|ls|dir|locate|Get-ChildItem|gci)\b|git\s+ls-files", re.I)),
+    ("ask the environment", re.compile(r"\b(?:uname|hostname|systeminfo|ver)\b", re.I)),
+)
+_ROADBLOCK_REASON_RE = re.compile(r"no other (?:way|method|route|approach)|only (?:one|two) (?:way|method|route)", re.I)
+_WORD_STOP = frozenset("""the and for with from that this are not but can you your have has was were will then there
+which where type find locate dir path test echo true false null none usr bin opt tmp home git run get set sudo""".split())
+
+
+def _result_text(block):
+    c = block.get("content")
+    if isinstance(c, list):
+        c = " ".join(b.get("text", "") for b in c if isinstance(b, dict))
+    return str(c or "")
+
+
+def _attempt_class(name, text):
+    if "list_computer_folders" in name or "request_computer_folder" in name:
+        return "ask the environment"
+    if name in ("Bash", "PowerShell"):
+        for label, rx in _CLASS_RES:
+            if rx.search(text):
+                return label
+        return "run or launch it"
+    return "other tool"
+
+
+def _failed_attempts(records):
+    """[(class, head word, set of words)] for every failed tool call of the turn."""
+    uses = {b.get("id"): b for b in _turn_tool_uses(records)}
+    out = []
+    for rec in records:
+        content = (rec.get("message") or {}).get("content") if isinstance(rec, dict) and rec.get("type") == "user" else None
+        for blk in content if isinstance(content, list) else []:
+            if not isinstance(blk, dict) or blk.get("type") != "tool_result" or blk.get("tool_use_id") not in uses:
+                continue
+            use = uses[blk["tool_use_id"]]
+            inp = use.get("input") if isinstance(use.get("input"), dict) else {}
+            name = str(use.get("name") or "")
+            cmd = str(inp.get("command") or "") if name in ("Bash", "PowerShell") else json.dumps(inp, default=str)
+            res = _result_text(blk)
+            if blk.get("is_error"):
+                if _HOOK_REFUSAL_RE.search(res) or (_HARMLESS_RE.search(cmd) and name in ("Bash", "PowerShell")) \
+                        or _HARMLESS_RE.search(res):
+                    continue
+            elif not (len(res) < 600 and _FAIL_TEXT_RE.search(res)):
+                continue
+            head = (cmd.split() or [name])[0].lower() if name in ("Bash", "PowerShell") else name.lower()
+            words = {w for w in re.findall(r"[a-z0-9][a-z0-9_.-]{2,}", (cmd + " " + name).lower()) if w not in _WORD_STOP}
+            out.append((_attempt_class(name, cmd), head, words))
+    return out
+
+
+def _roadblock_record(transcript_path, reply_text):
+    """(None, detail) when unreadable; else (classes counted, reason text ok). Counts the best shared target word."""
     records, detail = _records_since_last_user_message(transcript_path)
     if records is None:
         return None, detail
-    for block in _turn_tool_uses(records):
-        name = str(block.get("name") or "")
-        inp = block.get("input") if isinstance(block.get("input"), dict) else {}
-        if any(t in name for t in _PROBE_TOOLS):
-            return True, None
-        if name == "Bash" and _PROBE_CMD_RE.search(str(inp.get("command") or "")):
-            return True, None
-    return False, None
+    attempts = _failed_attempts(records)
+    known = set(re.findall(r"[a-z0-9][a-z0-9_.-]{2,}", (reply_text + " " + _last_user_text(transcript_path)).lower()))
+    reply_l = reply_text.lower()
+    best = []
+    for w in {w for a in attempts for w in a[2]} & known:
+        named = {}
+        for cls, head, words in attempts:
+            if w in words and head in reply_l:  # the reply names the method
+                named.setdefault(cls, head)
+        if len(named) > len(best):
+            best = list(named)
+    return best, None
 
 
 def _user_message_count(transcript_path):
@@ -3497,13 +3560,22 @@ def roadblock_check(payload, reply_text, retry):
     transcript_path = _field(_TRANSCRIPT_RE, payload)
     if not transcript_path:
         return None, "house-rules: roadblock check could not run (the Stop payload carried no transcript_path)."
-    if claims:  # a stall phrase is flagged on the phrase alone
-        probed, detail = _probe_since_last_user_message(transcript_path)
-        if probed is None:
-            return None, "house-rules: roadblock check could not tell whether this turn probed (%s)." % detail
-        if probed:
+    need = ""
+    if claims and "NEEDS YOU" not in reply_text:  # a stall phrase is flagged on the phrase alone
+        best, detail = _roadblock_record(transcript_path, reply_text)
+        if best is None:
+            return None, "house-rules: roadblock check could not tell whether this turn tried enough (%s)." % detail
+        if len(best) >= 3 or (best and _ROADBLOCK_REASON_RE.search(reply_text)):
             return None, None
+        need = (" Only %d failed method(s) named in the reply, in %d class(es); %d more different method(s) "
+                "are needed (existence check, disk search, package database, run it, ask the environment, "
+                "other tool), all related to the thing claimed, or say why no other method exists."
+                % (len(best), len(best), 3 - len(best)))
+    elif claims:  # NEEDS YOU: the licence, login, purchase or destructive part is the user's
+        claims = []
     claims = claims + stalls
+    if not claims:
+        return None, None
     warn = "house-rules: a roadblock claim (%s) went out unchecked." % claims[0]
     # #588: the retry (stop_hook_active) counts on the check's own counter; never a third block
     path = _roadblock_state_path(transcript_path)
@@ -3521,10 +3593,10 @@ def roadblock_check(payload, reply_text, retry):
     except (OSError, ValueError, AttributeError) as exc:
         return None, ("house-rules: roadblock check could not read or write its block count (%s), "
                       "so it did not block." % type(exc).__name__)
-    return ("House rules, roadblocks (rules/detail/roadblocks.md): this reply claims a roadblock (%s) but no "
-            "tool this turn probed or installed. Before ending, %s, install what is missing, and try "
+    return ("House rules, roadblocks (rules/detail/roadblocks.md): this reply claims a roadblock (%s) but the "
+            "record shows no three failed attempts.%s Before ending, %s, install what is missing, and try "
             "another route; list every attempt. (block %d of %d)"
-            % (claims[0], _roadblock_advice(claims[0]), done + 1, ROADBLOCK_BLOCKS)), None
+            % (claims[0], need, _roadblock_advice(claims[0]), done + 1, ROADBLOCK_BLOCKS)), None
 
 
 register_prompt(_scope_mode_link)
