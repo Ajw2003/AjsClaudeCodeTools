@@ -11,8 +11,8 @@ Run it yourself, any time, on any machine:
 The checks live in checks/, one file per part (core, safe_git, design_loop, writing, delegation, docs,
 make_page) plus checks/common.py, the setup they share. Each part file also runs alone:
 `python checks/<part>.py` prints its own numbered results and its own RESULT line. This script starts the
-parts as separate processes (as many at once as the machine has cores), prints each part's output whole in a
-fixed order, adds up the checks, and exits 0 only if every part passed. CI runs it with no options, which
+parts as separate processes (as many at once as the machine has cores), prints each part's output whole, with its
+measured time, as that part finishes (#611), adds up the checks, and exits 0 only if every part passed. CI runs it with no options, which
 means every part. The layout is explained in docs/4-systems/verify-suites.md, "The split layout (#370)".
 
 Each part feeds real hook payloads to hook.py's handlers and prints a numbered PASS/FAIL line for each, then
@@ -44,7 +44,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CHECKS = os.path.join(HERE, "checks")
 PLUGIN_REL = "claude-house-rules/plugins/house-rules/"
 
-# Fixed order: the order each part's output is printed in, whatever order they finish in.
+# Fixed order: the order of the Parts summary; each part's output prints as it finishes.
 PARTS = ["core", "safe_git", "design_loop", "writing", "delegation", "docs", "make_page"]
 # Start the slow ones first so a 4-core machine is not left waiting on one long part at the end.
 START_ORDER = ["safe_git", "design_loop", "make_page", "core", "delegation", "docs", "writing"]
@@ -245,6 +245,22 @@ def judge(res):
     return res
 
 
+def run_streaming(order, runner, workers):
+    """Yield judged results in the order the parts finish, not a fixed order (#611)."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = [ex.submit(runner, p) for p in order]
+        for f in concurrent.futures.as_completed(futs):
+            yield judge(f.result())
+
+
+def print_part(res):
+    print("=" * 78)
+    print("PART %s - %s (%.1f s)" % (res["part"], res["why"], res["seconds"]))
+    print("=" * 78)
+    sys.stdout.write(res["out"] if res["out"].endswith("\n") or not res["out"] else res["out"] + "\n")
+    sys.stdout.flush()
+
+
 def main(argv):
     ap = argparse.ArgumentParser(description="Run the house-rules hook checks (every part, at the same time, by default).")
     ap.add_argument("--parts", help="comma-separated parts to run: " + ", ".join(PARTS))
@@ -300,16 +316,9 @@ def main(argv):
     t0 = time.time()
     results = {}
     order = [p for p in START_ORDER if p in chosen] if not args.serial else list(chosen)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
-        futs = {p: ex.submit(run_part, p, args.timeout) for p in order}
-        for part in chosen:                    # fixed order, each part's output whole
-            res = judge(futs[part].result())
-            results[part] = res
-            print("=" * 78)
-            print("PART %s - %s (%.1f s)" % (part, res["why"], res["seconds"]))
-            print("=" * 78)
-            sys.stdout.write(res["out"] if res["out"].endswith("\n") or not res["out"] else res["out"] + "\n")
-            sys.stdout.flush()
+    for res in run_streaming(order, lambda p: run_part(p, args.timeout), workers):   # each part prints as it finishes
+        results[res["part"]] = res
+        print_part(res)
     wall = time.time() - t0
 
     total = sum(r["checks"] for r in results.values())
