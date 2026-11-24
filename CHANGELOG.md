@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command step 2 (#619) is merged into the working branch after all seven verify parts passed on its final commit (core 272, docs 167, writing 24, safe_git 282, delegation 204, design_loop 529, make_page 116); a merge conflict in this file was resolved by keeping both sides. Step 3 (#620, verify.py cases for the modes and the helper script) is with a builder.
+
 Review command step 2 is final on its branch (commit 4e94d17: the report folder name now uses the file name without its ending and leading date). Six of the seven verify parts pass on it (core 272, docs 167, writing 24, safe_git 282, design_loop 529, make_page 116); the delegation part is being re-read before the merge.
 
 Review command step 2 fixes came back from the builder (design page lookup for dated names, extra words after the path, non-ASCII file names, closed pipe) and I re-ran the `mode` and `units` checks myself; a small fix to the report folder name is in progress and the full verify run waits for it. Open question for aj: a sweep of this repo is 9 folders but 96 batches (about 87 minutes by the measured figures), so aj's rule of a notice over 12 folders prints no notice for it; suggested: also notify when batches pass 12.
