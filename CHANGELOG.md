@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Design review loop (#592): the build plan page now carries its Acceptance tests item, a page-mode review of it is saved (`docs/qa/design-review-loop/page-review-findings.md`, 12 findings, 10 applied, 2 left as open risks), and the self-test has a sample handover card (`templates/selftest/handover-card.md`) with a check. The acceptance stamp is not issued: the repeat run was not recorded as rounds.
+
 The combined approval (#600) now refuses its plan half when the feature's `-plan.html` page has no current review stamp; the design half still applies, and a plan approval in its own message is unchanged. Chosen by aj as A2 after the acceptance run; `design_loop.py` `_plan_unreviewed`, four new test cases.
 
 Design review loop acceptance run (#592): six of nine criteria pass, three fail (reviewer modes have no saved findings, the self-judging test's card format is unchecked, the combined approval does not refuse with no plan issues); report and screenshots in `docs/qa/design-review-loop/`. The no-permission-mode message in `core.py` now says what happens in Build.
