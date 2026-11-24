@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.92.0 -->
 <meta charset="utf-8">
+<meta name="house-rules-reviewed" content="ee721bc8235bb22ec5c16495a92925f7418bff570d11faa01f5cdcd6d62f90b3;clean;1">
 <meta name="house-rules-page" content="qa">
 <title>Design Review Loop QA</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -238,7 +239,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">The design review loop is built and its acceptance run passes all nine criteria on your Windows PC (round 2). You check that the results read right, then reply with a pass or what failed.</p>
+      <p class="lead" id="lead" data-basic="summary">The design review loop is built and its acceptance run passes all nine criteria on your Windows PC (round 2). Please check that the results read right, then reply with a pass or say what failed.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -258,8 +259,8 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Do step 1: open docs/qa/design-review-loop/round-2.md and expect nine PASS lines and STATUS: pass.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: design review loop", or send "QA failed: design review loop" with what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Nine other checks still fail on Windows only (guard cwd, a delete under the temp folder, waitfor, two page checks, one node check); they were not investigated and sit outside this feature. The full verify.py was not rerun after the stamp fix; only the acceptance criteria were. The deviation check is a phrase heuristic and has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or page-mode and plan-mode checks separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.</p></details></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Open docs/qa/design-review-loop/round-2.md and expect nine PASS lines and the line STATUS: pass.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: design review loop", or send "QA failed: design review loop" with what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Nine checks still fail in a full verify.py run on your Windows PC: three in the guard (branch by cwd, audit entries, a delete under the temp folder), two page checks, three waitfor checks and one node check. The same nine failed before the line-ending fix, so neither fix caused them. They were not investigated, and whether they also fail on a clean main was not checked. The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures. The deviation check works by matching phrases, and it has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.</p></details></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -284,7 +285,7 @@ const PAGE = {
   "eyebrow": "QA · #592: reviewer, acceptance run, parked questions and deviations ledger",
   "pageType": "qa",
   "short": {
-    "lead": "The design review loop is built and its acceptance run passes all nine criteria on your Windows PC (round 2). You check that the results read right, then reply with a pass or what failed.",
+    "lead": "The design review loop is built and its acceptance run passes all nine criteria on your Windows PC (round 2). Please check that the results read right, then reply with a pass or say what failed.",
     "hint": "Tap a row to see what was checked and how.",
     "key": [
       [
@@ -302,7 +303,7 @@ const PAGE = {
         "Run",
         "All nine criteria pass on your PC",
         "",
-        "Round 2 ran docs/qa/design-review-loop/run_acceptance.py on your Windows machine, one output file per search text under round-2/. Every criterion C1 to C9 shows PASS and STATUS is pass. Round 1 (6 pass, 3 fail) is recorded beside it in round-1.md.",
+        "Round 2 ran docs/qa/design-review-loop/run_acceptance.py on your Windows machine, with one output file per search text in the round-2/ folder next to it. Every criterion from C1 to C9 shows PASS, and the STATUS line reads pass. Round 1 (6 passed, 3 failed) is recorded in round-1.md in the same folder.",
         "Nothing from you."
       ],
       [
@@ -310,7 +311,7 @@ const PAGE = {
         "Windows",
         "Two Windows-only bugs fixed",
         "",
-        "Your first PC run failed everything: the design_loop part crashed because a test faked gh with a shell script Windows cannot run, and a plan page saved with Windows line endings looked changed after review. Both are fixed and covered by the passing run.",
+        "Your first PC run failed everything. The design_loop checks crashed because a test stood in for gh (the GitHub command-line tool) with a shell script, which Windows cannot run. Also, a plan page saved with Windows line endings looked changed after review, so its review stamp no longer matched. Both are fixed, and the passing round 2 run covers them.",
         "Nothing from you."
       ],
       [
@@ -318,7 +319,7 @@ const PAGE = {
         "Stamp",
         "Acceptance stamp is current",
         "",
-        "scripts/acceptance.py stamp wrote acceptance-stamp.json after the round passed, and acceptance.py check reports it current. ledger.py check reports 9 criteria, 2 rounds, valid.",
+        "Running scripts/acceptance.py stamp wrote acceptance-stamp.json after the round passed, and acceptance.py check reports that stamp as current. ledger.py check reports 9 criteria and 2 rounds, and says the ledger is valid.",
         "Nothing from you."
       ],
       [
@@ -326,8 +327,8 @@ const PAGE = {
         "Your test",
         "Read the round and reply",
         "you",
-        "Open docs/qa/design-review-loop/round-2.md and read the nine PASS lines. Open one output file, such as round-2/c6-1.txt, and confirm it ends with the passing checks for the combined approval.",
-        "Follow the steps in Wrap-up."
+        "Open docs/qa/design-review-loop/round-2.md and read the nine PASS lines. Then open one output file, such as docs/qa/design-review-loop/round-2/c6-1.txt, and confirm it ends with the passing checks for the combined approval (a design approval and a build plan approval given in one message).",
+        "Follow the to-do steps in the Wrap-up section."
       ]
     ]
   },
@@ -346,8 +347,8 @@ const PAGE = {
       "Windows crash (#592)",
       "The close-facts tests no longer need a shell script.",
       [
-        "The tests faked gh with a #!/bin/sh file, which Windows cannot run, so design_loop crashed with no checks reported.",
-        "A Python stand-in replaces gh in those tests; six checks pass on Windows."
+        "The tests stood in for gh (the GitHub command-line tool) with a #!/bin/sh shell script, which Windows cannot run. So the design_loop checks crashed and reported no results.",
+        "Those tests now use a Python stand-in for gh, and their six checks pass on Windows."
       ],
       "checks/design_loop.py: the close facts (#549) block.",
       null,
@@ -358,8 +359,8 @@ const PAGE = {
       "Line endings (#592)",
       "A page saved with Windows line endings keeps its review stamp.",
       [
-        "The stamp hashed the page as read, so CRLF made a reviewed plan page look stale and refused the plan half of a combined approval.",
-        "The hash treats CRLF and LF alike."
+        "The review stamp is a hash of the page text as read. A page saved with Windows line endings (CRLF) therefore hashed differently from the reviewed version and looked out of date. That made the check refuse the plan half of a combined approval.",
+        "The hash now treats Windows line endings (CRLF) and Unix line endings (LF) as the same."
       ],
       "scripts/page_criteria.py: _stamp_hash.",
       null,
@@ -368,7 +369,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "66 files, +5814 −3006",
+      "69 files, +7271 −3006",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -699,8 +700,20 @@ const PAGE = {
         ],
         [
           "docs/5-today/Today.md",
-          29,
+          31,
           1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/5-today/handoff-AjsAgent-acceptance-round-2-windows-fixes.md",
+          16,
+          0,
           [
             [
               "Not in the plan",
@@ -844,6 +857,30 @@ const PAGE = {
         [
           "docs/plans/2026-11-24-design-review-loop-plan.page.json",
           161,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-24-design-review-loop-qa.html",
+          1338,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-24-design-review-loop-qa.page.json",
+          101,
           0,
           [
             [
@@ -1172,7 +1209,7 @@ const PAGE = {
       "Still unverified",
       "5 things not yet proven",
       null,
-      "Nine other checks still fail on Windows only (guard cwd, a delete under the temp folder, waitfor, two page checks, one node check); they were not investigated and sit outside this feature. The full verify.py was not rerun after the stamp fix; only the acceptance criteria were. The deviation check is a phrase heuristic and has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or page-mode and plan-mode checks separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.",
+      "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard (branch by cwd, audit entries, a delete under the temp folder), two page checks, three waitfor checks and one node check. The same nine failed before the line-ending fix, so neither fix caused them. They were not investigated, and whether they also fail on a clean main was not checked. The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures. The deviation check works by matching phrases, and it has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.",
       null,
       null
     ]
@@ -1181,10 +1218,10 @@ const PAGE = {
     "feature": "design review loop",
     "base": "origin/main",
     "unverified": [
-      "Nine other checks still fail on Windows only (guard cwd, a delete under the temp folder, waitfor, two page checks, one node check); they were not investigated and sit outside this feature",
-      "The full verify.py was not rerun after the stamp fix; only the acceptance criteria were",
-      "The deviation check is a phrase heuristic and has not been seen firing in a live session",
-      "No test covers the two-round cap, re-review of changed picks, or page-mode and plan-mode checks separately",
+      "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard (branch by cwd, audit entries, a delete under the temp folder), two page checks, three waitfor checks and one node check. The same nine failed before the line-ending fix, so neither fix caused them. They were not investigated, and whether they also fail on a clean main was not checked.",
+      "The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures.",
+      "The deviation check works by matching phrases, and it has not been seen firing in a live session.",
+      "No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately.",
       "Round 1 was written into ledger form afterwards from report.md, not from a fresh run"
     ],
     "files": {}
@@ -1192,10 +1229,10 @@ const PAGE = {
   "wrapup": {
     "summary": "The design review loop passes its acceptance run on your PC and waits for your QA.",
     "changing": "checks/design_loop.py, scripts/page_criteria.py, the changelog, round records and the acceptance stamp under docs/qa/design-review-loop.",
-    "blocking": "Your QA of #592.",
+    "blocking": "Your QA of the design review loop (#592).",
     "next": "On a pass, the pull request for #592 is ready to merge. On a fail, I fix it on this branch.",
     "todo": [
-      "Do step 1: open docs/qa/design-review-loop/round-2.md and expect nine PASS lines and STATUS: pass.",
+      "Open docs/qa/design-review-loop/round-2.md and expect nine PASS lines and the line STATUS: pass.",
       "Tap <b>Copy my reply<\/b> and send it: \"QA passed: design review loop\", or send \"QA failed: design review loop\" with what to change."
     ]
   },
