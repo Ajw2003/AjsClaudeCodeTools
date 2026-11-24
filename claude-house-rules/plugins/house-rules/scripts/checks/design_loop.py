@@ -2234,8 +2234,28 @@ _CW_WRITE = json.dumps({"type": "assistant", "message": {"content": [{"type": "t
                         "input": {"file_path": os.path.join(_cw_pages, "plan.html"), "content": "<p>x</p>"}}]}})
 _CW_EDITOR = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent",
                          "input": {"subagent_type": "house-rules:editor", "prompt": "edit the page"}}]}})
-_cw_t_page = _hand_transcript("cw-page", [_CW_USER, _CW_WRITE])
-_cw_t_edited = _hand_transcript("cw-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
+# #594: a page owes a review stamp (page_criteria.stamp_line), not an editor run.
+import page_criteria as _cw_pcrit
+_CW_HEAD = '<!doctype html>\n<meta charset="utf-8">\n'
+
+
+def _cw_page_t(name, body, stamp=None, kind=None, edit_after=""):
+    """Writes docs/plans/<name> (stamp = (verdict, rounds) or a raw content value) and returns a transcript that wrote it."""
+    meta = '<meta name="house-rules-page" content="%s">\n' % kind if kind else ""
+    html = _CW_HEAD + meta + body
+    if stamp:
+        line = (_cw_pcrit.stamp_line(html, *stamp) if isinstance(stamp, tuple)
+                else '<meta name="house-rules-reviewed" content="%s">\n' % stamp)
+        html = _CW_HEAD + line + meta + body
+    with open(os.path.join(_cw_pages, name), "w", encoding="utf-8", newline="\n") as f:
+        f.write(html + edit_after)
+    w = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Write",
+                    "input": {"file_path": os.path.join(_cw_pages, name), "content": "x"}}]}})
+    return _hand_transcript("cw-" + name, [_CW_USER, w])
+
+
+_cw_t_page = _cw_page_t("plan.html", "<p>x</p>\n")
+_cw_t_edited = _cw_page_t("stamped.html", "<p>x</p>\n", stamp=("clean", 1))
 _cw_t_none = _hand_transcript("cw-none", [_CW_USER])
 
 
@@ -2244,14 +2264,28 @@ def _cw_editor(transcript, text="The page is up."):
                                              transcript_path=transcript), env=_loop_env)[1]
 
 
-_cw_cases.append(("editor: writing a page under docs/plans with no editor run gets the reminder",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+_cw_cases.append(("editor (#594): writing a page under docs/plans with no stamp is owed, naming the reviewer and the stamp",
+                  "no review stamp" in _cw_editor(_cw_t_page) and "house-rules:reviewer" in _cw_editor(_cw_t_page)
+                  and "--reviewed clean --rounds" in _cw_editor(_cw_t_page)
+                  and "HOUSE_RULES_CLEAR_WRITING=off" in _cw_editor(_cw_t_page)))
 _cw_cases.append(("#537: HOUSE_RULES_PAGES=off: a written docs/plans page with no editor run is not asked for the editor pass",
-        "no @house-rules:editor helper ran" not in run_hook("handover", stop_payload(
+        "review stamp" not in run_hook("handover", stop_payload(
             last_assistant_message="The page is up.", cwd=_loop_dir, stop_hook_active=True, transcript_path=_cw_t_page),
             env=dict(_loop_env, HOUSE_RULES_PAGES="off"))[1]))
-_cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
-                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
+_cw_cases.append(("editor (#594): a page with a current stamp stays quiet",
+                  "review stamp" not in _cw_editor(_cw_t_edited) and "stamp is stale" not in _cw_editor(_cw_t_edited)))
+_cw_cases.append(("editor (#594): a stamped page edited afterwards is stale and owed",
+                  "stamp is stale: the page changed after review" in _cw_editor(
+                      _cw_page_t("stale.html", "<p>x</p>\n", stamp=("clean", 1), edit_after="<p>more</p>\n"))))
+_cw_cases.append(("editor (#594): the open-risks verdict with 2 rounds is a valid stamp",
+                  "stamp" not in _cw_editor(_cw_page_t("risks.html", "<p>x</p>\n", stamp=("open-risks", 2)))))
+_cw_cases.append(("editor (#594): rounds 3 is invalid and owed",
+                  "invalid" in _cw_editor(_cw_page_t("r3.html", "<p>x</p>\n", stamp=("clean", 3)))))
+_cw_cases.append(("editor (#594): review and qa pages are exempt",
+                  all("stamp" not in _cw_editor(_cw_page_t("ex-%s.html" % k, "<p>x</p>\n", kind=k)) for k in ("review", "qa"))))
+_cw_cases.append(("editor (#594): proposal, build-plan, art and a page with no type need a stamp",
+                  all("no review stamp" in _cw_editor(_cw_page_t("need-%s.html" % k, "<p>x</p>\n", kind=None if k == "none" else k))
+                      for k in ("proposal", "build-plan", "art", "none"))))
 def _cw_editor_on(transcript, text):
     return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir, stop_hook_active=True,
                                              transcript_path=transcript), env=dict(_loop_env, HOUSE_RULES_EDITOR="on"))[1]
@@ -2265,7 +2299,7 @@ _cw_cases.append(("editor: with HOUSE_RULES_EDITOR=on, a reply of 160 words or m
 _cw_cases.append(("editor (#325): a 200-word reply with no page and no editor run gets no editor reminder by default",
                   "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, _cw_200)))
 _cw_cases.append(("editor (#325): a turn that wrote a docs/plans page still owes the editor by default",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+                  "no review stamp" in _cw_editor(_cw_t_page)))
 
 # A page written by a shell command never passes the Write hook (found in the real run, #250).
 with open(os.path.join(_cw_pages, "shellpage.html"), "w", encoding="utf-8") as _f:
@@ -2277,7 +2311,7 @@ _cw_t_shell = _hand_transcript("cw-shell", [
                 "input": {"command": "printf '<p>x</p>' > docs/plans/shellpage.html"}}]}})])
 _cw_shell_out = _cw_editor(_cw_t_shell)
 _cw_cases.append(("page: a page written by a shell command is checked at the end of the reply, editor reminder too",
-                  "the page shellpage.html" in _cw_shell_out and "no @house-rules:editor helper ran" in _cw_shell_out))
+                  "shellpage.html: no review stamp" in _cw_shell_out))
 
 # #284: in a git repository a page counts as written only when git shows it new, edited, or committed
 # since aj's message; a cloned page has a fresh file time but an old commit, so it does not count.
@@ -2376,8 +2410,10 @@ _ck_t_read = _hand_transcript("ck-read", _ck_user("check it", [json.dumps({"type
     {"type": "tool_use", "id": "r1", "name": "Bash", "input": {"command": "python3 t.py"}}]}})]))
 # #559: the edited page is then sent, as the send-page checkpoint requires; this fixture is about the editor rule
 _CK_SEND = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "SendUserFile",
-                       "input": {"file_path": os.path.join(_cw_pages, "plan.html")}}]}})
-_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR, _CK_SEND])
+                       "input": {"file_path": os.path.join(_cw_pages, "stamped.html")}}]}})
+_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, json.dumps({"type": "assistant", "message": {"content": [{
+    "type": "tool_use", "name": "Write", "input": {"file_path": os.path.join(_cw_pages, "stamped.html"), "content": "x"}}]}}),
+    _CK_SEND])
 
 # 1 page rule (long reply) - editor ran, so only the page rule is in play
 _ck_long = " ".join(["Words"] * 230) + "."
