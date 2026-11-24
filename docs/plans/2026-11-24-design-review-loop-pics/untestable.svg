@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 220" width="680" height="220" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="13">
+<style>
+.bg{fill:#fff}.t{fill:#1b1f2a}.m{fill:#5b6275}.ln{stroke:#8a92a6;fill:none;stroke-width:1.5}
+.new{fill:#fde0dc;stroke:#c0392b}.you{fill:#dbe7ff;stroke:#2f5fd0}.reuse{fill:#dff3e4;stroke:#2e8b57}
+@media (prefers-color-scheme:dark){.bg{fill:#14171f}.t{fill:#eef0f6}.m{fill:#a4abbd}.ln{stroke:#6c748a}.new{fill:#4a1f1b;stroke:#ff8a7a}.you{fill:#1d2c55;stroke:#7aa2ff}.reuse{fill:#1f3a2a;stroke:#5fcf8c}}
+</style>
+<rect class="bg" width="680" height="220"/>
+<text class="t" x="16" y="24" font-weight="700">When this machine really cannot test it (phone sensors, a GPU, your logins)</text>
+<g stroke-width="1.5">
+<rect class="new" x="16" y="42" width="144" height="60" rx="8"/><text class="t" x="88" y="68" text-anchor="middle">Reviewer says</text><text class="t" x="88" y="86" text-anchor="middle">"cannot run here"</text>
+<rect class="new" x="180" y="42" width="144" height="60" rx="8"/><text class="t" x="252" y="68" text-anchor="middle">Builder writes one</text><text class="t" x="252" y="86" text-anchor="middle">self-judging test</text>
+<rect class="reuse" x="344" y="42" width="144" height="60" rx="8"/><text class="t" x="416" y="68" text-anchor="middle">Run here against</text><text class="t" x="416" y="86" text-anchor="middle">stand-ins, to prove it</text>
+<rect class="you" x="508" y="42" width="156" height="60" rx="8"/><text class="t" x="586" y="68" text-anchor="middle">You run one command</text><text class="t" x="586" y="86" text-anchor="middle">and read PASS or FAIL</text>
+</g>
+<g class="ln"><path d="M160 72h20M324 72h20M488 72h20"/></g>
+<g class="m"><text x="16" y="136">The test decides pass or fail itself. You never judge a screenshot or tick a list.</text>
+<text x="16" y="158">It follows the handover card format and says UNTESTED when it was not run on your machine.</text>
+<text x="16" y="180">The QA page lists it as one step, never as a pile of manual checks.</text></g>
+</svg>
