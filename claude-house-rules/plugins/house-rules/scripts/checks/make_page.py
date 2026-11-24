@@ -252,6 +252,30 @@ def _mp_qa_content(name, qa):
     return c
 
 
+_acc = __import__("acceptance")
+_qaf = os.path.join(_d, "docs", "qa", "demo-feature")
+
+
+def _mp_stamp(proj=_d, folder=_qaf):
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, "acceptance-stamp.json"), "w", encoding="utf-8") as f:
+        json.dump({"tree": _acc.tree(proj)}, f)
+
+
+def _mp_text(name):
+    p = os.path.join(_d, "docs", "plans", name + ".html")
+    return open(p, encoding="utf-8").read() if os.path.isfile(p) else ""
+
+
+_rc, _o = _mp("build", _mp_qa_content("qa0", _qa), "--project", _d)
+_mp_cases.append(("make_page (#596): QA mode with no acceptance stamp is refused (exit 2), naming the stamp and the acceptance run",
+                  _rc == 2 and "stamp missing" in _o and "acceptance run first" in _o and "acceptance.py stamp" in _o))
+_mp_stamp()
+with open(os.path.join(_d, "planned.py"), "a", encoding="utf-8") as _f:
+    _f.write("d\n")
+_rc, _o = _mp("build", _mp_qa_content("qa0", _qa), "--project", _d)
+_mp_cases.append(("make_page (#596): QA mode with a stale stamp is refused (exit 2)", _rc == 2 and "stale" in _o))
+_mp_git(_d, "checkout", "-q", "planned.py")
 _stage = os.path.join(_d, ".claude", "house-rules-loop.json")
 _rc, _o = _mp("build", _mp_qa_content("qa1", _qa), "--project", _d)
 _mp_cases.append(("make_page: QA mode with no stage file builds, creates none and says it did not record",
@@ -269,9 +293,59 @@ _mp_cases.append(("make_page: QA mode marks an unplanned file 'Not in the plan' 
 _mp_cases.append(("make_page: QA mode sets approval to the QA passed phrase and adds the Still unverified item",
                   _pg.get("approval") == "QA passed: demo feature" and "replyPrefix" not in _pg
                   and any(c[0] == "keep" and c[1] == "Still unverified" and c[2] == "1 things not yet proven" for c in _pg["changes"])))
+_rc, _o = _mp("build", _mp_qa_content("qa1", _qa), "--project", _d)
+_mp_cases.append(("make_page (#596): building the same QA page twice works (the built page does not stale the stamp)", _rc == 0))
 _rc, _o = _mp("build", _mp_qa_content("qa2", dict(_qa, unverified=[])), "--project", _d)
-_mp_cases.append(("make_page: QA mode with an empty unverified list is refused with exit 2",
-                  _rc == 2 and "unverified" in _o))
+_t2 = _mp_text("qa2")
+_mp_cases.append(("make_page (#596): QA mode with an empty unverified list builds and says nothing is unverified, 0 things",
+                  _rc == 0 and "Nothing is unverified: every acceptance item passed the acceptance run" in _t2
+                  and "0 things not yet proven" in _t2))
+_mp_cases.append(("make_page (#596): a non-empty unverified list is unchanged",
+                  "1 things not yet proven" in _mp_text("qa1") and "The live run." in _mp_text("qa1")))
+_nm = {"title": "Run it", "folder": "/home/aj/proj", "shell": "bash", "command": 'git -C "/home/aj/proj" status', "expect": "clean tree"}
+_rc, _o = _mp("build", _mp_qa_content("qa4", dict(_qa, needs_machine=[_nm, dict(_nm, title="Second", untested=False)])), "--project", _d)
+_t4 = _mp_text("qa4")
+_mp_cases.append(("make_page (#596): needs_machine renders one item with UNTESTED first, folder, shell, command, what aj sees; untested false drops the line",
+                  _rc == 0 and "Needs your machine" in _t4 and "2 step(s), one command each" in _t4
+                  and "Run it\\nUNTESTED:\\nFolder: /home/aj/proj, shell: bash\\nCommand: git -C" in _t4
+                  and "You should see: clean tree" in _t4 and "Second\\nFolder:" in _t4))
+_rc, _o = _mp("build", _mp_qa_content("qa5", dict(_qa, needs_machine=[dict(_nm, command="")])), "--project", _d)
+_mp_cases.append(("make_page (#596): a needs_machine entry missing a field is refused, naming the entry and the field",
+                  _rc == 2 and "entry 0 (Run it) needs command" in _o))
+_mp_cases.append(("make_page (#596): no ledger file adds no deviations item", "Deviations and parked" not in _mp_text("qa1")))
+with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
+    _f.write("| # | s | plan | done | why | undo |\n|---|---|---|---|---|---|\n| D1 | 1 | p | Did the thing. | w | u |\n"
+             "| D2 | 1 | p | Did another. | w | u |\n\n| # | s | Question | Default |\n| P1 | 2 | Which way? | x |\n")
+_rc, _o = _mp("build", _mp_qa_content("qa6", _qa), "--project", _d)
+_t6 = _mp_text("qa6")
+_mp_cases.append(("make_page (#596): ledger rows come first with right counts",
+                  _rc == 0 and "2 deviation(s), 1 parked" in _t6 and "D1: Did the thing.\\nD2: Did another.\\nP1: Which way?" in _t6
+                  and _t6.index("Deviations and parked") < _t6.index("Files changed, counted")))
+with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
+    _f.write("# empty\n")
+_rc, _o = _mp("build", _mp_qa_content("qa7", _qa), "--project", _d)
+_mp_cases.append(("make_page (#596): a ledger with no D or P rows says None recorded, 0 and 0",
+                  _rc == 0 and "None recorded" in _mp_text("qa7") and "0 deviation(s), 0 parked" in _mp_text("qa7")))
+os.remove(os.path.join(_qaf, "ledger.md"))
+# P3: the fingerprint ignores built pages but not plan markdown or source
+_t0 = _acc.tree(_d)
+os.makedirs(os.path.join(_d, "docs", "plans"), exist_ok=True)
+with open(os.path.join(_d, "docs", "plans", "zz.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>a</p>")
+_t1 = _acc.tree(_d)
+with open(os.path.join(_d, "docs", "plans", "zz.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>b</p>")
+_t2f = _acc.tree(_d)
+with open(os.path.join(_d, "docs", "plans", "zz.md"), "w", encoding="utf-8") as _f:
+    _f.write("m")
+_t3 = _acc.tree(_d)
+with open(os.path.join(_d, "extra.py"), "a", encoding="utf-8") as _f:
+    _f.write("z\n")
+_t4f = _acc.tree(_d)
+_mp_cases.append(("acceptance (P3): the fingerprint ignores docs/plans/*.html added or edited, changes for docs/plans/*.md and for source",
+                  _t0 == _t1 == _t2f and _t3 != _t2f and _t4f != _t3))
+os.remove(os.path.join(_d, "docs", "plans", "zz.md"))
+_mp_git(_d, "checkout", "-q", "extra.py")
 os.makedirs(os.path.dirname(_stage))
 with open(_stage, "w", encoding="utf-8") as _f:
     json.dump({"feature": "demo", "stage": "Build"}, _f)
@@ -599,8 +673,10 @@ for _typ in _pc.TYPES:
     _raw = re.sub(r"<replace:[^>]*>", "x", _raw)
     with open(_sf, "w", encoding="utf-8") as _f:
         _f.write(_raw)
+    if _typ == "qa":  # the QA gate (#596): the fixture carries a real current stamp for the starter's feature "x"
+        _mp_stamp(_sp, os.path.join(_sp, "docs", "qa", "x"))
     _rc2, _o2 = _mp("build", _sf, "--project", _sp)
-    _bh = os.path.join(_sp, "docs", "plans", "st-" + _typ + ".html")
+    _bh =os.path.join(_sp, "docs", "plans", "st-" + _typ + ".html")
     _bt = open(_bh, encoding="utf-8").read() if os.path.isfile(_bh) else ""
     _stripped = re.sub(r"<!-- house-rules make_page[^>]*-->", "", _bt)
     _msgs = _pc.check(_stripped)

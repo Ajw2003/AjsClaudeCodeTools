@@ -276,10 +276,47 @@ def apply_qa(page, project):
     for k in ("feature", "base"):
         if not qa.get(k):
             die("QA mode needs qa.%s in the content file; add it" % k)
-    unv = qa.get("unverified")
-    if not isinstance(unv, list) or not unv:
-        die("QA mode needs qa.unverified, a non-empty list of what is not yet proven; a QA page that "
-            "claims everything is proven is refused, so list what you did not check")
+    unv = qa.get("unverified") or []
+    if not isinstance(unv, list):
+        die("qa.unverified must be a list of strings (empty means everything passed the acceptance run)")
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    import acceptance
+    folder = qa.get("folder") or qa["feature"].lower().replace(" ", "-")
+    fpath = os.path.join(project, "docs", "qa", folder)
+    problem = acceptance.stamp_problem(fpath, project)
+    if problem:
+        die("%s (%s). Run the acceptance run first (the visual-loop skill, whole-feature acceptance), "
+            "then `acceptance.py stamp %s`" % (problem, fpath, fpath))
+    machine = []
+    nm = qa.get("needs_machine") or []
+    if not isinstance(nm, list):
+        die("qa.needs_machine must be a list of {title, folder, shell, command, expect, untested}")
+    for i, e in enumerate(nm):
+        if not isinstance(e, dict):
+            die("qa.needs_machine entry %d is not an object" % i)
+        for k in ("title", "folder", "shell", "command", "expect"):
+            if not e.get(k):
+                die("qa.needs_machine entry %d (%s) needs %s" % (i, e.get("title") or "untitled", k))
+        machine.append("\n".join(
+            ([e["title"]] + (["UNTESTED:"] if e.get("untested", True) else [])
+             + ["Folder: %s, shell: %s" % (e["folder"], e["shell"]), "Command: %s" % e["command"],
+                "You should see: %s" % e["expect"]])))
+    ledger = []
+    lp = os.path.join(fpath, "ledger.md")
+    if os.path.isfile(lp):
+        with open(lp, encoding="utf-8") as f:
+            for ln in f.read().splitlines():
+                c = [x.strip() for x in ln.split("|")]
+                if ln.startswith("| D") and len(c) > 4:
+                    ledger.append(("D", "%s: %s" % (c[1], c[4])))
+                elif ln.startswith("| P") and len(c) > 3:
+                    ledger.append(("P", "%s: %s" % (c[1], c[3])))
+        short = lambda s: s if len(s) <= 160 else s[:157].rstrip() + "..."
+        nd = sum(1 for k, _ in ledger if k == "D")
+        page.setdefault("changes", []).insert(
+            0, ["chg", "Deviations and parked decisions", "%d deviation(s), %d parked" % (nd, len(ledger) - nd), None,
+                "\n".join(short(t) for _, t in ledger) or "None recorded", None, None])
     plan = qa.get("files") or {}
     base = qa["base"]
     rows, seen, tot_a, tot_r = [], set(), 0, 0
@@ -299,8 +336,13 @@ def apply_qa(page, project):
          "%d files, +%d −%d" % (len(seen), tot_a, tot_r),
          None, "The added and removed counts come from git (git diff --numstat %s...HEAD); the estimates "
          "beside them come from the plan." % base, None, rows])
+    if machine:
+        page["changes"].append(["chg", "Needs your machine", "%d step(s), one command each" % len(machine), None,
+                                "\n\n".join(machine), None, None])
     page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
-                            " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv), None, None])
+                            " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv)
+                            or "Nothing is unverified: every acceptance item passed the acceptance run (stamp for the current source).",
+                            None, None])
     page.setdefault("choices", [])  # a QA page usually has none, and the template maps over the list
     page["approval"] = "QA passed: %s" % qa["feature"]
     page.pop("replyPrefix", None)

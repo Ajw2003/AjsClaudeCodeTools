@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """acceptance.py - whole-feature acceptance evidence and the freshness-checked stamp (#595).
 
-  acceptance.py tree [--root DIR]            fingerprint of the source tree (docs/qa/ and the loop file left out)
+  acceptance.py tree [--root DIR]            fingerprint of the source tree (docs/qa/, docs/plans/*.html and the loop file left out)
   acceptance.py run --out DIR [--timeout S] -- CMD...   run CMD, save stdout, stderr, exit code to DIR/run-N.txt
   acceptance.py stamp FEATURE_DIR [--root DIR]   refuse unless `ledger.py status` says NEXT: done; else write FEATURE_DIR/acceptance-stamp.json
   acceptance.py check FEATURE_DIR [--root DIR]   exit 0 if the stamp's tree equals the current tree, else 1
