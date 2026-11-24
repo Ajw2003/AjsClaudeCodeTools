@@ -1,0 +1,259 @@
+{
+ "title": "Modular tests rule",
+ "eyebrow": "Proposal \u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: modular tests",
+ "short": {
+  "lead": "Proposal: house rules will require every test to be a self-contained module that runs alone or chained, refuse new tests that are not, and list old ones that are not; you pick how strict and how far the first build goes.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "The rule",
+    "A test is a module, not a slice of one big run",
+    "",
+    "A new rule section and a detail file. A test names its module, runs alone with one command, needs no other module's leftovers, and chains with others through one runner. Only a test that is meant to check the whole system may run every check.",
+    "Nothing from you.",
+    {
+     "src": "pics/before-after.svg",
+     "alt": "Today a change to one tool runs all of verify_tools.py. After: only the module you changed.",
+     "caption": "Today a change to one tool runs all of verify_tools.py. After: only the module you changed."
+    }
+   ],
+   [
+    "lock",
+    "The gate",
+    "New tests are refused unless they follow it",
+    "",
+    "A hook checks each test file Claude writes or edits and refuses one with no module name or no stand-alone command, saying how to fix it.",
+    "Nothing from you.",
+    {
+     "src": "pics/gate.svg",
+     "alt": "The gate: a test file with a module is saved, one without is refused with the fix.",
+     "caption": "The gate: a test file with a module is saved, one without is refused with the fix."
+    }
+   ],
+   [
+    "list",
+    "The audit",
+    "Old tests are named in a docs file, then work goes on",
+    "",
+    "A command lists every existing test that is not modular and writes the list to the state tier of the docs. Work continues. Inside a refactor, listed tests must be converted first.",
+    "Nothing from you.",
+    {
+     "src": "pics/audit.svg",
+     "alt": "The audit writes the list; a refactor turns the list into work.",
+     "caption": "The audit writes the list; a refactor turns the list into work."
+    }
+   ],
+   [
+    "wrench",
+    "The skill and command",
+    "One command converts an old test",
+    "",
+    "A skill and a slash command, `/house-rules:modular-tests audit` and `/house-rules:modular-tests convert <path>`, split one test file into modules without changing what it checks.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve it",
+    "you",
+    "I add one line to the decisions log.",
+    "Pick an option for each of the three questions under Your choices, then tap Copy my reply and send it."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "old",
+   "house-rules suite",
+   "Already split into 7 modules",
+   "`verify.py --parts core,safe_git` and `--changed` run only some parts, and each part file runs alone. This is the model.",
+   null,
+   [
+    "Seven part files under `scripts/checks/`, with `--parts` and `--changed`.",
+    "A one-line module header and a one-line doc note in each part file, so the audit recognises it.",
+    "No change to how you run it."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "tools/verify_tools.py",
+   "836 lines that all run in one go",
+   "It tests install, use_branch, session_ledger, footprint, overnight and the version-bump check, and runs every one of them each time. It becomes one module per tool, with a runner.",
+   null,
+   [
+    "One script with four groups of checks, all run every time the script is loaded.",
+    "One module per tool plus a runner with `--parts`.",
+    "Changing install.py runs install checks only."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "agent-router and prompt-workshop suites",
+   "Two single-file suites (245 and 228 lines)",
+   "Each becomes modules in the same shape as house-rules. They are younger offshoots, so they go last.",
+   null,
+   [
+    "Two single-file verify.py scripts.",
+    "Per-plugin modules and a runner.",
+    "Their checks run only for the part you touched."
+   ],
+   null
+  ],
+  [
+   "same",
+   "Live QA folders and clean_install_test.py",
+   "Whole-system tests that stay whole",
+   "These test everything on purpose, so the rule allows them when they declare themselves end-to-end. They are listed in the audit as exempt, with the reason.",
+   null,
+   [
+    "Seven `*-live-tests` folders and one install test.",
+    "A one-line end-to-end declaration each.",
+    "No change to what they run."
+   ],
+   null
+  ],
+  [
+   "new",
+   "Rule section and detail file",
+   "Tests are modules",
+   "A section in `rules/house-rules.md`, a detail file, a `checks.json` entry, and a `verify.py` case so the rule is enforced and not just written.",
+   null,
+   [
+    "`green-suite.md` already says to run only touched parts.",
+    "A rule that makes that mandatory for every test.",
+    "Every future test I write is a module."
+   ],
+   null
+  ],
+  [
+   "new",
+   "Test-module hook",
+   "Refuses a non-modular test at write time",
+   "Checks files that look like tests (`test_*`, `*_test.*`, `verify*.py`). It reads a module header and a stand-alone command, and refuses with the fix. A file declared end-to-end passes.",
+   null,
+   [
+    "Nothing checks test shape today.",
+    "One new check in `hook.py`, with its own cases.",
+    "A refusal appears once, naming what to add."
+   ],
+   null
+  ],
+  [
+   "new",
+   "modular-tests skill and command",
+   "Audit and convert in one command",
+   "`audit` writes `docs/3-state/non-modular-tests.md`. `convert <path>` splits a file into modules and proves the old and new runs give the same results.",
+   null,
+   [
+    "Commands exist for docs, labels and modes only.",
+    "A skill, a command and one script.",
+    "You type one line to convert a file."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "How strict is the refusal?",
+   [
+    [
+     "A",
+     "Refuse at write time (suggested)",
+     1,
+     "The hook refuses a test file with no module header or no stand-alone command, which matches your wording that new tests are refused."
+    ],
+    [
+     "B",
+     "Refuse at write time and fail the pull request's automatic checks too",
+     0,
+     "Same hook, plus a `verify.py` check that fails a pull request containing a non-modular test. Stricter, and catches edits made outside Claude."
+    ],
+    [
+     "C",
+     "Warn only",
+     0,
+     "The hook reminds but does not refuse. Not what you asked for; listed for completeness."
+    ]
+   ],
+   "A matches the words you used, and the pull-request check can be added later without redoing anything."
+  ],
+  [
+   "second",
+   "What counts as a refactor, the point at which listed tests must be converted?",
+   [
+    [
+     "A",
+     "A line you type: `refactor on` (suggested)",
+     1,
+     "Works like the `pages off` and `builders off` switches: `refactor off` ends it. It is explicit, so the hook never guesses."
+    ],
+    [
+     "B",
+     "Any issue labelled `refactor`",
+     0,
+     "Needs no typing, but depends on every refactor being labelled first."
+    ],
+    [
+     "C",
+     "I decide and say so",
+     0,
+     "No setup, but nothing checks my judgment."
+    ]
+   ],
+   "A is the only option the hook can check without guessing."
+  ],
+  [
+   "third",
+   "How far does the first build go?",
+   [
+    [
+     "A",
+     "Rule, hook, skill, command, audit; then convert verify_tools.py as the proof (suggested)",
+     1,
+     "Shows the whole loop working on one real file. The two offshoot suites become one issue each."
+    ],
+    [
+     "B",
+     "All of the above, plus convert every suite now",
+     0,
+     "Biggest change, with the most risk. Needs one issue per suite: verify_tools.py, agent-router and prompt-workshop, plus the rule work, so four issues."
+    ],
+    [
+     "C",
+     "Rule, hook, skill, command, audit only; convert nothing yet",
+     0,
+     "Smallest. The audit list is the only evidence the conversion works."
+    ]
+   ],
+   "A proves the conversion on real code without converting three suites at once (verify_tools.py, agent-router and prompt-workshop)."
+  ]
+ ],
+ "wrapup": {
+  "summary": "This proposal adds a modular-tests rule, a hook that refuses non-modular new tests, an audit that lists old ones, and a skill and command to convert them.",
+  "changing": "The rules file, one hook check, one new skill and command, a state-tier doc listing non-modular tests, and, if you pick option A under the third choice, tools/verify_tools.py split into modules.",
+  "blocking": "Your three choices: how strict the refusal is, what counts as a refactor, and how far the first build goes. I also need the repository name for Plunderspell, your other project, as owner/repo, because I do not have it. The rule is global, so it applies to Plunderspell's tests too, but converting them is an issue in that repository.",
+  "next": "After you approve, I write a build plan with one issue per step.",
+  "todo": [
+   "Read the suggestion on each choice.",
+   "Pick an option under Your choices.",
+   "Tap <b>Copy my reply</b> and send it.",
+   "Tell me Plunderspell's repository name, as owner/repo."
+  ]
+ }
+}

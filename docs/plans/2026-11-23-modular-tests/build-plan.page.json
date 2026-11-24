@@ -1,0 +1,181 @@
+{
+ "title": "Modular tests build plan",
+ "eyebrow": "Build plan \u00b7 nothing built yet",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: modular tests",
+ "short": {
+  "lead": "The build is seven steps, one issue each, starting with the rule text; I need your approval to begin step 1.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Step 1 (#576)",
+    "Write the rule and its detail file",
+    "",
+    "Adds the \"Tests are modules\" section to the rules file, a detail file, and the `checks.json` entry.",
+    "Nothing from you.",
+    {
+     "src": "pics/gate.svg",
+     "alt": "The gate: a test with a module is saved, one without is refused.",
+     "caption": "The gate: a test with a module is saved, one without is refused."
+    }
+   ],
+   [
+    "hammer",
+    "Step 2 (#577)",
+    "Add the `refactor on` and `refactor off` switch",
+    "",
+    "A typed line saved like the other switches and listed in the mode command.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Step 3 (#578)",
+    "Build the write-time gate",
+    "",
+    "A check that refuses a test file with no module header, naming the line to add.",
+    "Nothing from you.",
+    {
+     "src": "pics/gate.svg",
+     "alt": "The gate: a test with a module is saved, one without is refused.",
+     "caption": "The gate: a test with a module is saved, one without is refused."
+    }
+   ],
+   [
+    "wrench",
+    "Step 4 (#579)",
+    "Build the skill, command and audit",
+    "",
+    "`/house-rules:modular-tests audit` and `convert <path>`, and the list in `docs/3-state/non-modular-tests.md`.",
+    "Nothing from you.",
+    {
+     "src": "pics/audit.svg",
+     "alt": "The audit writes the list of tests that are not modular yet.",
+     "caption": "The audit writes the list of tests that are not modular yet."
+    }
+   ],
+   [
+    "hammer",
+    "Step 5 (#580)",
+    "Convert `tools/verify_tools.py` into modules",
+    "",
+    "The first real conversion, with the same number of checks before and after.",
+    "Nothing from you.",
+    {
+     "src": "pics/before-after.svg",
+     "alt": "One big script becomes modules that run alone or chained.",
+     "caption": "One big script becomes modules that run alone or chained."
+    }
+   ],
+   [
+    "list",
+    "Step 6 (#581)",
+    "File two conversion issues for the offshoot suites",
+    "",
+    "One issue each for the agent-router and prompt-workshop suites.",
+    "Nothing from you."
+   ],
+   [
+    "book",
+    "Step 7 (#582)",
+    "Docs, changelog and version",
+    "",
+    "Updates the docs tiers, adds the changelog line, and bumps the plugin version.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the plan",
+    "you",
+    "I start building step 1.",
+    "Tap Copy my reply and send it."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Rule text and detail file",
+   "Step 1",
+   "",
+   "Done when: `verify.py` passes with the new rule section mapped to its check.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Refactor switch",
+   "Step 2",
+   "",
+   "Done when: a `verify.py` case types `refactor on` and reads it back as on.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "The gate in `hook.py`",
+   "Step 3",
+   "",
+   "Done when: `verify.py` cases show a new modular file allowed, a new file with no header refused, an end-to-end file allowed, and an old non-modular file refused only during a refactor.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Skill, command and audit",
+   "Step 4",
+   "",
+   "Done when: the audit writes `docs/3-state/non-modular-tests.md` naming `tools/verify_tools.py` and both offshoot suites as not modular.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "tools/verify_tools.py",
+   "Step 5",
+   "",
+   "Done when: the full run reports the same check count as before the split and `--parts install` runs only the install checks.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Offshoot suites",
+   "Step 6",
+   "",
+   "Done when: two open issues exist, one per suite.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Docs and version",
+   "Step 7",
+   "",
+   "Done when: `verify.py`, `verify_tools.py`, `docref.py check` and `docs_drift.py` all exit 0 and the version-bump check passes.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "This plan builds the modular-tests rule in seven steps, each tracked as its own issue under #575 (Modular tests: every test is a module that runs alone or chained).",
+  "changing": "The rules file and a detail file, one hook check, a typed switch, a new skill and command, a state-tier list of non-modular tests, tools/verify_tools.py split into modules, and the docs and version.",
+  "blocking": "Your approval of this plan. Plunderspell's repository name is still needed from you, as owner/repo, if you want its tests converted.",
+  "next": "After you approve, I build step 1.",
+  "todo": [
+   "Read the steps in order.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

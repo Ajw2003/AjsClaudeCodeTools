@@ -276,11 +276,11 @@ def art_case(expect, title, file_path, extra="", contains=None, excludes=None):
         obj = json.loads(payload)
         obj["tool_input"].update(extra)
         payload = json.dumps(obj)
-    code, out, err = run_hook("artifact", payload, env=verbose_env())
+    code, out, err, log = run_hook_log("artifact", payload, env=verbose_env())
     if "artifact custody" in out:
         got = "remind"
-    elif '"systemMessage"' in out:
-        got = "trace"
+    elif log.strip() and not out.strip():
+        got = "trace"  # #584: the trace is a hook-log line, nothing on stdout
     elif not out.strip():
         got = "silent"
     else:
@@ -536,11 +536,11 @@ def run_case(expect, title, file_path, extra=""):
     obj = {"tool_name": "Write", "tool_input": {"file_path": file_path}}
     if extra:
         obj["tool_input"].update(extra)
-    code, out, err = run_hook("runnable", json.dumps(obj), env=verbose_env())
+    code, out, err, log = run_hook_log("runnable", json.dumps(obj), env=verbose_env())
     if "whole workflows" in out:
         got = "remind"
-    elif '"systemMessage"' in out:
-        got = "trace"
+    elif log.strip() and not out.strip():
+        got = "trace"  # #584: the trace is a hook-log line, nothing on stdout
     elif not out.strip():
         got = "silent"
     else:
@@ -575,11 +575,11 @@ run_case(
 # --- the compile-verification reminder for compiled-language (.cs) files ---------------------
 def compile_case(expect, title, file_path):
     obj = {"tool_name": "Write", "tool_input": {"file_path": file_path}}
-    code, out, err = run_hook("runnable", json.dumps(obj), env=verbose_env())
+    code, out, err, log = run_hook_log("runnable", json.dumps(obj), env=verbose_env())
     if "should compile" in out.lower():
         got = "remind"
-    elif '"systemMessage"' in out:
-        got = "trace"
+    elif log.strip() and not out.strip():
+        got = "trace"  # #584: the trace is a hook-log line, nothing on stdout
     elif not out.strip():
         got = "silent"
     else:
@@ -696,8 +696,8 @@ else:
     for v in voice_problems:
         print(f"          {v}")
 for event, payload, needle, why in trace_cases[1:]:  # artifact, runnable
-    code, out, err = run_hook(event, payload, env=verbose_env())
-    if code == 0 and '"systemMessage"' in out and needle in out:
+    code, out, err, log = run_hook_log(event, payload, env=verbose_env())
+    if code == 0 and not out.strip() and needle in log:
         report("PASS", f"{event} traces its decision on {why}")
         print(f"          says what it looked at and what it concluded; names {needle!r}")
     else:
@@ -711,12 +711,12 @@ for event, payload, needle, why in trace_cases[1:]:  # artifact, runnable
     else:
         report("FAIL", f"{event} is silent by default on {why}")
         print(f"          exit {code}, got: {out[:160]!r}")
-    code, out, err = run_hook(event, payload, env=verbose_env())
-    if code == 0 and needle in out and '"systemMessage"' in out:
-        report("PASS", f"HOUSE_RULES_TRACE=verbose restores the {event} trace on {why}")
+    code, out, err, log = run_hook_log(event, payload, env=verbose_env())
+    if code == 0 and needle in log and not out.strip():
+        report("PASS", f"HOUSE_RULES_TRACE=verbose logs the {event} trace on {why}")
     else:
-        report("FAIL", f"HOUSE_RULES_TRACE=verbose restores the {event} trace on {why}")
-        print(f"          exit {code}, got: {out[:160]!r}")
+        report("FAIL", f"HOUSE_RULES_TRACE=verbose logs the {event} trace on {why}")
+        print(f"          exit {code}, got: {out[:160]!r}, log: {log[:160]!r}")
 
 # --- one lever turns every trace off, and no reminder goes with it -----------------------------
 off = env_in(REPO_THEIRS)
@@ -747,6 +747,55 @@ else:
     report("FAIL", "HOUSE_RULES_TRACE=off silences every trace and no reminder")
     for q in quiet_failures:
         print(f"          {q}")
+
+# --- #584: traces go to the hook log, not the chat -----------------------------------------------
+_HL_NAME = "house-rules-hook-log.txt"
+_HL_GUARD = ("guard", "")  # trace(): "guard: empty payload"
+_HL_NOOP = ("artifact", json.dumps({"tool_input": {"file_path": r"C:\proj\a.cs"}}))  # trace_noop()
+
+
+def _hl_run(event, payload, trace_mode, seed=None, seed_dir=False):
+    d = tempfile.mkdtemp(prefix="hook-log-case-")
+    p = os.path.join(d, _HL_NAME)
+    if seed_dir:
+        os.mkdir(p)  # a directory where the log should be: the append cannot work
+    elif seed is not None:
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(seed)
+    e = dict(os.environ, TMPDIR=d, TEMP=d, TMP=d)
+    e.pop("HOUSE_RULES_TRACE", None)
+    if trace_mode:
+        e["HOUSE_RULES_TRACE"] = trace_mode
+    code, out, err = run_hook(event, payload, env=e)
+    log = read(p) if os.path.isfile(p) else ""
+    shutil.rmtree(d, ignore_errors=True)
+    return code, out, log
+
+
+_c, _o, _l = _hl_run(*_HL_GUARD, None)
+report("PASS" if _c == 0 and not _o.strip() and "guard: empty payload" in _l else "FAIL",
+       "#584: a trace lands in the hook log and not in stdout")
+_c, _o, _l = _hl_run(*_HL_GUARD, "chat")
+report("PASS" if '"systemMessage"' in _o and "guard: empty payload" in _o and "guard: empty payload" in _l else "FAIL",
+       "#584: HOUSE_RULES_TRACE=chat prints the trace in chat as well as logging it")
+_c, _o, _l = _hl_run(*_HL_GUARD, "off")
+report("PASS" if not _o.strip() and not _l else "FAIL", "#584: HOUSE_RULES_TRACE=off writes no log line and prints nothing")
+_n = [_hl_run(*_HL_NOOP, m) for m in (None, "verbose", "off")]
+report("PASS" if not _n[0][1].strip() and not _n[0][2] and "a.cs" in _n[1][2] and not _n[1][1].strip()
+       and not _n[2][2] else "FAIL",
+       "#584: trace_noop writes only under HOUSE_RULES_TRACE=verbose (default and off write nothing)")
+_c, _o, _l = _hl_run(*_HL_GUARD, None, seed="".join("old %d\n" % i for i in range(1, 601)))
+_ls = _l.splitlines()
+report("PASS" if len(_ls) == 500 and _ls[0] == "old 102" and "guard: empty payload" in _ls[-1] else "FAIL",
+       "#584: the hook log is capped at its newest 500 lines")
+if len(_ls) != 500:
+    print(f"          {len(_ls)} lines; first {_ls[:1]!r}")
+_c, _o, _l = _hl_run(*_HL_GUARD, None, seed_dir=True)
+report("PASS" if _c == 0 and _o.count("could not write the hook log (") == 1 and _o.count("\n") == 0
+       and json.loads(_o)["systemMessage"].startswith("house-rules plugin: could not write the hook log (") else "FAIL",
+       "#584: an unwritable hook log gives the one-line message, not silence")
+if _c != 0 or '"systemMessage"' not in _o:
+    print(f"          exit {_c}, got: {_o[:160]!r}")
 
 # --- handover is the deliberate exception, and it is not an oversight --------------------------
 # Tracing its stand-down would announce a compliant card's own compliance, which the rules
@@ -2444,10 +2493,10 @@ report("PASS" if _br_ok else "FAIL",
        "versioncheck reads a branch build's ref and fetches GitHub's version from that branch, not main")
 if not _br_ok:
     print(f"          ref={_br_ref!r} raw={_br_raw!r} api={_br_api!r} none={_br_none!r} main={_main_raw!r}")
-rc, out, err = run_hook("versioncheck", vc_payload("vc-branch"),
+rc, out, err, _br_log = run_hook_log("versioncheck", vc_payload("vc-branch"),
                         vc_env("vc-branch", HOUSE_RULES_VC_INSTALLED_PLUGINS_JSON=_br_inst,
                                HOUSE_RULES_VC_MARKETPLACE=_installed_version, HOUSE_RULES_VC_GITHUB=_installed_version))
-_br_ok = rc == 0 and "OUT OF DATE" not in out and "the AjsAgent/phase-3-handoff branch on" in out and not vc_fake_calls("vc-branch")
+_br_ok = rc == 0 and "OUT OF DATE" not in out and "the AjsAgent/phase-3-handoff branch on" in _br_log and not vc_fake_calls("vc-branch")
 report("PASS" if _br_ok else "FAIL",
        "versioncheck on a branch build that matches its branch names the branch and runs no update")
 if not _br_ok:

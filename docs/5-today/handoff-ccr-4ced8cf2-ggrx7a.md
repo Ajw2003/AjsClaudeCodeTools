@@ -1,0 +1,32 @@
+# Handoff: modular tests and quieter hook messages
+
+## What the work is for
+Every test becomes a module that runs alone or chained with others, so a change to one part runs only that part's tests. New tests that are not modules are refused, old ones are listed, and a skill and command convert them.
+
+## Where it stands
+Pull request #603 is open for quieter hook messages (`Refs #583`), waiting on aj's review and merge. Issues #583 to #586 stay `needs review`.
+
+2026-11-24: main took plugin 2.90.0 (pull request #602), so quieter messages moved to 2.91.0. Main was merged into this branch (an autosave had committed the first merge with conflict markers; fixed in a later commit). The loop state file kept this branch's own copy, so main's approval records in it are not in this branch's version. Full verify.py after the merge and bump: 1503 checks, all parts pass; verify_tools.py, docref.py and docs_drift.py clean; version check 2.90.0 to 2.91.0 against origin/main. One main test that pinned exactly 2.90.0 now accepts 2.90.0 or later.
+
+QUIETER MESSAGES PASSED QA (2026-11-24); no pull request yet, waiting for aj to say to open one. Before that it was in QA: all three steps are built, issues #583 to #586 say `needs review`, and the QA page `docs/plans/2026-11-23-debug-log-spam/qa.html` is sent. Plugin 2.91.0. Waiting on aj's "QA passed: quieter hook messages" or "QA failed".
+
+Quieter messages step 1 (#584) is built and merged on this branch: `trace()` and `trace_noop()` write to `house-rules-hook-log.txt` in the temp folder, `HOUSE_RULES_TRACE=chat` restores chat output, and `/house-rules:hook-log` runs `scripts/hooklog.py`. My own full `verify.py` run after the merge passed every part (1449 total; core 220 after the hook-log change). Step 2 (#585) is built and merged: scratch index per process, one-line error once per session; the collision case fails without the fix (checked), and my full verify.py passed 1453 checks. Step 3 (#586): docs, changelog and plugin 2.91.0 are written; the version-bump check and the doc checks (`docref.py check`, `docs_drift.py`, `verify_tools.py`) still need a run before QA.
+
+Modular tests step 1 (#576): the builder's branch `worktree-agent-ace349c0c494b15b9` holds the rule text and detail file. I merged it, ran the full verify.py, and it failed: the injected rules measured 10286 against the 9700 limit (the new section is 650 characters; about 64 are free), plus one speed-switches check failed (cause not yet known). I reverted the merge on this branch. The builder had reported 9634 and a pass, which my run did not support. Waiting on aj to choose where the rule goes: a separate loaded file, cut about 600 characters from existing sections, or a one-line pointer. Quieter messages step 1 (#584): its builder has not reported.
+
+BUILD: aj approved both build plans ("Build plan approved: quieter hook messages" and "Build plan approved: modular tests"). Two builders are running in isolated worktrees: quieter messages step 1 (#584) and modular tests step 1 (#576); their reports are not in yet. Issues #583, #584, #585, #586, #575, #576, #577 say `in progress`.
+
+Quieter messages (option A chosen: log plus `/house-rules:hook-log`): systems doc `docs/4-systems/hook-message-log.md`, issues #583 to #586 and build plan page `docs/plans/2026-11-23-debug-log-spam/build-plan.html` are written, waiting on build plan approval. Earlier: design approved ("Design approved: quieter hook messages 1* 2A"), stage Plan. aj's own answer to choice 1: hide all hook messages by default, expandable in chat. The docs lookup found no expandable hook message in Claude Code; aj is asked to choose an alternative. The decisions-log entry is written. No systems doc or issues yet.
+
+Second piece of work: aj asked to fix repeating hook messages (a screenshot of two). A proposal page `docs/plans/2026-11-23-debug-log-spam/proposal.html` is sent; no issues yet, nothing built, waiting on two choices.
+
+Modular tests: Design approved ("Design approved: modular tests 1A 2* 3A"). Planning is done: `docs/4-systems/modular-tests.md`, the issues, and the build plan page `docs/plans/2026-11-23-modular-tests/build-plan.html`. The stage is Plan. Nothing is built.
+
+## The next step
+Wait for aj's review of pull request #603. Modular tests step 1 (#576) is held until aj picks where the rule goes. Modular tests step 1 still waits on aj's choice of where the rule goes. After aj picks where the rule goes, re-apply the builder's branch and fit it, then find why the speed-switches check failed. Read both builder reports, verify their claims by running the suites myself, merge their worktree branches into this branch, then start the next steps (#585, #577), two builders at most. Once aj approves the build plan, build step 1 (#584). Earlier note: write `docs/4-systems/` doc and issues for quieter messages (decisions-log entry still owed). For the quieter-messages work: aj picks the two options and approves ("Design approved: quieter hook messages"). For modular tests: aj approves the build plan ("Build plan approved: modular tests"). Then build step 1, the rule text and its detail file (#576). The injected rules sit near the 9700-character limit, so the new section needs room made.
+
+## What is unverified
+`/house-rules:hook-log` was never run as a slash command or on Windows; the script itself was run on Linux. The pickup "nothing to pick up" message is still a direct chat message. Whether the speed-switches failure comes from the new rule text. The hook-log design assumes only `trace()` and the autosave notes move to the log; if aj means every message, step 1 widens. The autosave lock collision is read from code and the Windows error text, not reproduced. Nothing has been run. The gate's file-name patterns and the module header format are untested designs. Plunderspell's repository name is not known, so its tests are not planned.
+
+## The issue numbers
+Quieter messages: parent #583, steps #584, #585, #586. Modular tests: parent #575. Steps: #576 rule text, #577 refactor switch, #578 write-time gate, #579 skill, command and audit, #580 convert `tools/verify_tools.py`, #581 offshoot suite issues, #582 docs and version.

@@ -85,7 +85,7 @@ note can't crowd the context.
 - Every failure (no `origin`, a push that times out, a fetch that fails) is said in one line.
 - Every save and pickup decision is said in one line too (2026-11-17, after the desktop app saved nothing and said
   nothing): saved and pushed, saved on this computer, nothing changed, not a git repository, nothing to pick up
-  (`_save_said` and `event_pickup` in `scripts/house_rules/delegation.py`). `HOUSE_RULES_TRACE=off` hides them.
+  (`_save_said` and `event_pickup` in `scripts/house_rules/delegation.py`). Since 2.91.0 these go to the hook log (`/house-rules:hook-log`), not the chat; `HOUSE_RULES_TRACE=chat` restores chat output and `off` hides them.
   At the end of a reply with nothing new, the line says the work is saved, with its file count and save time.
   The desktop app shows no session-start notice, so the pickup note also asks Claude to open its first reply with
   one line saying what was picked up (`PICKUP_ANNOUNCE`).

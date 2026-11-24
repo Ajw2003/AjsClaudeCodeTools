@@ -88,8 +88,41 @@ def trace_enabled():
     return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() not in _TRACE_OFF
 
 
+def _trace_chat():
+    return os.environ.get("HOUSE_RULES_TRACE", "on").strip().lower() == "chat"
+
+
+HOOK_LOG_NAME = "house-rules-hook-log.txt"
+HOOK_LOG_MAX_LINES = 500
+_LOG_ERROR_SHOWN = False
+
+
+def _log_line(message):
+    """Append one line (UTC time, message) to the hook log, keeping the newest 500 lines. A
+    failure to write is one systemMessage per process, never silent."""
+    global _LOG_ERROR_SHOWN
+    path = os.path.join(tempfile.gettempdir(), HOOK_LOG_NAME)
+    line = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " " + " ".join(str(message).split())
+    try:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                lines = f.read().splitlines()
+        except FileNotFoundError:
+            lines = []
+        lines = (lines + [line])[-HOOK_LOG_MAX_LINES:]
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+    except Exception as exc:
+        if not _LOG_ERROR_SHOWN:
+            _LOG_ERROR_SHOWN = True
+            emit({"systemMessage": "house-rules plugin: could not write the hook log (%s)" % exc})
+
+
 def trace(message):
     """Say what this handler decided, on a path that would otherwise emit nothing.
+
+    Goes to the hook log (/house-rules:hook-log), not the chat; HOUSE_RULES_TRACE=chat also
+    emits it as a systemMessage, =off drops it.
 
     Only for handlers with a genuinely silent success path - guard's allow, artifact,
     runnable, handover and harvest. inject, standards, scope and delegate always emit
@@ -97,7 +130,9 @@ def trace(message):
     the most expensive possible frequency (scope runs on every prompt).
     """
     if trace_enabled():
-        emit({"systemMessage": message})
+        _log_line(message)
+        if _trace_chat():
+            emit({"systemMessage": message})
 
 
 def trace_verbose():
@@ -108,11 +143,13 @@ def trace_noop(message):
     """The "looked, nothing to do" trace: a handler that decided nothing and acted on nothing.
 
     Silence is the correct output there - rules/house-rules.md defines silence as "looked,
-    nothing to do". Emits only under HOUSE_RULES_TRACE=verbose. "Could not tell" and "acted"
-    traces stay on trace(), which still prints by default.
+    nothing to do". Logs only under HOUSE_RULES_TRACE=verbose (or chat, which also emits it).
+    "Could not tell" and "acted" traces stay on trace(), which logs by default.
     """
-    if trace_verbose():
-        emit({"systemMessage": message})
+    if trace_verbose() or _trace_chat():
+        _log_line(message)
+        if _trace_chat():
+            emit({"systemMessage": message})
 
 
 # ---------------------------------------------------------------------------------------

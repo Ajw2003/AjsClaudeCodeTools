@@ -8,6 +8,7 @@ label recording, the edit gates) it loops over a core link list the design loop 
 import json
 import os
 import re
+import tempfile
 import time
 
 from house_rules import core
@@ -1242,7 +1243,28 @@ def _autosave_state_path(top, branch, kind):
     gitdir = _git_dir(top)  # a file read; handles .git being a file in a linked worktree
     if not gitdir:
         raise RuntimeError("no git directory under %s" % top)
+    if kind == "index":  # one scratch index per process: overlapping runs must not share git's .lock
+        kind = "index.%d" % os.getpid()
     return os.path.join(gitdir, "house-rules-autosave-%s.%s" % (branch.replace("/", "_"), kind))
+
+
+def _autosave_error(payload, what, exc):
+    """Every error goes to the hook log; the chat gets its first line once per session (an identical
+    one later is quiet, a different one prints). No session id in the payload: it always prints."""
+    first = (str(exc).splitlines() or [""])[0]
+    text = "%s: %s" % (type(exc).__name__, first)
+    trace("house-rules autosave error (%s): %s" % (what, " ".join(str(exc).split()) or type(exc).__name__))
+    try:
+        data = json.loads(payload)
+        sid = re.sub(r"[^A-Za-z0-9_.-]", "_", str(data.get("session_id") or ""))
+    except (TypeError, ValueError, AttributeError):
+        sid = ""  # no payload, or not an object: no session to key on
+    if sid:
+        seen = os.path.join(tempfile.gettempdir(), "house-rules-autosave-error-%s" % sid)
+        if _autosave_read(seen) == text:
+            return
+        _autosave_write(seen, text)
+    emit({"systemMessage": "house-rules plugin: autosave hit an error (%s) and did not %s." % (text, what)})
 
 
 def _autosave_read(path):
@@ -1506,6 +1528,7 @@ def event_autosave():
     CHECKPOINT_MINUTES stretch with no commit, commit for the subagent; then snapshot the
     worktree to the autosave ref and push it. The same entry records `gh issue create` calls for
     the issue gate (_issues_record), which is why it runs on any branch."""
+    payload = None
     try:
         if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
             return 0
@@ -1563,8 +1586,7 @@ def event_autosave():
         else:
             trace(_save_said(top, branch))
     except Exception as exc:
-        emit({"systemMessage": "house-rules plugin: autosave hit an error (%s: %s) and did not run for this call."
-                               % (type(exc).__name__, exc)})
+        _autosave_error(payload, "run for this call", exc)
     return 0
 
 
@@ -1572,6 +1594,7 @@ def event_autosave_final():
     """Stop / StopFailure (#529): save at once, skipping the one-minute window, when the folder changed
     since the last save (or has none). A read-only turn pushes nothing. On the PC it never makes a
     commit; a cloud session on its own branch commits `wip: autosave` (_cloud_autosave)."""
+    payload = None
     try:
         if not _autosave_enabled():
             return 0
@@ -1619,8 +1642,7 @@ def event_autosave_final():
         msg = _autosave_snapshot(top, branch, force_push=True)
         emit({"systemMessage": msg}) if msg else trace(_save_said(top, branch, " (end of turn)"))
     except Exception as exc:
-        emit({"systemMessage": "house-rules plugin: autosave (end of turn) hit an error (%s: %s) and did not save."
-                               % (type(exc).__name__, exc)})
+        _autosave_error(payload, "save at the end of the turn", exc)
     return 0
 
 

@@ -768,13 +768,13 @@ desc_payload = json.dumps(
         },
     }
 )
-code, out, err = run_hook("guard", desc_payload, env=verbose_env())
-if '"permissionDecision"' not in out and "`npm test`" in out:
+code, out, err, log = run_hook_log("guard", desc_payload, env=verbose_env())
+if '"permissionDecision"' not in out and "`npm test`" in log:
     report("PASS", "a harmless command with a git-mentioning description does not prompt")
     print("          no prompt, and the trace names `npm test` - the command, not the description")
 else:
     report("FAIL", "a harmless command with a git-mentioning description does not prompt")
-    print(f"          got: {out}")
+    print(f"          got: {out!r}, log: {log!r}")
 
 # --- the fallback tier: no command field must never mean "wave it through" ------------------
 nocmd_payload = json.dumps(
@@ -913,8 +913,8 @@ else:
     if not bucket_titles:
         print("          no GUARD_BUCKETS titles were found at all - the pattern has drifted")
 for event, payload, needle, why in trace_cases[:1]:  # guard
-    code, out, err = run_hook(event, payload, env=verbose_env())
-    if code == 0 and '"systemMessage"' in out and needle in out:
+    code, out, err, log = run_hook_log(event, payload, env=verbose_env())
+    if code == 0 and not out.strip() and needle in log:
         report("PASS", f"{event} traces its decision on {why}")
         print(f"          says what it looked at and what it concluded; names {needle!r}")
     else:
@@ -928,22 +928,22 @@ for event, payload, needle, why in trace_cases[:1]:  # guard
     else:
         report("FAIL", f"{event} is silent by default on {why}")
         print(f"          exit {code}, got: {out[:160]!r}")
-    code, out, err = run_hook(event, payload, env=verbose_env())
-    if code == 0 and needle in out and '"systemMessage"' in out:
-        report("PASS", f"HOUSE_RULES_TRACE=verbose restores the {event} trace on {why}")
+    code, out, err, log = run_hook_log(event, payload, env=verbose_env())
+    if code == 0 and needle in log and not out.strip():
+        report("PASS", f"HOUSE_RULES_TRACE=verbose logs the {event} trace on {why}")
     else:
-        report("FAIL", f"HOUSE_RULES_TRACE=verbose restores the {event} trace on {why}")
-        print(f"          exit {code}, got: {out[:160]!r}")
+        report("FAIL", f"HOUSE_RULES_TRACE=verbose logs the {event} trace on {why}")
+        print(f"          exit {code}, got: {out[:160]!r}, log: {log[:160]!r}")
 for event, payload, needle in (
     ("guard", "", "guard: empty payload"),
     ("guardwrite", "", "guardwrite: empty payload"),
     ("guardwrite", json.dumps({"tool_input": {}}), "no file_path field"),
 ):
-    code, out, err = run_hook(event, payload, env=_dflt)
-    if code == 0 and needle in out and '"systemMessage"' in out:
-        report("PASS", f"{event} still prints its 'could not tell' trace by default ({needle})")
+    code, out, err, log = run_hook_log(event, payload, env=_dflt)
+    if code == 0 and needle in log and not out.strip():
+        report("PASS", f"{event} still logs its 'could not tell' trace by default ({needle})")
     else:
-        report("FAIL", f"{event} still prints its 'could not tell' trace by default ({needle})")
+        report("FAIL", f"{event} still logs its 'could not tell' trace by default ({needle})")
         print(f"          exit {code}, got: {out[:160]!r}")
 
 

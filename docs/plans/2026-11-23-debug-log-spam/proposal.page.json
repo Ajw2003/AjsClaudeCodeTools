@@ -1,0 +1,181 @@
+{
+ "title": "Quieter hook messages",
+ "eyebrow": "Proposal \u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: quieter hook messages",
+ "short": {
+  "lead": "Proposal: stop the two hook messages in your screenshot from repeating after every command, fix the cause of the second one, and you choose how far the quieting goes.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "Message one",
+    "\"closable-merge stamping is off\" goes quiet",
+    "",
+    "While the design loop is off, one of our hook scripts prints a message after every Bash call to say it did nothing. Our rules say silence should mean \"looked, nothing to do\", so this message will now appear only when you set `HOUSE_RULES_TRACE=verbose`.",
+    "Nothing from you.",
+    {
+     "src": "pics/quiet.svg",
+     "alt": "Today the message prints after every Bash call. Proposed: shown only in verbose mode.",
+     "caption": "Today the message prints after every Bash call. Proposed: shown only in verbose mode."
+    }
+   ],
+   [
+    "lock",
+    "Message two",
+    "The autosave error stops colliding with itself",
+    "",
+    "Autosave runs after every write and shell call and uses one fixed scratch file per branch. Two calls at once collide on its lock file. Each run gets its own scratch file, so they cannot.",
+    "Nothing from you.",
+    {
+     "src": "pics/lock.svg",
+     "alt": "Two autosave runs share one scratch file and fail; separate files cannot collide.",
+     "caption": "Two autosave runs share one scratch file and fail; separate files cannot collide."
+    }
+   ],
+   [
+    "list",
+    "Message three",
+    "Any remaining error says it once, in one line",
+    "",
+    "Git's error text spans several lines, which is why your screenshot shows a \"PostToolUse:Bash says:\" prefix on each fragment. The message becomes one line and appears once per session for the same error.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve it",
+    "you",
+    "I add one line to the decisions log.",
+    "Pick an option for each of the two questions under Your choices, then tap Copy my reply and send it."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "changed",
+   "design_loop.py, line 3273",
+   "The \"stamping is off\" message",
+   "It is sent with `trace()`, which prints by default, so it prints after every Bash call while the loop is off. It moves to `trace_noop()`, which prints only in verbose mode.",
+   null,
+   [
+    "`trace()` at `design_loop.py:3273`.",
+    "`trace_noop()`, the helper meant for \"looked, nothing to do\".",
+    "The message disappears unless you ask for verbose."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "delegation.py, `_autosave_snapshot`",
+   "One scratch index path per branch",
+   "The path is built in `_autosave_state_path` from the branch name only. Adding the process number makes it unique per run.",
+   null,
+   [
+    "`house-rules-autosave-<branch>.index`, shared.",
+    "A name with the process number in it.",
+    "Parallel tool calls stop failing with File exists."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "delegation.py, autosave error handler",
+   "Multi-line error, repeated every call",
+   "The handler at `delegation.py:1565` emits the raw exception text. It takes the first line only and remembers the text, so the same error is said once per session.",
+   null,
+   [
+    "One message per failing call, several lines long.",
+    "One line, once per session.",
+    "You see a real failure once instead of fifty times."
+   ],
+   null
+  ],
+  [
+   "same",
+   "All other trace messages",
+   "Left as they are",
+   "Messages that report an action or a failure (saved, committed, could not tell) keep printing. Only \"off\" and \"nothing to do\" messages go quiet.",
+   null,
+   [
+    "22 trace calls in the plugin.",
+    "The other 21 keep printing exactly as they do now. (The autosave error is not one of the 22; it is sent a different way.)",
+    "You see the same messages as today."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "How far does the quieting go?",
+   [
+    [
+     "A",
+     "Only the \"off\" message and the autosave collision (suggested)",
+     1,
+     "Fixes what your screenshot shows and nothing else. The other 21 trace messages are reports of real work and stay."
+    ],
+    [
+     "B",
+     "Also fold per-turn success messages into one line",
+     0,
+     "The end-of-turn autosave messages (committed, pushed, nothing changed) become one line. A larger change, and it touches the messages that prove autosave worked."
+    ],
+    [
+     "C",
+     "Only tell me the setting that turns traces off",
+     0,
+     "No code change: `HOUSE_RULES_TRACE=off` already silences every message, failures included, which breaks the rule that nothing fails silently."
+    ]
+   ],
+   "A fixes what you showed me without hiding messages that prove work was done."
+  ],
+  [
+   "second",
+   "How should the autosave collision be fixed?",
+   [
+    [
+     "A",
+     "Own scratch file per run, plus one line, once per session (suggested)",
+     1,
+     "Removes the cause, and any other failure is said once."
+    ],
+    [
+     "B",
+     "One line, once per session only",
+     0,
+     "Quiets it but leaves the collision, so autosave still skips saves when two calls overlap."
+    ],
+    [
+     "C",
+     "Own scratch file per run only",
+     0,
+     "Removes the cause, but any other real failure would still repeat on every call."
+    ]
+   ],
+   "A is the only option that stops both the collision and any repeat."
+  ]
+ ],
+ "wrapup": {
+  "summary": "This proposal makes two repeating hook messages quiet, removes the cause of the autosave collision, and keeps every message that reports real work.",
+  "changing": "One message in design_loop.py, the scratch file name and error handler in delegation.py, a test case for each in `verify.py`, a line in the changelog, and a new plugin version number.",
+  "blocking": "Your two choices: how far the quieting goes, and how the autosave collision is fixed.",
+  "next": "After you approve, I write a build plan. This is a small change, so it may not need separate GitHub issues to track it.",
+  "todo": [
+   "Read the suggestion on each choice.",
+   "Pick an option under Your choices.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

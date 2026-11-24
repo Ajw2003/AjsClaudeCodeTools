@@ -159,6 +159,22 @@ def run_hook(event, payload="", env=None):
     )
 
 
+def run_hook_log(event, payload="", env=None):
+    """run_hook with a fresh temp folder, so the hook log (#584: traces go there, not to stdout)
+    is this call's alone. Returns (code, stdout, stderr, log text)."""
+    d = tempfile.mkdtemp(prefix="hook-log-")
+    e = dict(os.environ) if env is None else dict(env)
+    e.update(TMPDIR=d, TEMP=d, TMP=d)
+    code, out, err = run_hook(event, payload, env=e)
+    try:
+        with open(os.path.join(d, "house-rules-hook-log.txt"), encoding="utf-8") as f:
+            log = f.read()
+    except FileNotFoundError:
+        log = ""
+    shutil.rmtree(d, ignore_errors=True)
+    return code, out, err, log
+
+
 def run_shell(args, payload="", env=None):
     e = dict(os.environ) if env is None else env
     proc = subprocess.run(

@@ -1,6 +1,6 @@
 {
-  "feature": "roadblock detection fix",
-  "stage": "qa",
+  "feature": "quieter hook messages",
+  "stage": "done",
   "skip": false,
   "approvals": [
     {
@@ -239,14 +239,75 @@
       "at": 1795057803
     },
     {
+      "stage": "Design approved",
+      "name": "free issue closing",
+      "at": 1795228036
+    },
+    {
       "stage": "Build plan approved",
-      "name": "roadblock detection fix",
-      "at": 1795477452
+      "name": "free issue closing",
+      "at": 1795228159
+    },
+    {
+      "stage": "QA passed",
+      "name": "free issue closing",
+      "at": 1795234149
+    },
+    {
+      "stage": "Design approved",
+      "name": "clear roadblocks",
+      "at": 1795370308
+    },
+    {
+      "stage": "Build plan approved",
+      "name": "clear roadblocks",
+      "at": 1795383010
+    },
+    {
+      "stage": "Design approved",
+      "name": "modular tests",
+      "at": 1795417356
+    },
+    {
+      "stage": "Design approved",
+      "name": "quieter hook messages",
+      "at": 1795420373
+    },
+    {
+      "stage": "Build plan approved",
+      "name": "quieter hook messages",
+      "at": 1795420670
+    },
+    {
+      "stage": "QA passed",
+      "name": "quieter hook messages",
+      "at": 1795492346
     }
   ],
-  "log_mark": "43318f55669030f71dd0a90061a3a7bd1cce2e2a56716433e17ed3c4b83668de",
+  "log_mark": "f44bbe71210587ed7b3636d97cd30b14183689ebf82efcc3eadba953424c17ac",
   "redo": false,
-  "issues": [],
+  "issues": [
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 583,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 586,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 585,
+      "labelled": true
+    },
+    {
+      "repo": "Ajw2003/AjsClaudeCodeTools",
+      "number": 584,
+      "labelled": true
+    }
+  ],
   "labels": {
     "Ajw2003/AjsClaudeCodeTools#289": [
       "AjsAgent created this",
@@ -846,6 +907,81 @@
       "Feature",
       "in progress",
       "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#569": [
+      "Feature",
+      "AjsAgent created this",
+      "needs review"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#570": [
+      "Feature",
+      "AjsAgent created this",
+      "needs review"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#571": [
+      "Feature",
+      "AjsAgent created this",
+      "needs review"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#572": [
+      "Feature",
+      "AjsAgent created this",
+      "needs review"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#575": [
+      "Feature",
+      "AjsAgent created this",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#576": [
+      "Feature",
+      "AjsAgent created this",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#577": [
+      "Feature",
+      "AjsAgent created this",
+      "in progress"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#578": [
+      "Feature",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#579": [
+      "Feature",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#580": [
+      "Feature",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#581": [
+      "Feature",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#582": [
+      "Feature",
+      "AjsAgent created this"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#583": [
+      "Feature",
+      "AjsAgent created this",
+      "needs review"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#584": [
+      "Feature",
+      "AjsAgent created this",
+      "needs review"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#585": [
+      "Feature",
+      "AjsAgent created this",
+      "needs review"
+    ],
+    "Ajw2003/AjsClaudeCodeTools#586": [
+      "Feature",
+      "AjsAgent created this",
+      "needs review"
     ]
   },
   "sweep": [
@@ -2405,6 +2541,37 @@
       "qa_at": 1795057803,
       "qa": "QA passed: flexible pages",
       "merged_pr": null
+    },
+    {
+      "feature": "free issue closing",
+      "issues": [],
+      "qa_at": 1795234149,
+      "qa": "QA passed: free issue closing",
+      "merged_pr": null
+    },
+    {
+      "feature": "quieter hook messages",
+      "issues": [
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 583
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 586
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 585
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 584
+        }
+      ],
+      "qa_at": 1795492346,
+      "qa": "QA passed: quieter hook messages",
+      "merged_pr": null
     }
   ],
   "sweep_proposed": [
@@ -2646,6 +2813,75 @@
       ],
       "stage": "build",
       "parent": 495
+    },
+    "clear roadblocks": {
+      "name": "clear roadblocks",
+      "issues": [
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 569,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 572,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 571,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 570,
+          "labelled": true
+        }
+      ],
+      "stage": "qa",
+      "parent": 569
+    },
+    "modular tests": {
+      "name": "modular tests",
+      "issues": [
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 576,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 577,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 578,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 579,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 580,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 581,
+          "labelled": true
+        },
+        {
+          "repo": "Ajw2003/AjsClaudeCodeTools",
+          "number": 582,
+          "labelled": true
+        }
+      ],
+      "stage": "plan",
+      "parent": 575
     }
   },
   "offered": [],
@@ -2686,19 +2922,10 @@
         "ajw2003/ajsclaudecodetools",
         546
       ]
-    ],
-    "ajw2003/ajsclaudecodetools#602": [
-      [
-        "ajw2003/ajsclaudecodetools",
-        587
-      ],
-      [
-        "ajw2003/ajsclaudecodetools",
-        587
-      ]
     ]
   },
   "held": false,
-  "qa_page": "docs/plans/2026-11-23-roadblock-detection-fix-qa.html",
+  "parent": 583,
+  "qa_page": "docs/plans/2026-11-23-debug-log-spam/qa.html",
   "qa_page_linked": true
 }

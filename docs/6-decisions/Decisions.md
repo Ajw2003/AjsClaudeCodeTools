@@ -3651,3 +3651,23 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 **Why.** aj's own QA is the sign-off the design loop requires.
 
 **Status.** Standing. Merging to main and closing the issues are aj's steps; the issues stay `needs review`.
+
+## 2026-11-23 — Quieter hook messages: design approved, choice 1 needs a re-ask
+
+**Context.** aj's screenshot showed two hook messages repeating after every Bash call: "closable-merge stamping is off" (`design_loop.py:3273`) and an autosave error caused by overlapping calls sharing one scratch index file (`delegation.py:1245`). The proposal page is `docs/plans/2026-11-23-debug-log-spam/proposal.html`.
+
+**Decision.** aj wrote "Design approved: quieter hook messages 1* 2A". Choice 2A stands: each autosave run gets its own scratch file, and any remaining error is one line, shown once per session. For choice 1 aj's own answer was that every hook message is hidden by default and can be expanded in chat like tool output.
+
+**Why.** Claude Code's hook documentation describes no collapsible or expandable hook message on any surface (https://code.claude.com/docs/en/hooks; read through a helper, so exact wording is unchecked). Choice 1 cannot be built as written, so aj is asked again; choice 2A is unaffected.
+
+**Status.** Choice 2A standing; choice 1 open.
+
+## 2026-11-24 — Quieter hook messages: QA passed
+
+**Context.** Quieter hook messages (plugin 2.91.0, issues #583 to #586) moved the plugin's status messages (`trace()` and `trace_noop()`) to a log file read with `/house-rules:hook-log`, and fixed the autosave scratch-file collision behind the screenshot error. The QA page is `docs/plans/2026-11-23-debug-log-spam/qa.html`. My own full `verify.py` run passed every part (1453 checks) before the hand-over; no live session had run 2.91.0.
+
+**Decision.** aj wrote "QA passed: quieter hook messages". The issues stay `needs review` until aj closes them; no pull request is open yet.
+
+**Why.** aj's own QA is the sign-off the design loop requires.
+
+**Status.** Standing. Choice 1 as first written (expandable hook messages) was not possible in Claude Code, so option A (a log and a command) replaced it; see the 2026-11-23 entry above.

@@ -272,17 +272,17 @@ for _ev, _extra in (("Stop", {}), ("StopFailure", {"error": "rate_limit"})):
     _r1 = _as_ref(_df, _bn)
     _as_write(_df, "a.py", "changed\n")  # inside the window: the edit hook would stay silent
     _fp = json.dumps(dict({"hook_event_name": _ev, "session_id": "s1", "cwd": _df}, **_extra))
-    _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
+    _, _fo0, _, _fo = run_hook_log("autosavefinal", _fp, env=_as_env())  # #584: the note is a log line
     _r2 = _as_ref(_df, _bn)
     commit_case(
         "autosavefinal (#529): a %s payload inside the one-minute window pushes a fresh save" % _ev,
-        bool(_r1) and _r2 != _r1 and _as_remote_ref(_bf, _bn) == _r2 and "(end of turn): saved" in _fo,
+        bool(_r1) and _r2 != _r1 and _as_remote_ref(_bf, _bn) == _r2 and "(end of turn): saved" in _fo and not _fo0.strip(),
         "first %s, now %s, origin %s, out %r" % (_r1[:9], _r2[:9], _as_remote_ref(_bf, _bn)[:9], _fo[:120]),
     )
-    _, _fo, _ = run_hook("autosavefinal", _fp, env=_as_env())
+    _, _fo0, _, _fo = run_hook_log("autosavefinal", _fp, env=_as_env())
     commit_case(
         "autosavefinal (#529): an unchanged folder pushes nothing and says so (%s)" % _ev,
-        _as_ref(_df, _bn) == _r2 and _as_remote_ref(_bf, _bn) == _r2 and "your work is saved on GitHub: 1 file(s) on %s" % _bn in _fo,
+        _as_ref(_df, _bn) == _r2 and _as_remote_ref(_bf, _bn) == _r2 and "your work is saved on GitHub: 1 file(s) on %s" % _bn in _fo and not _fo0.strip(),
         "ref %s -> %s, out %r" % (_r2[:9], _as_ref(_df, _bn)[:9], _fo[:120]),
     )
 _dcf, _bcf = _as_repo("ajsagent/x")
@@ -441,30 +441,30 @@ open(os.path.join(_ps_d, "shell.txt"), "w").write("made by PowerShell\n")
 _ps_env = _as_env(HOUSE_RULES_TRACE="on", HOUSE_RULES_HANDOFF="on")
 _ps_pl = {"hook_event_name": "PostToolUse", "tool_name": "PowerShell", "session_id": "ps", "cwd": _ps_d,
           "tool_input": {"command": "echo hi > shell.txt"}, "tool_response": {}}
-_, _ps_out, _ = run_hook("autosave", json.dumps(_ps_pl), env=_ps_env)
+_, _ps_o0, _, _ps_out = run_hook_log("autosave", json.dumps(_ps_pl), env=_ps_env)  # #584: read the log
 _ps_ok = (len(_ps_matcher) == 1 and re.fullmatch(_ps_matcher[0], "PowerShell") and bool(_as_ref(_ps_d, "AjsAgent/ps"))
-          and "saved 1 changed file(s) on AjsAgent/ps (shell.txt) and pushed the save to GitHub" in _ps_out
+          and "saved 1 changed file(s) on AjsAgent/ps (shell.txt) and pushed the save to GitHub" in _ps_out and not _ps_o0.strip()
           and _as_git(_ps_bare, "for-each-ref", "refs/house-rules/saves/").strip() != "")
 report("PASS" if _ps_ok else "FAIL",
        "#535 QA: a PowerShell call is matched and saved, and the save says which files went to GitHub")
 if not _ps_ok:
     print("          matcher %r, out %r" % (_ps_matcher, _ps_out[:300]))
 _ps_stop = {"hook_event_name": "Stop", "session_id": "ps", "cwd": _ps_d}
-_, _ps_o1, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
+_, _, _, _ps_o1 = run_hook_log("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
 time.sleep(1.1)  # the end-of-turn check compares file times to the last save, in whole seconds on some systems
 open(os.path.join(_ps_d, "second.txt"), "w").write("later\n")
-_, _ps_o2, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
-_, _ps_o3, _ = run_hook("autosavefinal", json.dumps(_ps_stop), env=_as_env(HOUSE_RULES_TRACE="off"))
+_, _, _, _ps_o2 = run_hook_log("autosavefinal", json.dumps(_ps_stop), env=_ps_env)
+_, _ps_o3, _, _ps_l3 = run_hook_log("autosavefinal", json.dumps(_ps_stop), env=_as_env(HOUSE_RULES_TRACE="off"))
 _ps_ok = ("(end of turn): your work is saved on GitHub: 1 file(s) on AjsAgent/ps, saved at " in _ps_o1
           and " UTC. Nothing changed after that." in _ps_o1
           and "(end of turn): saved 2 changed file(s) on AjsAgent/ps" in _ps_o2 and "pushed the save to GitHub" in _ps_o2
-          and not _ps_o3.strip())
+          and not _ps_o3.strip() and not _ps_l3.strip())
 report("PASS" if _ps_ok else "FAIL",
        "#535 QA: the end-of-turn save always says what it did (saved and pushed, or nothing changed), and is quiet with traces off")
 if not _ps_ok:
     print("          o1 %r o2 %r o3 %r" % (_ps_o1[:200], _ps_o2[:200], _ps_o3[:120]))
 _ps_plain = tempfile.mkdtemp(prefix="house-rules-plain-", dir=_FIXTURE_ROOT)
-_, _ps_p1, _ = run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": _ps_plain}), env=_ps_env)
+_, _, _, _ps_p1 = run_hook_log("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": _ps_plain}), env=_ps_env)
 _ps_d2, _ = _as_repo("AjsAgent/ps-quiet")
 _, _ps_p2, _ = run_hook("pickup", json.dumps({"hook_event_name": "SessionStart", "cwd": _ps_d2}), env=_ps_env)
 _ps_ok = ("is not inside a git repository, so nothing is saved or picked up here" in _ps_p1
@@ -646,7 +646,7 @@ for _name, _o in (("autosave", out_first_autosave), ("autosave unreachable origi
                   ("autosave checkpoint", oq_checkpoint), ("commitgate deny", o3),
                   ("commitgate fallback", o4), ("worktreesweep", osw)):
     try:
-        json.loads(_o)
+        json.loads(_o or "{}")  # #584: a call with only a status note now prints nothing; two objects still fail
     except ValueError:
         _multi.append("%s: %r" % (_name, _o[:100]))
 commit_case(
@@ -2309,6 +2309,66 @@ _skt = open(_sk, encoding="utf-8").read() if os.path.isfile(_sk) else ""
 commit_case("visual-loop skill exists with frontmatter and names ledger.py, waitfor.py, visualcheck.py and the reviewer",
             _skt.startswith("---\nname: visual-loop\n") and "description:" in _skt
             and all(w in _skt for w in ("ledger.py", "waitfor.py", "visualcheck.py", "@house-rules:reviewer")), "skill text missing pieces")
+
+
+# --- #585: the scratch index is per run; an autosave error is one line, once per session ----------
+_sn_d, _ = _as_repo("worktree-agent-x")
+_as_write(_sn_d, "new.py")
+_sn_code = (
+    "import sys, time\n"
+    "sys.path.insert(0, sys.argv[3])\n"
+    "from house_rules import delegation as dl\n"
+    "while time.time() < float(sys.argv[2]): pass\n"  # both processes start the snapshot together
+    "dl._autosave_snapshot(sys.argv[1], 'worktree-agent-x')\n"
+)
+_sn_at = str(time.time() + 1.5)
+_sn_procs = [subprocess.Popen([sys.executable, "-c", _sn_code, _sn_d, _sn_at, os.path.dirname(HOOK)], cwd=_sn_d,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(2)]
+_sn_res = [p.communicate(timeout=60) + (p.returncode,) for p in _sn_procs]
+_sn_left = [f for f in os.listdir(os.path.join(_sn_d, ".git")) if ".index" in f]
+commit_case("autosave: two snapshots started at once on one repo both succeed and leave no scratch index",
+            all(r[2] == 0 for r in _sn_res) and not _sn_left and bool(_as_ref(_sn_d, "worktree-agent-x")),
+            "exit %s, left %s, err %r" % ([r[2] for r in _sn_res], _sn_left, _sn_res[0][1][-200:]))
+
+
+def _sn_broken(rm_objects=True):
+    d, _b = _as_repo("worktree-agent-x")
+    _as_write(d, "new.py")
+    if rm_objects:  # git cannot read HEAD's tree: a real, multi-line git failure
+        for root, _dirs, files in os.walk(os.path.join(d, ".git", "objects")):
+            for f in files:
+                os.chmod(os.path.join(root, f), 0o644)
+                os.remove(os.path.join(root, f))
+    else:  # no commit yet: a different failure
+        shutil.rmtree(os.path.join(d, ".git", "refs", "heads"))
+        os.makedirs(os.path.join(d, ".git", "refs", "heads"))
+    return d
+
+
+def _sn_run(d, session="sn1"):
+    p = _as_payload("PostToolUse", "Write", os.path.join(d, "new.py"), d).replace('"s1"', '"%s"' % session)
+    return run_hook_log("autosave", p, env=_as_env())
+
+
+# the same temp folder must hold the once-per-session file across both calls, so run by hand
+_sn_tmp = tempfile.mkdtemp(prefix="sn-")
+_sn_env = _as_env(TMPDIR=_sn_tmp, TEMP=_sn_tmp, TMP=_sn_tmp)
+_sn_bad = _sn_broken()
+_sn_p1 = _as_payload("PostToolUse", "Write", os.path.join(_sn_bad, "new.py"), _sn_bad)
+_c1, _o1, _e1 = run_hook("autosave", _sn_p1, env=_sn_env)
+_c2, _o2, _e2 = run_hook("autosave", _sn_p1, env=_sn_env)
+_sn_log = open(os.path.join(_sn_tmp, "house-rules-hook-log.txt"), encoding="utf-8").read() if os.path.exists(
+    os.path.join(_sn_tmp, "house-rules-hook-log.txt")) else ""
+commit_case("autosave error: one short line the first time",
+            _o1.count("autosave hit an error") == 1 and _o1.count("\n") <= 1 and "\\n" not in _o1, repr(_o1))
+commit_case("autosave error: an identical second error prints nothing, and both are in the hook log",
+            _o2.strip() == "" and _sn_log.count("autosave error") == 2, "out %r, log %r" % (_o2, _sn_log))
+_sn_bad2 = _sn_broken(rm_objects=False)
+_c3, _o3, _e3 = run_hook("autosave", _as_payload("PostToolUse", "Write", os.path.join(_sn_bad2, "new.py"), _sn_bad2),
+                         env=_sn_env)
+commit_case("autosave error: a different error text prints again", "autosave hit an error" in _o3 and _o3 != _o1,
+            "first %r, third %r" % (_o1, _o3))
+shutil.rmtree(_sn_tmp, ignore_errors=True)
 
 
 finish()
