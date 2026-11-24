@@ -1,0 +1,127 @@
+$ verify.py --only 'reviewer'
+exit 0
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: /usr/local/bin/python
+hook.py:     /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/hook.py
+run.sh:      /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (4 at once on 4 core(s))
+
+==============================================================================
+PART core - passed (36.8 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: core
+===========================================
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART safe_git - passed (56.7 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: safe_git
+===========================================
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART design_loop - passed (75.6 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: design_loop
+===========================================
+
+ 1. PASS  clear writing: editor (#594): writing a page under docs/plans with no stamp is owed, naming the reviewer and the stamp
+
+--------------------------------
+RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART writing - passed (3.0 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: writing
+===========================================
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART delegation - passed (56.4 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: delegation
+===========================================
+
+ 1. PASS  the scout, builder, reviewer and editor agents exist, pinned to haiku, sonnet, opus and sonnet
+          short tool allowlists, no Agent tool, bodies of 15 lines or fewer, executor.md gone
+ 2. PASS  reviewer.md names the page, plan and acceptance modes and points to agents/editor.md
+ 3. PASS  visual-loop skill exists with frontmatter and names ledger.py, waitfor.py, visualcheck.py and the reviewer
+          skill text missing pieces
+
+--------------------------------
+RESULT: PASS - all 3 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART docs - passed (16.3 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: docs
+===========================================
+
+ 1. PASS  #563: builder, reviewer and archivist prompts carry the waitfor.py line
+
+--------------------------------
+RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART make_page - passed (103.2 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: make_page
+===========================================
+
+make_page build of the starter:
+make_page: note - approval '<topic> summary' is not a design-loop phrase, so sending it back moves no stage (the phrases are Design approved: <feature> or Build plan approved: <feature>).
+make_page: wrote /tmp/house-rules-verify-make_page-a4_sj3r_/mp-j4poedcm/dsum/docs/plans/decision-summary.html (0 picture(s) embedded)
+make_page: /tmp/house-rules-verify-make_page-a4_sj3r_/mp-j4poedcm/dsum/docs/plans/decision-summary.html is outside /home/user/AjsClaudeCodeTools; a link to it will not open in the app (#329). Copy it into /home/user/AjsClaudeCodeTools/docs/plans before linking.
+visual check light: page errors 0, overflow none
+visual check dark: page errors 0, overflow none
+visual check alone: broken pictures 0
+make_page: SEND THIS PAGE NOW: /tmp/house-rules-verify-make_page-a4_sj3r_/mp-j4poedcm/dsum/docs/plans/decision-summary.html - send it to aj with the file-send tool (display render) as the last action of the turn.
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    36.8 s  passed
+  safe_git        0 checks  PASS    56.7 s  passed
+  design_loop     1 checks  PASS    75.6 s  passed
+  writing         0 checks  PASS     3.0 s  passed
+  delegation      3 checks  PASS    56.4 s  passed
+  docs            1 checks  PASS    16.3 s  passed
+  make_page       0 checks  PASS   103.2 s  passed
+  wall-clock 103.2 s
+
+--------------------------------
+RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only 'reviewer' matched 5 check(s).
+
+--- stderr ---
