@@ -2868,6 +2868,23 @@ def _check_changelog(ctx):
             % ", ".join(os.path.join(r, "CHANGELOG.md") for r in stale))
 
 
+_DEVIATION_RE = re.compile(
+    r"\b(deviat\w*|depart(?:s|ed|ure)? from (?:the |this )?(?:build )?plan|(?:differs?|changed?|diverg\w*) from (?:the |this )?(?:build )?plan"
+    r"|instead of (?:the )?(?:plan|what the plan)|not as (?:the )?plan(?:ned)?)\b", re.IGNORECASE)
+
+
+def _check_deviation(ctx):
+    """#599: with nobody present (unattended or bypass; an unknown mode counts as attended), a reply that says it
+    departed from the build plan, with no `ledger_note.py` call this turn, is sent back once. A phrase heuristic."""
+    if not ctx.get("hands_off") or ctx.get("ledger_logged"):
+        return ""
+    if not _DEVIATION_RE.search(ctx.get("reply") or ""):
+        return ""
+    return ("log each departure with `python3 %s deviate <feature> --step <n> --plan ... --done ... --why ... "
+            "--undo ...`, or `park` for a change to what aj approved, then say so in one line"
+            % os.path.join(core.SCRIPTS_DIR, "ledger_note.py"))
+
+
 CHECKPOINTS = [
     ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
@@ -2876,6 +2893,7 @@ CHECKPOINTS = [
     ("reply ends", "plain summary", _check_plain, "block"),
     ("reply ends", "qa page", _check_qa_page, "block"),
     ("reply ends", "decided for you", _check_decided, "block"),
+    ("reply ends", "deviation", _check_deviation, "block"),
     ("reply ends", "changelog", _check_changelog, "block"),
     ("reply ends", "handoff", _check_handoff, "block"),
     ("reply ends", "send page", _check_send, "block"),
@@ -2888,6 +2906,7 @@ CHECKPOINT_RULES = {
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
+    "deviation": "With nobody present, every departure from the build plan is logged in the ledger, not only said in the reply.",
     "decided for you": "Design points are aj's to decide; a reply puts them as options, not as \"I went with ...\".",
     "handoff": "A turn that wrote or committed files is pushed, with a fresh clean handoff note.",
     "send page": "A page written or rebuilt this turn is sent to aj with the file-send tool, after its last change.",
@@ -3499,6 +3518,16 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
                 ctx["can_send"] = _SEND_TOOL in _read_text(transcript_path)
         except Exception as exc:
             trace_lines.append("house-rules: the send-page checkpoint could not read the turn (%s: %s), "
+                               "so it is off for this reply." % (type(exc).__name__, exc))
+        try:
+            ctx["hands_off"] = core.unattended() or core._field(core._MODE_RE, payload) == "bypassPermissions"
+            if ctx["hands_off"] and transcript_path:
+                recs, _d = core._records_since_last_user_message(transcript_path)
+                ctx["ledger_logged"] = any("ledger_note.py" in str((b.get("input") or {}).get("command", ""))
+                                           for b in core._turn_tool_uses(recs or []))
+        except Exception as exc:
+            ctx["hands_off"] = False
+            trace_lines.append("house-rules: the deviation checkpoint could not read the turn (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
         missed = _missed_checkpoints(ctx)
         if missed:
