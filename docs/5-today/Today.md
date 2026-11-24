@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj chose the order for the review's findings: hook speed first, then code quality, then the guard holes. A proposal page for the speed work is at `docs/plans/speed-first-proposal.html` (five measured steps and three questions); nothing is built, and the design stage waits for aj's approval line.
+
 A whole-repo code review of the house-rules scripts and `tools/` is saved in `docs/qa/review-ajsclaudecodetools-2026-11-24/report.md`; no code was changed. It found guard bypasses proven by running commands, nine files of 2,000 to 4,000 lines, and heavy per-call cost in the hook engine. The docs prose, agent-router and prompt-workshop were not reviewed (aj said the last two are not in production). Waiting on aj: which finding group to turn into a plan page first.
 
 The review command is finished on this branch (plugin 2.94.1) and open as pull request 623: the sweep token estimate is fixed (10,000 per batch plus 3,400 per file), the 2 high and 7 medium findings of test 3 are fixed in `scripts/review_plan.py`, and batches are capped at 6 files. All seven verify parts pass (1,602 checks). Acceptance tests 1 to 7 pass; the image-mode run was pointed at the repo's own rules file because the sandbox's installed plugin is the older 2.93.0 (`docs/qa/review-command/round-2/results.md`). The 8 low findings wait for aj at QA.
