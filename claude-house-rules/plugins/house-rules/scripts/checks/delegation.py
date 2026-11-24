@@ -1569,7 +1569,7 @@ _cap_case("stallcheck: no-flag mode says it is watching all sessions",
 
 # --- waitfor.py (#561): real processes, short numbers.
 _wf = os.path.join(HERE, "waitfor.py")
-_wf_flag = os.path.join(_home, "wf-flag")
+_wf_flag = os.path.join(_home, "wf-flag").replace("\\", "/")  # the check runs under sh, where a backslash is an escape
 
 
 def _wf_run(*extra):
