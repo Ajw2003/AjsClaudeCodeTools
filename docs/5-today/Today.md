@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Acceptance tests 1, 2 and 4 are saved under `docs/qa/review-command/round-1/`. The real sweep over the 14-folder test repo ran all 15 batches one at a time (all `no findings`; 88.9 seconds, 203,394 tokens). The notice said 66,000 tokens, so I logged deviation D2 and a builder is fixing the estimate (10,000 per batch plus 3,400 per file, plugin 2.94.1). Test 3 (a code-mode review of the helper script) is running; tests 5, 6 and 7 are not run yet.
+
 All four build steps of the review command (#618 to #621) are merged into `AjsAgent/jolly-dirac-fvh4cg` at plugin 2.94.0, and all seven verify parts pass on the merged code. The acceptance tests are running: tests 1 and 2 pass (saved in `docs/qa/review-command/round-1/`); test 4's real sweep over a 14-folder fixture is in progress, one reviewer at a time, and tests 3, 5, 6 and 7 follow. Issues still say `in progress`; they switch to `needs review` after the acceptance tests.
 
 Step 3 (#620, seven new verify.py cases) is merged into `AjsAgent/jolly-dirac-fvh4cg`; all seven verify parts pass on it. Step 4 (#621, docs and plugin version 2.94.0) is with a builder in `/home/user/wt-review-step4`. Still to do: merge step 4, run the plan's seven acceptance tests, swap `in progress` for `needs review`, and build the QA page.
