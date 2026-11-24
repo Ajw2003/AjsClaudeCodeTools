@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command round 2 and pull request: acceptance tests 6 (full verify, 1,602 checks) and 7 (findings ranked high, medium, low on a seeded fixture) pass, and test 5 passes for style; the image-mode part is being re-run against the repo's own rules file. Results are in `docs/qa/review-command/round-2/results.md`; the work is in pull request 623 (`Refs #617`).
+
 Review command, plugin 2.94.1: `scripts/review_plan.py` now fixes the 2 high and 7 medium problems from acceptance test 3. It finds the design page for `-build-plan` and folder-style plans by exact name (several matches print `design: ambiguous` and a `candidate:` line each), names folder-style reports after their folder, treats `./` and the repo's absolute path as the whole repo, resolves the target against `--root`, exits 3 with a clean `error:` for a bad `--root` or missing git, and caps batches at 6 files. The sweep token estimate is now 10,000 per batch plus 3,400 per file (deviation D2). The new cases sit in one check, `review command: review_plan.py finds designs by exact name...`; the 8 low findings are left for aj at QA (deviation D3 in `docs/qa/review-command/ledger.md`).
 
 Review command acceptance test 3 is saved (`docs/qa/review-review-plan-2026-11-24/report.md`): a real code-mode review of `scripts/review_plan.py` found 17 problems (2 high, 7 medium, 8 low); four were re-run and reproduce (a `-build-plan` page finds no design page, `./` is not treated as the whole repo, a missing `--root` prints a traceback, folder-style plans share one report name). The 2 high and 7 medium will be fixed after the token-estimate fix merges (deviation D3); the low ones are left for aj to decide.
