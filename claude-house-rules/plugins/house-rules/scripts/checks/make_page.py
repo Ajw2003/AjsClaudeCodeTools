@@ -425,7 +425,6 @@ _pw = {n: _mp_page_of(os.path.join(_d, "docs", "plans", n + ".html")) for n in (
 _mp_cases.append(("make_page: the last to-do line carries the approval phrase, HTML-escaped",
                   bool(_pw) and all(pg["wrapup"]["todo"][-1] == 'Tap <b>Copy my reply</b> and send it: "Build plan approved: guards &lt;audit&gt; &amp; more", or say what to change.'
                                     for pg in _pw.values())))
-<<<<<<< HEAD
 # #600: a two-line approval, the design line then the build-plan line.
 _two = "Design approved: combo\nBuild plan approved: combo"
 _rc, _o = _mp("build", _mp_content("two", approval=_two, choices=_ch), "--project", _d)
@@ -438,33 +437,15 @@ _mp_cases.append(("make_page (#600): a bad second approval line is refused and t
                   _rc != 0 and "'Guards audit'" in _o))
 _rc, _o = _mp("build", _mp_content("tworev", approval="Build plan approved: combo\nDesign approved: combo"), "--project", _d)
 _mp_cases.append(("make_page (#600): the two lines in the wrong order are refused", _rc != 0 and "Design approved" in _o))
-=======
-_two = lambda a, b: [[a, "Which?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""],
+_pair = lambda a, b: [[a, "Which?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""],
                      [b, "And?", [["A", "Option A", 1, "one"], ["B", "Option B", 0, "two"]], ""]]
-_rc, _o = _mp("build", _mp_content("dupid", choices=_two("share", "share")), "--project", _d)
+_rc, _o = _mp("build", _mp_content("dupid", choices=_pair("share", "share")), "--project", _d)
 _mp_cases.append(("make_page: two choices sharing an id are refused (exit 2), naming 'choice ids must be different' and the id",
                   _rc == 2 and "choice ids must be different" in _o and "share" in _o))
-_rc, _o = _mp("build", _mp_content("distinctid", choices=_two("c1", "c2")), "--project", _d)
+_rc, _o = _mp("build", _mp_content("distinctid", choices=_pair("c1", "c2")), "--project", _d)
 _mp_cases.append(("make_page: the same two choices with distinct ids build (exit 0)", _rc == 0))
 _rc, _o = _mp("build", _mp_content("nochoicekey"), "--project", _d)
 _mp_cases.append(("make_page: a content file with no choices still builds", _rc == 0))
-_real = os.path.join(ROOT, "docs", "plans", "2026-11-24-visual-docs-and-roadmap.json")
-if not os.path.isfile(_real):
-    report("SKIP", "make_page: real proposal content file not in this checkout")
-else:
-    with open(_real, encoding="utf-8") as _f:
-        _rp = json.load(_f)
-    _rrc, _ro = _mp("build", _real, "--project", _d, "--out", os.path.join(_mp_tmp, "real-ok.html"))
-    _mp_cases.append(("make_page: the real visual-docs proposal content (ids c1..c10) builds", _rrc == 0))
-    for _q in _rp.get("choices", []):
-        _q[0] = "share"
-    _bad = os.path.join(_mp_tmp, "real-share.json")
-    with open(_bad, "w", encoding="utf-8") as _f:
-        json.dump(_rp, _f)
-    _rrc, _ro = _mp("build", _bad, "--project", _d, "--out", os.path.join(_mp_tmp, "real-share.html"))
-    _mp_cases.append(("make_page: the real proposal content with every id 'share' is refused",
-                      _rrc == 2 and "choice ids must be different" in _ro))
->>>>>>> 26a857e (fix: make_page refuses choices that share an id)
 _NODE = shutil.which("node") or "/opt/node22/bin/node"
 _PWMOD = "/opt/node22/lib/node_modules"
 _JS = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const out={};
