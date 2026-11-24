@@ -1443,11 +1443,11 @@ def _gc_reset():
 
 _gc_reset()
 _o = _gc_run("unreached")
-report("PASS" if '"decision":"block"' in _o and "continue building castles 2 to 12" in _o and "block 1 of 6" in _o else "FAIL",
+report("PASS" if '"decision":"block"' in _o and "continue building castles 2 to 12" in _o and "block 1 of 2" in _o else "FAIL",
        "#591: a goal-unreached verdict blocks with the judge's reason")
 _gc_reset()
 _gc_n = [('"decision":"block"' in _gc_run("unreached")) for _ in range(7)]
-report("PASS" if _gc_n == [True] * 6 + [False] else "FAIL", "#591: the goal check blocks 6 times in a row per user message, the 7th passes (%s)" % _gc_n)
+report("PASS" if _gc_n == [True] * 2 + [False] * 5 else "FAIL", "#591/#608: the goal check shares the cap, 2 blocks in a row then it passes (%s)" % _gc_n)
 _gc_reset()
 _o = _gc_run("reached")
 report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: a goal-reached verdict passes")
@@ -1489,6 +1489,17 @@ report("PASS" if '"decision":"block"' in _o and "criterion C2" in _o and "Roadbl
 _rb_fresh()
 _o = _rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="pass"))
 report("PASS" if '"decision":"block"' not in _o else "FAIL", "#607: a reply the judge passes is left alone")
+_rb_fresh()
+_cap_o = [_rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="flag")) for _ in range(12)]
+_cap_b = ['"decision":"block"' in _o for _o in _cap_o]
+report("PASS" if _cap_b == [True] * 2 + [False] * 10 and "unverified" in _cap_o[2] else "FAIL",
+       "#608: 12 identical flagged replies give 2 blocks then a warning saying what was unverified (%s)" % _cap_b)
+with open(_gc_t, "a", encoding="utf-8") as _f:
+    _f.write(chr(10) + _rb_tool("ls") + chr(10))
+_o = _rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="flag"))
+report("PASS" if '"decision":"block"' in _o and "block 1 of 2" in _o else "FAIL",
+       "#608: a tool call between blocks resets the count, so the check runs again")
+_rb_fresh()
 _rb_off = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS="off"))
 report("PASS" if '"decision":"block"' not in _rb_off else "FAIL", "HOUSE_RULES_ROADBLOCKS=off turns the check off")
 _rb_fresh()
