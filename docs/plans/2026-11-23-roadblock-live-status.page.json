@@ -5,7 +5,7 @@
  "kind": "summary",
  "approval": "Review read: roadblock live status",
  "short": {
-  "lead": "Superseded: the live tests have since run and four of five cases behave correctly (see the QA page for pull request 602). At the time of writing, main was merged into the branch and pushed, but the five live test sessions could not run because the 5-hour usage limit was reached until 9:20pm.",
+  "lead": "Superseded: the live tests have since run and four of five cases behave correctly (see the QA page for pull request 602). At the time of writing, main was merged into the branch and pushed, but the five live test sessions could not run because the 5-hour usage limit had been reached and did not reset until 9:20pm.",
   "hint": "Tap a finding.",
   "key": [
    [
@@ -62,7 +62,7 @@
   [
    "keep",
    "Handoff note updated (2e8d33a2)",
-   "The next session can pick up from the 9:20pm rerun.",
+   "At the time of writing, the next session could pick up from the rerun planned for 9:20pm.",
    null,
    "Fix: nothing to do.",
    null,
@@ -70,12 +70,12 @@
   ]
  ],
  "wrapup": {
-  "summary": "The roadblock fix branch is current with main and pushed; live verification is waiting on the usage limit.",
+  "summary": "The roadblock fix branch is current with main and pushed. At the time of writing, live verification was waiting on the usage limit; it has since run.",
   "changing": "Nothing further changed in code; the branch now includes main and a handoff update.",
-  "blocking": "Nothing waits now: the live tests have run, and the QA page and pull request 602 (which carries Refs #587) are open.",
+  "blocking": "Nothing waits now: the live tests have run, and the QA page and pull request 602 (which links to issue #587) are open.",
   "next": "Read the QA page for pull request 602.",
   "todo": [
-   "After 9:20pm, tell the agent to rerun live_roadblocks.py.",
+   "No rerun of live_roadblocks.py is needed now; the live tests have already run.",
    "Tap <b>Copy my reply</b> and send it."
   ]
  }

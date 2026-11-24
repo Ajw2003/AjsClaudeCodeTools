@@ -313,3 +313,5 @@ Live roadblock sessions on the branch build 2.90.0 (2026-11-23): curly apostroph
 Pull request #602 (roadblock detection fix, Refs #587) is open; QA page `docs/plans/2026-11-23-roadblock-detection-fix-qa.html` sent to aj; issues #587 to #591 are `needs review`; CI pending.
 
 Pull request #602 has Auto-fix on (aj said yes). The live status page was edited by the editor and marked superseded by the QA page.
+
+Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stale 9:20pm wording now reads as past.
