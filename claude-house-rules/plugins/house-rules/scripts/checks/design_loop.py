@@ -3682,7 +3682,7 @@ _pf14_root = tempfile.mkdtemp(prefix="pf14-", dir=_FIXTURE_ROOT)
 _loop_gh("in progress", 7)
 _p5_root, _p5_old = _pf14_root, _p5_root
 _d = _p5_repo(_hq_build)
-run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
+run_hook("handover", stop_payload(last_assistant_message="Step done.\n\n[HARD STOP] Should the header be blue or green?", cwd=_d), env=_loop_env)
 _pf14_held = _ma_stage(_d).get("held") is True
 _p5_root = _p5_old
 _pf14.append(("proof (#514) #463: 'I went with option B' is sent back as decided for you, and a question in Build sets the hold",
