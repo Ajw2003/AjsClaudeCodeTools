@@ -1,7 +1,6 @@
 <!doctype html>
 <!-- house-rules make_page 2.92.0 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="ec2e6e4f26091169c5df2c28d1c4833c939a135e4f6435eb0213753244a899a1;clean;2">
 <meta name="house-rules-page" content="proposal">
 <title>Visual docs and self-updating roadmap</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -239,7 +238,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">Proposal: two new house-rules skills, visual-docs (one illustrated overview page from the tier docs) and visual-roadmap (a GitHub Action that redraws two roadmap views when issues or merges change), both checked by the review command once it is merged; I need your approval and ten picks.</p>
+      <p class="lead" id="lead" data-basic="summary">Proposal: two new house-rules skills. Visual-docs turns the tier docs into one illustrated overview page. Visual-roadmap is a GitHub Action that redraws two roadmap views when issues or merges change. Both are checked by the review command once it is merged. I need your approval and ten picks.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -286,7 +285,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: visual docs and visual roadmap skills",
   "short": {
-    "lead": "Proposal: two new house-rules skills, visual-docs (one illustrated overview page from the tier docs) and visual-roadmap (a GitHub Action that redraws two roadmap views when issues or merges change), both checked by the review command once it is merged; I need your approval and ten picks.",
+    "lead": "Proposal: two new house-rules skills. Visual-docs turns the tier docs into one illustrated overview page. Visual-roadmap is a GitHub Action that redraws two roadmap views when issues or merges change. Both are checked by the review command once it is merged. I need your approval and ten picks.",
     "hint": "Tap a step to see what it produces and what it needs from you.",
     "key": [
       [
@@ -343,7 +342,7 @@ const PAGE = {
         "Risks",
         "What could sink it",
         "",
-        "The Action may lack write access in this repo (untested); GitHub shows HTML as source code; In dev stays empty until a dev branch exists. Also: the review command is planned, not built (issues 617 to 621), so both skills wait on it. Done when: opening an issue here moves a dot on the roadmap SVG within 5 minutes; /house-rules:visual-docs stale names a section after one of its docs is edited; and /house-rules:review image mode returns VERDICT: clean on screenshots of each skill's output at 375px wide, in light and dark.",
+        "The Action may lack write access in this repo (untested); GitHub shows HTML as source code; In dev stays empty until a dev branch exists. Also: the review command is planned, not built (issues 617 to 621), so both skills wait on it. Done when three things hold. Opening an issue here moves a dot on the roadmap SVG within 5 minutes. /house-rules:visual-docs stale names a section after one of its docs is edited. /house-rules:review image mode returns VERDICT: clean on screenshots of each skill's output at 375px wide, in light and dark.",
         "Nothing from you."
       ],
       [
@@ -370,7 +369,7 @@ const PAGE = {
       "Skill 1: visual-docs",
       "One illustrated page that reads like a game design document, built from the tier docs.",
       null,
-      "The skill reads docs/1-landing, 2-roadmap, 3-state and 4-systems, and the plain copies under docs/plain/ where one exists; for a doc with no plain copy it writes the plain wording itself. It writes one page, docs/1-landing/overview.html (tell me if you prefer another path), in six sections: the pitch in one line, the pillars (what the project promises), how it works as diagrams, each part and its state, the road ahead, and risks. Wording is for a person who has never opened the repo: no file paths in body text, jargon defined on first use. It reuses make_page.py's picture handling and colours (in this repo, the builder's default colours, since docs/page-style.json says only use defaults). Before finishing it runs /house-rules:review on the page and on screenshots of it, and the review command saves the report. Which page template it uses, and when the review runs, are your picks below.",
+      "The skill reads docs/1-landing, 2-roadmap, 3-state and 4-systems, and the plain copies under docs/plain/ where one exists; for a doc with no plain copy it writes the plain wording itself. It writes one page to docs/1-landing/overview.html; tell me if you prefer another path. The page has six sections: the pitch in one line, the pillars (what the project promises), how it works as diagrams, each part and its state, the road ahead, and risks. Wording is for a person who has never opened the repo: no file paths in body text, jargon defined on first use. It reuses make_page.py's picture handling and colours (in this repo, the builder's default colours, since docs/page-style.json says only use defaults). Before finishing it runs /house-rules:review on the page and on screenshots of it, and the review command saves the report. Which page template it uses, and when the review runs, are your picks below.",
       [
         "plain-docs writes text copies only; make_page.py builds handover pages (proposal, build plan, QA, review, art); neither makes a project overview.",
         "A new skill folder, one page layout, and a staleness check that mirrors plain-docs' stale mode.",
@@ -472,11 +471,11 @@ const PAGE = {
       "What the review command gives these skills",
       "Both skills reuse the reviewer; no new critic agent is made.",
       null,
-      "This revision assumes the branch AjsAgent/jolly-dirac-fvh4cg is merged and its parent issue 617 and steps 618 to 621 are built. That adds /house-rules:review and four reviewer modes: code, codebase, image and style, beside the existing page, plan, acceptance and diff. Reports are saved under docs/qa/review-<target>-<date>/. The design review loop decision of 2026-11-24, answer 4A (extend the reviewer, never duplicate it), still holds, so neither visual skill adds an agent.\nVisual-docs uses the page check named in the pick below on its finished page, and image mode on screenshots of that page at 375px in light and dark, because its pictures sit inside the page and have no file of their own. Visual-roadmap runs two reviews on each of its two pictures when it is built: image mode, and style mode with the stated style passed as criteria text (the legend's colours and the stage names). Whether .svg counts as an image extension is not yet decided in the review command's plan. The roadmap Action runs on GitHub, where no Claude session exists, so that review happens at build time only, never on each update.",
+      "This revision assumes the branch AjsAgent/jolly-dirac-fvh4cg is merged and its parent issue 617 and steps 618 to 621 are built. That adds /house-rules:review and four reviewer modes: code, codebase, image and style, beside the existing page, plan, acceptance and diff. Reports are saved under docs/qa/review-<target>-<date>/. The design review loop decision of 2026-11-24, answer 4A (extend the reviewer, never duplicate it), still holds, so neither visual skill adds an agent.\nVisual-docs uses the page check named in the pick below on its finished page. It uses image mode on screenshots of that page at 375px in light and dark, because its pictures sit inside the page and have no file of their own. Visual-roadmap runs two reviews on each of its two pictures when it is built: image mode, and style mode with the stated style passed as criteria text (the legend's colours and the stage names). Whether .svg counts as an image extension is not yet decided in the review command's plan. The roadmap Action runs on GitHub, where no Claude session exists, so that review happens at build time only, never on each update.",
       [
         "The reviewer has modes page, plan, acceptance and diff today; visual-loop uses it on screenshots; the review command is designed and planned, nothing built.",
         "Nothing new here: this item only records what the two skills reuse once it lands.",
-        "Each review costs about 75 seconds and 50,000 tokens (the average of two measured page reviews). Visual-docs runs at least two per build, and visual-roadmap runs four once, when it is built."
+        "Each review costs 75 seconds and 50,000 tokens (rounded averages of two measured page reviews). Visual-docs runs at least two per build, and visual-roadmap runs four once, when it is built."
       ],
       {
         "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2220%22 width=%22110%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2265%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Evisual-docs page%3C/text%3E%3Crect x=%2210%22 y=%2270%22 width=%22110%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2265%22 y=%2294%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3ERoadmap SVGs%3C/text%3E%3Cline x1=%22122%22 y1=%2240%22 x2=%22170%22 y2=%2240%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22122%22 y1=%2290%22 x2=%22170%22 y2=%2290%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22170%22 y=%2220%22 width=%22140%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22240%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Epage %2B image review%3C/text%3E%3Crect x=%22170%22 y=%2270%22 width=%22140%22 height=%2240%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22240%22 y=%2294%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eimage %2B style review%3C/text%3E%3Ctext x=%22160%22 y=%22150%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eroadmap review: build time only%3C/text%3E%3C/svg%3E",
@@ -657,7 +656,7 @@ const PAGE = {
           "A",
           "Once per build, automatically (suggested)",
           1,
-          "Costs about 75 seconds and 50,000 tokens per review (the average of two measured page reviews), and a build runs at least two, so about 150 seconds and 100,000 tokens. A page never ships unchecked."
+          "Costs 75 seconds and 50,000 tokens per review (rounded averages of two measured page reviews: 73.8 and 77.2 seconds, 50,353 and 49,615 tokens). A build runs at least two, so 150 seconds and 100,000 tokens at those averages. A page never ships unchecked."
         ],
         [
           "B",
@@ -715,7 +714,7 @@ const PAGE = {
   ],
   "wrapup": {
     "summary": "A proposal for two new house-rules skills: visual-docs, which makes one illustrated overview page from the tier docs, and visual-roadmap, a GitHub Action that redraws two roadmap views when issues or merges change.",
-    "changing": "Nothing is built. After approval, and once the review command is merged, this adds two skill folders (the roadmap one also needs an install command for other projects) under claude-house-rules/plugins/house-rules/skills/, one workflow file under .github/workflows/, a roadmap data file and cases in verify.py.",
+    "changing": "Nothing is built. After approval, and once the review command is merged, this adds four things. Two skill folders under claude-house-rules/plugins/house-rules/skills/, where the roadmap one also needs an install command for other projects. One workflow file under .github/workflows/. A roadmap data file. Cases in verify.py.",
     "blocking": "Your approval and ten picks: update trigger, the two views, where views live, how views are opened, when and how the review runs, how the dev branch is found, the docs page scope, the docs page layout, and phase grouping.",
     "next": "I log the decision, then send a build plan page with one parent issue and one child issue per step for you to approve before I build anything.",
     "todo": [
