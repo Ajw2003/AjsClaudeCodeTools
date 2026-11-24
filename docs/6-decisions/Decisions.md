@@ -3664,7 +3664,7 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 
 ## 2026-11-24 — Quieter hook messages: QA passed
 
-**Context.** Quieter hook messages (plugin 2.90.0, issues #583 to #586) moved the plugin's status messages (`trace()` and `trace_noop()`) to a log file read with `/house-rules:hook-log`, and fixed the autosave scratch-file collision behind the screenshot error. The QA page is `docs/plans/2026-11-23-debug-log-spam/qa.html`. My own full `verify.py` run passed every part (1453 checks) before the hand-over; no live session had run 2.90.0.
+**Context.** Quieter hook messages (plugin 2.91.0, issues #583 to #586) moved the plugin's status messages (`trace()` and `trace_noop()`) to a log file read with `/house-rules:hook-log`, and fixed the autosave scratch-file collision behind the screenshot error. The QA page is `docs/plans/2026-11-23-debug-log-spam/qa.html`. My own full `verify.py` run passed every part (1453 checks) before the hand-over; no live session had run 2.91.0.
 
 **Decision.** aj wrote "QA passed: quieter hook messages". The issues stay `needs review` until aj closes them; no pull request is open yet.
 

@@ -5,7 +5,7 @@ them, and the autosave scratch-file fix. Status: design approved 2026-11-23 as "
 quieter hook messages 1* 2A"; aj's own answer to choice 1 was "hide all messages, expandable like tool
 output". Claude Code documents no expandable hook message (https://code.claude.com/docs/en/hooks, read
 through a helper, so wording unchecked), so aj chose option A: silent by default, plus a log and a command
-to read it. Built in plugin 2.90.0 (#583 to #586; the autosave scratch file is `house-rules-autosave-<branch>.index.<pid>`, and `_autosave_error` in `delegation.py` says an error once per session id). The log command is `scripts/hooklog.py`, called with `python`. Page: `docs/plans/2026-11-23-debug-log-spam/proposal.html`.
+to read it. Built in plugin 2.91.0 (#583 to #586; the autosave scratch file is `house-rules-autosave-<branch>.index.<pid>`, and `_autosave_error` in `delegation.py` says an error once per session id). The log command is `scripts/hooklog.py`, called with `python`. Page: `docs/plans/2026-11-23-debug-log-spam/proposal.html`.
 
 ## What changes
 

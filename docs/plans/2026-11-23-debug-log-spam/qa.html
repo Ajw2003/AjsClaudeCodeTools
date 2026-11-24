@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- house-rules make_page 2.90.0 -->
+<!-- house-rules make_page 2.91.0 -->
 <meta charset="utf-8">
 <meta name="house-rules-page" content="qa">
 <title>Quieter hook messages QA</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
@@ -237,7 +237,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">The quieter hook messages are built as plugin 2.90.0. Your test is to confirm that the two messages from your screenshot no longer appear in chat, and that the log command shows them instead.</p>
+      <p class="lead" id="lead" data-basic="summary">The quieter hook messages are built as plugin 2.91.0. Your test is to confirm that the two messages from your screenshot no longer appear in chat, and that the log command shows them instead.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -257,8 +257,8 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> UNTESTED: not run on your PC. Open PowerShell in the repo folder and run <code>python tools/use_branch.py ccr-4ced8cf2-ggrx7a</code>. It should print the branch name, version 2.90.0 and the commit it installed.</label></li><li><label><input type="checkbox"> Start a new Claude Code session in PlunderSpell and ask me to run a few shell commands, including two at the same moment. You should see no line starting "closable-merge stamping is off" and no autosave error.</label></li><li><label><input type="checkbox"> Type <code>/house-rules:hook-log 20</code>. You should see lines starting with a time, including the closable-merge one, in place of the chat messages.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: quieter hook messages", or send "QA failed: quieter hook messages" with what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">No live Claude Code session has run 2.90.0. The session that built it ran the installed 2.89.0 hooks, so every check ran the branch's code directly. The /house-rules:hook-log command was run as a script on Linux only; it has not been run as a slash command or on Windows. The autosave collision is reproduced by a test with two processes, but not on your Windows machine where the screenshot error appeared.</p></details></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> UNTESTED: not run on your PC. Open PowerShell in the repo folder and run <code>python tools/use_branch.py ccr-4ced8cf2-ggrx7a</code>. It should print the branch name, version 2.91.0 and the commit it installed.</label></li><li><label><input type="checkbox"> Start a new Claude Code session in PlunderSpell and ask me to run a few shell commands, including two at the same moment. You should see no line starting "closable-merge stamping is off" and no autosave error.</label></li><li><label><input type="checkbox"> Type <code>/house-rules:hook-log 20</code>. You should see lines starting with a time, including the closable-merge one, in place of the chat messages.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: quieter hook messages", or send "QA failed: quieter hook messages" with what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">No live Claude Code session has run 2.91.0. The session that built it ran the installed 2.89.0 hooks, so every check ran the branch's code directly. The /house-rules:hook-log command was run as a script on Linux only; it has not been run as a slash command or on Windows. The autosave collision is reproduced by a test with two processes, but not on your Windows machine where the screenshot error appeared.</p></details></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -280,10 +280,10 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Quieter hook messages QA",
-  "eyebrow": "QA · parent issue #583, plugin 2.90.0",
+  "eyebrow": "QA · parent issue #583, plugin 2.91.0",
   "pageType": "qa",
   "short": {
-    "lead": "The quieter hook messages are built as plugin 2.90.0. Your test is to confirm that the two messages from your screenshot no longer appear in chat, and that the log command shows them instead.",
+    "lead": "The quieter hook messages are built as plugin 2.91.0. Your test is to confirm that the two messages from your screenshot no longer appear in chat, and that the log command shows them instead.",
     "hint": "Tap a step to see what to do.",
     "key": [
       [
@@ -301,7 +301,7 @@ const PAGE = {
         "Checked",
         "The full check suite passes and the collision fix is proven",
         "",
-        "I ran verify.py myself after merging each step: every part passes (1453 checks in total). I removed the autosave fix on purpose and the new collision case failed (\"two snapshots started at once on one repo both succeed and leave no scratch index\"), then I put the fix back. docref.py, docs_drift.py and tools/verify_tools.py exit 0, and the version-bump check reports 2.87.0 to 2.90.0.",
+        "I ran verify.py myself after merging each step: every part passes (1453 checks in total). I removed the autosave fix on purpose and the new collision case failed (\"two snapshots started at once on one repo both succeed and leave no scratch index\"), then I put the fix back. docref.py, docs_drift.py and tools/verify_tools.py exit 0, and the version-bump check reports 2.87.0 to 2.91.0.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0ODAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgNDgwIDIwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiPjxyZWN0IHdpZHRoPSI0ODAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZjRmNmZiIi8+PHRleHQgeD0iMjAiIHk9IjI2IiBmaWxsPSIjMWExYTJlIiBmb250LXdlaWdodD0iYm9sZCI+QWZ0ZXIgZXZlcnkgQmFzaCBjYWxsLCB0b2RheTwvdGV4dD48cmVjdCB4PSIyMCIgeT0iMzYiIHdpZHRoPSI0NDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjZmZlM2UzIiBzdHJva2U9IiNjOTJhMmEiLz48dGV4dCB4PSIyNDAuMCIgeT0iNjEuMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzFhMWEyZSI+4oCcY2xvc2FibGUtbWVyZ2Ugc3RhbXBpbmcgaXMgb2ZmIOKApiBkaWQgbm90aGluZ+KAnTwvdGV4dD48dGV4dCB4PSIyMCIgeT0iMTEwIiBmaWxsPSIjMWExYTJlIiBmb250LXdlaWdodD0iYm9sZCI+UHJvcG9zZWQ8L3RleHQ+PHJlY3QgeD0iMjAiIHk9IjEyMCIgd2lkdGg9IjQ0MCIgaGVpZ2h0PSI0MCIgcng9IjgiIGZpbGw9IiNkM2Y5ZDgiIHN0cm9rZT0iIzJiOGEzZSIvPjx0ZXh0IHg9IjI0MC4wIiB5PSIxNDUuMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzFhMWEyZSI+Tm90aGluZyBzaG93bi4gSE9VU0VfUlVMRVNfVFJBQ0U9dmVyYm9zZSBicmluZ3MgaXQgYmFjay48L3RleHQ+PC9zdmc+",
@@ -359,7 +359,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "112 files, +12773 −190",
+      "34 files, +5631 −2763",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -367,7 +367,7 @@ const PAGE = {
         [
           ".claude/house-rules-loop.json",
           1,
-          1,
+          2704,
           [
             [
               "Not in the plan",
@@ -378,67 +378,7 @@ const PAGE = {
         ],
         [
           "CHANGELOG.md",
-          56,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/README.md",
-          1,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json",
-          1,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/agents/archivist.md",
-          1,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/agents/builder.md",
-          1,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/agents/reviewer.md",
-          1,
+          4,
           0,
           [
             [
@@ -451,162 +391,6 @@ const PAGE = {
         [
           "claude-house-rules/plugins/house-rules/commands/hook-log.md",
           26,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/commands/mode.md",
-          3,
-          2,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/hooks/hooks.json",
-          10,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/checks.json",
-          4,
-          6,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/detail/evidence-before-claims.md",
-          1,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/detail/fails-silently.md",
-          0,
-          21,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/detail/roadblocks.md",
-          23,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/detail/show-dont-tell.md",
-          6,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/detail/users-hands.md",
-          1,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/detail/waits.md",
-          44,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/house-rules.md",
-          2,
-          7,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/show-dont-tell.md",
-          2,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/visual.json",
-          5,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/rules/waits.json",
-          8,
           0,
           [
             [
@@ -630,8 +414,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/core.py",
-          152,
-          33,
+          67,
+          18,
           [
             [
               "Not in the plan",
@@ -642,7 +426,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/delegation.py",
-          353,
+          72,
           12,
           [
             [
@@ -654,32 +438,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
-          85,
-          5,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/checks/docs.py",
-          13,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
-          136,
-          1,
+          4,
+          2,
           [
             [
               "Not in the plan",
@@ -690,44 +450,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
-          154,
-          15,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/checks/writing.py",
-          56,
-          8,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/clarity.py",
-          4,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/hook.py",
-          19,
-          2,
+          14,
+          14,
           [
             [
               "Not in the plan",
@@ -750,8 +474,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/core.py",
-          148,
-          7,
+          42,
+          5,
           [
             [
               "Not in the plan",
@@ -773,176 +497,8 @@ const PAGE = {
           ]
         ],
         [
-          "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
-          132,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
-          97,
-          8,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/house_rules/waits.py",
-          60,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/house_rules/writing.py",
-          62,
-          25,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/ledger.py",
-          196,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/make_page.py",
-          86,
-          22,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
           "claude-house-rules/plugins/house-rules/scripts/proposal.page.json",
           90,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/verify.py",
-          3,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/visualcheck.py",
-          392,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/scripts/waitfor.py",
-          118,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/skills/visual-loop/SKILL.md",
-          45,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "claude-house-rules/plugins/house-rules/templates/handover-page.html",
-          3,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/1-landing/README.md",
-          1,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/3-state/ProjectState.md",
-          14,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/4-systems/README.md",
-          2,
           0,
           [
             [
@@ -989,18 +545,6 @@ const PAGE = {
           ]
         ],
         [
-          "docs/4-systems/roadblocks.md",
-          58,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
           "docs/4-systems/usage-handoff.md",
           1,
           1,
@@ -1013,44 +557,8 @@ const PAGE = {
           ]
         ],
         [
-          "docs/4-systems/wait-and-visual-checks.md",
-          147,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
           "docs/5-today/Today.md",
-          43,
-          1,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/5-today/handoff-ajsagent-affectionate-lovelace-r0zfgg.md",
-          23,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/5-today/handoff-ajsagent-eloquent-mayer-0ayp82.md",
-          102,
+          6,
           0,
           [
             [
@@ -1062,7 +570,7 @@ const PAGE = {
         ],
         [
           "docs/5-today/handoff-ccr-4ced8cf2-ggrx7a.md",
-          26,
+          28,
           0,
           [
             [
@@ -1074,295 +582,7 @@ const PAGE = {
         ],
         [
           "docs/6-decisions/Decisions.md",
-          52,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/architecture.md",
-          2,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-clear-roadblocks-plan.html",
-          520,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-clear-roadblocks-plan.page.json",
-          108,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-clear-roadblocks-qa.html",
-          815,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-clear-roadblocks-qa.page.json",
-          93,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-clear-roadblocks.html",
-          565,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-clear-roadblocks.page.json",
-          154,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-art/loop.svg",
-          12,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-art/pictures.svg",
-          14,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-art/send.svg",
-          14,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-art/sheet.svg",
-          14,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-art/waits.svg",
-          13,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-build-plan.html",
-          629,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-build-plan.page.json",
-          218,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-live-tests/live-qa-results.txt",
-          143,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-pics/loop.svg",
-          12,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-pics/pictures.svg",
-          14,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-pics/send.svg",
-          14,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-pics/sheet.svg",
-          14,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-pics/waits.svg",
-          13,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-qa.html",
-          1588,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks-qa.page.json",
-          218,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks.html",
-          895,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/plans/2026-11-22-wait-and-visual-checks.page.json",
-          142,
+          20,
           0,
           [
             [
@@ -1435,6 +655,30 @@ const PAGE = {
         [
           "docs/plans/2026-11-23-debug-log-spam/proposal.page.json",
           181,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-23-debug-log-spam/qa.html",
+          1880,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/plans/2026-11-23-debug-log-spam/qa.page.json",
+          102,
           0,
           [
             [
@@ -1527,186 +771,6 @@ const PAGE = {
               0
             ]
           ]
-        ],
-        [
-          "docs/plans/_to_delete/2026-11-22-wait-and-visual-checks.starter.page.json",
-          90,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/criteria.md",
-          3,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/fixture/index.html",
-          14,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-1.md",
-          5,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-1/page-desktop-dark.png",
-          0,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-1/page-desktop-light.png",
-          0,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-1/page-phone-dark.png",
-          0,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-1/page-phone-light.png",
-          0,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-1/report.json",
-          48,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-2.md",
-          5,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-2/page-desktop-dark.png",
-          0,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-2/page-desktop-light.png",
-          0,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-2/page-phone-dark.png",
-          0,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-2/page-phone-light.png",
-          0,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
-        ],
-        [
-          "docs/qa/loop-proof/round-2/report.json",
-          40,
-          0,
-          [
-            [
-              "Not in the plan",
-              0,
-              0
-            ]
-          ]
         ]
       ]
     ],
@@ -1715,7 +779,7 @@ const PAGE = {
       "Still unverified",
       "3 things not yet proven",
       null,
-      "No live Claude Code session has run 2.90.0. The session that built it ran the installed 2.89.0 hooks, so every check ran the branch's code directly. The /house-rules:hook-log command was run as a script on Linux only; it has not been run as a slash command or on Windows. The autosave collision is reproduced by a test with two processes, but not on your Windows machine where the screenshot error appeared.",
+      "No live Claude Code session has run 2.91.0. The session that built it ran the installed 2.89.0 hooks, so every check ran the branch's code directly. The /house-rules:hook-log command was run as a script on Linux only; it has not been run as a slash command or on Windows. The autosave collision is reproduced by a test with two processes, but not on your Windows machine where the screenshot error appeared.",
       null,
       null
     ]
@@ -1724,19 +788,19 @@ const PAGE = {
     "feature": "quieter hook messages",
     "base": "origin/main",
     "unverified": [
-      "No live Claude Code session has run 2.90.0. The session that built it ran the installed 2.89.0 hooks, so every check ran the branch's code directly.",
+      "No live Claude Code session has run 2.91.0. The session that built it ran the installed 2.89.0 hooks, so every check ran the branch's code directly.",
       "The /house-rules:hook-log command was run as a script on Linux only; it has not been run as a slash command or on Windows.",
       "The autosave collision is reproduced by a test with two processes, but not on your Windows machine where the screenshot error appeared."
     ],
     "files": {}
   },
   "wrapup": {
-    "summary": "The quieter hook messages are built as plugin 2.90.0 and wait for your test.",
+    "summary": "The quieter hook messages are built as plugin 2.91.0 and wait for your test.",
     "changing": "Status messages go to a log file, a new /house-rules:hook-log command, the autosave scratch file and error message, the test cases that expected chat messages, and the docs.",
     "blocking": "Waiting on your test of the branch build.",
     "next": "If it passes, I open a pull request. If it fails, I fix it on this branch and ask you to test again.",
     "todo": [
-      "UNTESTED: not run on your PC. Open PowerShell in the repo folder and run <code>python tools/use_branch.py ccr-4ced8cf2-ggrx7a<\/code>. It should print the branch name, version 2.90.0 and the commit it installed.",
+      "UNTESTED: not run on your PC. Open PowerShell in the repo folder and run <code>python tools/use_branch.py ccr-4ced8cf2-ggrx7a<\/code>. It should print the branch name, version 2.91.0 and the commit it installed.",
       "Start a new Claude Code session in PlunderSpell and ask me to run a few shell commands, including two at the same moment. You should see no line starting \"closable-merge stamping is off\" and no autosave error.",
       "Type <code>/house-rules:hook-log 20<\/code>. You should see lines starting with a time, including the closable-merge one, in place of the chat messages.",
       "Tap <b>Copy my reply<\/b> and send it: \"QA passed: quieter hook messages\", or send \"QA failed: quieter hook messages\" with what to change."
