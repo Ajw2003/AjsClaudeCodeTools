@@ -342,7 +342,7 @@ if shutil.which("git"):
         "foo off": _own_ask("git commit -m x", _own_foo),
         "foo on": _own_ask("git commit -m x", _own_foo, HOUSE_RULES_OWNED_BRANCHES="bar/, foo/"),
     }
-    _own_res["-C wt"] = _own_ask("git -C %s commit -m x" % _own_wt, _own_main, _own_main)
+    _own_res["-C wt"] = _own_ask('git -C "%s" commit -m x' % _own_wt, _own_main, _own_main)
     # #203: "cd" inside a commit message is not a directory change.
     _own_res["cd in message"] = _own_ask('git commit -m "fix cd handling"', _own_main, _own_wt)
     # #291: a force push, a folder the guard can't follow (two cds) and a branch not confirmed mine
@@ -443,11 +443,12 @@ _fr_fail = []
 _fr_top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=_ua_dir, stdout=subprocess.PIPE,
                          universal_newlines=True).stdout.strip()
 for _n, _cmd in (
-    ("1", "G=%s; git -C $G add f && git -C $G commit -m x -- f && git -C $G push -q origin AjsAgent/ua" % _ua_dir),
-    ("2", "git -C %s commit -m x" % _ua_dir),
-    ("3", "cd %s && git commit -m x" % _ua_dir),
-    ("3b", "cd %s; git commit -m x" % _ua_dir),
-    ("3c", 'D="%s"; cd ${D} && git commit -m x' % _ua_dir),
+    # forward slashes: a backslash in an unquoted path is an escape to a real shell, so Windows paths are given this way
+    ("1", "G=%s; git -C $G add f && git -C $G commit -m x -- f && git -C $G push -q origin AjsAgent/ua" % _ua_dir.replace("\\", "/")),
+    ("2", "git -C %s commit -m x" % _ua_dir.replace("\\", "/")),
+    ("3", "cd %s && git commit -m x" % _ua_dir.replace("\\", "/")),
+    ("3b", "cd %s; git commit -m x" % _ua_dir.replace("\\", "/")),
+    ("3c", 'D="%s"; cd ${D} && git commit -m x' % _ua_dir.replace("\\", "/")),
     ("5", "sleep 1; ls | head"),
     ("7", "python3 x.py | tail -5"),
     ("7b", "until grep x f; do sleep 1; done | tail"),

@@ -11,6 +11,7 @@ over a core link list that part registers on; none of them is imported here.
 import hashlib
 import json
 import os
+import posixpath
 import re
 import sys
 import tempfile
@@ -1102,7 +1103,10 @@ REBUILDABLE_DIRS = ("node_modules", "__pycache__", ".venv", ".pytest_cache", ".m
 
 def _temp_roots():
     """Folders that hold only temporary files by definition: /tmp and ~/.cache."""
-    return [os.path.realpath("/tmp"), os.path.realpath(os.path.expanduser("~/.cache"))]
+    roots = [os.path.realpath("/tmp"), os.path.realpath(os.path.expanduser("~/.cache"))]
+    if os.name == "nt":
+        roots.append(os.path.realpath(tempfile.gettempdir()))  # /tmp in Git Bash
+    return roots
 
 
 def _in_temp_root(path):
@@ -1160,13 +1164,16 @@ def _delete_refusal(subject, where):
             words = shlex.split(stmt[m.end(2):])
         except ValueError:
             return "recursive" if recursive else "unsaved"  # unparseable quoting: its targets can't be checked
-        targets = [w for w in words if not w.startswith(("-", "/")) or os.path.isabs(w) and not re.match(r"^/[a-zA-Z]$", w)]
+        # startswith("/"), not isabs: on Windows isabs("/tmp/x") is False, but the shell's /tmp/x is a real path
+        targets = [w for w in words if not w.startswith(("-", "/")) or w.startswith("/") and not re.match(r"^/[a-zA-Z]$", w)]
         if not targets:
             return refusal
         for t in targets:
             if re.search(r"[*?\[\]$`]", t) or "~" in t[1:]:
                 return refusal
             t = os.path.expanduser(t)
+            if os.name == "nt" and t.startswith("/tmp/"):
+                t = os.path.join(tempfile.gettempdir(), t[5:])  # Git Bash's /tmp is the user's Temp folder
             path = t if os.path.isabs(t) else os.path.join(base, t)
             try:
                 if os.path.isdir(path) or _in_temp_root(path):
@@ -1229,7 +1236,7 @@ def _rm_only_in_scratchpad(subject, payload):
         for a in paths:
             if not a.startswith("/") or re.search(r"[$`~]", a) or ".." in a.split("/"):
                 return False
-            norm = os.path.normpath(a)
+            norm = posixpath.normpath(a)  # the scratchpad is a POSIX path; os.path would turn / into \ on Windows
             parts = norm.split("/")
             ok = False
             if proj and re.match(r"^/tmp/claude-[^/]+/%s/%s/scratchpad(/|$)" % (re.escape(proj), re.escape(sid)), norm):

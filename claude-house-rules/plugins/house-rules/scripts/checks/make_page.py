@@ -570,8 +570,22 @@ _nlog = os.path.join(_mp_tmp, "node-args.bin")
 with open(os.path.join(_nd, "node"), "w", encoding="utf-8") as _f:
     _f.write('#!/bin/sh\nprintf \'%s\\0\' "$@" > "$NODE_ARGS_LOG"\nexit 0\n')
 os.chmod(os.path.join(_nd, "node"), 0o755)
-subprocess.run([sys.executable, "-c",
-                "import importlib.util as u, make_page as m; u.find_spec = lambda n: None; m.visual_check('PAGE.html', {})"],
+_nprobe = "import importlib.util as u, make_page as m; u.find_spec = lambda n: None; m.visual_check('PAGE.html', {})"
+if os.name == "nt":
+    # Windows cannot run a #!/bin/sh script as `node`, and a .cmd wrapper cannot pass the long script argument
+    # faithfully, so the probe records the arguments in a stand-in for subprocess.run instead.
+    _nprobe = ("import importlib.util as u, os, shutil, subprocess, make_page as m\n"
+               "u.find_spec = lambda n: None\n"
+               "shutil.which = lambda n: 'node' if n == 'node' else None\n"
+               "_run = subprocess.run\n"
+               "def _fake(cmd, **k):\n"
+               "    if cmd and cmd[0] == 'node':\n"
+               "        open(os.environ['NODE_ARGS_LOG'], 'wb').write(b''.join(a.encode('utf-8') + b'\\0' for a in cmd[1:]))\n"
+               "        return subprocess.CompletedProcess(cmd, 0, '', '')\n"
+               "    return _run(cmd, **k)\n"
+               "subprocess.run = _fake\n"
+               "m.visual_check('PAGE.html', {})\n")
+subprocess.run([sys.executable, "-c", _nprobe],
                env=dict(os.environ, PATH=_nd, NODE_ARGS_LOG=_nlog, PYTHONPATH=HERE), capture_output=True, text=True, timeout=60)
 try:
     _nargs = open(_nlog, "rb").read().decode("utf-8").split("\0")

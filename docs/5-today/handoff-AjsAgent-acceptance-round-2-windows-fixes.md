@@ -4,13 +4,13 @@
 Finish the design review loop (parent issue #592) by recording acceptance round 2 from real output on aj's Windows PC, stamping it, and handing it over for QA.
 
 ## Where it stands
-Two Windows-only bugs are fixed on branch `AjsAgent/acceptance-round-2-windows-fixes` (cut from `pc-acceptance-round-2`): the close-facts tests faked `gh` with a shell script (now a Python stand-in), and the review stamp hashed CRLF differently from LF. A rerun of `run_acceptance.py` on aj's PC passed C1 to C9. `round-1.md` (written from `report.md`) and `round-2.md` are recorded, `ledger.py check` is valid, and `acceptance.py check` says the stamp is current. The QA page is built at `docs/plans/2026-11-24-design-review-loop-qa.html`.
+aj failed QA: fix every pre-existing failure before the pull request to main. All are fixed on this branch: `waitfor.py` (runs checks under `sh`, `taskkill` on Windows), the guard (`core.py` path patterns, `safe_git.py` `posixpath` and `/tmp` mapping), `_extract_file_path` (JSON-unescaped), the fake `node` and `claude` stand-ins, and `tools/force_update.py` (runs the path `which` finds). A full `verify.py` passed 1574 of 1581 (7 skipped), `tools/verify_tools.py` 55 of 55, `docref.py check` OK, `docs_drift.py` 0. The source changed after round 2, so the acceptance stamp is stale; `run_acceptance.py` was started again in the background and writes `docs/qa/design-review-loop/round-2/`.
 
 ## The next step
-Wait for aj's reply on the QA page: "QA passed: design review loop", or what failed. On a pass, mark the issues and pull request #604 ready for aj's merge decision; on a fail, fix on this branch and rerun the failing criterion with `run_acceptance.py C<n>`.
+When the rerun ends, read `round-2/round-2-draft.md`. If STATUS is pass: copy it over `round-2.md`, run `scripts/acceptance.py stamp docs/qa/design-review-loop`, update the QA page content (`docs/plans/2026-11-24-design-review-loop-qa.page.json`: the unverified lines now say the suite is clean), rebuild it with `--reviewed clean --rounds 1`, commit, push, send the page. If a criterion fails, read its `cN-M.txt`.
 
 ## What is unverified
-A full `verify.py` run after both fixes passed 1572 of 1581 checks; nine fail on Windows (guard x3, page checks x2, waitfor x3, node x1), the same nine fail on a clean `main` (which also crashes the `design_loop` part on Windows), so this feature did not cause them; one cause found (`waitfor.py` calls `os.killpg`, which Windows lacks; `waitfor` checks 112 and 115 give wrong exit codes too), the guard, page and node causes not found. The deviation check is a phrase heuristic never seen firing live. No test covers the two-round cap or changed-pick re-review. Round 1 was recorded afterwards from the report, not from a fresh run.
+The rerun result. No plugin version bump was made for the hook fixes. Check 172 (prompttimer concurrency) failed once in one full run and passed in the next two; it may be timing-sensitive.
 
 ## The issue numbers
 Parent #592; pull request #604 (`Refs #592`).

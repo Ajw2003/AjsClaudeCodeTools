@@ -2764,7 +2764,7 @@ _pc_data_f = _pc_file("data.json", "{}")
 _pc_cases = []
 _o = _pc("Write", {"file_path": _pc_plans, "content": _pc_hand})
 _pc_cases.append(("Write of a hand-written docs/plans page is refused, naming the page and the builder command",
-                  _pc_denied(_o) and _pc_plans in _o and "make_page.py build <content.json>" in _o))
+                  _pc_denied(_o) and json.dumps(_pc_plans)[1:-1] in _o and "make_page.py build <content.json>" in _o))  # the hook's output is JSON, so a Windows path comes back with doubled backslashes
 _pc_cases.append(("Write of a builder page under docs/plans is allowed",
                   _pc("Write", {"file_path": _pc_plans, "content": _pc_built}) == ""))
 _pc_cases.append(("Write of an .html outside docs/plans is allowed",

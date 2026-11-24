@@ -1717,7 +1717,14 @@ _OUTSIDE_PATTERNS = [
 
 def _extract_file_path(payload):
     m = _FILE_PATH_RE.search(payload)
-    return m.group(1) if m else None
+    if not m:
+        return None
+    path = m.group(1)
+    try:
+        path = json.loads('"%s"' % path)  # undo JSON escaping: a Windows path arrives with doubled backslashes
+    except ValueError:
+        path = m.group(1)  # not valid JSON text: keep it as written
+    return path
 
 
 def _is_outside_project(file_path):
@@ -2278,10 +2285,12 @@ def is_owned_branch(branch, extra=()):
 _ANY_C_FLAG_RE = re.compile(r"(^|\s)-C(\s|=)")
 
 
-_GIT_C_DIR_RE = re.compile(r"""\bgit\s+-C\s*(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))""")
+# Inside double quotes a backslash is literal unless it escapes $ ` " \ or a newline, so a Windows path
+# like "C:\Users\x" is followed; an escaping backslash still leaves the target unclear.
+_GIT_C_DIR_RE = re.compile(r"""\bgit\s+-C\s*(?:"((?:[^"$`\\]|\\(?![$`"\\\n]))+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))""")
 
 
-_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*(?:&&|;)""")
+_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"((?:[^"$`\\]|\\(?![$`"\\\n]))+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*(?:&&|;)""")
 
 
 # A statement-leading NAME=value, NAME="value" or NAME='value' followed by ; or && (#261).

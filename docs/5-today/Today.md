@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj failed QA with "fix all pre existing failures before we pr to main". All nine Windows failures are fixed (waitfor, guard, page and node checks) plus one in tools/verify_tools.py; a full verify.py passes here (1574 of 1581, 7 skipped). The acceptance run is being repeated because the fixes made its stamp stale; round 2 is not re-stamped yet.
+
 Acceptance round 2 now passes all nine criteria on aj's PC after the two Windows fixes; both rounds are recorded, the stamp is current, and the QA page is built and sent. Waiting on aj's QA reply.
 
 aj's PC run of the acceptance runner failed every criterion: the `design_loop` part crashed on Windows before reporting a check. I fixed two Windows-only causes (the fake `gh` script in the close-facts tests, and the review stamp hashing CRLF differently from LF). A full nine-criteria rerun is in progress; round 2 is not recorded or stamped yet.

@@ -12,6 +12,7 @@ Exit codes: 0 done, 1 failed, 2 stalled, 3 timed out, 4 bad usage. Defaults come
 """
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -32,15 +33,24 @@ def header(name, first, interval, deadline, kind):
 
 def run_check(cmd, timeout):
     """(code, output); a command that cannot start is code -1 with the error text; code None = still running at the cap."""
+    # On Windows a plain shell=True runs cmd.exe, which cannot read the POSIX checks this tool is given
+    # (`;`, `test`, `$(...)`); use the sh that Git for Windows ships, and fall back to cmd.exe without it.
+    sh = shutil.which("sh") if os.name == "nt" else None
     try:
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
+        proc = subprocess.Popen([sh, "-c", cmd] if sh else cmd, shell=not sh, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, start_new_session=True)
     except OSError as exc:
         return -1, "%s: %s" % (type(exc).__name__, exc)
     try:
         out, _ = proc.communicate(timeout=timeout)
         return proc.returncode, out.decode("utf-8", "replace").strip()
     except subprocess.TimeoutExpired:
-        os.killpg(proc.pid, 9)  # the whole group, or a child holding the pipe would hang us
+        # the whole tree, or a child holding the pipe would hang us
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+        else:
+            os.killpg(proc.pid, 9)
         proc.communicate()
         return None, ""
 

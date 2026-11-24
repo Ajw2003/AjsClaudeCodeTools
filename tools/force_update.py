@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 
@@ -26,7 +27,8 @@ from _plugin_sync import tree_hash, diff_trees  # noqa: E402
 
 def invoke_claude(args, activity):
     print(f"==> {activity}")
-    proc = subprocess.run(["claude"] + args)
+    # The full path `which` finds: on Windows a bare "claude" reaches only claude.exe, never a claude.cmd.
+    proc = subprocess.run([shutil.which("claude") or "claude"] + args)
     if proc.returncode != 0:
         raise SystemExit(f"{activity} failed (exit {proc.returncode}).")
 
