@@ -4,7 +4,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-Step 2 of the design review loop (issue #594, the review stamp on design and plan pages) is being built by a helper; nothing of it is committed yet. Detail: `docs/qa/design-review-loop/ledger.md` lists the deviations and parked decisions so far.
+Step 2 of the design review loop (issue #594) is built: a design, plan or other page now needs a review stamp, and a reply linking a page with no stamp or a stale one is sent back. Review and QA pages are exempt. Detail: `make_page.py build --reviewed clean|open-risks --rounds 1|2`, `page_criteria.py`, `house_rules/writing.py`; my own `verify.py` run passed 1453 of 1453, and a real stamp on a copy of the plan page went stale after one edit. Detail: `docs/qa/design-review-loop/ledger.md` lists the deviations and parked decisions so far.
 
 Step 1 of the design review loop (issue #593): the reviewer helper now has page, plan and acceptance modes as well as its old diff mode, and a real first run on the approved design page found seven things, which are logged in `docs/qa/design-review-loop/ledger.md`. Detail: `agents/reviewer.md`, `rules/detail/review-modes.md`, `scripts/checks/delegation.py`; verify.py passes 1444 of 1444.
 
