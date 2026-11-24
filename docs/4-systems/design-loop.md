@@ -76,6 +76,10 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
 - **Writing the tracker on every message** gave a fresh project a file on a bare "approved"; the
   write now happens only on a real change.
 
+## Combined approval (design review loop, #600)
+
+aj can approve the design and the build plan in one reply: two lines, `Design approved: <feature> <picks>` then `Build plan approved: <feature>`. The feature goes from Design straight to Build. The plan's issues (a parent and a step per step, labelled `AjsAgent created this` and `in progress`) cannot exist yet, so the build-plan line is read with the existing owed-work rule (2.80.0): the note says they are owed in this same turn, and the check at the end of the turn holds the agent to it. There is no new phrase (parked decision P1: the two-phrase rule from 2.68.1 is reused). Whether the plan was reviewed is not checked here (D7): the reply-end stamp check sends back any reply that links a page with no current stamp. `make_page.py` accepts a two-line `approval` (design line, then build-plan line, each checked as the loop would), and the copy box shows both lines with the picks after the first. Cases: `checks/design_loop.py` (#600), `checks/make_page.py` (#600).
+
 ## Approvals in natural word order (2026-11-09, "Handoff overwrite" 3A; built in phase 1 step 1, #501)
 
 The loop accepted only the stage words first ("Design approved: <feature>"). It also accepts them after the

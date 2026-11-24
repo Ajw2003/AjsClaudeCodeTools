@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Step 8 of the design review loop (issue #600) is built: one reply can approve the design and the build plan together (two lines), and a page may offer both lines. The approval reader needed no change; the plan's issues are owed in the same turn by the existing rule. Detail: `docs/4-systems/design-loop.md`, "Combined approval".
+
 Step 5 of the design review loop (issue #597) is built: a self-judging test template (`templates/selftest/selftest.py`) that prints one RESULT line and exits 0, 1 or 2, plus the instructions for when and how to hand it to aj (`rules/detail/selftest.md`). My own `verify.py` run passed 1469 of 1469, and I ran the template three ways (pass, one failing check, a missing library). Not tested on Windows or Python 3.8.
 
 Step 3 of the design review loop (issue #595) is built: a whole feature can be run and judged through the existing visual loop, then stamped with `scripts/acceptance.py stamp`; the stamp goes stale when the source changes (reports under `docs/qa/` are left out of the fingerprint). Every build plan page now needs an "Acceptance tests" item. My own `verify.py` run passed 1465 of 1465; the stamp was refused in this repo where no passing ledger exists. Not tried: a live run with the reviewer in acceptance mode.
