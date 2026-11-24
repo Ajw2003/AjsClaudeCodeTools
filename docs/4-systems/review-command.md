@@ -1,0 +1,46 @@
+# Review command
+
+## What it owns
+
+One command, `/house-rules:review`, that sends the existing reviewer helper at code, an image, a screen's style, or a whole repository, in any project that has the plugin installed. It owns the choice of mode from what the user points at, the saving of the report, and the whole-repo sweep. It does not own the reviewer's judging stance; that stays in `agents/reviewer.md`.
+
+**Status: planned (parent issue #617, steps #618 to #621). Nothing is built.** The design was approved on 2026-11-24 as "Design approved: review command 1A 2A 3*". The build plan is `docs/plans/review-command-plan.html` and awaits approval.
+
+## How it will work
+
+| Piece | Step | What it does |
+|---|---|---|
+| Four new reviewer modes | #618 | `code`, `codebase`, `image` and `style` join `page`, `plan`, `acceptance` and `diff` in `agents/reviewer.md` and `rules/detail/review-modes.md`. Same stance: findings only, no praise. |
+| The command | #619 | `commands/review.md` picks the mode, takes extra input, saves the report and runs the sweep. |
+| Checks | #620 | `verify.py` cases keep the mode lists, the command file and the sweep notice in step. |
+| Docs and version | #621 | This document, a Decisions entry, a CHANGELOG line, the Today note, the version bump. |
+
+## Decisions that shape it
+
+- The reviewer is extended, not duplicated (design review loop, 4A in `docs/6-decisions/Decisions.md`). A second critic agent was dropped for that reason.
+- A reviewer has no Agent tool, so it cannot start other reviewers. The command, run by the main session, spawns one reviewer per top-level folder, one at a time.
+- Question 1, answer A: a short verdict goes to chat and the main session saves the full report to `docs/qa/review-<target name>-<date>/`. The reviewer itself writes nothing new.
+- Question 2, answer A: the sweep goes folder by folder, one reviewer at a time, with a merged list ranked by severity and then file.
+- Question 3, aj's own answer: the sweep has **no folder cap**. Over 12 top-level folders the command first tells the user the folder count, an estimated time and an estimated token use, then runs.
+- Syntax: `/house-rules:review <path> [style] [criteria text]`. No argument reviews the uncommitted diff in diff mode.
+
+## Mode detection order
+
+1. The path `.` on its own: codebase.
+2. An image extension: image.
+3. A page whose `house-rules-page` tag says `build-plan`: plan (the approved design page is passed too).
+4. Any other HTML page: page.
+5. Any other file or folder: code.
+6. The word `style` after the path: style (needs a stated style or a project UI guide; otherwise it stops and says so).
+
+## Invariants it must keep
+
+- The command file uses the braced `${CLAUDE_PLUGIN_ROOT}`; the unbraced form broke `/house-rules:harvest-scan` (Decisions, 2026-09-20).
+- One reviewer at a time, at most two, per the delegation rule.
+- Every wait has a deadline from `rules/waits.json` (agent: 900 seconds), checked each minute with `scripts/waitfor.py`. A folder past it is listed as not reviewed, never dropped silently.
+- `docs/page-style.json` describes handover pages, not app screens, so style mode does not read it.
+
+## Known unknowns
+
+- The sweep notice estimates 75 seconds and 50,000 tokens per folder. Both come from two reviewer runs of one page each (73.8 and 77.2 seconds; 50,353 and 49,615 tokens). A real code folder is larger, so the figures are a floor, not a forecast.
+- Claude Code's own built-in `/review` was named by the reviewer from product knowledge and was not tested here; that is why the command is always written with its `house-rules:` prefix.
