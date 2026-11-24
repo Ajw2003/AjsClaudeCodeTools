@@ -4,7 +4,7 @@
  "pageType": "proposal",
  "approval": "Design approved: judge blocking fix and one-minute segments",
  "short": {
-  "lead": "The end-of-reply judge blocked 12 times in a row, even when the model had tried three different ways. Its criteria are a single sentence, and the model is never told what a passing reply looks like. I propose keeping the judge and tuning it. A second part makes every wait-bound job, not only tests, run as independent segments of at most a minute that each print their own result, so a failure shows up early and nobody waits 20 minutes for one output.",
+  "lead": "The end-of-reply judge blocked 12 times in a row, even when the model had tried three different ways. Its criteria are a single sentence, and the model is never shown what a passing reply looks like. I propose keeping the judge and tuning it. A second part makes every job that involves waiting, not only tests, run as independent segments of at most a minute that each print their own result, so a failure shows up early and nobody waits 20 minutes for one output.",
   "hint": "Tap a step to see what it changes. The choices at the end are yours.",
   "key": [
    [
@@ -61,11 +61,11 @@
     "Segments",
     "Every long job in one-minute pieces",
     "",
-    "One rule for tests, builds, installs, renders and agent runs: segments of at most 60 seconds, each with its own result.",
+    "One rule for tests, builds, installs, renders and agent runs: split the work into segments of at most 60 seconds, each reporting its own result.",
     "Nothing from you.",
     {
-     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22204%22 viewBox=%220 0 360 204%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EAny long job, cut into one-minute segments%3C/text%3E%3Crect x=%228%22 y=%2228%22 width=%2280%22 height=%2246%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%2248.0%22 y=%2249.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ESegment 1%3C/text%3E%3Ctext x=%2248.0%22 y=%2264.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3EPASS at 0:40%3C/text%3E%3Crect x=%2298%22 y=%2228%22 width=%2280%22 height=%2246%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%22138.0%22 y=%2249.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ESegment 2%3C/text%3E%3Ctext x=%22138.0%22 y=%2264.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3EPASS at 0:55%3C/text%3E%3Crect x=%22188%22 y=%2228%22 width=%2280%22 height=%2246%22 rx=%226%22 fill=%22%23f8c9c4%22 stroke=%22%23445%22/%3E%3Ctext x=%22228.0%22 y=%2249.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ESegment 3%3C/text%3E%3Ctext x=%22228.0%22 y=%2264.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3EFAIL at 0:20%3C/text%3E%3Crect x=%22278%22 y=%2228%22 width=%2274%22 height=%2246%22 rx=%226%22 fill=%22%23e6e6e6%22 stroke=%22%23445%22/%3E%3Ctext x=%22315.0%22 y=%2249.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ESegment 4%3C/text%3E%3Ctext x=%22315.0%22 y=%2264.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Enot started%3C/text%3E%3Ctext x=%2210%22 y=%2296%22 fill=%22%23333%22%3EYou see the failure about 2 minutes in, not after 20.%3C/text%3E%3Crect x=%2210%22 y=%22108%22 width=%22340%22 height=%2238%22 rx=%226%22 fill=%22%23cfe3f8%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%22125.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EEach segment: one command, one input check, one result line%3C/text%3E%3Ctext x=%22180.0%22 y=%22140.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eruns alone%3B its input is a named file, not leftovers%3C/text%3E%3Crect x=%2210%22 y=%22154%22 width=%22340%22 height=%2238%22 rx=%226%22 fill=%22%23fde9b8%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%22171.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ECannot be cut%3F Write: Cannot split: %3Creason%3E%3C/text%3E%3Ctext x=%22180.0%22 y=%22186.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Ethen it must stream progress every minute%3C/text%3E%3C/svg%3E",
-     "alt": "Four segments: two pass, the third fails about two minutes in, the fourth never starts",
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22204%22 viewBox=%220 0 360 204%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EAny long job, cut into one-minute segments%3C/text%3E%3Crect x=%228%22 y=%2228%22 width=%2280%22 height=%2246%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%2248.0%22 y=%2249.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ESegment 1%3C/text%3E%3Ctext x=%2248.0%22 y=%2264.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3EPASS at 0:40%3C/text%3E%3Crect x=%2298%22 y=%2228%22 width=%2280%22 height=%2246%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%22138.0%22 y=%2249.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ESegment 2%3C/text%3E%3Ctext x=%22138.0%22 y=%2264.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3EPASS at 0:55%3C/text%3E%3Crect x=%22188%22 y=%2228%22 width=%2280%22 height=%2246%22 rx=%226%22 fill=%22%23f8c9c4%22 stroke=%22%23445%22/%3E%3Ctext x=%22228.0%22 y=%2249.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ESegment 3%3C/text%3E%3Ctext x=%22228.0%22 y=%2264.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3EFAIL at 0:20%3C/text%3E%3Crect x=%22278%22 y=%2228%22 width=%2274%22 height=%2246%22 rx=%226%22 fill=%22%23e6e6e6%22 stroke=%22%23445%22/%3E%3Ctext x=%22315.0%22 y=%2249.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ESegment 4%3C/text%3E%3Ctext x=%22315.0%22 y=%2264.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Enot started%3C/text%3E%3Ctext x=%2210%22 y=%2296%22 fill=%22%23333%22%3EYou see the failure at 1:55, not after 20 minutes.%3C/text%3E%3Crect x=%2210%22 y=%22108%22 width=%22340%22 height=%2238%22 rx=%226%22 fill=%22%23cfe3f8%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%22125.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EEach segment: one command, one input check, one result line%3C/text%3E%3Ctext x=%22180.0%22 y=%22140.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eruns alone%3B its input is a named file, not leftovers%3C/text%3E%3Crect x=%2210%22 y=%22154%22 width=%22340%22 height=%2238%22 rx=%226%22 fill=%22%23fde9b8%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%22171.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3ECannot be cut%3F Write: Cannot split: %3Creason%3E%3C/text%3E%3Ctext x=%22180.0%22 y=%22186.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Ethen it must stream progress every minute%3C/text%3E%3C/svg%3E",
+     "alt": "Four segments: two pass, the third fails at 1 minute 55 seconds, the fourth never starts",
      "caption": "A failing segment stops the run early."
     }
    ],
@@ -148,9 +148,9 @@
   [
    "new",
    "What exists today for waits and tests",
-   "The rules already limit waits, but allow 20-minute jobs, and tests are the only part designed to be modular.",
+   "The rules already limit waits, but allow 20-minute jobs, and only the tests have a design for being split into separate parts.",
    null,
-   "Waits: rules/waits.json limits a foreground command to 60 seconds, but allows deadlines of 600 seconds for a command, 900 for an agent, 1200 for a build and 900 for CI, and the guard accepts a background launch with a timeout up to 1,200,000 ms (20 minutes). waitfor.py checks each minute, but a build can still run for 20 minutes before anyone learns it failed. Tests: another session on your other account designed modular tests (docs/4-systems/modular-tests.md, issues 575 to 582, approved 2026-11-23, not built). It gives each test module a name and a run-alone command and a --parts runner, and its conversion skill proves old and new runs report the same checks. It covers tests only. I ran the whole of verify.py on this branch: core 68.9 seconds, safe_git 127.6, design_loop 201.1, writing 8.5, delegation 142.9, docs 46.7 and make_page 105.5. Five of the seven parts are over a minute and the slowest is over three. That run also had failures (core 1, safe_git 3, delegation 3, make_page 1, design_loop stopped without a result line). This branch changes four documentation files and no plugin code, and the same checks pass on main's continuous-integration run (1 minute 22 seconds, on Linux). So the failures come from running on this Windows machine, not from this work; fixing them is a separate item.",
+   "Waits: rules/waits.json limits a foreground command to 60 seconds. It allows deadlines of 600 seconds (10 minutes) for a command, 900 (15 minutes) for an agent, 1200 (20 minutes) for a build and 900 (15 minutes) for CI. The guard also accepts a background launch with a timeout up to 1,200,000 ms (20 minutes). waitfor.py checks each minute, but a build can still run for 20 minutes before anyone learns it failed. Tests: another session on your other account designed modular tests (docs/4-systems/modular-tests.md, issues 575 to 582, approved 2026-11-23, not built). It gives each test module a name and a command to run it alone, adds a runner that takes a --parts option, and includes a conversion skill that proves the old and new runs report the same checks. It covers tests only, not builds, installs, renders or agent runs. I ran the whole of verify.py on this branch: core 68.9 seconds, safe_git 127.6 seconds, design_loop 201.1 seconds, writing 8.5 seconds, delegation 142.9 seconds, docs 46.7 seconds and make_page 105.5 seconds. Five of the seven parts took over a minute, and the slowest, design_loop, took over three minutes (201.1 seconds). That run also had failures (1 failure in core, 3 in safe_git, 3 in delegation, 1 in make_page; design_loop stopped without printing a result line). This branch changes four documentation files and no plugin code, and the same checks pass on main's continuous-integration run (automated checks on GitHub; 1 minute 22 seconds, on Linux). So the failures come from running on this Windows machine, not from this work; fixing them is a separate item.",
    [
     "A 60-second foreground limit, 20-minute background deadlines, modular tests designed but not built.",
     "One segment rule for all wait-bound work, with tests as the first case.",
@@ -163,7 +163,7 @@
    "The segment plan, written before any long job starts",
    "Before waiting on anything, the model writes a plan of segments, each with its own deadline.",
    null,
-   "The existing wait statement already names what is awaited, how it is checked, what done means, and the deadline. It is extended to a short table: segment name, the one command, the input it needs and how that is checked in seconds, the output it leaves, and the 60-second deadline. The model starts segment 1, reads its result, and only then starts segment 2. If a segment fails, the later ones are not started, and the reply names the failed segment and its output. The plan is the one place that says how work is cut up, so tests, builds, installs, renders and agent runs all follow the same rule, and rules/detail/waits.md gains this section.",
+   "The existing wait statement already names what is awaited, how it is checked, what done means, and the deadline. The statement becomes a short table with one row per segment: segment name, the one command, the input it needs and how that input is checked (a check that takes seconds), the output it leaves, and the 60-second deadline. The model starts segment 1, reads its result, and only then starts segment 2. If a segment fails, the later ones are not started, and the reply names the failed segment and shows its output. The plan is the one place that says how the work is cut up, so tests, builds, installs, renders and agent runs all follow the same rule. I would add this section to rules/detail/waits.md.",
    [
     "A wait states its deadline but not how the work is cut up.",
     "A segment table before every job over a minute.",
@@ -174,9 +174,9 @@
   [
    "new",
    "Addition 1: a 60-second limit on every wait",
-   "Any segment, module or run that needs over a minute is flagged and must be split.",
+   "Any segment, test module or run that takes over a minute is flagged and must be split.",
    null,
-   "For tests, the module header gains a measured time recorded after each run, and the gate (issue 578) and audit (issue 579) flag every module over 60 seconds with its name and time. For all other work, rules/waits.json drops the 600, 900 and 1200 second deadlines to 60 seconds per segment, and the guard refuses a background launch whose timeout is over 60,000 ms unless the launch description says \"Cannot split:\" and gives a reason, the same way the guard already accepts \"no safe way:\". A job that truly cannot split, such as a CI run or one engine build, may stay whole, but it must report progress at least every minute, and waitfor.py then shows a result per minute. The 60 is read from rules/waits.json, so it changes in one place.",
+   "For tests, the module header gains a measured time recorded after each run, and the gate (issue 578) and audit (issue 579) flag every module over 60 seconds with its name and time. For all other work, rules/waits.json lowers the 600, 900 and 1200 second deadlines (10, 15 and 20 minutes) to 60 seconds per segment, and the guard refuses a background launch whose timeout is over 60,000 ms unless the launch description contains \"Cannot split:\" followed by a reason, the same way the guard already accepts \"no safe way:\". A job that truly cannot split, such as a CI run or one engine build, may stay whole, but it must report progress at least every minute, so waitfor.py can show one result per minute. The 60 is read from rules/waits.json, so it changes in one place.",
    [
     "Foreground limit 60 seconds; background up to 20 minutes.",
     "60 seconds per segment everywhere; a named exit for the rare job that cannot split.",
@@ -189,7 +189,7 @@
    "Addition 2: each segment prints its own result, as it finishes",
    "Results appear per segment, in the order they finish.",
    null,
-   "Every segment ends with its own PASS or FAIL line and a final RESULT line, in the format verify.py already uses. For tests, the gate requires this in the module header. verify.py itself changes, because today it prints each part only when its turn in a fixed order comes, so a finished part waits behind a slower one; it will print each part the moment it finishes. For other work, the segment plan lists each segment's result line, so the model reads one result per minute and stops at the first FAIL.",
+   "Every segment ends with its own PASS or FAIL line and a final RESULT line, in the same format verify.py already prints. For tests, the gate requires this in the module header. verify.py itself has to change. Today it prints the parts in a fixed order, so a finished part waits behind a slower one before its result shows. The change makes it print each part the moment that part finishes. For other work, the segment plan lists each segment's result line, so the model reads one result per minute and stops at the first segment that prints FAIL.",
    [
     "verify.py holds finished output until earlier parts end.",
     "Each module prints when done.",
@@ -199,10 +199,10 @@
   ],
   [
    "new",
-   "Addition 3: segments that stand alone, not daisy chains",
+   "Addition 3: segments that stand alone, not chained together",
    "Each segment runs alone, so one failure never hides behind another.",
    null,
-   "A segment has one command, one named input and one named output. Its input is a file or fresh state it checks at the very start (so a missing input fails in seconds), never a leftover of the previous segment's process. A job with a real data flow, such as compile then link then package, passes each output to the next as a named checkpoint file, so any segment can be re-run alone without the earlier ones. For tests, the conversion skill runs each module alone and then all in shuffled order and compares; a mismatch is reported as a hidden dependency between modules and is not fixed automatically. For other work, the plan states each segment's input check and the test is simply running it alone once.",
+   "A segment has one command, one named input and one named output. Its input is a named file or a freshly created state, and the segment checks it at the very start, so a missing input fails in seconds. The input is never something left behind in memory or on disk by the previous segment's process. A job with a real data flow, such as compile then link then package, passes each output to the next as a named checkpoint file, so any segment can be re-run alone without the earlier ones. For tests, the conversion skill runs each module alone and then all in shuffled order and compares; a mismatch is reported as a hidden dependency between modules, and the skill does not try to fix it. For other work, the plan states each segment's input check and the test is to run that segment alone once.",
    [
     "The proof compares counts only.",
     "Each segment checked alone, and tests also shuffled.",
@@ -228,7 +228,7 @@
    "Flaws I found in the segment design",
    "Five known gaps, each with its answer.",
    null,
-   "One: speed differs by machine, so the time is measured on the machine that runs the work and recorded, not assumed. Two: a split can hide a real dependency; the alone-then-shuffled run is the proof for tests, and the input check is the proof for other work. Three: one engine build, install or CI run may never fit in 60 seconds; the Cannot split line is the exit, and such a job must still report progress each minute, otherwise a minute-by-minute poll shows nothing and the failure is found late anyway. Four: the 12-block loop came from a judge, so every new refusal here needs the shared cap of two blocks and a copyable accepted reply. Without them it would repeat the same fault. Five: refusing a long background launch could block a legitimate job; the one-line Cannot split exit is the answer, and it is logged so I can see how often it is used.",
+   "One: speed differs by machine, so the time is measured and recorded on the machine that runs the work, not assumed. Two: a split can hide a real dependency; running each module alone and then in shuffled order is the proof for tests, and the input check is the proof for other work. Three: one engine build, install or CI run may never fit in 60 seconds; the Cannot split line is the exit, and such a job must still report progress each minute, otherwise a check every minute shows nothing, and the failure is found late anyway. Four: the 12-block loop came from a judge, so every new refusal in this design needs the shared cap of two blocks and a copyable accepted reply. Without both, the new refusals could loop the same way. Five: refusing a long background launch could block a legitimate job; the one-line \"Cannot split:\" exit is the answer, and each use is logged so I can see how often it happens.",
    [
     "Nothing guards against these today.",
     "Each gap has a test or a stated limit.",
@@ -284,36 +284,36 @@
   ],
   [
    "flask",
-   "How hard should the 60-second rule be enforced for work that is not a test?",
+   "How strictly should the 60-second rule be enforced for work that is not a test?",
    [
     [
      "A",
-     "Refuse a background launch over 60 seconds unless it says Cannot split and why",
+     "Refuse a background launch with a timeout over 60 seconds, unless its description says \"Cannot split:\" and gives the reason",
      1,
-     "It stops the 20-minute wait before it starts, and the exit is one line, so it cannot loop."
+     "It stops a 20-minute wait before it starts, and the way out is a single line, so the refusal cannot loop."
     ],
     [
      "B",
-     "Only warn, and print the segment plan",
+     "Only warn, and print the segment plan without refusing the launch",
      0,
      "Nothing stops a long wait from being started again."
     ],
     [
      "C",
-     "Enforce only for builds and installs",
+     "Enforce the limit only for builds and installs",
      0,
      "Leaves agent runs and renders open."
     ]
    ],
-   "Refusing at launch is the only point where the limit holds; a hook cannot interrupt a wait that has already begun."
+   "Refusing at launch is the only point where the limit holds, because a hook cannot interrupt a wait that has already begun."
   ],
   [
    "share",
-   "How should a job with a real data flow, such as compile then link then package, be handled?",
+   "How should a job where each step needs the previous step's output, such as compile then link then package, be handled?",
    [
     [
      "A",
-     "Pass each output as a named checkpoint file, and check it at the start of the next segment",
+     "Pass each output on as a named checkpoint file (a saved file the next segment reads), and have the next segment check it at its start",
      1,
      "Every segment can be re-run alone, and a missing input fails in seconds."
     ],
@@ -321,7 +321,7 @@
      "B",
      "Forbid any dependency between segments",
      0,
-     "Too strict; some work cannot be done without one."
+     "Too strict, because some work cannot be done without a dependency."
     ]
    ],
    "A checkpoint file keeps each segment independent while allowing real data to flow."
