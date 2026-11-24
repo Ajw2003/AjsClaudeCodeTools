@@ -133,7 +133,7 @@ a Changed item can carry a before-and-after compare (side by side when wide, a s
 project's style file sets whether pictures are `required` (art and visual changes), `optional` or
 `off`; the builder refuses a required picture that is missing.
 
-The style file is `docs/page-style.json`, read only by the builder. It holds colours, roles (you act,
+The style file is `docs/page-style.json`; the reviewer's style mode reads a stated style or a project UI guide, not this file. It holds colours, roles (you act,
 accent, blocking, done, each mapped to one of the project's colours), reserved colours, themes, fonts,
 shape, labels, icons, pictures and picture folders. The builder drafts it from the project's design
 system or style guide and aj approves it. With no file, the session asks aj once per project: "create
