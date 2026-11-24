@@ -95,6 +95,26 @@ from house_rules.writing import (  # noqa: F401
 #                 handover_record_offers
 # ---------------------------------------------------------------------------------------
 
+def event_roadblocks():
+    """#588: its own Stop hook, so the roadblock check still runs when unattended turns the handover toggle off."""
+    try:
+        payload = read_payload()
+    except Exception:
+        emit({"systemMessage": "house-rules plugin: could not read the Stop payload, so "
+              "the roadblock check is offline for this turn."})
+        return 0
+    if not payload:
+        return 0
+    retry = bool(re.search(r'"stop_hook_active"\s*:\s*true', payload))
+    reply_text = handover_evidence_check(payload)[0]
+    block, msg = roadblock_check(payload, reply_text, retry)
+    if block:
+        emit({"decision": "block", "reason": block})
+    elif msg:
+        emit({"systemMessage": msg})
+    return 0
+
+
 def event_handover():
     import os as _os
 
@@ -131,11 +151,6 @@ def event_handover():
     (reply_text, needs_evidence, evidence_words, impossible_words, not_checked,
      could_not_tell) = handover_evidence_check(payload)
     have_reply = reply_text is not None
-
-    rb_block, rb_msg = roadblock_check(payload, reply_text, retry)
-    if rb_block:
-        emit({"decision": "block", "reason": rb_block})
-        return 0
 
     uncommitted, commit_could_not_tell = handover_commit_check(payload)
 
@@ -177,8 +192,6 @@ def event_handover():
     issue_line, issue_problem, label_line, label_problem = handover_stop_lines(payload)
 
     trace_lines = list(trace_lines_early)
-    if rb_msg:
-        trace_lines.append(rb_msg)
     # #398: links the hooks told a project thread to post and that never went out.
     links_owed = []
     try:
@@ -316,6 +329,7 @@ EVENTS = {
     "rclink": event_rclink,
     "userpromptaudit": event_userpromptaudit,
     "handover": event_handover,
+    "roadblocks": event_roadblocks,
     "harvest": event_harvest,
     "pagecheck": event_pagecheck,
     "sendcheck": event_sendcheck,

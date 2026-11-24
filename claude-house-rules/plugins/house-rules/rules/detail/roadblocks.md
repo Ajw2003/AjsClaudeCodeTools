@@ -21,3 +21,15 @@ It stopped and handed the work back instead.
 
 **Enforcement:** an end-of-reply check (built in step 2, issue #571) blocks a roadblock claim made
 with no check, twice, then lets it through with a warning.
+
+**The record check (#589):** a roadblock claim passes only when the turn holds three failed attempts
+from every tool (Bash, PowerShell, MCP), in three different method classes: existence check (`which`,
+`where`, `command -v`, `type`, `Get-Command`, `Test-Path`), disk search (`find`, `ls`, `dir`, `locate`),
+package database (`pip show`, `npm ls`, `apt list`, `dpkg -l`), run or launch it, ask the environment
+(`list_computer_folders`, `hostname`), other tool. Three existence checks count once. Failed means the
+tool result's `is_error`, minus a hook refusal and harmless non-zero exits (`git commit` with nothing to
+commit), plus an exit-0 result with clear failure text. The attempts share a target word that is also
+in the reply or the user's request, and the reply names each method. With fewer than three methods the
+reply says why there is no other (the model judge of #591 checks that reason). A reply marking
+`NEEDS YOU` for a licence, login, purchase or destructive step is exempt. One failed attempt is
+blocked with how many more different methods are needed.

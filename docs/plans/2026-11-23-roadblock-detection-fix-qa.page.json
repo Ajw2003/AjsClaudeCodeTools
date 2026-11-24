@@ -1,0 +1,100 @@
+{
+ "title": "Roadblock detection fix: QA",
+ "eyebrow": "QA \u00b7 steps for you to follow",
+ "pageType": "qa",
+ "short": {
+  "lead": "The fix is built and was checked in real headless sessions on the branch build 2.90.0. Four cases behave correctly and one cannot be tested that way. Your part is to read the result and approve the pull request.",
+  "hint": "Tap a step to see what to do.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Checked",
+    "Four live sessions on the branch build",
+    "",
+    "A claim written with a curly apostrophe was blocked twice. A claim backed only by git ls-files was blocked twice. A claim that listed three failed methods was left alone. An unattended stall was blocked twice by the goal check, and the reason it gave was correct.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
+     "alt": "Placeholder tile; no diagram applies to this page.",
+     "caption": "Placeholder tile; no diagram applies to this page."
+    }
+   ],
+   [
+    "flask",
+    "Checked",
+    "verify.py after merging main",
+    "",
+    "8 of 994 checks fail. They are the same safe_git, delegation, design_loop and make_page checks that already failed on this Windows machine before the change.",
+    "Nothing from you."
+   ],
+   [
+    "hand",
+    "Your test",
+    "Read the result and approve",
+    "you",
+    "Open the pull request, read the changelog entry for 2.90.0, and decide whether the unverified bypass-mode denial is acceptable.",
+    "Follow the steps in Wrap-up."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Detection wording",
+   "Curly apostrophes and more wordings are caught.",
+   null,
+   "Live: the curly-apostrophe claim was blocked twice (block 1 of 2, block 2 of 2).",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Evidence needed",
+   "A claim needs three failed attempts by different methods that named the claimed thing.",
+   null,
+   "Live: a claim backed only by git ls-files was blocked twice; a claim listing three failed methods was not blocked.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Never waiting",
+   "In unattended mode a reply that stops with 'Next step' is blocked by the goal check while work can continue.",
+   null,
+   "Live: the stall was blocked twice, and the reason said 'Carry on'. In bypass mode a design question is denied and the agent chooses; that part was checked with test fixtures only, not in a live session.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "Roadblock detection fix (#587)",
+  "base": "origin/main",
+  "unverified": [
+   "Bypass-mode denial of the question tool in a live session: a headless session reports the tool as disabled even with the environment variable set, so the denial hook is never reached; only fixture cases cover it.",
+   "The original Castle session that let a claim through: its transcript is not readable from here, so the two bugs are confirmed in test runs only.",
+   "verify_tools.py check A16 fails here because the plugin from the aj-house-rules marketplace is not installed on this machine."
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "The roadblock detection fix is built, merged with main and checked live in four of five cases.",
+  "changing": "A claim that something cannot be done needs three failed attempts; curly apostrophes are caught; unattended and bypass sessions no longer wait for an answer on design questions.",
+  "blocking": "Your approval of the pull request, and your decision on the bypass-mode gap listed as unverified.",
+  "next": "On a pass, the pull request is ready to merge.",
+  "todo": [
+   "Open the pull request linked in the reply and read the 2.90.0 changelog entry.",
+   "Decide whether the unverified bypass-mode denial is acceptable.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

@@ -1,5 +1,5 @@
 {
-  "feature": "clear roadblocks",
+  "feature": "roadblock detection fix",
   "stage": "qa",
   "skip": false,
   "approvals": [
@@ -239,55 +239,14 @@
       "at": 1795057803
     },
     {
-      "stage": "Design approved",
-      "name": "free issue closing",
-      "at": 1795228036
-    },
-    {
       "stage": "Build plan approved",
-      "name": "free issue closing",
-      "at": 1795228159
-    },
-    {
-      "stage": "QA passed",
-      "name": "free issue closing",
-      "at": 1795234149
-    },
-    {
-      "stage": "Design approved",
-      "name": "clear roadblocks",
-      "at": 1795370308
-    },
-    {
-      "stage": "Build plan approved",
-      "name": "clear roadblocks",
-      "at": 1795383010
+      "name": "roadblock detection fix",
+      "at": 1795477452
     }
   ],
-  "log_mark": "c7094929e58043002c7387cbeea33c89377df674740c28975464721b1b73b266",
+  "log_mark": "43318f55669030f71dd0a90061a3a7bd1cce2e2a56716433e17ed3c4b83668de",
   "redo": false,
-  "issues": [
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 569,
-      "labelled": true
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 572,
-      "labelled": true
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 571,
-      "labelled": true
-    },
-    {
-      "repo": "Ajw2003/AjsClaudeCodeTools",
-      "number": 570,
-      "labelled": true
-    }
-  ],
+  "issues": [],
   "labels": {
     "Ajw2003/AjsClaudeCodeTools#289": [
       "AjsAgent created this",
@@ -887,26 +846,6 @@
       "Feature",
       "in progress",
       "AjsAgent created this"
-    ],
-    "Ajw2003/AjsClaudeCodeTools#569": [
-      "Feature",
-      "AjsAgent created this",
-      "needs review"
-    ],
-    "Ajw2003/AjsClaudeCodeTools#570": [
-      "Feature",
-      "AjsAgent created this",
-      "needs review"
-    ],
-    "Ajw2003/AjsClaudeCodeTools#571": [
-      "Feature",
-      "AjsAgent created this",
-      "needs review"
-    ],
-    "Ajw2003/AjsClaudeCodeTools#572": [
-      "Feature",
-      "AjsAgent created this",
-      "needs review"
     ]
   },
   "sweep": [
@@ -2466,13 +2405,6 @@
       "qa_at": 1795057803,
       "qa": "QA passed: flexible pages",
       "merged_pr": null
-    },
-    {
-      "feature": "free issue closing",
-      "issues": [],
-      "qa_at": 1795234149,
-      "qa": "QA passed: free issue closing",
-      "merged_pr": null
     }
   ],
   "sweep_proposed": [
@@ -2754,10 +2686,19 @@
         "ajw2003/ajsclaudecodetools",
         546
       ]
+    ],
+    "ajw2003/ajsclaudecodetools#602": [
+      [
+        "ajw2003/ajsclaudecodetools",
+        587
+      ],
+      [
+        "ajw2003/ajsclaudecodetools",
+        587
+      ]
     ]
   },
   "held": false,
-  "parent": 569,
-  "qa_page": "docs/plans/2026-11-22-clear-roadblocks-qa.html",
+  "qa_page": "docs/plans/2026-11-23-roadblock-detection-fix-qa.html",
   "qa_page_linked": true
 }
