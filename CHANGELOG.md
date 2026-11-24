@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Reworked the visual roadmap proposal to run locally with no GitHub Actions: refreshes come from the plugin's session hook, a git post-merge hook, session start and a manual command, and GitHub Pages is an optional publish step, off by default. Nine picks now. Still nothing built.
+
 Reworded the visual skills proposal so both skills work in any repo with house rules docs: an install command and per-repo settings file for the roadmap Action, and roadmap grouping that follows each repo's own `docs/2-roadmap/Roadmap.md`. Still nothing built.
 
 Revised the visual skills proposal (`docs/plans/2026-11-24-visual-docs-and-roadmap.html`) to assume the review command on branch `AjsAgent/jolly-dirac-fvh4cg` is merged: both skills now check their output with `/house-rules:review` (page, image and style modes), no new agent is added, and two more picks say how the visual-docs page is checked and when. Still nothing built.

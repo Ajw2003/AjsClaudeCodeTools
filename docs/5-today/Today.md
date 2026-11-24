@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj said the roadmap must not depend on GitHub Actions: the budget might run out, or the Action could exhaust it. I reworked the proposal so the roadmap refreshes locally (session hook, git post-merge hook, session start, manual command), with GitHub Pages as an optional publish step that stays off by default. The page has nine picks. The reworked page has not been reviewed yet.
+
 aj corrected the visual skills proposal: the self-updating roadmap must work in any repo that has house rules docs, not just this one. I reworded the page so repo facts are examples, added a per-repo install command and settings file, and made roadmap grouping follow each repo's own roadmap tier. Review and editor passes on that revision are in progress.
 
 aj asked me to redo the visual skills proposal assuming branch `AjsAgent/jolly-dirac-fvh4cg` (the review command, planned as issues 617 to 621, nothing built there either) is merged. The page now lists what both skills reuse from it, adds a ninth pick (when visual-docs runs the review), and says both skills wait on that command. The page was reviewed twice (clean, round 2) and now has ten picks.
