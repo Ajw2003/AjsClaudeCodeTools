@@ -4,9 +4,11 @@ aj noted that the roadblock judge looks over-zealous: it flags things it should 
 
 ## What was seen (branch `ccr-1839130d-clohr1`, finishing the design review loop, #592)
 
-1. **It fired on replies that only reported a wait.** About seven times in a row it flagged replies saying a background test run was still going. None claimed something could not be done. Each retry listed "three methods" that only showed the run was in progress, and the judge kept firing because those were not three different ways of getting a result that does not exist yet. A wait is not a roadblock, and the judge has no way to tell the two apart.
+1. **It fired on replies that only reported a wait.** About twelve times in a row (the count kept rising while aj's note was being written) it flagged replies saying a background test run was still going. None claimed something could not be done. Each retry listed "three methods" that only showed the run was in progress, and the judge kept firing because those were not three different ways of getting a result that does not exist yet. A wait is not a roadblock, and the judge has no way to tell the two apart.
 2. **It flagged an honest report of a refusal.** "The safety check denied this, so I did not stamp it" was read as a claim of inability and sent back, although it named the attempt and what the refusal said.
 3. **It did not pass on the retry.** The retry (`stop_hook_active`) is meant to pass once three different methods are listed, but a wait has no such methods to list, so it blocked again and again.
+
+4. **It even flagged the replies that answered it.** Replies that listed the checks it asked for, and said plainly that nothing had failed, were sent back again because the checks only showed a run in progress.
 
 ## What it costs, as far as known
 
