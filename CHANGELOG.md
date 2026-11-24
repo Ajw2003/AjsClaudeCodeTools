@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Acceptance runner test run passed here (all nine criteria, Linux); aj gave the clone path on their PC and was handed a three-step PowerShell card to run it there and push the outputs. The path is recorded in the gitignored `rules/handover-target.md`, not in the repo. A throwaway-folder install of the branch build (`CLAUDE_CONFIG_DIR`) worked: plugin 2.92.0 at commit 184dcf9 with a reviewer that has Write.
+
 Note only, nothing changed: `docs/roadblock-judge-friction-2026-11-24.md` records three cases from one session where the roadblock judge looked over-zealous and may have wasted usage; the token cost was not measured.
 
 Design review loop (#592): `docs/qa/design-review-loop/run_acceptance.py` runs each acceptance criterion C1 to C9 through `verify.py --only` and saves each one's own output under `docs/qa/design-review-loop/round-2/`, so aj can run it and the acceptance rounds can be recorded from real output (aj chose option A). A search text that matches no check counts as a failure.
