@@ -1286,7 +1286,7 @@ _rb_t = _hand_transcript("rb-none", [_rb_user("build it"), _rb_tool("pytest -q")
 _rb_fresh()
 _rb1, _rb2, _rb3 = _rb_run(_rb_t), _rb_run(_rb_t), _rb_run(_rb_t)
 for _n, _o in ((1, _rb1), (2, _rb2)):
-    report("PASS" if '"decision":"block"' in _o and "roadblocks.md" in _o and "which, ls or uname" in _o else "FAIL",
+    report("PASS" if '"decision":"block"' in _o and "roadblocks.md" in _o and "run the install command" in _o else "FAIL",
            "a roadblock claim with no probe is blocked (block %d of 2), naming the check and the rule file" % _n)
 report("PASS" if '"decision":"block"' not in _rb3 and "roadblock claim" in _rb3 and "unchecked" in _rb3 else "FAIL",
        "the third time the reply passes with a visible warning line")
@@ -1376,7 +1376,7 @@ _rb_fresh()
 for _ph in ("I can't verify it", "I can’t verify it", "we won't verify it", "we won’t verify it",
             "I couldn't run it",
             "I couldn’t run it", "I don't have access", "I don’t have access", "That is not available here",
-            "It isn't available", "It isn’t available", "I can’t continue"):
+            "It isn't available", "It isn’t available"):
     _rb_fresh()
     report("PASS" if '"decision":"block"' in _rb_run(_rb_t, reply=_ph) else "FAIL", "#588: %s is flagged" % ascii(_ph))
 _rb_fresh()
@@ -1499,6 +1499,20 @@ with open(_gc_t, "a", encoding="utf-8") as _f:
 _o = _rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="flag"))
 report("PASS" if '"decision":"block"' in _o and "block 1 of 2" in _o else "FAIL",
        "#608: a tool call between blocks resets the count, so the check runs again")
+_rb_fresh()
+_o = _rb_run(_rb_t, reply="I could not run it, I'm unable to, I can't. Next step: run pytest on the new case by 10:00.")
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#609: a reply ending in a next step, or with bare could-not/unable-to/I-can't, is not flagged")
+_rb_fresh()
+_o = _rb_run(_rb_t, reply="Unverified: the render, the engine could not be started; done-test is `pytest -q` passing, deadline 10:00.",
+             env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#609: an Unverified line with a done-test and deadline passes")
+_rb_fresh()
+_o = _rb_run(_rb_t, reply="Not done. NEEDS YOU: the licence key.", env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#609: a NEEDS YOU line exempts the goal check")
+_rb_fresh()
+_o = _rb_run(_rb_t)
+report("PASS" if '"decision":"block"' in _o and "(fails C2/C3)" in _o and "Roadblock record:" in _o and "Cannot split:" in _o else "FAIL",
+       "#609: the phrase-list block names a criterion and shows the six reply forms")
 _rb_fresh()
 _rb_off = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS="off"))
 report("PASS" if '"decision":"block"' not in _rb_off else "FAIL", "HOUSE_RULES_ROADBLOCKS=off turns the check off")
