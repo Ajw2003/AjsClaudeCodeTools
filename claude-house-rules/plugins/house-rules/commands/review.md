@@ -24,7 +24,9 @@ It prints `mode:`, `report:` (the folder for the saved report), `criteria:` (the
 
 ## Every mode except a whole-repo sweep
 
-Spawn ONE `house-rules:reviewer` with the Agent tool. Tell it the mode and the target. For plan
+Spawn ONE `house-rules:reviewer` with the Agent tool. Tell it the mode and the target, and give it
+these two absolute paths (an agent file does not expand `${CLAUDE_PLUGIN_ROOT}` itself):
+`${CLAUDE_PLUGIN_ROOT}/rules/detail/review-modes.md` and `${CLAUDE_PLUGIN_ROOT}/scripts/waitfor.py`. For plan
 mode also give the design page from `design:` (or say there is none). For image and style modes
 give the text after the path as the criteria or the style. In style mode with no stated style
 and no project UI guide the reviewer stops and says so; pass that on, do not invent a style.
@@ -35,7 +37,8 @@ and no project UI guide the reviewer stops and says so; pass that on, do not inv
    line, show that line to the user BEFORE starting anything else.
 2. Run `python "${CLAUDE_PLUGIN_ROOT}/scripts/review_plan.py" batches`. Each line is
    `<unit>`, a batch number and a comma-separated file list.
-3. Spawn one `house-rules:reviewer` in codebase mode per batch, ONE AT A TIME, naming its files
+3. Spawn one `house-rules:reviewer` in codebase mode per batch, ONE AT A TIME, giving it the same
+   two absolute paths as above, naming its files
    and telling it to start every finding with `[high]`, `[medium]` or `[low]`. There is no
    folder cap.
 4. Check each reviewer's wait every minute with `python "${CLAUDE_PLUGIN_ROOT}/scripts/waitfor.py"`
