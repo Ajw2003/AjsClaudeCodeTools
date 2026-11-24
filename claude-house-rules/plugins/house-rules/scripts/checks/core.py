@@ -1243,9 +1243,53 @@ _rb_bad = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS_STATE=_HAND_RO
 report("PASS" if '"decision":"block"' not in _rb_bad and "could not read or write" in _rb_bad else "FAIL",
        "an unusable state file produces a message and no block")
 _rb_fresh()
-_rb_ret = _rb_run(_rb_t, retry=True)
-report("PASS" if '"decision":"block"' not in _rb_ret and "unchecked" in _rb_ret and not os.path.exists(_RB_STATE) else "FAIL",
-       "the retry (stop_hook_active) never blocks and does not count")
+_rb_r = [_rb_run(_rb_t, retry=r) for r in (False, True, True)]
+report("PASS" if ['"decision":"block"' in o for o in _rb_r] == [True, True, False] and "unchecked" in _rb_r[2] else "FAIL",
+       "#588: a retry (stop_hook_active) still blocks a second time and never a third")
+_rb_fresh()
+for _ph in ("I can't verify it", "I can’t verify it", "we won't verify it", "we won’t verify it",
+            "I am unable to verify it", "I am unable to run it", "I could not run it", "I couldn't run it",
+            "I couldn’t run it", "I don't have access", "I don’t have access", "That is not available here",
+            "It isn't available", "It isn’t available", "I can’t continue"):
+    _rb_fresh()
+    report("PASS" if '"decision":"block"' in _rb_run(_rb_t, reply=_ph) else "FAIL", "#588: %s is flagged" % ascii(_ph))
+_rb_fresh()
+report("PASS" if '"decision":"block"' not in _rb_run(_rb_t, reply="> I couldn't run it\n\nAll fine.") else "FAIL",
+       "#588: a blockquoted claim is ignored")
+_rb_fresh()
+_rb_stall = "I've stopped here; next step is yours."
+report("PASS" if '"decision":"block"' not in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
+       "#588: a stall phrase is not scanned when attended")
+_rb_fresh()
+# in-process: a real unattended run turns the whole handover hook off (apply_switches), so the hook cannot show it
+os.environ.update(HOUSE_RULES_UNATTENDED="on", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE)
+_rb_m = _cc_mod.core.roadblock_check(stop_payload(transcript_path=_rb_t), _rb_stall, False)[0]
+del os.environ["HOUSE_RULES_UNATTENDED"]
+report("PASS" if _rb_m else "FAIL", "#588: a stall phrase is flagged when unattended")
+_rb_fresh()
+_rb_pm = lambda m: _rb_run_pm(_rb_t, m)
+
+
+def _rb_run_pm(transcript, mode):
+    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=_rb_stall,
+                                                   permission_mode=mode), env=_RB_ENV)
+    return out
+
+
+report("PASS" if '"decision":"block"' in _rb_pm("bypassPermissions") else "FAIL",
+       "#588: a stall phrase is flagged when permission_mode is bypassPermissions")
+_rb_fresh()
+report("PASS" if '"decision":"block"' not in _rb_pm("default") else "FAIL", "#588: a stall phrase is not scanned in default mode")
+_rb_fresh()
+report("PASS" if "no permission_mode" in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
+       "#588: a missing permission_mode is announced")
+_rb_fresh()
+_rb_car = _hand_transcript("rb-carrier", [_rb_user("build it"), _rb_tool("pytest -q"), json.dumps(
+    {"type": "user", "message": {"content": "<system-reminder>x</system-reminder>"}})])
+_rb_run(_rb_car)
+_rb_run(_rb_car)
+report("PASS" if '"decision":"block"' not in _rb_run(_rb_car) else "FAIL",
+       "#588: a system-reminder carrier does not reset the turn")
 _rb_off = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS="off"))
 report("PASS" if '"decision":"block"' not in _rb_off else "FAIL", "HOUSE_RULES_ROADBLOCKS=off turns the check off")
 _rb_fresh()

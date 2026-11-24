@@ -3063,7 +3063,7 @@ def _is_genuine_user_message(record):
         return False
     if re.match(r"^\s*Stop hook feedback", text or "", re.IGNORECASE):
         return False
-    if "<task-notification>" in (text or ""):
+    if "<task-notification>" in (text or "") or re.match(r"^\s*<system-reminder>", text or ""):
         return False
     origin = record.get("origin")
     if isinstance(origin, dict) and origin.get("kind") not in (None, "human"):
@@ -3105,11 +3105,26 @@ def _load_turn(transcript_path):
 
 def _read_turn(transcript_path):
     try:
-        with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
-            raw_lines = f.readlines()
+        with open(transcript_path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            f.seek(max(0, size - _TAIL_BYTES))
+            raw_lines = f.read().decode("utf-8", errors="replace").splitlines()
+        if size > _TAIL_BYTES:
+            res = _turn_from_lines(raw_lines[1:])  # the first line is cut mid-way
+            if res[2] is None:
+                return res
+            with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:  # no user message in the tail
+                raw_lines = f.readlines()
     except OSError as exc:
         return None, None, "could not read the transcript (%s)" % type(exc).__name__
+    return _turn_from_lines(raw_lines)
 
+
+_TAIL_BYTES = 1 << 20
+
+
+def _turn_from_lines(raw_lines):
     records = []
     for line in raw_lines:
         line = line.strip()
@@ -3390,10 +3405,15 @@ def handover_evidence_check(payload):
 
 # --- roadblock claims (#571, docs/4-systems/roadblocks.md): blocked twice per user message, then a warning ---
 _ROADBLOCK_RE = re.compile(
-    r"\b(i can(?:'|no)t|i cannot|(?:is|isn't|is not|are|aren't|are not|not) installed|not on your machine|"
-    r"no access to|you(?:'ll| will)? (?:need|have) to install)\b",
+    r"\b(i can(?:['’]|no)t|i cannot|(?:is|isn['’]t|is not|are|aren['’]t|are not|not) installed|"
+    r"not on your machine|no access to|you(?:['’]ll| will)? (?:need|have) to install|"
+    r"(?:can|won)['’]t verify|unable to|could not|couldn['’]t|don['’]t have access|not available here|"
+    r"isn['’]t available)\b",
     re.IGNORECASE,
 )
+# #588: stall phrases, scanned only when unattended or permission_mode is bypassPermissions
+_STALL_RE = re.compile(r"\b(not done|i['’]ve stopped(?: here)?|next step)\b", re.IGNORECASE)
+_MODE_RE = re.compile(r'"permission_mode"\s*:\s*"([^"]*)"')
 _PROBE_CMD_RE = re.compile(
     r"\b(which|ls|uname|hostname|where|apt|apt-get|pip|pip3|npm|brew|winget|choco)\b|command\s+-v",
     re.IGNORECASE,
@@ -3406,8 +3426,13 @@ def _roadblocks_enabled():
     return os.environ.get("HOUSE_RULES_ROADBLOCKS", "on").strip().lower() not in _TOGGLE_OFF
 
 
-def _roadblock_claims(text):
-    return [m.group(1).lower() for m in _ROADBLOCK_RE.finditer(text or "") if not _is_quoted(text, m.start())]
+def _roadblock_claims(text, regex=_ROADBLOCK_RE):
+    return [m.group(1).lower() for m in regex.finditer(text or "")
+            if not _is_quoted(text, m.start()) and not _in_blockquote(text, m.start())]
+
+
+def _in_blockquote(text, start):
+    return text[text.rfind("\n", 0, start) + 1:].lstrip().startswith(">")
 
 
 def _probe_since_last_user_message(transcript_path):
@@ -3443,6 +3468,8 @@ def _roadblock_state_path(transcript_path):
 
 
 def _roadblock_advice(phrase):
+    if "verify" in phrase or "available" in phrase or phrase in ("unable to", "could not") or "couldn" in phrase:
+        return "run a command that checks it (which, ls or uname)"
     if "install" in phrase:
         return "run the install command yourself (apt, pip, npm, brew, winget or choco)"
     if "machine" in phrase or "access" in phrase:
@@ -3456,19 +3483,29 @@ def roadblock_check(payload, reply_text, retry):
     if not reply_text or not _roadblocks_enabled():
         return None, None
     claims = _roadblock_claims(reply_text)
-    if not claims:
-        return None, None
+    note = None
+    mode = _field(_MODE_RE, payload)
+    if unattended() or mode == "bypassPermissions":
+        stalls = _roadblock_claims(reply_text, _STALL_RE)
+    else:
+        stalls = []
+        if not mode and _roadblock_claims(reply_text, _STALL_RE):
+            note = ("house-rules: the Stop payload carried no permission_mode, so stall phrases were not "
+                    "scanned (treated as attended).")
+    if not claims and not stalls:
+        return None, note
     transcript_path = _field(_TRANSCRIPT_RE, payload)
     if not transcript_path:
         return None, "house-rules: roadblock check could not run (the Stop payload carried no transcript_path)."
-    probed, detail = _probe_since_last_user_message(transcript_path)
-    if probed is None:
-        return None, "house-rules: roadblock check could not tell whether this turn probed (%s)." % detail
-    if probed:
-        return None, None
+    if claims:  # a stall phrase is flagged on the phrase alone
+        probed, detail = _probe_since_last_user_message(transcript_path)
+        if probed is None:
+            return None, "house-rules: roadblock check could not tell whether this turn probed (%s)." % detail
+        if probed:
+            return None, None
+    claims = claims + stalls
     warn = "house-rules: a roadblock claim (%s) went out unchecked." % claims[0]
-    if retry:
-        return None, warn  # #256: the retry never blocks
+    # #588: the retry (stop_hook_active) counts on the check's own counter; never a third block
     path = _roadblock_state_path(transcript_path)
     try:
         key = "%s|%d" % (transcript_path, _user_message_count(transcript_path))
