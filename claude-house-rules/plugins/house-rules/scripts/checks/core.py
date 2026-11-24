@@ -1244,7 +1244,21 @@ hand_case(
 
 # --- roadblock claims (#571): blocked twice per user message, then a warning ----------------------
 _RB_STATE = os.path.join(_HAND_ROOT, "roadblock-state.json")
-_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE)
+# #591: stall phrases run the goal check; tests use a stub for claude (HOUSE_RULES_GOALCHECK_CMD), never the real model
+_GC_STUB = os.path.join(_HAND_ROOT, "goalcheck_stub.py")
+_GC_SRC = """import os, sys, time
+m = os.environ.get('GC_STUB_MODE', 'unreached')
+if m == 'sleep': time.sleep(10)
+if m == 'fail': sys.stderr.write('boom'); sys.exit(3)
+if m == 'garbage': print('no json here'); sys.exit(0)
+if os.environ.get('GC_STUB_LOG'):
+    open(os.environ['GC_STUB_LOG'], 'a').write(os.environ.get('HOUSE_RULES_GOALCHECK', '') + sys.argv[2] + chr(10))
+print('{"ok": true}' if m == 'reached' else '{"ok": false, "reason": "continue building castles 2 to 12"}')
+"""
+with open(_GC_STUB, "w", encoding="utf-8") as _f:
+    _f.write(_GC_SRC)
+_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE,
+               HOUSE_RULES_GOALCHECK_CMD=_GC_STUB)
 _RB_CLAIM = "I can't continue: the engine is not installed."
 
 
@@ -1258,8 +1272,8 @@ def _rb_tool(cmd):
 
 
 def _rb_run(transcript, retry=False, env=None, reply=_RB_CLAIM):
-    _, out, _ = run_hook("handover", stop_payload(transcript_path=transcript, last_assistant_message=reply,
-                                                   stop_hook_active=retry), env=env or _RB_ENV)
+    _, out, _ = run_hook("roadblocks", stop_payload(transcript_path=transcript, last_assistant_message=reply,
+                                                    stop_hook_active=retry), env=env or _RB_ENV)
     return out
 
 
@@ -1277,10 +1291,73 @@ for _n, _o in ((1, _rb1), (2, _rb2)):
 report("PASS" if '"decision":"block"' not in _rb3 and "roadblock claim" in _rb3 and "unchecked" in _rb3 else "FAIL",
        "the third time the reply passes with a visible warning line")
 _rb_fresh()
-_rb_ok = [_rb_run(_hand_transcript("rb-%d" % i, [_rb_user("build it"), _rb_tool(c)]))
-          for i, c in enumerate(("which unity", "ls /opt", "pip install foo"))]
-report("PASS" if all('"decision":"block"' not in o and "unchecked" not in o for o in _rb_ok) else "FAIL",
-       "a turn that ran which, ls or an install is not blocked")
+# #589: the record check. Older case "a turn that ran which, ls or an install is not blocked" changed: a probe
+# alone no longer passes; the turn needs three failed attempts in three classes (cases below).
+_rb_n = [0]
+
+
+def _rb_rec(tag, calls, user="where is unity"):
+    """calls: (tool name, input, result text, is_error). Writes the transcript, returns its path."""
+    recs = [_rb_user(user)]
+    for i, (name, inp, res, err) in enumerate(calls):
+        tid = "t%d" % i
+        recs.append(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": tid, "name": name, "input": inp}]}}))
+        recs.append(json.dumps({"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": tid, "content": res, "is_error": err}]}}))
+    _rb_n[0] += 1
+    return _hand_transcript("rb589-%s-%d" % (tag, _rb_n[0]), recs)
+
+
+def _rb_blocked(transcript, reply):
+    _rb_fresh()
+    return '"decision":"block"' in _rb_run(transcript, reply=reply)
+
+
+_RB_B = lambda c, r="not found", e=True: ("Bash", {"command": c}, r, e)
+_RB_R = "I can't continue, unity is not installed."
+_RB_R3 = _RB_R + " I tried which unity, find for unity and pip show unity."
+_RB_3 = [_RB_B("which unity"), _RB_B("find / -name unity"), _RB_B("pip show unity")]
+report("PASS" if _rb_blocked(_rb_rec("ls", [("Bash", {"command": "git ls-files"}, "a.py", False)]), _RB_R) else "FAIL",
+       "#589: a claim after only git ls-files is blocked")
+for _k in (1, 2):
+    _rb_fresh()
+    _o = _rb_run(_rb_rec("n%d" % _k, _RB_3[:_k]), reply=_RB_R3)
+    report("PASS" if '"decision":"block"' in _o and "%d more different" % (3 - _k) in _o else "FAIL",
+           "#589: %d failed attempt(s) are blocked, saying %d more are needed" % (_k, 3 - _k))
+report("PASS" if not _rb_blocked(_rb_rec("ok", _RB_3), _RB_R3) else "FAIL",
+       "#589: three failed attempts in three classes, related and all named, are accepted")
+# Found by the live headless run (2026-11-23): `ls /usr/bin | grep zzqqtool` finds nothing and the tool reports
+# "(Bash completed with no output)" with is_error false, so a filtered search that found nothing must still count.
+_RB_EMPTY = [_RB_B("which unity"), _RB_B("ls /usr/bin | grep unity", "(Bash completed with no output)", False),
+             _RB_B("pip show unity")]
+_RB_RLS = _RB_R + " I tried which unity, ls for unity and pip show unity."
+report("PASS" if not _rb_blocked(_rb_rec("empty", _RB_EMPTY), _RB_RLS) else "FAIL",
+       "#589: a filtered search that finds nothing (exit 0, no output) counts as a failed attempt")
+report("PASS" if _rb_blocked(_rb_rec("emptyls", [_RB_B("which unity"), _RB_B("ls /empty", "(Bash completed with no output)", False),
+                                                 _RB_B("pip show unity")]), _RB_RLS) else "FAIL",
+       "#589: a plain ls of an empty folder (no filter) does not count as a failed attempt")
+report("PASS" if _rb_blocked(_rb_rec("ex", [_RB_B("which unity"), _RB_B("where unity"), _RB_B("command -v unity")]),
+                              _RB_R + " I tried which, where and command -v for unity.") else "FAIL",
+       "#589: three existence checks count once and are blocked")
+report("PASS" if _rb_blocked(_rb_rec("unrel", [_RB_B("which foo"), _RB_B("find / -name bar"), _RB_B("pip show baz")]), _RB_R3) else "FAIL",
+       "#589: three failures unrelated to the claimed thing are blocked")
+report("PASS" if not _rb_blocked(_rb_rec("ps", [("PowerShell", {"command": "Get-Command unity"}, "x", True),
+                                                _RB_3[1], ("mcp__x__list_computer_folders", {"q": "unity"}, "none", True)]),
+                                  _RB_R + " I tried Get-Command, find and mcp__x__list_computer_folders for unity.") else "FAIL",
+       "#589: a PowerShell and an MCP failure count as attempts")
+report("PASS" if _rb_blocked(_rb_rec("hook", [_RB_B("which unity"), _RB_B("find / -name unity"),
+                                              _RB_B("pip show unity", "PreToolUse:Bash hook error: denied")]), _RB_R3) else "FAIL",
+       "#589: a PreToolUse hook refusal does not count as an attempt")
+report("PASS" if not _rb_blocked(_rb_rec("needs", []), _RB_R + " NEEDS YOU: the licence.") else "FAIL",
+       "#589: a NEEDS YOU reply is exempt")
+report("PASS" if not _rb_blocked(_rb_rec("why", _RB_3[:1]), _RB_R + " which unity failed; there is no other way to check.") else "FAIL",
+       "#589: fewer than three methods with a stated reason is accepted here (the judge in #591 checks it)")
+_rb_fresh()
+_o = _rb_run(os.path.join(_HAND_ROOT, "does-not-exist.jsonl"), reply=_RB_R)
+report("PASS" if '"decision":"block"' not in _o and "could not" in _o else "FAIL",
+       "#589: an unreadable transcript is announced and never blocks")
+_rb_fresh()
 _rb_fresh()
 _rb_run(_rb_t)
 _rb_run(_rb_t)
@@ -1292,9 +1369,114 @@ _rb_bad = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS_STATE=_HAND_RO
 report("PASS" if '"decision":"block"' not in _rb_bad and "could not read or write" in _rb_bad else "FAIL",
        "an unusable state file produces a message and no block")
 _rb_fresh()
-_rb_ret = _rb_run(_rb_t, retry=True)
-report("PASS" if '"decision":"block"' not in _rb_ret and "unchecked" in _rb_ret and not os.path.exists(_RB_STATE) else "FAIL",
-       "the retry (stop_hook_active) never blocks and does not count")
+_rb_r = [_rb_run(_rb_t, retry=r) for r in (False, True, True)]
+report("PASS" if ['"decision":"block"' in o for o in _rb_r] == [True, True, False] and "unchecked" in _rb_r[2] else "FAIL",
+       "#588: a retry (stop_hook_active) still blocks a second time and never a third")
+_rb_fresh()
+for _ph in ("I can't verify it", "I can’t verify it", "we won't verify it", "we won’t verify it",
+            "I am unable to verify it", "I am unable to run it", "I could not run it", "I couldn't run it",
+            "I couldn’t run it", "I don't have access", "I don’t have access", "That is not available here",
+            "It isn't available", "It isn’t available", "I can’t continue"):
+    _rb_fresh()
+    report("PASS" if '"decision":"block"' in _rb_run(_rb_t, reply=_ph) else "FAIL", "#588: %s is flagged" % ascii(_ph))
+_rb_fresh()
+report("PASS" if '"decision":"block"' not in _rb_run(_rb_t, reply="> I couldn't run it\n\nAll fine.") else "FAIL",
+       "#588: a blockquoted claim is ignored")
+_rb_fresh()
+_rb_stall = "I've stopped here; next step is yours."
+report("PASS" if '"decision":"block"' not in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
+       "#588: a stall phrase is not scanned when attended")
+_rb_fresh()
+# the real path: HOUSE_RULES_UNATTENDED=on makes the hook's own apply_switches turn HANDOVER off; roadblocks must still run
+_rb_un = _rb_run(_rb_t, reply=_rb_stall, env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if '"decision":"block"' in _rb_un else "FAIL", "#588: a stall phrase is flagged when unattended (the roadblocks hook, via apply_switches)")
+_rb_fresh()
+_, _rb_un_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM),
+                          env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if _rb_un_h.strip() == "" else "FAIL", "#588: unattended really turns the handover hook off (so only the roadblocks hook can catch it)")
+_rb_fresh()
+# attended: the handover hook no longer runs the check, so one turn is counted once, not twice
+_, _rb_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM), env=_RB_ENV)
+_rb_c = [_rb_run(_rb_t) for _ in range(3)]
+report("PASS" if "roadblocks.md" not in _rb_h and ['"decision":"block"' in o for o in _rb_c] == [True, True, False] else "FAIL",
+       "#588: attended, the handover hook leaves the roadblock check alone, so a turn blocks twice and not once more")
+_rb_fresh()
+_rb_pm = lambda m: _rb_run_pm(_rb_t, m)
+
+
+def _rb_run_pm(transcript, mode):
+    _, out, _ = run_hook("roadblocks", stop_payload(transcript_path=transcript, last_assistant_message=_rb_stall,
+                                                    permission_mode=mode), env=_RB_ENV)
+    return out
+
+
+report("PASS" if '"decision":"block"' in _rb_pm("bypassPermissions") else "FAIL",
+       "#588: a stall phrase is flagged when permission_mode is bypassPermissions")
+_rb_fresh()
+report("PASS" if '"decision":"block"' not in _rb_pm("default") else "FAIL", "#588: a stall phrase is not scanned in default mode")
+_rb_fresh()
+report("PASS" if "no permission_mode" in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
+       "#588: a missing permission_mode is announced")
+_rb_fresh()
+_rb_car = _hand_transcript("rb-carrier", [_rb_user("build it"), _rb_tool("pytest -q"), json.dumps(
+    {"type": "user", "message": {"content": "<system-reminder>x</system-reminder>"}})])
+_rb_run(_rb_car)
+_rb_run(_rb_car)
+report("PASS" if '"decision":"block"' not in _rb_run(_rb_car) else "FAIL",
+       "#588: a system-reminder carrier does not reset the turn")
+# --- #591: the goal check (stall phrase, end of turn only, nested claude call via a stub) ---
+_gc_un = dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on")
+_gc_log = os.path.join(_HAND_ROOT, "gc.log")
+_gc_t = _hand_transcript("gc", [_rb_user("build castles 1 to 12"), _rb_tool("pytest -q")])
+
+
+def _gc_run(mode, reply=_rb_stall, env=None, transcript=None):
+    return _rb_run(transcript or _gc_t, reply=reply, env=dict(env or _gc_un, GC_STUB_MODE=mode))
+
+
+def _gc_reset():
+    _rb_fresh()
+    for _g in (_RB_STATE + ".goal", _gc_log):
+        if os.path.exists(_g):
+            os.remove(_g)
+
+
+_gc_reset()
+_o = _gc_run("unreached")
+report("PASS" if '"decision":"block"' in _o and "continue building castles 2 to 12" in _o and "block 1 of 6" in _o else "FAIL",
+       "#591: a goal-unreached verdict blocks with the judge's reason")
+_gc_reset()
+_gc_n = [('"decision":"block"' in _gc_run("unreached")) for _ in range(7)]
+report("PASS" if _gc_n == [True] * 6 + [False] else "FAIL", "#591: the goal check blocks 6 times in a row per user message, the 7th passes (%s)" % _gc_n)
+_gc_reset()
+_o = _gc_run("reached")
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: a goal-reached verdict passes")
+_gc_reset()
+_gc_run("unreached", env=dict(_gc_un, GC_STUB_LOG=_gc_log), reply="All done, nothing left.")
+report("PASS" if not os.path.exists(_gc_log) else "FAIL", "#591: no stall phrase means no goal check")
+_gc_reset()
+_gc_run("unreached", env=dict(_gc_un, GC_STUB_LOG=_gc_log))
+_gc_seen = read(_gc_log) if os.path.exists(_gc_log) else ""
+report("PASS" if _gc_seen.startswith("off") and "build castles 1 to 12" in _gc_seen and "gc" in _gc_seen else "FAIL",
+       "#591: a stall phrase runs the check with the goal and transcript path, plugin hooks off in the nested call")
+_gc_reset()
+_o = _gc_run("unreached", env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="off"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: attended, a stall phrase does not run the goal check")
+for _mode, _word in (("fail", "no usable verdict"), ("garbage", "no usable verdict"), ("sleep", "timed out")):
+    _gc_reset()
+    _o = _gc_run(_mode, env=dict(_gc_un, HOUSE_RULES_GOALCHECK_TIMEOUT="1"))
+    report("PASS" if '"decision":"block"' not in _o and _word in _o else "FAIL", "#591: a %s claude is announced and never blocks" % _mode)
+_gc_reset()
+_o = _gc_run("unreached", env=dict(_gc_un, HOUSE_RULES_GOALCHECK_CMD=os.path.join(_HAND_ROOT, "no-such-claude.exe")))
+report("PASS" if '"decision":"block"' not in _o and "could not run claude" in _o else "FAIL", "#591: a missing claude is announced and never blocks")
+_gc_reset()
+_o = _gc_run("unreached", env=dict(_gc_un, HOUSE_RULES_GOALCHECK="off"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: HOUSE_RULES_GOALCHECK=off turns the goal check off")
+_gc_reset()
+_gc_hooks = json.loads(hooks_json_text)["hooks"]["Stop"]
+_gc_judge = [h for e in _gc_hooks for h in e["hooks"] if h.get("type") == "prompt"]
+report("PASS" if len(_gc_judge) == 1 and "three different methods" in _gc_judge[0]["prompt"] and "$ARGUMENTS" in _gc_judge[0]["prompt"] else "FAIL",
+       "#591: hooks.json has the prompt-type judge on Stop and its prompt names the three-method rule")
 _rb_off = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS="off"))
 report("PASS" if '"decision":"block"' not in _rb_off else "FAIL", "HOUSE_RULES_ROADBLOCKS=off turns the check off")
 _rb_fresh()

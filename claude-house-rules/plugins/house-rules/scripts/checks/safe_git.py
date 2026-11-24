@@ -2060,6 +2060,16 @@ report("PASS" if all(_ua_dec(o[1]) == "deny" and "nobody is there to answer" in 
        and all(o[0] == 0 and o[1] == "" for o in _un_n[1::2]) else "FAIL",
        "noask: AskUserQuestion and ExitPlanMode are denied when unattended; silent and exit 0 when not")
 
+_bp = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "bp", "tool_name": "AskUserQuestion",
+                                    "tool_input": {}, "permission_mode": "bypassPermissions"}), env=dict(os.environ, HOUSE_RULES_UNATTENDED="off"))
+_bd = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "bp", "tool_name": "AskUserQuestion",
+                                    "tool_input": {}, "permission_mode": "default"}), env=dict(os.environ, HOUSE_RULES_UNATTENDED="off"))
+report("PASS" if _ua_dec(_bp[1]) == "deny" and "Choose the most reasonable reversible option" in _bp[1]
+       and "carry on" in _bp[1] and _bd[1] == "" and _bd[2] == "" else "FAIL",
+       "noask: bypassPermissions denies the question with the choose-and-carry-on reason; default mode is silent")
+report("PASS" if _un_n[1][1] == "" and "no permission_mode" in _un_n[1][2] and _ua_dec(_un_n[0][1]) == "deny" else "FAIL",
+       "noask: a payload with no permission_mode is announced on stderr and treated as attended; unattended still denies")
+
 _un_h = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]["PreToolUse"]
 report("PASS" if any(m["matcher"] == "AskUserQuestion|ExitPlanMode" and "run.sh\\\" noask" in json.dumps(m["hooks"])
                      for m in _un_h) else "FAIL", "hooks.json registers noask on AskUserQuestion|ExitPlanMode")

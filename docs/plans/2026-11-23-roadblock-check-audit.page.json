@@ -1,0 +1,276 @@
+{
+ "title": "Roadblock Check Audit",
+ "eyebrow": "Proposal \u00b7 audit of the planned fix (parent issue #587, the roadblock detection fix), nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: roadblock check audit",
+ "short": {
+  "lead": "I tested the planned roadblock check against real transcripts and found eight weak spots. The fix keeps phrase matching as a cheap first layer. It adds a check of the session record, and an optional second model that judges each reply. You make five choices.",
+  "hint": "Tap a card to see the evidence.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Measured",
+    "Measurements, not guesses",
+    "",
+    "I ran test cases through the merged check (tool types, quoting, apostrophes), read how 224 tool results record failure, counted genuine messages (17), scanned 28 real final replies, timed a 5.3 MB transcript, and tried a Stop hook judged by a model. Results are on the eight cards below. Anything I could not measure is labelled as reasoned.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E7%20measurements%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E28%20real%20replies%20scanned%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E5.3%20MB%20transcript%20timed%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3E1%20model%20judge%20run%3C/text%3E%3C/svg%3E",
+     "alt": "What was measured",
+     "caption": "Measured items and reasoned items are labelled apart on each card."
+    }
+   ],
+   [
+    "shield",
+    "Layers",
+    "Three layers instead of one phrase list",
+    "",
+    "Layer 1 is the cheap phrase scan. Layer 2 reads the session record. It wants three failed attempts that each used a different kind of method, such as a file check, a disk search or a package lookup. All three must be about one target, and the reply must list them. Layer 3 is an optional model judge that catches wording no list covers.",
+    "Pick the layers in question 1.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Ctext%20x=%2212%22%20y=%2228%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ELayer%201:%20phrase%20scan%20%28cheap%29%3C/text%3E%3Ctext%20x=%2212%22%20y=%2252%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ELayer%202:%20record%20check%3C/text%3E%3Ctext%20x=%2212%22%20y=%2276%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ELayer%203:%20model%20judge%20%28optional%29%3C/text%3E%3Ctext%20x=%2212%22%20y=%22100%22%20font-family=%22sans-serif%22%20font-size=%2213%22%20fill=%22%231a2433%22%3ECap:%202%20blocks%2C%20then%20warn%3C/text%3E%3C/svg%3E",
+     "alt": "The three layers",
+     "caption": "Each layer covers a gap in the one before it."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the audit and your five picks",
+    "you",
+    "Your approval is recorded in the decisions log, and the plan page is updated to match.",
+    "Pick one option for each question, then tap Copy my reply and paste it into this chat."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "1. Claim wording slips past",
+   "Curly apostrophes, paraphrases and blockquotes.",
+   "",
+   "Measured: a roadblock claim written with a curly apostrophe (can\u2019t) was not flagged, and a line inside a quoted block was flagged by mistake. Reasoned: a phrase list never covers every paraphrase, such as \"wasn't able to\" or \"no way to\".",
+   [
+    "Today the pattern needs a straight apostrophe and ignores only quotes and backticks.",
+    "Normalise apostrophes, ignore blockquotes and code, and add the optional model judge for paraphrases.",
+    "Fewer misses and fewer false alarms."
+   ],
+   null
+  ],
+  [
+   "chg",
+   "2. The probe test is too loose",
+   "Any command containing ls, where, npm, pip, apt or similar counted.",
+   "",
+   "Measured: a turn that ran git ls-files counted as a probe, so the roadblock claim was accepted without real evidence. This was the main cause on your PC.",
+   [
+    "Today a probe is any Bash command containing one of 13 program names or command -v.",
+    "Count only failed attempts about the target the reply names, and count each kind of method once.",
+    "A claim needs real evidence, not a lucky word."
+   ],
+   null
+  ],
+  [
+   "chg",
+   "3. Other tools are invisible",
+   "PowerShell and MCP tool calls are not recognised.",
+   "",
+   "Measured: after a PowerShell call to Get-Command, the claim was still blocked even though the attempt was real, and the same happened after a failed MCP tool call (a tool from a connected server). Whether your PC uses the PowerShell tool is unverified.",
+   [
+    "Today only the tool named Bash is read.",
+    "Read every tool's result, and add the Windows equivalents of each method class.",
+    "No false blocks on Windows or on MCP tools."
+   ],
+   null
+  ],
+  [
+   "chg",
+   "4. What counts as failed",
+   "Real failures and harmless ones look alike.",
+   "",
+   "Measured in this session: the tool result's error flag (is_error) was set on 9 of 224 results and is reliable. But it is also set by hook refusals and by harmless non-zero exits, such as git commit with nothing to commit. Four results looked like failures but had the flag unset.",
+   [
+    "Today failure is not read at all.",
+    "Failed means is_error, minus hook refusals and a short list of harmless exits, plus results that exited cleanly (code 0) but contain clear failure text.",
+    "Evidence rests on real failures."
+   ],
+   null
+  ],
+  [
+   "chg",
+   "5. Two escape routes in the plan are weak",
+   "A reply that names no target, and a reply that lists fewer than three methods.",
+   "",
+   "Reasoned: counting any three failed results lets unrelated failures satisfy the rule, and \"say why\" is unchecked. Replacement: the three attempts must share a target word that also appears in the reply or in your request. If the reply lists fewer than three, the model judge checks the reason it gives.",
+   [
+    "Today the plan allows both, and lists them as known weaknesses.",
+    "Attempts must share a target, methods come from a fixed list of kinds, and the model judge checks the reason.",
+    "Unrelated failures no longer count."
+   ],
+   null
+  ],
+  [
+   "chg",
+   "6. False alarms",
+   "Replies that are honest, that quote the rule, that relay a helper's failure, or that really must stop.",
+   "",
+   "Measured: the phrase \"next step\" appeared in 2 of 28 real final replies, and one of those was a reply discussing the rule itself. Reasoned: a reply relaying a subagent's failure, or needing a licence, login or purchase, is a legitimate stop.",
+   [
+    "Today every phrase hit blocks up to twice.",
+    "A stall phrase flags a reply only if it also hands the decision back to you, a marked exemption covers licence, login, purchase and destructive stops, and the cap of two stays.",
+    "Fewer pointless blocks."
+   ],
+   null
+  ],
+  [
+   "chg",
+   "7. Which messages start a new turn",
+   "Messages that you did not write start a new turn by mistake.",
+   "",
+   "Measured: in this session, 2 of 17 messages counted as yours were automatic system-reminder messages, not you. Each wrongly starts a new turn. That hides earlier attempts and resets the count of blocks so far. Hook feedback is correctly excluded.",
+   [
+    "Today any message not on a short exclusion list is genuine.",
+    "Also exclude system-reminder carriers.",
+    "Attempts before the block keep counting."
+   ],
+   null
+  ],
+  [
+   "chg",
+   "8. The environment",
+   "Mode field, other modes and speed.",
+   "",
+   "Measured: the Stop payload has permission_mode, the whole end-of-turn (Stop) step took 0.8 s on a 5.3 MB transcript, and the check itself adds 0.08 s. Estimate, not measured: 100 MB would take about 15 s. Hook time limits are unknown.",
+   [
+    "Today a missing mode is not handled and the whole file is read.",
+    "If the mode is missing, say so and assume someone is watching. Read only the end of the transcript. Question 5 asks whether the auto and dontAsk modes should count as unattended.",
+    "Safe on long sessions."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "How much checking sits behind the phrase scan?",
+   [
+    [
+     "A",
+     "Layers 1 and 2 only: phrase scan plus the record check, no model call",
+     0,
+     "Free and fast, but wording no list covers still slips through."
+    ],
+    [
+     "B",
+     "Add layer 3: a model-judged Stop hook on every turn end (my suggestion)",
+     1,
+     "Measured once: the judge flagged the claim, gave an actionable reason, and passed after methods were listed. Its call cost $0.004 for two evaluations, against $0.244 for the main model in that run."
+    ],
+    [
+     "C",
+     "Add layer 3 as an agent hook that reads the transcript itself",
+     0,
+     "Strongest, since it can verify each listed method really ran, but it is slower and costs more. Not tested."
+    ]
+   ],
+   "B closes the wording gap for a tiny measured cost. One run is a small sample, so the cost is an estimate."
+  ],
+  [
+   "second",
+   "How is a different method decided?",
+   [
+    [
+     "A",
+     "A closed table of method classes: existence check, disk search, package database, run it, ask the environment, other tool (my suggestion)",
+     1,
+     "Three attempts must fall in three different kinds, so which, where and command -v together count as one attempt (all are existence checks)."
+    ],
+    [
+     "B",
+     "A different command program or tool name",
+     0,
+     "Simpler, but three existence checks would count as three methods."
+    ]
+   ],
+   "A stops the cheapest way of gaming the rule."
+  ],
+  [
+   "third",
+   "What about stops that are really yours to settle?",
+   [
+    [
+     "A",
+     "The reply marks NEEDS YOU for a licence, login, purchase or destructive step, and is exempt from the three-attempt rule (my suggestion)",
+     1,
+     "Matches the rule that those four stay yours. In unattended mode the agent carries on with other work."
+    ],
+    [
+     "B",
+     "No exemption: the cap of two handles it",
+     0,
+     "Simplest, but the agent is told to try again at things it can never do."
+    ]
+   ],
+   "A keeps the block for real roadblocks only."
+  ],
+  [
+   "fourth",
+   "When does a stall phrase such as \"next step\" flag a reply?",
+   [
+    [
+     "A",
+     "Only with hand-back wording too: ends in a question, or says your call, let me know, or waiting for you (my suggestion)",
+     1,
+     "Removes the 2 false flags in 28 real replies, which came from ordinary \"next step\" lines."
+    ],
+    [
+     "B",
+     "On the phrase alone, as you approved in your 2026-11-23 answers",
+     0,
+     "Catches more, but flags ordinary replies in unattended runs."
+    ]
+   ],
+   "A still catches the reply from the Castle session on your PC, which ended with \"Your call\"."
+  ],
+  [
+   "fifth",
+   "Which permission modes should count as unattended, with no one watching?",
+   [
+    [
+     "A",
+     "Unattended runs and bypassPermissions only, as you answered on 2026-11-23 (my suggestion)",
+     1,
+     "Matches what you said, word for word."
+    ],
+    [
+     "B",
+     "Also auto and dontAsk",
+     0,
+     "Those modes also run without a person confirming each step, but you did not name them."
+    ]
+   ],
+   "A keeps to your answer. B is one line to add later."
+  ]
+ ],
+ "wrapup": {
+  "summary": "This audit found eight weak spots in the planned check and proposes three layers: phrases, a record check of three related failed attempts, and an optional model judge.",
+  "changing": "The claim pattern, the evidence test, the failure rule, the window rule and the plan page for issues #588 (detection), #589 (the three-attempt rule) and #590 (never waiting).",
+  "blocking": "Your pick for each of the five questions under Your choices.",
+  "next": "After you approve, I update the plan page and issues to match, and you approve the build plan.",
+  "todo": [
+   "Read the eight cards, starting with 2 and 3.",
+   "Pick one option for each of the five questions.",
+   "Tap <b>Copy my reply</b>, then paste it into this chat and send it. It will look like \"Design approved: roadblock check audit 1B 2A 3A 4A 5A\"."
+  ]
+ }
+}
