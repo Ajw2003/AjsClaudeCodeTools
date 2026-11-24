@@ -15,7 +15,7 @@ Making a design and a build plan trustworthy before aj sees them, proving a fini
 | Acceptance run | #595 | Reviewer runs and screenshots the whole feature against the acceptance list the build plan carries, reusing the visual loop (four rounds, never asks aj). A hook records the stamp for the current commit in the stage file. |
 | QA gate | #596 | QA mode refuses without a current acceptance stamp, accepts an empty unverified list, and opens with the ledger. |
 | Self-judging test | #597 | The fallback when this machine genuinely cannot test something: one test that decides pass or fail itself, handed over as one command. |
-| Parked questions | #598 | Reversible questions take the safest default, go in `docs/qa/<feature>/ledger.md` with how to undo them, and work continues. Extends the `noask` hook from 2.90.0. |
+| Parked questions | #598 | First half built (see "Parked questions" below): the script, the rule text and the helper note. The hooks that stop asking in Build are not built yet. |
 | Deviations ledger | #599 | In unattended or bypass mode, every departure from the plan is logged in the same ledger file. Intent changes park that piece only. |
 | Combined approval | #600 | One approval line moves Design to Build when the reviewed plan is present. |
 
@@ -30,3 +30,7 @@ Making a design and a build plan trustworthy before aj sees them, proving a fini
 
 - The `bypassPermissions` value was read from Claude Code's mode list, not seen live (`roadblocks.md`, 2.90.0 notes).
 - Opus review cost per page is unmeasured. The two-round cap is an estimate.
+
+## Parked questions (design review loop, #598)
+
+`scripts/ledger_note.py park <feature> --step S --question Q --default D --affects A [--answer HOW]` appends row P<n> (one more than the highest P in the file) to the Parked decisions table of `docs/qa/<folder>/ledger.md`, creating the file with its two tables if absent; the folder rule is `make_page.qa_folder`. `|` and newlines in a cell are escaped (the QA page parser splits cells on every `|`, so an escaped one still cuts that cell short). The rule in `rules/show-dont-tell.md` and the helper start note (`_loop_helper_note`) tell the agent to park a reversible question and carry on; a [HARD STOP] (cannot be undone, or touches money, secrets or other people) is still asked. Not built yet: the `AskUserQuestion` hook and the Build question hold.
