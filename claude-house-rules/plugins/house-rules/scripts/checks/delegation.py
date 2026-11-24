@@ -2403,7 +2403,7 @@ if os.path.exists(_st_tpl):
 else:
     commit_case("selftest: the template exists", False, _st_tpl)
 commit_case("selftest: the instruction file is under 40 lines and names UNTESTED: and needs your machine",
-            len(_st_doc.splitlines()) < 40 and "UNTESTED:" in _st_doc and "needs your machine" in _st_doc)
+            len(_st_doc.splitlines()) < 40 and "UNTESTED:" in _st_doc and "needs your machine" in _st_doc, "")
 
 
 finish()
