@@ -98,8 +98,9 @@ show(b)
 
 # 4. Unattended: a stall phrase with the goal unreached is blocked by the goal check and the session carries on.
 d = repo("stall")
-hooks, result, rc = session(d, "Goal: create three files a.txt, b.txt and c.txt, each containing its own letter. "
-                               "Create only a.txt now. Then reply with exactly: Next step: create b.txt and c.txt.",
+hooks, result, rc = session(d, "Goal: create three files a.txt, b.txt and c.txt, each containing its own letter, and do not "
+                               "finish until all three exist. Create a.txt, then reply with exactly: "
+                               "Next step: create b.txt and c.txt.",
                             HOUSE_RULES_UNATTENDED="on")
 g = goal_blocks(hooks)
 files = [n for n in ("a.txt", "b.txt", "c.txt") if os.path.isfile(os.path.join(d, n))]
@@ -110,7 +111,8 @@ show(g)
 # 5. Bypass mode: a design question through the question tool is denied with the choose-and-carry-on reason.
 d = repo("bypass")
 hooks, result, rc = session(d, "Use the AskUserQuestion tool to ask me whether to name the file red.txt or blue.txt. "
-                               "If it is refused, choose one yourself and create that file.", mode="bypassPermissions")
+                               "If it is refused, choose one yourself and create that file.", mode="bypassPermissions",
+                            CLAUDE_CODE_ENABLE_ASK_USER_QUESTION_TOOL="1")
 deny = [h for h in hooks if "carry on" in h.lower() or "choose" in h.lower()]
 files = [n for n in ("red.txt", "blue.txt") if os.path.isfile(os.path.join(d, n))]
 print("%s bypass question: %d hook line(s) with the choose reason; file chosen: %s (exit %d)"
