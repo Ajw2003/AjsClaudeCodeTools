@@ -1,0 +1,307 @@
+{
+ "title": "Visual docs and self-updating roadmap",
+ "eyebrow": "AjsClaudeCodeTools \u00b7 two new skills \u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: visual docs and visual roadmap skills",
+ "short": {
+  "lead": "Proposal: add two skills to the house-rules plugin, visual-docs (turns the tier docs into one illustrated game-design-style page) and visual-roadmap (a GitHub Action that redraws two roadmap views whenever issues or merges change); I need your approval and five picks.",
+  "hint": "Tap a step to see what it produces and what it needs from you.",
+  "key": [
+   [
+    "I build it",
+    ""
+   ],
+   [
+    "You decide or test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "Today",
+    "Text docs and a hand-edited roadmap",
+    "",
+    "Six tier folders, plain-English text copies under docs/plain/, and docs/2-roadmap/Roadmap.md, which is edited by hand. Nothing draws a picture, and nothing updates when an issue closes.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2220%22 width=%2280%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2250%22 y=%2241%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3ETier docs%3C/text%3E%3Crect x=%2210%22 y=%2264%22 width=%2280%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2250%22 y=%2285%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPlain copies%3C/text%3E%3Crect x=%2210%22 y=%22108%22 width=%2280%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2250%22 y=%22129%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPage style%3C/text%3E%3Cline x1=%2292%22 y1=%2237%22 x2=%22130%22 y2=%2280%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2292%22 y1=%2281%22 x2=%22130%22 y2=%2285%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2292%22 y1=%22125%22 x2=%22130%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22130%22 y=%2260%22 width=%2290%22 height=%2250%22 rx=%226%22 fill=%22%23ffd98a%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22175%22 y=%2289%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Evisual-docs%3C/text%3E%3Cline x1=%22222%22 y1=%2285%22 x2=%22240%22 y2=%2285%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22240%22 y=%2245%22 width=%2270%22 height=%2280%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22275%22 y=%2289%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EOne page%3C/text%3E%3C/svg%3E",
+     "alt": "Three existing sources (tier docs, plain copies, page style) feed the new visual-docs skill, which produces one illustrated page.",
+     "caption": "Mock-up: what the new skill reuses and what it produces."
+    }
+   ],
+   [
+    "hammer",
+    "Skill 1",
+    "visual-docs",
+    "",
+    "A skill that reads the tier docs and writes one condensed, illustrated page with a diagram per idea, in human wording.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2210%22 width=%22300%22 height=%2226%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22160%22 y=%2227%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E1. The pitch, one line%3C/text%3E%3Crect x=%2210%22 y=%2242%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2282%22 y=%2266%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E2. Pillars%3C/text%3E%3Crect x=%22165%22 y=%2242%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22237%22 y=%2266%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E3. How it works%3C/text%3E%3Crect x=%2210%22 y=%2288%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2282%22 y=%22112%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E4. Parts and state%3C/text%3E%3Crect x=%22165%22 y=%2288%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22237%22 y=%22112%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E5. Road ahead%3C/text%3E%3Crect x=%2210%22 y=%22134%22 width=%22300%22 height=%2236%22 rx=%226%22 fill=%22%23f6c2c2%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22160%22 y=%22156%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E6. Risks and open questions%3C/text%3E%3C/svg%3E",
+     "alt": "Six stacked sections of a game-design-style page, from the one-line pitch down to risks.",
+     "caption": "Mock-up of the page layout the skill fills in."
+    }
+   ],
+   [
+    "hammer",
+    "Skill 2",
+    "visual-roadmap",
+    "",
+    "A GitHub Action plus a small script that keeps one data file current and redraws two views from it on every issue and merge event.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%228%22 y=%2214%22 width=%2270%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2243%22 y=%2235%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue opened%3C/text%3E%3Crect x=%228%22 y=%2256%22 width=%2270%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2243%22 y=%2277%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue closed%3C/text%3E%3Crect x=%228%22 y=%2298%22 width=%2270%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2243%22 y=%22119%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPR to dev%3C/text%3E%3Crect x=%228%22 y=%22140%22 width=%2270%22 height=%2232%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2243%22 y=%22160%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPR to main%3C/text%3E%3Cline x1=%2280%22 y1=%2231%22 x2=%22110%22 y2=%2288%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2280%22 y1=%2273%22 x2=%22110%22 y2=%2290%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2280%22 y1=%22115%22 x2=%22110%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2280%22 y1=%22156%22 x2=%22110%22 y2=%22100%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22110%22 y=%2270%22 width=%2290%22 height=%2250%22 rx=%226%22 fill=%22%23ffd98a%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22155%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EGitHub Action%3C/text%3E%3Cline x1=%22202%22 y1=%2295%22 x2=%22224%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22224%22 y=%2250%22 width=%2286%22 height=%2290%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22267%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Edata %2B 2 views%3C/text%3E%3C/svg%3E",
+     "alt": "Four GitHub events (issue opened, issue closed, merge to dev, merge to main) trigger one Action that rewrites the roadmap data and both views.",
+     "caption": "Mock-up of the update trigger."
+    }
+   ],
+   [
+    "eye",
+    "Check",
+    "I run both on this repo",
+    "",
+    "I run each on this repo, screenshot the output in light and dark at phone width, and add cases to verify.py.",
+    "Look at the two pages."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve and pick",
+    "you",
+    "A dated entry in docs/6-decisions/Decisions.md, one parent issue and one child issue per step.",
+    "Pick under Your choices and send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "Skill 1: visual-docs",
+   "One illustrated page that reads like a game design document, built from the tier docs.",
+   null,
+   "The skill reads docs/1-landing, 3-state, 4-systems and the plain copies under docs/plain/, then writes a single page in six sections: the pitch in one line, the pillars (what the project promises), how it works as diagrams, each part and its state, the road ahead, and risks. Wording is for a person who has never opened the repo: no file paths in body text, jargon defined on first use. It reuses make_page.py for layout and docs/page-style.json for colours, so it needs no new styling system. It saves a fingerprint of each source doc, so a later run lists which sections went stale instead of rewriting everything.",
+   [
+    "plain-docs writes text copies only; make_page.py builds approval pages only; neither makes a project overview.",
+    "A new skill folder, one page layout, and a staleness check that mirrors plain-docs' stale mode.",
+    "You get a one-page, picture-led overview per project, regenerated only where the docs changed."
+   ],
+   {
+    "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2210%22 width=%22300%22 height=%2226%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22160%22 y=%2227%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E1. The pitch, one line%3C/text%3E%3Crect x=%2210%22 y=%2242%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2282%22 y=%2266%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E2. Pillars%3C/text%3E%3Crect x=%22165%22 y=%2242%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22237%22 y=%2266%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E3. How it works%3C/text%3E%3Crect x=%2210%22 y=%2288%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2282%22 y=%22112%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E4. Parts and state%3C/text%3E%3Crect x=%22165%22 y=%2288%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22237%22 y=%22112%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E5. Road ahead%3C/text%3E%3Crect x=%2210%22 y=%22134%22 width=%22300%22 height=%2236%22 rx=%226%22 fill=%22%23f6c2c2%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22160%22 y=%22156%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E6. Risks and open questions%3C/text%3E%3C/svg%3E",
+    "alt": "Six stacked sections of a game-design-style page, from the one-line pitch down to risks.",
+    "caption": "Mock-up of the page layout the skill fills in."
+   }
+  ],
+  [
+   "new",
+   "Staleness check for the docs page",
+   "Flags sections whose source doc changed since the page was built.",
+   null,
+   "Each section records the hash of the docs it was written from. Running the skill with the word stale compares hashes and prints the sections to redo. A source doc that has gone missing is reported by name rather than skipped.",
+   [
+    "plain-docs already tracks staleness for text copies.",
+    "The same idea, applied to the visual page.",
+    "The page never silently drifts from the docs."
+   ],
+   {
+    "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2230%22 width=%2290%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2255%22 y=%2254%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E4-systems doc%3C/text%3E%3Cline x1=%22102%22 y1=%2250%22 x2=%22130%22 y2=%2250%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22130%22 y=%2230%22 width=%2280%22 height=%2240%22 rx=%226%22 fill=%22%23ffd98a%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22170%22 y=%2254%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Ehash saved%3C/text%3E%3Cline x1=%22212%22 y1=%2250%22 x2=%22235%22 y2=%2250%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22235%22 y=%2230%22 width=%2275%22 height=%2240%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22272%22 y=%2254%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eup to date%3C/text%3E%3Crect x=%2210%22 y=%22110%22 width=%2290%22 height=%2240%22 rx=%226%22 fill=%22%23f6c2c2%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2255%22 y=%22134%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Edoc edited%3C/text%3E%3Cline x1=%22102%22 y1=%22130%22 x2=%22130%22 y2=%22130%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22130%22 y=%22110%22 width=%2280%22 height=%2240%22 rx=%226%22 fill=%22%23ffd98a%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22170%22 y=%22134%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Ehash differs%3C/text%3E%3Cline x1=%22212%22 y1=%22130%22 x2=%22235%22 y2=%22130%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22235%22 y=%22110%22 width=%2275%22 height=%2240%22 rx=%226%22 fill=%22%23f6c2c2%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22272%22 y=%22134%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eflagged stale%3C/text%3E%3C/svg%3E",
+    "alt": "A source doc's saved fingerprint is compared on each run; a mismatch flags the page section as stale.",
+    "caption": "Mock-up of the staleness check."
+   }
+  ],
+  [
+   "new",
+   "Skill 2: visual-roadmap",
+   "Two live views of the roadmap, redrawn by a GitHub Action.",
+   null,
+   "The Action runs on four events: an issue opened, an issue closed, a pull request merged into the dev branch, and a pull request merged into main. It rewrites one data file (each issue with its stage) and redraws both views from it. The stages are Backlog, Doing, Review, In dev and Shipped. A merge to the dev branch moves an issue to In dev; a merge to main moves it to Shipped. Because the Action runs on GitHub, it updates even when no Claude session is open. This repo has no dev branch today (git shows only main plus session branches), so the dev branch name is a setting and the In dev stage stays empty until one exists.",
+   [
+    "docs/2-roadmap/Roadmap.md is edited by hand; the issue labels already say whose move it is.",
+    "A workflow file, one script, one data file and two generated views.",
+    "The roadmap is always current, and you can see at a glance what is only in dev and what has shipped."
+   ],
+   {
+    "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%228%22 y=%2214%22 width=%2270%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2243%22 y=%2235%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue opened%3C/text%3E%3Crect x=%228%22 y=%2256%22 width=%2270%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2243%22 y=%2277%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue closed%3C/text%3E%3Crect x=%228%22 y=%2298%22 width=%2270%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2243%22 y=%22119%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPR to dev%3C/text%3E%3Crect x=%228%22 y=%22140%22 width=%2270%22 height=%2232%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2243%22 y=%22160%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPR to main%3C/text%3E%3Cline x1=%2280%22 y1=%2231%22 x2=%22110%22 y2=%2288%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2280%22 y1=%2273%22 x2=%22110%22 y2=%2290%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2280%22 y1=%22115%22 x2=%22110%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%2280%22 y1=%22156%22 x2=%22110%22 y2=%22100%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22110%22 y=%2270%22 width=%2290%22 height=%2250%22 rx=%226%22 fill=%22%23ffd98a%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22155%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EGitHub Action%3C/text%3E%3Cline x1=%22202%22 y1=%2295%22 x2=%22224%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22224%22 y=%2250%22 width=%2286%22 height=%2290%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22267%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Edata %2B 2 views%3C/text%3E%3C/svg%3E",
+    "alt": "Four GitHub events (issue opened, issue closed, merge to dev, merge to main) trigger one Action that rewrites the roadmap data and both views.",
+    "caption": "Mock-up of the update trigger."
+   }
+  ],
+  [
+   "new",
+   "View 1 (suggested): racetrack",
+   "Every issue is a dot on an oval track that ends at main.",
+   null,
+   "Each issue is a dot. Its position on the track is its stage, so a crowded corner shows a bottleneck. The finish line is a merge to main. Hovering a dot shows the issue title and number. It reads well on a phone because it is one picture, not a table.",
+   [
+    "No visual view of issue flow exists.",
+    "A generated SVG, embedded in an HTML page.",
+    "You see where work is piling up."
+   ],
+   {
+    "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2220%22 width=%22300%22 height=%22140%22 rx=%2260%22 fill=%22%23d8dce6%22 stroke=%22%2335508a%22 stroke-width=%223%22/%3E%3Crect x=%2250%22 y=%2255%22 width=%22220%22 height=%2270%22 rx=%2230%22 fill=%22%23eef2fb%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22160%22 y=%2290%22 text-anchor=%22middle%22 fill=%22%2314213d%22 font-size=%2210%22%3EBacklog %3E Doing %3E Review %3E In dev %3E Shipped%3C/text%3E%3Ccircle cx=%2240%22 cy=%2290%22 r=%227%22 fill=%22%23e07a5f%22/%3E%3Ccircle cx=%22105%22 cy=%2238%22 r=%227%22 fill=%22%23e07a5f%22/%3E%3Ccircle cx=%22225%22 cy=%2238%22 r=%227%22 fill=%22%2381b29a%22/%3E%3Ccircle cx=%22288%22 cy=%22100%22 r=%227%22 fill=%22%2381b29a%22/%3E%3Ctext x=%22160%22 y=%22148%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Efinish line = merged to main%3C/text%3E%3C/svg%3E",
+    "alt": "An oval racetrack with one dot per issue, moving around from Backlog through Doing, Review and In dev to the finish line at main.",
+    "caption": "Mock-up of the racetrack view. Dots are example issues."
+   }
+  ],
+  [
+   "new",
+   "View 2 (suggested): burn-up chart",
+   "Three lines over time: opened, in dev and shipped.",
+   null,
+   "The gap between the opened line and the in-dev line is work not yet merged; the gap between in-dev and shipped is work waiting for a release to main. It is the clearest picture of the dev-versus-main split, which a racetrack alone does not give.",
+   [
+    "Nothing tracks history; Roadmap.md shows only the current percentage.",
+    "A generated SVG line chart built from the data file's history.",
+    "You see pace and the size of the unreleased pile."
+   ],
+   {
+    "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Cline x1=%2230%22 y1=%22150%22 x2=%22300%22 y2=%22150%22 stroke=%22%2335508a%22/%3E%3Cline x1=%2230%22 y1=%22150%22 x2=%2230%22 y2=%2220%22 stroke=%22%2335508a%22/%3E%3Cpolyline points=%2230,140 90,115 150,90 210,60 290,35%22 fill=%22none%22 stroke=%22%23e07a5f%22 stroke-width=%223%22/%3E%3Cpolyline points=%2230,148 90,138 150,112 210,95 290,70%22 fill=%22none%22 stroke=%22%23c9a227%22 stroke-width=%223%22/%3E%3Cpolyline points=%2230,150 90,148 150,135 210,120 290,105%22 fill=%22none%22 stroke=%22%233d8f6a%22 stroke-width=%223%22/%3E%3Ctext x=%22215%22 y=%2230%22 fill=%22%2314213d%22%3Eopened%3C/text%3E%3Ctext x=%22215%22 y=%2285%22 fill=%22%2314213d%22%3Ein dev%3C/text%3E%3Ctext x=%22215%22 y=%22140%22 fill=%22%2314213d%22%3Eshipped (main)%3C/text%3E%3C/svg%3E",
+    "alt": "A line chart over time with three rising lines: issues opened on top, issues in dev in the middle, issues shipped to main at the bottom.",
+    "caption": "Mock-up of the burn-up chart. Numbers are made up."
+   }
+  ],
+  [
+   "new",
+   "Where the output is written",
+   "The Action writes to a roadmap-view branch, never to main.",
+   null,
+   "The house rule allows main to change only by pull request, so an Action that pushed straight to main would break it. The Action instead pushes the generated files to a separate roadmap-view branch, and the views are opened from there. The data file is the only source of truth; the views can always be rebuilt from it.",
+   [
+    "The repo rule: main only changes by pull request.",
+    "One extra branch, written only by the Action.",
+    "Main's history stays clean of auto-generated commits."
+   ],
+   {
+    "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2220%22 width=%2290%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2255%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EMerged to main%3C/text%3E%3Crect x=%2210%22 y=%2270%22 width=%2290%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2255%22 y=%2294%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EMerged to dev%3C/text%3E%3Crect x=%2210%22 y=%22120%22 width=%2290%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2255%22 y=%22144%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue events%3C/text%3E%3Cline x1=%22102%22 y1=%2240%22 x2=%22140%22 y2=%2240%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22102%22 y1=%2290%22 x2=%22140%22 y2=%2290%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22102%22 y1=%22140%22 x2=%22140%22 y2=%22140%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22140%22 y=%2220%22 width=%22170%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22225%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EAction builds views%3C/text%3E%3Crect x=%22140%22 y=%2270%22 width=%22170%22 height=%2240%22 rx=%226%22 fill=%22%23ffd98a%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22225%22 y=%2294%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EPush to roadmap-view%3C/text%3E%3Crect x=%22140%22 y=%22120%22 width=%22170%22 height=%2240%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22225%22 y=%22144%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Emain stays PR-only%3C/text%3E%3C/svg%3E",
+    "alt": "Action output goes to a separate roadmap-view branch, never to main, so the main-by-pull-request rule is kept.",
+    "caption": "Mock-up of where the output is written."
+   }
+  ]
+ ],
+ "choices": [
+  [
+   "share",
+   "What drives the roadmap updates?",
+   [
+    [
+     "A",
+     "GitHub Action (suggested)",
+     1,
+     "Fires on the GitHub events themselves, so it works when no session is open and catches merges done in the browser."
+    ],
+    [
+     "B",
+     "Plugin hook only",
+     0,
+     "Updates only while a Claude session is running, so it misses merges made elsewhere."
+    ],
+    [
+     "C",
+     "Both",
+     0,
+     "Action as the source, hook as a quick local refresh. More to maintain."
+    ]
+   ],
+   "Merges and issue changes happen on GitHub, so the trigger should live there."
+  ],
+  [
+   "share",
+   "Which two views?",
+   [
+    [
+     "A",
+     "Racetrack + burn-up chart (suggested)",
+     1,
+     "Racetrack shows where work is now; burn-up shows history and the dev/main gap."
+    ],
+    [
+     "B",
+     "Hourglass + dependency graph",
+     0,
+     "Hourglass shows the funnel from backlog to shipped; the graph shows which issue blocks which. Needs parent/child links kept clean."
+    ],
+    [
+     "C",
+     "Racetrack + milestone timeline",
+     0,
+     "Good if you plan by date; only useful once milestones carry due dates."
+    ]
+   ],
+   "The two views answer different questions, and A covers both without extra data."
+  ],
+  [
+   "share",
+   "Where do the generated views live?",
+   [
+    [
+     "A",
+     "roadmap-view branch (suggested)",
+     1,
+     "Keeps main pull-request-only and needs no settings change."
+    ],
+    [
+     "B",
+     "GitHub Pages",
+     0,
+     "A real web link, but you must switch on Pages in the repo settings."
+    ],
+    [
+     "C",
+     "Commit to docs/2-roadmap through a pull request",
+     0,
+     "Lives in the tier folder, but every update becomes a pull request to review."
+    ]
+   ],
+   "It is the only option that works end to end without you touching settings."
+  ],
+  [
+   "share",
+   "How is the dev branch found?",
+   [
+    [
+     "A",
+     "A setting, default dev (suggested)",
+     1,
+     "One line in a config file; if the branch does not exist the In dev stage is simply empty."
+    ],
+    [
+     "B",
+     "Guess the most recently merged-into long-lived branch",
+     0,
+     "No setup, but it can guess wrong when session branches are active."
+    ]
+   ],
+   "This repo has no dev branch today, so a guess has nothing reliable to find."
+  ],
+  [
+   "share",
+   "What does visual-docs produce?",
+   [
+    [
+     "A",
+     "One page for the whole project (suggested)",
+     1,
+     "A condensed game-design-style overview, as you described."
+    ],
+    [
+     "B",
+     "One page per system doc",
+     0,
+     "More detail, but less condensed and more to keep fresh."
+    ]
+   ],
+   "Your request was a condensed document, which is one page."
+  ]
+ ],
+ "wrapup": {
+  "summary": "A proposal for two new house-rules skills: visual-docs, which makes one illustrated overview page from the tier docs, and visual-roadmap, a GitHub Action that redraws two roadmap views when issues or merges change.",
+  "changing": "Nothing is built. After approval this adds two skill folders under claude-house-rules/plugins/house-rules/skills/, one workflow file under .github/workflows/, a roadmap data file and cases in verify.py.",
+  "blocking": "Your approval and five picks: update trigger, the two views, where views live, how the dev branch is found, and the docs page scope.",
+  "next": "I log the decision, create one parent issue and one child issue per step, and start with visual-roadmap's data file and racetrack.",
+  "todo": [
+   "Pick your answers in Your choices.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it with the approval line, or tell me what to change."
+  ]
+ }
+}
