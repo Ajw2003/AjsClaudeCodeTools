@@ -3495,14 +3495,14 @@ def handover_evidence_check(payload):
 
 # --- roadblock claims (#571, docs/4-systems/roadblocks.md): blocked twice per user message, then a warning ---
 _ROADBLOCK_RE = re.compile(
-    r"\b(i can(?:['’]|no)t|i cannot|(?:is|isn['’]t|is not|are|aren['’]t|are not|not) installed|"
+    r"\b((?:is|isn['’]t|is not|are|aren['’]t|are not|not) installed|"
     r"not on your machine|no access to|you(?:['’]ll| will)? (?:need|have) to install|"
-    r"(?:can|won)['’]t verify|unable to|could not|couldn['’]t|don['’]t have access|not available here|"
+    r"(?:can|won)['’]t verify|couldn['’]t|don['’]t have access|not available here|"
     r"isn['’]t available)\b",
     re.IGNORECASE,
 )
 # #588: stall phrases, scanned only when unattended or permission_mode is bypassPermissions
-_STALL_RE = re.compile(r"\b(not done|i['’]ve stopped(?: here)?|next step)\b", re.IGNORECASE)
+_STALL_RE = re.compile(r"\b(not done|i['’]ve stopped(?: here)?)\b", re.IGNORECASE)
 _MODE_RE = re.compile(r'"permission_mode"\s*:\s*"([^"]*)"')
 ROADBLOCK_BLOCKS = 2
 
@@ -3631,6 +3631,33 @@ def _roadblock_state_path(transcript_path):
     return os.path.join(tempfile.gettempdir(), "house-rules-roadblocks-%s.json" % key)
 
 
+def _tool_call_count(transcript_path):
+    n = 0
+    with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if line.strip():
+                c = (json.loads(line).get("message") or {}).get("content")
+                n += sum(1 for b in c if isinstance(b, dict) and b.get("type") == "tool_use") if isinstance(c, list) else 0
+    return n
+
+
+def _block_peek(transcript_path):
+    """(done, write) for the ONE counter the record check, goal check and judge share (#608): at most
+    ROADBLOCK_BLOCKS blocks in a row per user message; a real tool call since the last block resets it.
+    write(done) stores the new count. Raises OSError/ValueError: callers announce and do not block."""
+    path = _roadblock_state_path(transcript_path)
+    key = "%s|%d" % (transcript_path, _user_message_count(transcript_path))
+    tools = _tool_call_count(transcript_path)
+    state = json.loads(_read_text(path)) if os.path.isfile(path) else {}
+    done = state.get("count", 0) if state.get("key") == key and state.get("tools", 0) >= tools else 0
+
+    def write(n):
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"key": key, "count": n, "tools": tools}, f)
+    return done, write
+
+
 def _roadblock_advice(phrase):
     if "verify" in phrase or "available" in phrase or phrase in ("unable to", "could not") or "couldn" in phrase:
         return "run a command that checks it (which, ls or uname)"
@@ -3687,14 +3714,13 @@ def _goal_check(transcript_path, phrase):
         return None, None
     try:
         first, last = _first_user_text(transcript_path), _last_user_text(transcript_path)
-        key = "%s|%d" % (transcript_path, _user_message_count(transcript_path))
-        path = _roadblock_state_path(transcript_path) + ".goal"
-        state = json.loads(_read_text(path)) if os.path.isfile(path) else {}
+        done, write = _block_peek(transcript_path)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         return None, "house-rules: goal check could not read the session (%s), so it did not block." % type(exc).__name__
-    done = state.get("count", 0) if state.get("key") == key else 0
-    if done >= GOALCHECK_BLOCKS:
-        return None, "house-rules: the goal check blocked %d times for this user message and now lets the reply go." % done
+    if done >= ROADBLOCK_BLOCKS:
+        return None, ("house-rules: the checks blocked %d times in a row and now let the reply go; unverified: "
+                      "whether the goal was reached, since the reply stops (%r) without a tool call since the last block."
+                      % (done, phrase))
     argv = _goal_argv(_GOAL_PROMPT % (first[:1500], last[:1500], transcript_path, phrase))
     if argv is None:
         return None, "house-rules: goal check did not run: claude was not found on PATH, so it did not block."
@@ -3720,14 +3746,76 @@ def _goal_check(transcript_path, phrase):
     if verdict["ok"]:
         return None, None
     try:
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"key": key, "count": done + 1}, f)
+        write(done + 1)
     except OSError as exc:
         return None, "house-rules: goal check could not write its block count (%s), so it did not block." % type(exc).__name__
     return ("House rules, goal check: the reply stops (%r) but the goal is not reached and work can continue "
-            "without the user. %s Carry on. (block %d of %d)"
-            % (phrase, str(verdict.get("reason") or "").strip(), done + 1, GOALCHECK_BLOCKS)), None
+            "without the user (fails C1/C4: a stop needs one of the accepted forms). %s Carry on, or end with "
+            "one of: %s (block %d of %d)"
+            % (phrase, str(verdict.get("reason") or "").strip(), _JUDGE_FORMS, done + 1, ROADBLOCK_BLOCKS)), None
+
+
+_JUDGE_FORMS = (
+    "Roadblock record: tried 1) <check>, returned <result>; 2) ...; 3) ... Target: <thing>. | "
+    "No other method: <why nothing else can show it>. | NEEDS YOU: <the licence, login, purchase or destructive "
+    "step, and what was run to reach it>. | Goal status: blocked. <what was run and returned>. | "
+    "Cannot split: <why one piece, what was run, a progress signal each minute>. | "
+    "Unverified: <what, and why it could not be checked>.")
+_JUDGE_PROMPT = (
+    "You are the roadblock judge for house rules. The last assistant reply was:\n<<<%s>>>\n"
+    "The transcript is the JSONL file %s; use the Read tool on it (the end is the newest part) to see the "
+    "REAL tool calls of this turn. Criteria. C1 trigger: the reply claims something is missing, unreachable or "
+    "impossible and that stops the task (a plain 'Unverified:' note is not a trigger). C2 what passes: three "
+    "attempts this turn, each aimed at the claimed thing, each from a different method class (existence check, "
+    "disk search, package database, run it, ask the environment, other source such as CI, git history or "
+    "docs); one output read three ways is one method. C3 proof: the attempts appear in the real tool calls, "
+    "and every reason gives the check run, what it returned, and the logic from that to the claim. C4 ways out: "
+    "'No other method', 'NEEDS YOU', 'Unverified', 'Goal status' or 'Cannot split', each with a reason that meets "
+    "C3. C5 Cannot split: only for a genuine impossibility to split the work, with a progress signal each "
+    "minute; slowness or habit is never a reason. Flag the reply only when C1 triggers and neither C2 nor C4 is "
+    "met. Answer with one JSON object only: {\"ok\": true} or {\"ok\": false, \"criterion\": \"C2\", "
+    "\"reason\": \"<the claim and what is missing>\"}.")
+
+
+def _judge_check(transcript_path, reply_text):
+    """(block reason or None, systemMessage or None). Model judge of C1 to C5 for a reply the phrase list
+    passed (#607). Never blocks when it cannot tell, and says so."""
+    import subprocess
+    if os.environ.get("HOUSE_RULES_JUDGE", "on").strip().lower() in _TOGGLE_OFF:
+        return None, None
+    override = os.environ.get("HOUSE_RULES_JUDGE_CMD", "").strip()  # tests only: a stub standing in for claude
+    prompt = _JUDGE_PROMPT % (reply_text[:6000], transcript_path)
+    if override:
+        argv = ([sys.executable, override] if override.endswith(".py") else [override]) + ["-p", prompt]
+    else:
+        argv = _goal_argv(prompt)
+    if argv is None:
+        return None, "house-rules: roadblock judge did not run: claude was not found on PATH, so it did not block."
+    try:
+        timeout = float(os.environ.get("HOUSE_RULES_GOALCHECK_TIMEOUT", GOALCHECK_TIMEOUT))
+        env = dict(os.environ, HOUSE_RULES_GOALCHECK="off", HOUSE_RULES_ROADBLOCKS="off", HOUSE_RULES_JUDGE="off")
+        proc = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout, text=True,
+                              encoding="utf-8", errors="replace", env=env,
+                              cwd=os.path.dirname(os.path.abspath(transcript_path)))
+    except subprocess.TimeoutExpired:
+        return None, "house-rules: roadblock judge timed out after %g s, so it did not block." % timeout
+    except (OSError, ValueError) as exc:
+        return None, "house-rules: roadblock judge could not run claude (%s), so it did not block." % type(exc).__name__
+    verdict = None
+    m = re.search(r"\{.*\}", proc.stdout or "", re.DOTALL)
+    if proc.returncode == 0 and m:
+        try:
+            verdict = json.loads(m.group(0))
+        except ValueError:
+            verdict = None
+    if not isinstance(verdict, dict) or "ok" not in verdict:
+        return None, "house-rules: roadblock judge got no usable verdict from claude (exit %d), so it did not block." % proc.returncode
+    if verdict["ok"]:
+        return None, None
+    return ("House rules, roadblock judge (rules/detail/roadblocks.md): this reply fails criterion %s. %s "
+            "Rewrite the reply in one of the accepted forms: %s"
+            % (str(verdict.get("criterion") or "C2").strip(), str(verdict.get("reason") or "").strip(),
+               _JUDGE_FORMS)), None
 
 
 def roadblock_check(payload, reply_text, retry):
@@ -3738,16 +3826,32 @@ def roadblock_check(payload, reply_text, retry):
     claims = _roadblock_claims(reply_text)
     note = None
     mode = _field(_MODE_RE, payload)
-    if unattended() or mode == "bypassPermissions":
+    if (unattended() or mode == "bypassPermissions") and "NEEDS YOU" not in reply_text:  # #609: exempts the goal check
         stalls = _roadblock_claims(reply_text, _STALL_RE)
     else:
         stalls = []
         if not mode and _roadblock_claims(reply_text, _STALL_RE):
             note = ("house-rules: the Stop payload carried no permission_mode, so stall phrases were not "
                     "scanned (treated as attended).")
-    if not claims and not stalls:
-        return None, note
     transcript_path = _field(_TRANSCRIPT_RE, payload)
+    if not claims and not stalls:
+        if not transcript_path or "NEEDS YOU" in reply_text:
+            return None, note
+        try:
+            done, write = _block_peek(transcript_path)
+        except (OSError, ValueError) as exc:
+            return None, "house-rules: roadblock judge could not read its block count (%s), so it did not block." % type(exc).__name__
+        if done >= ROADBLOCK_BLOCKS:
+            return None, ("house-rules: the checks blocked %d times in a row and now let the reply go; unverified: "
+                          "the roadblock judge did not rule on this reply (no tool call since the last block)." % done)
+        jblock, jmsg = _judge_check(transcript_path, reply_text)
+        if jblock:
+            try:
+                write(done + 1)
+            except OSError as exc:
+                return None, "house-rules: roadblock judge could not write its block count (%s), so it did not block." % type(exc).__name__
+            jblock += " (block %d of %d)" % (done + 1, ROADBLOCK_BLOCKS)
+        return jblock, jmsg or note
     if not transcript_path:
         return None, "house-rules: roadblock check could not run (the Stop payload carried no transcript_path)."
     need = ""
@@ -3771,25 +3875,18 @@ def roadblock_check(payload, reply_text, retry):
         return None, None
     warn = "house-rules: a roadblock claim (%s) went out unchecked." % claims[0]
     # #588: the retry (stop_hook_active) counts on the check's own counter; never a third block
-    path = _roadblock_state_path(transcript_path)
     try:
-        key = "%s|%d" % (transcript_path, _user_message_count(transcript_path))
-        state = {}
-        if os.path.isfile(path):
-            state = json.loads(_read_text(path))
-        done = state.get("count", 0) if state.get("key") == key else 0
+        done, write = _block_peek(transcript_path)
         if done >= ROADBLOCK_BLOCKS:
             return None, warn
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"key": key, "count": done + 1}, f)
+        write(done + 1)
     except (OSError, ValueError, AttributeError) as exc:
         return None, ("house-rules: roadblock check could not read or write its block count (%s), "
                       "so it did not block." % type(exc).__name__)
     return ("House rules, roadblocks (rules/detail/roadblocks.md): this reply claims a roadblock (%s) but the "
-            "record shows no three failed attempts.%s Before ending, %s, install what is missing, and try "
-            "another route; list every attempt. (block %d of %d)"
-            % (claims[0], need, _roadblock_advice(claims[0]), done + 1, ROADBLOCK_BLOCKS)), None
+            "record shows no three failed attempts (fails C2/C3).%s Before ending, %s, install what is missing, and try "
+            "another route; list every attempt, or end with one of: %s (block %d of %d)"
+            % (claims[0], need, _roadblock_advice(claims[0]), _JUDGE_FORMS, done + 1, ROADBLOCK_BLOCKS)), None
 
 
 register_prompt(_scope_mode_link)

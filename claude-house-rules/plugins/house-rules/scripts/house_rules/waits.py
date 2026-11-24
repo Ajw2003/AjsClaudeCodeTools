@@ -10,7 +10,9 @@ import sys
 
 DEFAULTS = {"first_check_seconds": 60, "interval_seconds": 60, "stalled_after_quiet_checks": 3,
             "foreground_limit_seconds": 60,
-            "deadline_seconds": {"command": 600, "agent": 900, "build": 1200, "ci": 900}}
+            "deadline_seconds": {"command": 60, "agent": 60, "build": 60, "ci": 60},
+            "long_runners": ["unity", "dotnet build", "dotnet test", "msbuild", "gradle", "docker build",
+                             "pytest", "verify.py", "cargo build"]}
 _ENV = {"first_check_seconds": "HOUSE_RULES_WAIT_FIRST_CHECK", "interval_seconds": "HOUSE_RULES_WAIT_INTERVAL",
         "stalled_after_quiet_checks": "HOUSE_RULES_WAIT_STALLED_AFTER",
         "foreground_limit_seconds": "HOUSE_RULES_WAIT_FOREGROUND_LIMIT"}
@@ -53,8 +55,10 @@ def load_waits():
         data = {}
         _note("the settings file %s could not be read (%s: %s); using the built-in numbers."
               % (path, type(exc).__name__, str(exc)[:120]))
-    out = {k: _pick(_ENV[k], data, k, d, path) for k, d in DEFAULTS.items() if k != "deadline_seconds"}
+    out = {k: _pick(_ENV[k], data, k, d, path) for k, d in DEFAULTS.items() if k not in ("deadline_seconds", "long_runners")}
     dl = data.get("deadline_seconds") if isinstance(data.get("deadline_seconds"), dict) else {}
     out["deadline_seconds"] = {k: _pick(_ENV_DEADLINE[k], dl, k, d, path)
                                for k, d in DEFAULTS["deadline_seconds"].items()}
+    lr = data.get("long_runners")
+    out["long_runners"] = [x for x in lr if isinstance(x, str) and x] if isinstance(lr, list) else DEFAULTS["long_runners"]
     return out

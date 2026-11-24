@@ -1,0 +1,742 @@
+<!doctype html>
+<!-- house-rules make_page 2.91.0 -->
+<meta charset="utf-8">
+<meta name="house-rules-page" content="proposal">
+<title>Judge Loop and One-Minute Segments</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#566174; --line:#d5dbe6;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --you:#b35f00; --you-soft:#fdeed9;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.55 var(--body)}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:1.9rem;font-weight:800}
+h2{font-size:1.45rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.ico{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* stepper */
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stepper button{border:0;background:none;display:grid;justify-items:center;gap:4px;padding:4px 0;font-size:.72rem;color:var(--muted)}
+.stepper .bar{width:100%;height:6px;border-radius:3px;background:var(--line)}
+.stepper button.done .bar{background:var(--accent)}
+.stepper button[aria-current="step"]{color:var(--fg);font-weight:700}
+.stepper button[aria-current="step"] .bar{background:var(--accent)}
+
+.panel{display:grid;gap:18px}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.lead{font-size:1.1rem}
+
+/* at-a-glance strip */
+.glance{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.g{display:grid;justify-items:center;gap:4px;width:56px;text-align:center;font-size:.72rem;color:var(--muted)}
+.g span.c{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
+.arrow{color:var(--muted);font-size:1.1rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
+.glance .lk .ico{width:14px;height:14px}
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p,.crb li{font-size:.9rem}
+.crb ul.cl{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.sd h3{display:flex;gap:8px;align-items:center}
+.sd .back{padding-left:0}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.key i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent)}
+.key i.y{border-radius:4px;background:var(--you-soft);border-color:var(--you)}
+
+/* stage list */
+.stages{display:grid;gap:8px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.st > summary{list-style:none;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;cursor:pointer;min-height:48px}
+.st > summary::-webkit-details-marker{display:none}
+.st .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.st.you .c{border-radius:11px;background:var(--you-soft);color:var(--you)}
+.st.you{border-color:var(--you)}
+.st .nm b{display:block}
+.st .nm small{color:var(--muted);font-size:.85rem}
+.more{font-size:.78rem;color:var(--accent);font-weight:700;white-space:nowrap}
+details[open] > summary .more::after{content:" ▲"} details:not([open]) > summary .more::after{content:" ▼"}
+.detail{padding:0 14px 14px 68px;display:grid;gap:8px;font-size:.92rem}
+@media (max-width:420px){.detail{padding-left:14px}}
+.row{display:grid;grid-template-columns:72px 1fr;gap:8px}
+.row > span:first-child{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.back{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--you);padding-left:12px}
+
+/* created / changed */
+.cc{display:grid;gap:8px}
+.ci{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.ci > summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;cursor:pointer;min-height:48px}
+.ci > summary::-webkit-details-marker{display:none}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ci b{display:block}
+.ci small{color:var(--muted);font-size:.86rem}
+.ci .detail{padding:0 14px 14px 14px}
+.fromto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:.88rem}
+.fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
+.fromto span.to{background:var(--accent-soft)}
+.flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch;font-size:.84rem}
+.flow > span{border-radius:8px;padding:8px;background:var(--bg);display:grid;gap:2px;align-content:start;min-width:0}
+.flow > span.mid{background:var(--accent-soft)}
+.flow > i{align-self:center;color:var(--muted);font-style:normal}
+.flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+@media (max-width:479px){.flow{grid-template-columns:minmax(0,1fr)}.flow > i{justify-self:center;transform:rotate(90deg)}}
+.files{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.files h4{margin:0;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.frow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;align-items:baseline}
+.frow code{font-size:.82rem;word-break:break-all}
+.files .n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.parts{margin:0 0 4px;padding-left:18px;display:grid;gap:4px;font-size:.86rem}
+.parts li span:first-child{margin-right:8px}
+
+/* choices */
+.q{display:grid;gap:8px}
+.q h3{display:flex;gap:10px;align-items:flex-start}
+.qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input[type=radio]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.opt small{display:block;color:var(--muted);font-size:.86rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+.rec{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.rec .ico{width:12px;height:12px}
+.why{font-size:.88rem}
+.why summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:32px}
+.why p{margin-top:6px;color:var(--muted)}
+
+/* wrap-up */
+.wrapup{display:grid;gap:10px}
+.wu{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.wu .c{width:40px;height:40px;border-radius:10px;display:grid;place-items:center}
+.wu h3{margin-bottom:2px}
+.wu p,.wu li{font-size:.94rem}
+.wu ol{margin:4px 0 0;padding-left:20px;display:grid;gap:4px}
+.wu.do{border:2px solid var(--you)}
+.reply{display:grid;gap:8px}
+.reply pre{white-space:pre-wrap;margin:0;background:var(--card);border:1px dashed var(--accent);border-radius:10px;padding:12px;font-size:.92rem}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:12px;padding:14px 18px;font-weight:800;min-height:48px}
+.secondary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:700;min-height:48px}
+.nav{display:flex;justify-content:space-between;gap:10px}
+.nav .primary{margin-left:auto}
+.nextbox{position:sticky;bottom:0;z-index:3;background:var(--card);border:2px solid var(--you);border-radius:12px;padding:10px 14px;display:grid;gap:2px;font-size:.92rem}
+.nextbox b{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--you)}
+.wu li label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.wu li label > span{min-width:0;overflow-wrap:anywhere}
+.wu li code{font-size:.82rem;overflow-wrap:anywhere;word-break:break-all}
+.wu li input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--accent)}
+.status{font-size:.88rem;color:var(--muted)}
+.missing{color:var(--gap);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.panel{animation:in .2s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+<style>
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.g.done span.c{background:var(--ok-soft);color:var(--ok)}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+/* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+.pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+.pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+.pic img,.cmp img{display:block;max-width:100%;height:auto;background:var(--bg)}
+.pic,.pic button{width:100%;box-sizing:border-box}
+/* A tall screenshot shrunk to fit a short box is a sliver: fill the width and show its top instead. */
+.pic button img{width:100%;max-height:280px;object-fit:cover;object-position:top;border-radius:6px}
+.pic figcaption,.cmp figcaption{font-size:.86rem;color:var(--muted)}
+.pic,.cmp{margin:0}
+.cmp{display:grid;gap:6px;min-width:0}
+.cmp-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+body{overflow-wrap:anywhere}
+.crb p,.crb li,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
+@media (max-width:479px){.cr{grid-template-columns:minmax(0,1fr)}}
+.cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
+.cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cmp-slide{display:none;gap:6px;min-width:0}
+.cmp-frame{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.cmp-frame img{width:100%}
+.cmp-frame img + img{position:absolute;inset:0;height:100%;object-fit:fill;clip-path:inset(0 0 0 var(--pos,50%))}
+.cmp-slide input[type=range]{width:100%;accent-color:var(--accent);min-height:44px;margin:0}
+@media (max-width:639px){.cmp-side{display:none}.cmp-slide{display:grid}}
+dialog.lightbox{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:12px;width:min(96vw,960px);max-height:94vh;box-sizing:border-box;overflow:auto}
+dialog.lightbox::backdrop{background:rgba(0,0,0,.6)}
+dialog.lightbox img{display:block;width:100%;height:auto}
+dialog.lightbox p{margin-top:8px;font-size:.9rem}
+dialog.lightbox button{margin-top:10px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L3 15l3 3 8-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+</defs></svg>
+
+<!--
+  Handover page template (house-rules, issue #233). The approved format: four parts in this order -
+  In short, Changes, Choices, Wrap-up - and a part is left out only when it would be empty.
+  Copy this file, edit PAGE below, and nothing else. Every part keeps four rules:
+  detail only on tap; names, never bare numbers; one colour, one meaning (orange = the user acts,
+  green = done, nothing else orange); I check it first (phone width, light and dark, every tap,
+  a bare-number search). Rule: rules/detail/show-dont-tell.md.
+-->
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="eyebrow" id="eyebrow"></span>
+    <h1 id="title"></h1>
+  </header>
+  <nav class="stepper" aria-label="Steps" id="stepper"></nav>
+  <section class="panel" data-part="short" aria-labelledby="h-short">
+    <h2 id="h-short" tabindex="-1">In short</h2>
+    <div class="card">
+      <p class="lead" id="lead" data-basic="summary">The end-of-reply judge blocked 12 times in a row, even when the model had tried three different ways. Its criteria are a single sentence, and the model is never shown what a passing reply looks like. I propose keeping the judge and tuning it. A second part makes every job that involves waiting, not only tests, run as independent segments of at most a minute. Each segment prints its own result, so a failure shows up early and nobody waits 20 minutes for one output.</p>
+      <div class="key" id="key"></div>
+      <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
+      <p class="muted" style="font-size:.85rem" id="hint"></p>
+      <div class="sd" id="sd" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="panel" data-part="changes" aria-labelledby="h-changes" hidden>
+    <h2 id="h-changes" tabindex="-1">What this creates or changes</h2>
+    <p class="muted" id="cc-count"></p>
+    <div class="cc" id="cc"></div>
+  </section>
+  <section class="panel" data-part="choices" aria-labelledby="h-choices" hidden>
+    <h2 id="h-choices" tabindex="-1">Your choices</h2>
+    <p class="muted">My suggestion is marked, nothing is picked for you, and each has room for your own answer.</p>
+    <div id="qs" style="display:grid;gap:22px"></div>
+  </section>
+  <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
+    <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
+    <div class="wrapup" id="wrapup"></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Pick an option under Your choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b>.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: judge blocking fix and one-minute segments", or say what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">A judge with a one-sentence rule and no count.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Move it into the scripted Stop hook, which would call the Haiku model from inside the script, the way the goal check already does</p></div></div></div>
+    <div class="reply">
+      <pre id="out" aria-live="polite"></pre>
+      <p class="status" id="miss"></p>
+      <button class="primary" id="copy" type="button">Copy my reply</button>
+      <p class="status" id="st"></p>
+    </div>
+  </section>
+  <div class="nav">
+    <button class="secondary" id="prev" type="button">‹ Back</button>
+    <button class="primary" id="next" type="button">Next ›</button>
+  </div>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I record the decision, create one parent issue with a child issue per part, write a build plan, and start with the judge criteria and a replay of 12 blocked replies as a verify.py case.</span></aside>
+</div>
+
+<script>
+// ---- PAGE: the only part you edit. Example content shows every field. ----------------------
+// Tiny inline SVGs so the template stays one file; real pages use a data: URI or a path next to the page.
+const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
+const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
+const PAGE = {
+  "title": "Judge Loop and One-Minute Segments",
+  "eyebrow": "house-rules · fix proposal · nothing built yet",
+  "pageType": "proposal",
+  "approval": "Design approved: judge blocking fix and one-minute segments",
+  "short": {
+    "lead": "The end-of-reply judge blocked 12 times in a row, even when the model had tried three different ways. Its criteria are a single sentence, and the model is never shown what a passing reply looks like. I propose keeping the judge and tuning it. A second part makes every job that involves waiting, not only tests, run as independent segments of at most a minute. Each segment prints its own result, so a failure shows up early and nobody waits 20 minutes for one output.",
+    "hint": "Tap a step to see what it changes. The choices at the end are yours.",
+    "key": [
+      [
+        "I build it",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "bulb",
+        "Cause",
+        "Three judges, one uncapped",
+        "",
+        "Read from the code: the model judge in hooks.json has no block counter at all.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22360%22%20height=%22200%22%20viewBox=%220%200%20360%20200%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Ctext%20x=%2210%22%20y=%2218%22%20fill=%22%23333%22%20font-weight=%22bold%22%3EToday:%20three%20judges,%20one%20reply%3C/text%3E%3Crect%20x=%2220%22%20y=%2230%22%20width=%22320%22%20height=%2240%22%20rx=%226%22%20fill=%22%23f8c9c4%22%20stroke=%22%23445%22%20/%3E%3Ctext%20x=%22180.0%22%20y=%2248.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3EA%20%20Model%20judge%20%28hooks.json%29%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%2263.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Eno%20counter,%20sees%20only%20the%20last%20message%3C/text%3E%3Crect%20x=%2220%22%20y=%2280%22%20width=%22320%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fde9b8%22%20stroke=%22%23445%22%20/%3E%3Ctext%20x=%22180.0%22%20y=%2298.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3EB%20%20Phrase%20and%20record%20check%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%22113.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Ecap%202%20blocks%3C/text%3E%3Crect%20x=%2220%22%20y=%22130%22%20width=%22320%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fde9b8%22%20stroke=%22%23445%22%20/%3E%3Ctext%20x=%22180.0%22%20y=%22148.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3EC%20%20Goal%20check%20%28Haiku%29%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%22163.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Ecap%206%20blocks,%20separate%20counter%3C/text%3E%3Ctext%20x=%2210%22%20y=%22192%22%20fill=%22%23333%22%3ETotal%20allowed:%20unbounded%20%28A%29%20%2B%202%20%2B%206%3C/text%3E%3C/svg%3E",
+          "alt": "Three stacked boxes: model judge with no counter, phrase check capped at 2, goal check capped at 6",
+          "caption": "Today's three Stop-time judges, as read from hooks.json and core.py."
+        }
+      ],
+      [
+        "hammer",
+        "Judge side",
+        "Same judge, written criteria, one cap",
+        "",
+        "Keep the judge, write its five criteria down, give all three checks one shared limit of two blocks, and shorten the lists of trigger phrases.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22360%22%20height=%22204%22%20viewBox=%220%200%20360%20204%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Ctext%20x=%2210%22%20y=%2218%22%20fill=%22%23333%22%20font-weight=%22bold%22%3EAfter:%20the%20same%20judge,%20with%20written%20criteria%3C/text%3E%3Crect%20x=%2220%22%20y=%2228%22%20width=%22320%22%20height=%2234%22%20rx=%226%22%20fill=%22%23cfe8cf%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22180.0%22%20y=%2243.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3EModel%20judge:%20five%20written%20criteria%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%2258.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Esees%20the%20real%20attempts,%20names%20the%20criterion%20it%20failed%3C/text%3E%3Crect%20x=%2220%22%20y=%2270%22%20width=%22320%22%20height=%2234%22%20rx=%226%22%20fill=%22%23cfe8cf%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22180.0%22%20y=%2285.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3EPhrase%20and%20record%20check%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%22100.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Ecounts%20the%20methods%3B%20claims%20narrowed%3C/text%3E%3Crect%20x=%2220%22%20y=%22112%22%20width=%22320%22%20height=%2234%22%20rx=%226%22%20fill=%22%23cfe8cf%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22180.0%22%20y=%22127.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3EGoal%20check%20%28Haiku%29%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%22142.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Enext%20step%20is%20no%20longer%20a%20stall%20phrase%3C/text%3E%3Crect%20x=%2220%22%20y=%22154%22%20width=%22320%22%20height=%2234%22%20rx=%226%22%20fill=%22%23cfe3f8%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22180.0%22%20y=%22169.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3EOne%20shared%20cap:%202%20blocks%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%22184.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Eresets%20only%20after%20real%20tool%20work%3C/text%3E%3Ctext%20x=%2210%22%20y=%22198%22%20fill=%22%23333%22%20font-size=%2210%22%3EAfter%20the%20cap%20the%20reply%20goes%20out%20with%20a%20visible%20warning.%3C/text%3E%3C/svg%3E",
+          "alt": "The model judge with five written criteria, the two scripted checks and one shared cap of two blocks",
+          "caption": "The proposed shape. The judge stays."
+        }
+      ],
+      [
+        "hammer",
+        "Model side",
+        "Block messages hand over the passing reply",
+        "",
+        "Each block names the criterion that failed and gives a reply that passes, including an Unverified line.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22360%22%20height=%22204%22%20viewBox=%220%200%20360%20204%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Ctext%20x=%2210%22%20y=%2218%22%20fill=%22%23333%22%20font-weight=%22bold%22%3EReplies%20the%20judge%20accepts%3C/text%3E%3Crect%20x=%2210%22%20y=%2228%22%20width=%22340%22%20height=%22166%22%20rx=%226%22%20fill=%22%23f4f4f4%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%2220%22%20y=%2246%22%20fill=%22%23111%22%20font-family=%22monospace%22%3ERoadblock%20record:%3C/text%3E%3Ctext%20x=%2220%22%20y=%2262%22%20fill=%22%23111%22%20font-family=%22monospace%22%3E1.%20which%20unity%20-%20not%20found%3C/text%3E%3Ctext%20x=%2220%22%20y=%2276%22%20fill=%22%23111%22%20font-family=%22monospace%22%3E2.%20ls%20Unity%20folder%20-%20missing%3C/text%3E%3Ctext%20x=%2220%22%20y=%2290%22%20fill=%22%23111%22%20font-family=%22monospace%22%3E3.%20gh%20run%20list%20-%20no%20build%3C/text%3E%3Ctext%20x=%2220%22%20y=%22112%22%20fill=%22%23555%22%20font-family=%22monospace%22%3Eor%20%20No%20other%20method:%20%26lt%3Breason%26gt%3B%3C/text%3E%3Ctext%20x=%2220%22%20y=%22128%22%20fill=%22%23555%22%20font-family=%22monospace%22%3Eor%20%20NEEDS%20YOU:%20%26lt%3Blicence%7Clogin%7Cpurchase%26gt%3B%3C/text%3E%3Ctext%20x=%2220%22%20y=%22144%22%20fill=%22%23555%22%20font-family=%22monospace%22%3Eor%20%20Unverified:%20%26lt%3Bwhat%26gt%3B%20-%20%26lt%3Bwhy%26gt%3B%20-%20%26lt%3Bcheck%26gt%3B%3C/text%3E%3Ctext%20x=%2220%22%20y=%22160%22%20fill=%22%23555%22%20font-family=%22monospace%22%3Eor%20%20Goal%20status:%20reached%20%7C%20continuing:%20%26lt%3Bstep%26gt%3B%3C/text%3E%3Ctext%20x=%2220%22%20y=%22182%22%20fill=%22%23333%22%20font-size=%2210%22%3EEach%20line%20is%20checked%20against%20the%20real%20tool%20calls.%3C/text%3E%3C/svg%3E",
+          "alt": "The reply forms the judge accepts",
+          "caption": "The accepted reply forms."
+        }
+      ],
+      [
+        "flask",
+        "Segments",
+        "Every long job in one-minute pieces",
+        "",
+        "One rule for tests, builds, installs, renders and agent runs: segments of at most 60 seconds, each reporting its own result. The guard refuses longer launches without an accepted reason.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22360%22%20height=%22204%22%20viewBox=%220%200%20360%20204%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Ctext%20x=%2210%22%20y=%2218%22%20fill=%22%23333%22%20font-weight=%22bold%22%3EAny%20long%20job,%20cut%20into%20one-minute%20segments%3C/text%3E%3Crect%20x=%228%22%20y=%2228%22%20width=%2280%22%20height=%2246%22%20rx=%226%22%20fill=%22%23cfe8cf%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%2248.0%22%20y=%2249.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3ESegment%201%3C/text%3E%3Ctext%20x=%2248.0%22%20y=%2264.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3EPASS%20at%200:40%3C/text%3E%3Crect%20x=%2298%22%20y=%2228%22%20width=%2280%22%20height=%2246%22%20rx=%226%22%20fill=%22%23cfe8cf%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22138.0%22%20y=%2249.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3ESegment%202%3C/text%3E%3Ctext%20x=%22138.0%22%20y=%2264.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3EPASS%20at%200:55%3C/text%3E%3Crect%20x=%22188%22%20y=%2228%22%20width=%2280%22%20height=%2246%22%20rx=%226%22%20fill=%22%23f8c9c4%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22228.0%22%20y=%2249.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3ESegment%203%3C/text%3E%3Ctext%20x=%22228.0%22%20y=%2264.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3EFAIL%20at%200:20%3C/text%3E%3Crect%20x=%22278%22%20y=%2228%22%20width=%2274%22%20height=%2246%22%20rx=%226%22%20fill=%22%23e6e6e6%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22315.0%22%20y=%2249.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3ESegment%204%3C/text%3E%3Ctext%20x=%22315.0%22%20y=%2264.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Enot%20started%3C/text%3E%3Ctext%20x=%2210%22%20y=%2296%22%20fill=%22%23333%22%3EYou%20see%20the%20failure%20at%201:55,%20not%20after%2020%20minutes.%3C/text%3E%3Crect%20x=%2210%22%20y=%22108%22%20width=%22340%22%20height=%2238%22%20rx=%226%22%20fill=%22%23cfe3f8%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22180.0%22%20y=%22125.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3EEach%20segment:%20one%20command,%20one%20input%20check,%20one%20result%20line%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%22140.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Eruns%20alone%3B%20its%20input%20is%20a%20named%20file,%20not%20leftovers%3C/text%3E%3Crect%20x=%2210%22%20y=%22154%22%20width=%22340%22%20height=%2238%22%20rx=%226%22%20fill=%22%23fde9b8%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22180.0%22%20y=%22171.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3ECannot%20be%20cut%3F%20Write:%20Cannot%20split:%20%26lt%3Breason%26gt%3B%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%22186.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Ethen%20it%20must%20stream%20progress%20every%20minute%3C/text%3E%3C/svg%3E",
+          "alt": "Four segments: two pass, the third fails at 1 minute 55 seconds, the fourth never starts",
+          "caption": "A failing segment stops the run early."
+        }
+      ],
+      [
+        "lock",
+        "Approve",
+        "You pick the choices and approve",
+        "you",
+        "I record a dated entry in docs/6-decisions/Decisions.md and write a build plan.",
+        "Send the approval line."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "new",
+      "What exists today",
+      "Three checks run each time Claude finishes a reply (the Stop event), and they do not know about each other.",
+      null,
+      "The judge is the Stop entry of type prompt in hooks.json. Its criteria are one sentence: flag a claim that something cannot be done, verified, tested or reached unless the reply lists three different methods. It never says what counts as a different method. It sees only the last reply, not the tool calls. When it blocks, it does not say which rule the reply failed. So a model that really ran three checks can still fail. It happened to me four times in this session: the judge counted three ways of reading the same output as one method, and it flagged plain notes about what had not been checked. It also keeps no count of how many times it has blocked. The scripted record check (scripts/house_rules/core.py, roadblock_check) already groups methods into classes and stops after two blocks; the goal check stops after six blocks, using its own separate counter. I did not find the transcript of your 12-block session, so I could not reproduce the 12 blocks.",
+      [
+        "A judge with a one-sentence rule and no count.",
+        "The same judge with five written criteria and a shared cap.",
+        "A model that did the work passes, and a model that did not is told exactly what is missing."
+      ],
+      null
+    ],
+    [
+      "adapt",
+      "Write the judge's criteria down",
+      "Five numbered criteria, with the same wording used in the judge, in the guard's refusal, in the block message and in the rules.",
+      null,
+      "The criteria live once, in rules/detail/roadblocks.md. C1, what triggers a block: the reply claims something is missing, unreachable or impossible, and that claim stops the task. A note about what was not checked is not a trigger if it is written as an Unverified line. C2, what passes: three attempts in this turn. Each must be aimed at the thing claimed to be missing, and each must come from a different method class. The classes are: existence check, disk search, package database, running it, asking the environment, or another source such as CI (automated builds), git history or docs. Reading one output three ways counts as one method. C3, proof and the reason standard: the attempts must appear in the real tool calls, and the judge is shown those calls. Every reason the judge reads, whether it is No other method, Cannot split, Unverified or NEEDS YOU, must give three parts: the check that was run, what that check actually returned (evidence taken from the tool calls), and the logic that leads from that evidence to the claim. A reason with no check, an invented result, or a gap in the logic fails. C4, the ways out: a \"No other method\" line with its reason; a \"NEEDS YOU\" line for a licence, login, purchase or destructive step; or an Unverified line. When it blocks, the judge returns the criterion the reply failed and the exact line to add. C5, the Cannot split reason: a launch over 60 seconds is accepted only for a genuine impossibility to split it, shown by the reason standard in C3 and with a progress signal for each minute. A reason that only says \"it takes long\" fails C5.",
+      [
+        "One sentence, and the model has to guess what passes.",
+        "Five criteria, one source, quoted in every block.",
+        "The model always knows what to fix."
+      ],
+      null
+    ],
+    [
+      "adapt",
+      "One shared cap",
+      "The judge, the record check and the goal check share one counter that allows two blocks per user message.",
+      null,
+      "After two blocks the reply goes out with a visible warning. The counter resets only if the model made at least one real tool call after the last block. So a model that keeps working is checked again, and a model that only rewords its reply is not blocked a third time. A prompt hook (a hook that asks the model a question) cannot keep a count, so the first choice below decides where the judge runs.",
+      [
+        "Two counters with caps 2 and 6.",
+        "One counter with cap 2.",
+        "The worst case is two blocks, not twelve."
+      ],
+      null
+    ],
+    [
+      "adapt",
+      "Fewer false alarms",
+      "Stop treating ordinary phrases as roadblocks.",
+      null,
+      "The phrase \"next step\" is removed from the list of stall phrases, because the house rules themselves tell every reply to end with one next step. The list of claim phrases drops the bare phrases \"could not\", \"unable to\" and \"I can't\". It keeps phrases about a missing tool, machine or access. The judge no longer flags a plain Unverified note, which the evidence rule requires. A reply with a NEEDS YOU line is also exempt from the goal check.",
+      [
+        "The stall-phrase list (_STALL_RE) and the claim-phrase list (_ROADBLOCK_RE) in core.py.",
+        "Narrower lists, and NEEDS YOU exempts both checks.",
+        "Normal status replies pass."
+      ],
+      null
+    ],
+    [
+      "new",
+      "The passing reply, spelled out",
+      "Each block message includes the exact lines the model can copy into its reply.",
+      null,
+      "Each block quotes the claim it matched, names the failed criterion (C1 to C5), and says how many blocks remain. It lists the method classes the record already covers and the ones still missing, with a concrete command for each missing one. It then shows the six accepted forms. The first is a Roadblock record: three numbered methods, with what each returned. The next four are a \"No other method\" line with the check, its evidence and the logic, a \"NEEDS YOU\" line, a \"Goal status\" line, and a \"Cannot split\" line with the check run, its evidence, the logic, and the progress signal. The sixth is an \"Unverified\" line giving the item, the reason and the command that would check it. The record is still checked against the real failed tool calls, so invented methods do not pass. The same forms are written into rules/detail/roadblocks.md so the model knows them before it is blocked.",
+      [
+        "Messages say only to try three methods.",
+        "Messages carry a copyable accepted reply.",
+        "The model can always find the way out."
+      ],
+      null
+    ],
+    [
+      "new",
+      "What exists today for waits and tests",
+      "The rules already limit waits, but allow 20-minute jobs, and only the tests have a design for being split into separate parts.",
+      null,
+      "Waits: rules/waits.json limits a foreground command to 60 seconds. It allows deadlines of 600 seconds (10 minutes) for a command, 900 (15 minutes) for an agent, 1200 (20 minutes) for a build and 900 (15 minutes) for CI. The guard also accepts a background launch with a timeout up to 1,200,000 ms (20 minutes). waitfor.py checks each minute, but a build can still run for 20 minutes before anyone learns it failed. Tests: another session on your other account designed modular tests (docs/4-systems/modular-tests.md, issues 575 to 582, approved 2026-11-23, not built). It gives each test module a name and a command to run it alone, adds a runner that takes a --parts option, and includes a conversion skill that proves the old and new runs report the same checks. It covers tests only, not builds, installs, renders or agent runs. I ran the whole of verify.py on this branch. The parts took: core 68.9 seconds, safe_git 127.6 seconds, design_loop 201.1 seconds, writing 8.5 seconds, delegation 142.9 seconds, docs 46.7 seconds and make_page 105.5 seconds. Five of the seven parts took over a minute, and the slowest, design_loop, took over three minutes (201.1 seconds). That run also had failures (1 failure in core, 3 in safe_git, 3 in delegation, 1 in make_page; design_loop stopped without printing a result line). This branch changes four documentation files and no plugin code, and the same checks pass on main's continuous-integration run (automated checks on GitHub; 1 minute 22 seconds, on Linux). So the failures come from running on this Windows machine, not from this work; fixing them is a separate item.",
+      [
+        "A 60-second foreground limit, 20-minute background deadlines, modular tests designed but not built.",
+        "One segment rule for all wait-bound work, with tests as the first case.",
+        "You wait about a minute per part, and a failure stops the run early."
+      ],
+      null
+    ],
+    [
+      "new",
+      "The segment plan, written before any long job starts",
+      "Before waiting on anything, the model writes a plan of segments, each with its own deadline.",
+      null,
+      "The existing wait statement already names what is awaited, how it is checked, what done means, and the deadline. The statement becomes a short table with one row per segment: segment name, the one command, the input it needs and how that input is checked (a check that takes seconds), the output it leaves, and the 60-second deadline. The model starts segment 1, reads its result, and only then starts segment 2. If a segment fails, the later ones are not started, and the reply names the failed segment and shows its output. The plan is the one place that says how the work is cut up, so tests, builds, installs, renders and agent runs all follow the same rule. I would add this section to rules/detail/waits.md.",
+      [
+        "A wait states its deadline but not how the work is cut up.",
+        "A segment table before every job over a minute.",
+        "Failures are caught at the first segment that fails."
+      ],
+      null
+    ],
+    [
+      "new",
+      "Addition 1: a 60-second limit on every wait",
+      "The guard refuses any launch over 60 seconds, foreground or background, unless it gives a reason the judge accepts.",
+      null,
+      "Decided by you: the guard refuses a foreground or a background launch whose timeout is over 60,000 ms, unless the launch description says \"Cannot split:\" and gives a reason that passes criterion C5 of the judge. You also decided what that reason is: a genuine impossibility, checked and noted with logic and evidence, and the same standard applies to any reason the judge reads. C5 accepts only a genuine impossibility: the work cannot be cut, and that has been checked, not assumed. The reason must follow the reason standard in C3 (the check that was run, its real output as evidence, and the logic from that evidence to the impossibility). It must also say how progress will show each minute, such as a log file or a status command, so that a failure still shows early. Inconvenience, slowness or habit is never a reason. The guard checks that the three parts are present, which is a plain text check (its speed is not yet measured), and its refusal message quotes C5 and a form to copy. The Stop judge, which sees the tool calls, applies the same C5 to the reasons actually used, and flags an empty or generic one under the shared cap of two blocks, so it cannot loop. For tests, the module header also gains a measured time recorded after each run, and the gate (issue 578) and audit (issue 579) flag every module over 60 seconds with its name and time. For all other work, rules/waits.json lowers the 600, 900 and 1200 second deadlines (10, 15 and 20 minutes) to 60 seconds per segment. The 60 is read from rules/waits.json, so it changes in one place.",
+      [
+        "Foreground limit 60 seconds; background up to 20 minutes, no reason asked.",
+        "Both limited to 60 seconds, with a named exit and one written standard for the reason.",
+        "A long wait is refused before it starts, and the refusal says how to pass."
+      ],
+      null
+    ],
+    [
+      "adapt",
+      "Addition 2: each segment prints its own result, as it finishes",
+      "Results appear per segment, in the order they finish.",
+      null,
+      "Every segment ends with its own PASS or FAIL line and a final RESULT line, in the same format verify.py already prints. For tests, the gate requires this in the module header. verify.py itself has to change. Today it prints the parts in a fixed order, so a finished part waits behind a slower one before its result shows. The change makes it print each part the moment that part finishes. For other work, the segment plan lists each segment's result line, so the model reads one result per minute and stops at the first segment that prints FAIL.",
+      [
+        "verify.py holds finished output until earlier parts end.",
+        "Each module prints when done.",
+        "You and the model see results sooner."
+      ],
+      null
+    ],
+    [
+      "new",
+      "Addition 3: segments that stand alone, not chained together",
+      "Each segment runs alone, so one failure never hides behind another.",
+      null,
+      "A segment has one command, one named input and one named output. Its input is a named file or a freshly created state, and the segment checks it at the very start, so a missing input fails in seconds. The input is never something left behind in memory or on disk by the previous segment's process. A job with a real data flow, such as compile then link then package, passes each output to the next as a named checkpoint file, so any segment can be re-run alone without the earlier ones. For tests, the conversion skill runs each module alone and then all in shuffled order and compares; a mismatch is reported as a hidden dependency between modules, and the skill does not try to fix it. For other work, the plan states each segment's input check and the test is to run that segment alone once.",
+      [
+        "The proof compares counts only.",
+        "Each segment checked alone, and tests also shuffled.",
+        "A hidden dependency is caught the first time, not after a 20-minute run."
+      ],
+      null
+    ],
+    [
+      "adapt",
+      "The page check stops reading picture markup",
+      "Inline pictures no longer produce false findings.",
+      null,
+      "This page first showed 132 findings from the page check (scripts/clarity.py), and 15 after I fixed it. Cause: the check strips picture data with a pattern that stops at the first space (_DATA_URI_RE, clarity.py line 257), and the diagrams I wrote contained raw spaces, so their markup leaked into the text as repeated phrases. I already re-encoded the spaces in this page's four pictures. The proposed fix also makes the check robust: the pattern runs up to the closing quote, and inline svg elements are removed before reading. A verify.py case feeds a page with an inline picture and expects no findings from it. The step that builds the page also gets a second guard: it reads each inline picture as XML (the markup format the pictures are written in) and refuses to build the page if any picture has a markup error, such as a raw angle bracket. That would have caught the broken picture in the \"Every long job in one-minute pieces\" step, whose text contained a raw angle bracket and which the current visual check reported as fine.",
+      [
+        "The check strips picture data only up to the first space.",
+        "The check strips the whole picture, spaces included.",
+        "Pages with diagrams are judged on their words alone."
+      ],
+      null
+    ],
+    [
+      "risk",
+      "Flaws I found in this design",
+      "Four known gaps, each with its answer.",
+      null,
+      "One: the stricter, written judge could still disagree with the scripted record check. Both read the same criteria text and the same method classes, so they cannot differ on what counts. Two: a model could write fake methods, so the record is checked against real failed tool calls. Three: a shared cap of two with no reset would leave a long unattended run unchecked after the first two blocks, so the cap resets after real tool work. Four: whether Claude Code's own limit of 8 consecutive blocks applies to prompt hooks is unknown, because no test here reaches that limit. The missing cap does not explain the 12 blocks, so the build plan adds a replay of a real session to find out why.",
+      [
+        "None of these gaps is handled today.",
+        "Each gap has a test or a stated limit.",
+        "You see the limits before approving."
+      ],
+      null
+    ],
+    [
+      "risk",
+      "Flaws I found in the segment design",
+      "Six known gaps, each with its answer.",
+      null,
+      "One: speed differs by machine, so the time is measured and recorded on the machine that runs the work, not assumed. Two: a split can hide a real dependency; running each module alone and then in shuffled order is the proof for tests, and the input check is the proof for other work. Three: one engine build, install or CI run may never fit in 60 seconds. The Cannot split line is the exit. Such a job must still report progress each minute, otherwise a check every minute shows nothing and the failure is found late anyway. Four: the 12-block loop came from a judge, so every new refusal in this design needs the shared cap of two blocks and a copyable accepted reply. Without both, the new refusals could loop the same way. Five: refusing a long background launch could block a legitimate job; the one-line \"Cannot split:\" exit is the answer, and each use is logged so I can see how often it happens. Six: the guard can only see a timeout that is declared, so a long command with no timeout would slip through. The guard therefore treats a launch of a known long runner (such as the test, build or verify commands) with no explicit timeout as over 60 seconds. The list of runners lives in rules/waits.json, where you can change it.",
+      [
+        "Nothing guards against these today.",
+        "Each gap has a test or a stated limit.",
+        "You see the limits before approving."
+      ],
+      null
+    ]
+  ],
+  "choices": [
+    [
+      "first",
+      "Where should the judge run, so that it can see the attempts and keep a count of its blocks?",
+      [
+        [
+          "A",
+          "Move it into the scripted Stop hook, which would call the Haiku model from inside the script, the way the goal check already does",
+          1,
+          "The judge can read the real tool calls, share the counter, and return the criterion that failed. It adds up to 22 seconds, but only when a claim is flagged."
+        ],
+        [
+          "B",
+          "Leave it as the prompt hook; add the written criteria, and let the reply pass on the retry",
+          0,
+          "This is the smallest change, but the judge still cannot see the tool calls or keep a count, so it can still wrongly block a model that did the work."
+        ]
+      ],
+      "The judge has to see the real attempts to be fair, and only a script can both see them and keep a count of blocks."
+    ],
+    [
+      "share",
+      "What should the shared cap be?",
+      [
+        [
+          "A",
+          "Two blocks, reset after real tool work",
+          1,
+          "Matches today's record check. The blocks are limited, but long unattended runs are still checked."
+        ],
+        [
+          "B",
+          "Two blocks per user message, no reset",
+          0,
+          "Simplest, but an unattended run is no longer checked after two blocks."
+        ],
+        [
+          "C",
+          "Three blocks",
+          0,
+          "One more block per reply, so the loop could run one step longer."
+        ]
+      ],
+      "A cap of two with a reset ends the loop and still checks long unattended runs."
+    ],
+    [
+      "share",
+      "How should a job where each step needs the previous step's output, such as compile then link then package, be handled?",
+      [
+        [
+          "A",
+          "Pass each output on as a named checkpoint file (a saved file the next segment reads), and have the next segment check it at its start",
+          1,
+          "Every segment can be re-run alone, and a missing input fails in seconds."
+        ],
+        [
+          "B",
+          "Forbid any dependency between segments",
+          0,
+          "Too strict, because some work cannot be done without a dependency."
+        ]
+      ],
+      "A checkpoint file keeps each segment independent while allowing real data to flow."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A proposal with two linked parts: stop the end-of-reply judge looping, and cut every wait-bound job, tests included, into independent segments of at most a minute.",
+    "changing": "Nothing is built. It would edit hooks.json, scripts/house_rules/core.py, rules/detail/roadblocks.md, rules/waits.json, rules/detail/waits.md and verify.py. It would also change the launch guard, which would then refuse foreground and background launches over 60 seconds without a Cannot split reason, and extend the approved modular-tests design (issues 575 to 582).",
+    "blocking": "Your approval and your three choices: where the judge runs, the shared cap, and how a data flow between segments is handled. You already decided that the guard refuses long launches without an accepted reason.",
+    "next": "After you approve, I record the decision, create one parent issue with a child issue per part, write a build plan, and start with the judge criteria and a replay of 12 blocked replies as a verify.py case.",
+    "todo": [
+      "Pick an option under Your choices.",
+      "Tap <b>Copy my reply<\/b>.",
+      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: judge blocking fix and one-minute segments\", or say what to change."
+    ]
+  }
+};
+// ---- End of PAGE. Nothing below needs editing. ----------------------------------------------
+
+const ic = id => `<svg class="ico"><use href="#i-${id}"/></svg>`;
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// A picture is found by shape (src or before), not position, because flow and files before it are optional.
+const picOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && (x.src || x.before));
+let picN = 0; const PICS = [];
+const picHtml = p => {
+  if (!p) return "";
+  if (p.before && p.after) {
+    const id = "cmp" + (picN++), cap = p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : "";
+    const im = x => `<img src="${esc(x.src)}" alt="${esc(x.alt || p.caption || "")}">`;
+    return `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
+      <div class="cmp-slide"><div class="cmp-frame">${im(p.before)}${im(p.after)}</div><label for="${id}">Reveal after over before: drag to compare</label><input type="range" id="${id}" min="0" max="100" value="50" aria-label="Compare before and after: ${esc(p.caption || "")}"></div>${cap}</figure>`;
+  }
+  const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+  return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+};
+document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+let boxFrom = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-pic]");
+  if (b) { const p = PICS[+b.dataset.pic]; boxFrom = b; box.querySelector("img").src = p.src; box.querySelector("img").alt = p.alt; box.querySelector("p").textContent = p.caption; box.showModal(); return; }
+  if (e.target === box || e.target.closest("dialog.lightbox")) box.close();  // tap anywhere on it closes; Escape does too
+});
+box.addEventListener("close", () => { if (boxFrom) boxFrom.focus(); boxFrom = null; });
+document.title = PAGE.title;
+document.getElementById("title").textContent = PAGE.title;
+document.getElementById("eyebrow").textContent = PAGE.eyebrow;
+document.getElementById("lead").textContent = PAGE.short.lead;
+document.getElementById("hint").textContent = PAGE.short.hint;
+document.getElementById("key").innerHTML = PAGE.short.key.map(([l, k]) =>
+  `<span><i class="${k === "you" ? "y" : ""}"${k === "done" ? ' style="background:var(--ok-soft);border-color:var(--ok)"' : ""}></i>${esc(l)}</span>`).join("");
+
+// A part is left out only when it would be empty.
+const PARTS = [["short", "In short"], ["changes", "Changes"], ["choices", "Choices"], ["wrapup", "Wrap-up"]]
+  .filter(([id]) => id === "short" || id === "wrapup" || (PAGE[id] && PAGE[id].length));
+document.querySelectorAll("[data-part]").forEach(p => { if (!PARTS.some(([id]) => id === p.dataset.part)) p.remove(); });
+
+const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+const lst = v => Array.isArray(v) ? `<ul class="cl">${v.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p>${esc(v)}</p>`;
+const glance = document.getElementById("glance"), sd = document.getElementById("sd");
+glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
+  `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
+function showItem(n) {
+  glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
+  const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
+  const row = PAGE.short.items[n], summary = PAGE.kind === "summary";
+  const strip = Array.isArray(row[6]) && row[6].length === 3 && row[6].every(x => typeof x === "string") ? row[6] : null;
+  const needsYou = !summary && !/^Nothing/.test(Array.isArray(requires) ? requires.join(" ") : requires);
+  sd.innerHTML = `<h3>${esc(t)}</h3>${strip ? flow(strip) : ""}<div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span>${lst(creates)}</div>
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${summary ? ic("check") + "Decided by" : ic("hand") + "Requires"}</span>${lst(requires)}</div></div>${picHtml(pic)}`;
+}
+glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
+if (PAGE.short.items.length) showItem(0);
+
+if (document.getElementById("cc")) {
+  const counts = { new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
+  document.getElementById("cc-count").textContent =
+    `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
+  // A New item's picture (#241): what sets it off -> what it does -> what you get.
+  // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
+  const lineCounts = (a, r) => `+${a} \u2212${r}`;
+  const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+    fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+      (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
+}
+
+if (document.getElementById("qs")) {
+  document.getElementById("qs").innerHTML = PAGE.choices.map(([id, q, opts, why], n) =>
+    `<fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n + 1}</span>${esc(q)}</h3></legend>
+     ${opts.map(o => { const [v, l, rec, d] = o; return `<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${esc(l)}</b>${rec ? '<span class="rec">' + ic("check") + 'Suggested</span>' : ""}${d ? `<small>${esc(d)}</small>` : ""}</span></label>${picHtml(picOf(o, 4))}`; }).join("")}
+     <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to: ${esc(q)}" placeholder="Type your idea here"></span></label>
+     ${why ? `<details class="why"><summary>Why I suggest this</summary><p>${esc(why)}</p></details>` : ""}</fieldset>`).join("");
+}
+
+const W = PAGE.wrapup;
+document.getElementById("wrapup").innerHTML = [
+  ["file", "Summary", W.summary, "accent"], ["swap", "What's changing", W.changing, "accent"],
+  ["stop", "What's blocking", W.blocking, "gap"], ["next", "What's next", W.next, "ok"]
+].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("");
+// The to-do list is ticked off; make_page.py writes the same list and next-step text into the file so a reader without script sees them.
+document.getElementById("todo").innerHTML = W.todo.map(x => `<li><label><input type="checkbox"><span>${x}</span></label></li>`).join("");
+document.getElementById("nextstep").textContent = W.next || W.todo[0].replace(/<[^>]*>/g, "");
+
+const out = document.getElementById("out"), miss = document.getElementById("miss");
+function reply() {
+  const picks = PAGE.choices.map(([id], i) => {
+    const c = document.querySelector(`input[name=${id}]:checked`);
+    if (c && c.value === "own") { const t = document.querySelector(`.owntext[data-for=${id}]`).value.trim(); return [i + 1, t ? "own" : null, t]; }
+    return [i + 1, c && c.value];
+  });
+  const A = PAGE.approval || PAGE.replyPrefix;  // replyPrefix: only for pages built before approval existed
+  out.textContent = picks.length
+    ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
+      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
+    : A;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
+  const m = picks.filter(([, v]) => !v).map(([n]) => n);
+  miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
+  const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
+}
+document.addEventListener("change", reply);
+document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
+document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
+  // navigator.clipboard is missing on file:// and other non-https pages, so it is called inside a promise and falls back to execCommand.
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(out); getSelection().removeAllRanges(); getSelection().addRange(r);
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    st.textContent = ok ? "Copied. Paste it into the chat." : "Couldn't copy automatically. The reply is selected; copy it by hand."; };
+  Promise.resolve().then(() => navigator.clipboard.writeText(out.textContent))
+  .then(() => st.textContent = "Copied. Paste it into the chat.").catch(fallback); };
+
+let cur = 1;
+const stepper = document.getElementById("stepper");
+stepper.style.gridTemplateColumns = `repeat(${PARTS.length},1fr)`;
+stepper.innerHTML = PARTS.map(([, s], i) => `<button type="button" data-go="${i + 1}"><span class="bar"></span>${s}</button>`).join("");
+function go(n, focus = true) {
+  cur = Math.min(PARTS.length, Math.max(1, n));
+  const id = PARTS[cur - 1][0];
+  document.querySelectorAll("[data-part]").forEach(p => p.hidden = p.dataset.part !== id);
+  stepper.querySelectorAll("button").forEach((b, i) => { b.classList.toggle("done", i + 1 < cur); if (i + 1 === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  document.getElementById("prev").hidden = cur === 1;
+  const nx = document.getElementById("next"); nx.hidden = cur === PARTS.length; nx.textContent = cur === PARTS.length - 1 ? "Wrap-up ›" : "Next ›";
+  if (focus) { document.getElementById("h-" + id).focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+}
+stepper.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(+b.dataset.go); });
+document.getElementById("prev").onclick = () => go(cur - 1);
+document.getElementById("next").onclick = () => go(cur + 1);
+go(1, false); reply();
+</script>

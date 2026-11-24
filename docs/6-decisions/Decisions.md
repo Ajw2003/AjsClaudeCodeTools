@@ -7,6 +7,16 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-24 - The roadblock judge is tuned, not removed, and every long wait becomes one-minute segments
+
+**Decision.** aj approved "Design approved: judge blocking fix and one-minute segments 1A 2A 3A" on the page `docs/plans/judge-blocking-fix.html`. The roadblock judge stays. It gets five written criteria (C1 to C5) and a reason standard (the check run, what it returned, the logic to the claim), it moves into the scripted Stop hook so it can read the real tool calls (1A), it shares one cap of two blocks with the record check and the goal check, reset only after real tool work (2A), and steps that pass data use named checkpoint files (3A). The launch guard refuses a foreground or background launch over 60 seconds unless it says `Cannot split:` with a reason that passes C5. Parent issue #605, steps #606 to #613.
+
+**Why.** A test session was blocked 12 times in a row even when three different methods had been tried: the model judge had a one-sentence rule, could not see the tool calls, and kept no count. aj also wants no wait over a minute, so failures are caught early. Systems doc: `docs/4-systems/roadblock-judge-and-segments.md`.
+
+**Rejected.** Deleting the model judge (aj: its intent is right, it needs tuning and a limit). Keeping it as a prompt hook with written criteria (it still cannot see the tool calls or count). Enforcing the 60-second rule by advice only. Forbidding any dependency between segments (some work cannot be done without one).
+
+**Status.** Active. Extends, and does not supersede, the modular-tests entry for #575 and the roadblock entries for #587.
+
 ## 2026-11-24 - Design review loop reversals (plugin 2.92.0)
 
 **Context.** The design review loop (#592) is built. Four earlier decisions it replaces are recorded here, each in its own paragraph, so the older entries are not left standing unchallenged.

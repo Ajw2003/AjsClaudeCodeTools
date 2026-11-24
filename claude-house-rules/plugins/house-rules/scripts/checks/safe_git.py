@@ -1943,12 +1943,14 @@ report("PASS" if _rr_o[0] == 0 and not _rr_denied(_rr_o[1]) and "rerun count cou
 _rr_reset()
 
 # --- speed switches (#525): a foreground wait is refused with its background form ---
-def _wait_run(cmd, background=None, timeout=None):
+def _wait_run(cmd, background=None, timeout=None, description=None):
     ti = {"command": cmd}
+    if description:
+        ti["description"] = description
     if background is not None:
         ti["run_in_background"] = background
     if background and timeout is None:
-        timeout = 595000  # #562: a background launch must carry a timeout
+        timeout = 55000  # #562: a background launch must carry a timeout
     if timeout is not None:
         ti["timeout"] = timeout
     pl = {"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash", "tool_input": ti}
@@ -2094,14 +2096,14 @@ print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
 
 
 # --- #562: a background launch with no deadline is refused; an unchecked one is reported once ---
-_bg_big, _bg_ok = (_wait_run("make", True, t) for t in (1300000, 1200000))
+_bg_big, _bg_ok = (_wait_run("make", True, t) for t in (61000, 60000))
 _bg_missing = run_hook("guard", json.dumps({"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash",
                        "tool_input": {"command": "make", "run_in_background": True}}),
                        env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]
 _bgd = '"permissionDecision":"deny"'
-report("PASS" if _bgd in _bg_missing and "1200000" in _bg_missing and "waitfor.py" in _bg_missing else "FAIL",
-       "bg deadline: a background command with no timeout is refused, naming 1200000 ms and waitfor.py")
-report("PASS" if _bgd in _bg_big and "1200000" in _bg_big else "FAIL",
+report("PASS" if _bgd in _bg_missing and "60000" in _bg_missing and "waitfor.py" in _bg_missing else "FAIL",
+       "bg deadline: a background command with no timeout is refused, naming 60000 ms and waitfor.py")
+report("PASS" if _bgd in _bg_big and "60000" in _bg_big else "FAIL",
        "bg deadline: a timeout over the largest deadline is refused")
 report("PASS" if _bgd not in _bg_ok else "FAIL", "bg deadline: a timeout inside the limit passes")
 report("PASS" if _bgd in _wait_run("timeout 90 python x.py") else "FAIL", "bg deadline: a foreground timeout 90 is still refused")
@@ -2202,5 +2204,26 @@ report("PASS" if _wd not in _wait_run('echo "raise timeout 20000 later"') and
 report("PASS" if _wd in _wait_run("cd /x && timeout 120 sleep 1") and _wd in _wait_run("timeout 90 x")
        and _wd not in _wait_run("timeout 20 x") else "FAIL",
        "wait guard: timeout 120 after && and timeout 90 are refused, timeout 20 is allowed")
+
+# #610: one-minute segments; a launch over 60 seconds needs a valid `Cannot split:` reason
+_CS_OK = ("Cannot split: check: ran unity -version, one build; evidence: it returned one engine build with no stages; "
+          "logic: one engine build has no seam to cut at, so segments are impossible; progress: tail of Editor.log each minute")
+_CS_BAD = "Cannot split: it takes a while"
+_cs_deny = lambda out: '"permissionDecision":"deny"' in out
+_cs_long = _wait_run("python big.py", background=True, timeout=280000)
+report("PASS" if _cs_deny(_cs_long) and "Cannot split: check:" in _cs_long and "evidence:" in _cs_long else "FAIL",
+       "segments guard: a 280-second launch is refused and the message shows the Cannot split form to copy")
+report("PASS" if not _cs_deny(_wait_run("python big.py", background=True, timeout=280000, description=_CS_OK)) else "FAIL",
+       "segments guard: the same 280-second launch with a valid Cannot split reason passes")
+report("PASS" if _cs_deny(_wait_run("python big.py", background=True, timeout=280000, description=_CS_BAD)) else "FAIL",
+       "segments guard: a generic Cannot split reason is refused")
+report("PASS" if _cs_deny(_wait_run("dotnet test", background=True, timeout=None)) or
+       _cs_deny(run_hook("guard", json.dumps({"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash",
+                "tool_input": {"command": "dotnet test", "run_in_background": True}}), env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]) else "FAIL",
+       "segments guard: a known long runner with no timeout is refused as over 60 seconds")
+_cs_fg = run_hook("guard", json.dumps({"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash",
+                "tool_input": {"command": "dotnet test"}}), env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]
+report("PASS" if _cs_deny(_cs_fg) and "known long runner" in _cs_fg else "FAIL",
+       "segments guard: a foreground known long runner with no timeout is refused as over 60 seconds")
 
 finish()
