@@ -417,6 +417,37 @@ else:
         _mp_cases.append(("make_page: the copied text, with choices (approval then picks) and without (approval alone), matches the gate",
                           _w == _ph + " 1A" and _n == _ph and _gate(_w) and _gate(_n)))
 
+# a multi-line change detail (QA "Needs your machine" step cards) keeps its line breaks in the browser (#596)
+_nl = _mp_content("newlines")
+with open(_nl, encoding="utf-8") as _f:
+    _nlp = json.load(_f)
+_nlp["changes"] = [["chg", "Needs your machine", "1 step", None, "T\nUNTESTED:\nFolder: /p, shell: bash\nCommand: git status", None, None]]
+with open(_nl, "w", encoding="utf-8") as _f:
+    json.dump(_nlp, _f)
+_d = _mp_proj("newlines")
+_mp("style", "--quick", "--project", _d)
+_rc, _o = _mp("build", _nl, "--project", _d)
+_NLJS = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();
+await p.goto('file://'+process.argv[2]);const r=await p.evaluate(()=>{const d=document.querySelector('.ci');d.open=true;const e=d.querySelector('.detail p');
+return {ws:getComputedStyle(e).whiteSpace,t:e.innerText}});console.log(JSON.stringify(r));await b.close();})();""")
+if not (_rc == 0 and os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, "playwright"))):
+    report("SKIP", "make_page (#596): multi-line detail keeps its lines (no node/playwright or build failed)")
+else:
+    _nlf = os.path.join(_mp_tmp, "nl.js")
+    with open(_nlf, "w", encoding="utf-8") as _f:
+        _f.write(_NLJS)
+    _r = subprocess.run([_NODE, _nlf, os.path.join(_d, "docs", "plans", "newlines.html")], capture_output=True, text=True, timeout=180,
+                        env=dict(os.environ, NODE_PATH=_PWMOD, PLAYWRIGHT_BROWSERS_PATH=os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")))
+    try:
+        _nr = json.loads(_r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        _nr = None
+    if _nr is None:
+        report("SKIP", "make_page (#596): multi-line detail keeps its lines (browser did not run: %s)" % (_r.stderr.strip()[-200:] or "no output"))
+    else:
+        _mp_cases.append(("make_page (#596): a multi-line change detail renders each line on its own line",
+                          _nr["ws"] == "pre-line" and "\nUNTESTED:\n" in _nr["t"]))
+
 # a 40-character unbroken word in card text must not clip on a phone (#288); the old 1fr CSS must be caught
 _LONGW = "HOUSE_RULES_AGENT_NAME_WITH_A_VERY_LONG_TAIL_X"
 _lw = _mp_content("longword")
