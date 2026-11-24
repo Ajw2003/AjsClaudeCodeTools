@@ -29,7 +29,9 @@ _PAGE_META_RE = re.compile(r'<meta name="house-rules-page" content="([^"]*)"')
 
 def _stamp_hash(html):
     import hashlib
-    return hashlib.sha256(_STAMP_LINE_RE.sub("", html, count=1).encode("utf-8")).hexdigest()
+    # CRLF and LF hash alike: a page saved with Windows line endings is not a changed page.
+    body = _STAMP_LINE_RE.sub("", html, count=1).replace("\r\n", "\n")
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
 def stamp_line(html, verdict, rounds):

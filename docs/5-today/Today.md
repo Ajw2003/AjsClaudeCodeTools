@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj's PC run of the acceptance runner failed every criterion: the `design_loop` part crashed on Windows before reporting a check. I fixed two Windows-only causes (the fake `gh` script in the close-facts tests, and the review stamp hashing CRLF differently from LF). A full nine-criteria rerun is in progress; round 2 is not recorded or stamped yet.
+
 aj saw the first PC run sit silent for minutes; the runner now prints a progress line every 20 seconds (aj's rule: at least every minute) and I ran `C1` here to see the lines appear. aj has the fixed version to pull and rerun, or can let the first run finish.
 
 The runner's test run here passed all nine criteria (`round-2/` holds one output per search text). aj gave the PC clone path and was handed the three-step card to run it on Windows and push the outputs; waiting on aj's `STATUS:` line.
