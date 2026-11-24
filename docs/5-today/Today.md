@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Step 2 (#619) came back from its builder and I read the code: four fixes were sent back and returned (checked by my own `mode` and `units` runs); a small report-folder-name fix is in progress. My full seven-part verify run is going in the background and is not read. Open question for aj at QA: a sweep of this repo is 9 folders but 96 batches, so the over-12-folders notice would not print; suggested: also notify when batches pass 12.
+
 Step 2 (#619, the review command) is with a builder in `/home/user/wt-review-step2`. One batch was measured for the sweep notice (10 markdown files: 71.3 seconds, 43,991 tokens), so batches are capped at 8 files. I logged deviation D1: a small `scripts/review_plan.py` helper is added beyond the plan so the notice figures are counted. Nothing from step 2 is merged or verified yet.
 
 Step 1 (#618, four reviewer modes) is merged into `AjsAgent/jolly-dirac-fvh4cg` after all seven verify parts passed on it (delegation 204 on both the baseline and the step 1 branch). Step 2 (#619, the command) starts once a measured per-batch time and token figure is in.
