@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+A live test script for the roadblock fix, `docs/plans/2026-11-23-roadblock-unattended-hook/live_roadblocks.py`, starts five real headless sessions on the branch build (curly apostrophe, `git ls-files` only, three methods listed, unattended stall, bypass question); its first run was under way when this line was written, so no result is recorded yet.
+
 Plugin 2.90.0: roadblock detection fix (#587, steps #588 to #591). A reply that says it cannot do something now passes only after three failed attempts by different methods, curly apostrophes and more wordings are caught, and a model judge plus a goal check stop a reply that ends with "Next step" while work can carry on; in unattended or bypass-permission mode a design question is chosen by the agent and recorded, never waited on (the `noask` hook now covers `bypassPermissions`), and a licence, login, purchase or destructive step blocks only its own part. `HOUSE_RULES_ROADBLOCKS=off` and `HOUSE_RULES_GOALCHECK=off` switch the parts off. Detail: `docs/4-systems/roadblocks.md`.
 
 Plugin 2.89.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
