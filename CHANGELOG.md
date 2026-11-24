@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command step 3 (#620) final commit 1d979ba: the seven new `verify.py` cases now use made-up pages, clean up their temp folders, and each was shown failing against a deliberately broken file (the builder's docs run: 174 checks pass). My own run of all seven parts on it is in progress; not merged yet.
+
 Review command step 3 (#620) came back from its builder with seven new `verify.py` cases; I read them and sent back three fixes (use made-up pages instead of two real ones in `docs/plans`, delete the temp folders, and show the other three cases failing against a broken file). Not merged or verified by me yet.
 
 Review command step 2 (#619) is merged into the working branch after all seven verify parts passed on its final commit (core 272, docs 167, writing 24, safe_git 282, delegation 204, design_loop 529, make_page 116); a merge conflict in this file was resolved by keeping both sides. Step 3 (#620, verify.py cases for the modes and the helper script) is with a builder.

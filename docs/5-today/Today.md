@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Step 3 (#620, seven new verify.py cases) is built on `AjsAgent/review-command-step3` (final commit 1d979ba) after one round of fixes; my own seven-part verify run on it is in progress and not read yet. Step 4 (#621, docs and version) and the acceptance tests remain.
+
 Step 2 (#619, the review command and its helper script) is merged into `AjsAgent/jolly-dirac-fvh4cg`; all seven verify parts passed on its final commit. Step 3 (#620, verify.py cases) is with a builder in `/home/user/wt-review-step3`. Step 4 (#621, docs and version) and the acceptance tests are still to do.
 
 Step 2 (#619) came back from its builder and I read the code: four fixes were sent back and returned (checked by my own `mode` and `units` runs); a small report-folder-name fix is in progress. My full seven-part verify run is going in the background and is not read. Open question for aj at QA: a sweep of this repo is 9 folders but 96 batches, so the over-12-folders notice would not print; suggested: also notify when batches pass 12.
