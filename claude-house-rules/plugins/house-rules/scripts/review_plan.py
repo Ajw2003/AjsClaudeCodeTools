@@ -6,8 +6,10 @@
   review_plan.py batches [--root DIR]                   -> <unit><TAB><n><TAB><file,file,...>
 
 Files come from `git ls-files -co --exclude-standard`, so .git and ignored files are skipped.
-A batch is at most 8 files of one unit (8 x 7.1 s = 57 s, under the 60 s agent deadline).
-Exit 0 on success, 2 when the TARGET does not exist. STDLIB ONLY.
+A batch is at most 6 files of one unit: markdown ran at 7.1 s a file (8 x 7.1 = 57 s, right at the 60 s agent
+deadline), and code files run slower, so 6 files (43 s on markdown) leaves headroom.
+Sweep token estimate: 10,000 per batch plus 3,400 per file, fitted to the real 15-batch sweep (203,394 tokens).
+Exit 0 on success, 2 when the TARGET does not exist, 3 when --root or git cannot be used. STDLIB ONLY.
 """
 import argparse
 import datetime
@@ -18,13 +20,28 @@ import sys
 from pathlib import Path
 
 IMAGES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"}
-BATCH = 8
-SEC, TOK = 7.1, 4400
+BATCH = 6
+SEC, TOK_BATCH, TOK_FILE = 7.1, 10000, 3400
+GENERIC = {"build-plan", "proposal", "design"}  # folder-style pages named by their folder, not by themselves
 META = re.compile(r'<meta\s+name=["\']house-rules-page["\']\s+content=["\']build-plan["\']', re.I)
+
+
+def strip_date(name):
+    return re.sub(r"^\d{4}-\d{2}-\d{2}-", "", name)
+
+
+def designs_of(plan):
+    """Design pages next to a plan: same name minus -plan/-build-plan (date ignored), or a folder's proposal/design."""
+    want = {"proposal", "design"} if plan.stem == "build-plan" else {strip_date(re.sub(r"-(build-)?plan$", "", plan.stem))}
+    return sorted(f for f in plan.parent.iterdir()
+                  if f.is_file() and f != plan and f.suffix == plan.suffix and strip_date(f.stem) in want)
 
 
 def cmd_mode(a):
     root = Path(a.root).resolve()
+    if not root.is_dir():
+        print(f"error: --root {a.root} is not a folder")
+        return 3
     words = list(a.words)
     a.target = words.pop(0) if words else None
     if words and words[0].lower() == "style":
@@ -36,13 +53,13 @@ def cmd_mode(a):
     else:
         tpath = Path(a.target)
         if not tpath.is_absolute():
-            tpath = Path.cwd() / tpath
+            tpath = root / tpath
         if not tpath.exists():
             print(f"error: {a.target} not found")
             return 2
         if a.style:
             mode = "style"
-        elif a.target == ".":
+        elif tpath.resolve() == root:
             mode = "codebase"
         elif tpath.suffix.lower() in IMAGES:
             mode = "image"
@@ -53,25 +70,32 @@ def cmd_mode(a):
             mode = "code"
     if a.target is None:
         name = root.name
-    elif a.target == ".":
-        name = Path.cwd().resolve().name if a.root == "." else root.name
+    elif mode == "codebase":
+        name = root.name
+    elif tpath.is_file():
+        name = strip_date(tpath.parent.name if tpath.stem in GENERIC else tpath.stem)
     else:
-        name = re.sub(r"^\d{4}-\d{2}-\d{2}-", "", tpath.stem) if tpath.is_file() else tpath.name
+        name = tpath.name
     name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "target"
     print(f"mode: {mode}")
     print(f"report: docs/qa/review-{name}-{datetime.date.today().isoformat()}")
     print(f"criteria: {criteria}")
     if mode == "plan":
-        base = re.sub(r"-plan$", "", tpath.stem)
-        found = sorted(f for f in tpath.parent.iterdir()
-                       if f.is_file() and f != tpath and f.suffix == tpath.suffix and f.stem.endswith(base))
-        print(f"design: {found[-1] if found else 'none'}")
+        found = designs_of(tpath)
+        print(f"design: {found[0] if len(found) == 1 else 'ambiguous' if found else 'none'}")
+        if len(found) > 1:
+            for f in found:
+                print(f"candidate: {f}")
     return 0
 
 
 def units_of(root):
-    r = subprocess.run(["git", "-c", "core.quotepath=off", "ls-files", "-z", "-co", "--exclude-standard"],
-                       cwd=root, capture_output=True, text=True, encoding="utf-8")
+    try:
+        r = subprocess.run(["git", "-c", "core.quotepath=off", "ls-files", "-z", "-co", "--exclude-standard"],
+                           cwd=root, capture_output=True, text=True, encoding="utf-8")
+    except OSError as e:
+        print(f"error: cannot run git in {root}: {e}")
+        sys.exit(3)
     if r.returncode != 0:
         print(f"error: git ls-files failed in {root}: {r.stderr.strip()}")
         sys.exit(3)
@@ -103,9 +127,11 @@ def cmd_units(a):
     print(f"batches: {nb}")
     if folders > 12:
         m = math.ceil(files * SEC / 60)
+        tokens = nb * TOK_BATCH + files * TOK_FILE
         print(f"notice: This sweep covers {folders} folders, {files} files, in {nb} batches run one at a time. "
-              f"Estimated time about {m} minutes and about {files * TOK:,} tokens (7.1 seconds and 4,400 tokens "
-              f"per file, measured on one 10-file markdown batch); code files take longer, so treat both as a minimum.")
+              f"Estimated time about {m} minutes and about {tokens:,} tokens (7.1 seconds per file, "
+              f"and {TOK_BATCH:,} tokens per batch plus {TOK_FILE:,} per file, fitted to a measured 15-batch sweep); "
+              f"code files take longer, so treat both as a minimum.")
     return 0
 
 
