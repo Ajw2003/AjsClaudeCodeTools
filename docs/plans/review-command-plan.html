@@ -258,8 +258,8 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the steps in order.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: review command", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the steps in order.</label></li><li><label><input type="checkbox"> Answer the three questions under Your choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: review command", or say what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Split each folder into segments of 60 seconds or less, and estimate time from the segment count</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -303,7 +303,7 @@ const PAGE = {
         "Step 1",
         "Four new reviewer modes",
         "",
-        "code, codebase, image and style join the reviewer's modes file and its description line.",
+        "code, codebase, image and style join agents/reviewer.md, rules/detail/review-modes.md, and the style-file line in show-dont-tell.md.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22320%22%20height%3D%22180%22%3E%3Crect%20width%3D%22320%22%20height%3D%22180%22%20fill%3D%22%23e3eafc%22/%3E%3Ctext%20x%3D%2216%22%20y%3D%2234%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3Eagents/reviewer.md%3C/text%3E%3Ctext%20x%3D%2216%22%20y%3D%2260%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3Erules/detail/review-modes.md%3C/text%3E%3Ctext%20x%3D%2216%22%20y%3D%2286%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3E4%20modes%20-%3E%208%20modes%3C/text%3E%3C/svg%3E",
@@ -327,7 +327,7 @@ const PAGE = {
       [
         "check",
         "Step 3",
-        "Checks that prove it",
+        "verify.py checks that keep the files in step",
         "",
         "verify.py gains cases so the modes, the command and the sweep notice cannot drift apart.",
         "Nothing from you.",
@@ -342,7 +342,7 @@ const PAGE = {
         "Step 4",
         "Docs and version",
         "",
-        "A systems doc, a decisions entry, a changelog line, the Today note and the version bump.",
+        "The mode lists in review-loop.md, a new review-command.md, a Decisions entry, the Today note and the version bump.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22320%22%20height%3D%22180%22%3E%3Crect%20width%3D%22320%22%20height%3D%22180%22%20fill%3D%22%23e3eafc%22/%3E%3Ctext%20x%3D%2216%22%20y%3D%2234%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3Edocs/4-systems/review-command.md%3C/text%3E%3Ctext%20x%3D%2216%22%20y%3D%2260%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3EDecisions%20%2B%20CHANGELOG%3C/text%3E%3Ctext%20x%3D%2216%22%20y%3D%2286%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3Eplugin%20version%20up%3C/text%3E%3C/svg%3E",
@@ -366,7 +366,7 @@ const PAGE = {
       "Step 1: reviewer modes",
       "agents/reviewer.md, rules/detail/review-modes.md, rules/detail/show-dont-tell.md.",
       null,
-      "Depends on nothing; step 2 depends on it. Adds code, codebase, image and style to the description line, the mode bullets and the modes file. image judges against criteria you give or a fixed list (hierarchy, contrast, alignment, consistency). style needs a stated style or a project UI guide, and stops if neither exists. The line saying the style file is read only by the builder is updated. Done when: reviewer.md names eight modes and the modes file describes each in one block.",
+      "Depends on nothing; step 2 depends on it. Adds code, codebase, image and style to the description line, the mode bullets and the modes file. image reads pictures with the Read tool and judges against criteria you give or a fixed list (hierarchy, contrast, alignment, consistency). style compares image files or a page you name against a stated style or the project's UI guide (never docs/page-style.json), and stops if neither exists. The line saying the style file is read only by the builder is updated. Each step's commit adds a CHANGELOG.md line. Done when: reviewer.md names eight modes and the modes file describes each in one block.",
       null,
       null
     ],
@@ -375,7 +375,7 @@ const PAGE = {
       "Step 2: the command",
       "commands/review.md, using the braced ${CLAUDE_PLUGIN_ROOT}.",
       null,
-      "Depends on step 1; step 3 depends on it. Detection order: the path . on its own means codebase; an image extension means image; a page tagged build-plan means plan (with its design page); any other HTML page means page; any other file or folder means code; no argument means the uncommitted diff. The word style after the path selects style mode; text after it is the image criteria. Reports are saved by the main session to docs/qa/review-<target name>-<date>/. The sweep has no folder cap: with more than 12 top-level folders, the command first tells you the folder count, an estimated time (folders times 75 seconds) and an estimated token use (folders times 50,000), then runs. Each reviewer has a 900-second deadline from rules/waits.json, checked each minute with waitfor.py, and any folder past it is listed as not reviewed. Done when: a run on a folder, an image and a 14-folder fixture each names its mode, and the fixture prints the notice.",
+      "Depends on step 1; step 3 depends on it. Detection order: the path . on its own means codebase; an image extension means image; a page tagged build-plan means plan (with its design page); any other HTML page means page; any other file or folder means code; no argument means the uncommitted diff. The word style after the path selects style mode; text after it is the image criteria. Reports are saved by the main session to docs/qa/review-<target name>-<date>/. The sweep has no folder cap and skips .git and anything git ignores, which the notice says. With more than 12 top-level folders, the command first tells you the folder count, an estimated time and an estimated token use, then runs. This step first measures one real folder of this repo and takes the per-folder time and token figures from that run, and the notice says so. The agent deadline in rules/waits.json is 60 seconds (one segment), so the command writes a segment plan as rules/detail/waits.md requires; see the first question. A folder that does not finish is listed as not reviewed. Findings are ranked by severity, then file. Each step's commit adds a CHANGELOG.md line. Done when: a run on a folder, an image and a test folder with 14 one-file subfolders each names its mode, and the 14-folder run prints the notice and ends with every folder in the merged list or the not-reviewed list.",
       null,
       null
     ],
@@ -384,7 +384,7 @@ const PAGE = {
       "Step 3: verify.py cases",
       "Cases for the modes, the command and the notice.",
       null,
-      "Depends on steps 1 and 2; step 4 depends on it. Cases check that every mode name appears in reviewer.md and the modes file, that commands/review.md exists with a braced plugin root, and that the over-12-folders notice text is present. Done when: a full verify.py exits 0 and the visual-loop cases still pass.",
+      "Depends on steps 1 and 2; step 4 depends on it. Cases check that every mode name appears in reviewer.md, the modes file, verify.py and review-loop.md, that commands/review.md exists with a braced plugin root, and that the over-12-folders notice text is present. Each step's commit adds a CHANGELOG.md line. Done when: a full verify.py exits 0 and the visual-loop cases still pass.",
       null,
       null
     ],
@@ -393,7 +393,7 @@ const PAGE = {
       "Step 4: docs and version",
       "Systems doc, Decisions, CHANGELOG, Today, version.",
       null,
-      "Depends on steps 1 to 3. Writes docs/4-systems/review-command.md, a dated Decisions entry (including the 1A, 2A and uncapped-sweep answers), a CHANGELOG line, the Today note, and the plugin version bump. Done when: docref.py check and docs_drift.py both pass.",
+      "Depends on steps 1 to 3. Updates the mode lists in docs/4-systems/review-loop.md, which the approved design names, and keeps the new docs/4-systems/review-command.md for the command itself (a deviation from the design, logged here: one file per system). Writes a dated Decisions entry quoting your line 'Design approved: review command 1A 2A 3*' and the 3* text word for word, updates docs/5-today/Today.md, and bumps the plugin version. Done when: docref.py check and docs_drift.py both pass.",
       null,
       null
     ],
@@ -402,22 +402,81 @@ const PAGE = {
       "Acceptance tests",
       "One test per design item, run before QA.",
       null,
-      "1. Command picks the mode: run it on src, logo.png, . and a plan page; each prints the right mode. 2. Reviewer has eight modes: grep both files for all eight names. 3. Reports save to docs/qa/review-<name>-<date>/: run one review and list the folder. 4. Sweep is uncapped with a notice: run on a 14-folder fixture; the notice shows 14 folders, about 1,050 seconds and about 700,000 tokens. 5. Extra input: no argument reviews the diff; style with no style stops and says so. 6. Visual loop unchanged: its verify.py cases pass.",
+      "1. Command picks the mode: run it on src, a single file, logo.png, ., a plan page (check its design page is passed along) and another HTML page; each prints the right mode. 2. Reviewer has eight modes: grep reviewer.md, the modes file, verify.py and review-loop.md for all eight names. 3. Reports save to docs/qa/review-<name>-<date>/: run one review and list the folder. 4. Sweep is uncapped with a notice: run on a test folder with 14 one-file subfolders; the notice shows 14 folders and the measured time and token figures, and the run ends with every folder in the merged list or the not-reviewed list. 5. Extra input: no argument reviews the diff; style with no style stops and says so; image with no criteria uses hierarchy, contrast, alignment and consistency. 6. Visual loop unchanged: its verify.py cases pass. 7. Ranking: the merged list is ordered by severity, then file.",
       null,
       null
     ]
   ],
+  "choices": [
+    [
+      "deadline",
+      "A reviewer reading a whole folder takes over a minute, but the agent deadline is 60 seconds. What changes?",
+      [
+        [
+          "A",
+          "Split each folder into segments of 60 seconds or less, and estimate time from the segment count",
+          1,
+          "Keeps the deadline rule as it is; the time estimate grows with folder size."
+        ],
+        [
+          "B",
+          "You raise the agent deadline in waits.json for sweeps",
+          0,
+          "Simpler to run, but it loosens a rule you set on purpose."
+        ]
+      ],
+      "A, because the 60-second rule is yours and a sweep should not need it loosened."
+    ],
+    [
+      "root",
+      "Files at the repo root, outside any folder: are they reviewed?",
+      [
+        [
+          "A",
+          "Yes, as one extra unit called root files",
+          1,
+          "Nothing is silently left out."
+        ],
+        [
+          "B",
+          "No, they are listed as not reviewed",
+          0,
+          "Fewer units, but the root holds the config files that matter most."
+        ]
+      ],
+      "A, so a whole-codebase review really covers the whole codebase."
+    ],
+    [
+      "docs",
+      "Where do the mode lists live?",
+      [
+        [
+          "A",
+          "Update review-loop.md for the modes, and keep review-command.md for the command",
+          1,
+          "The design named review-loop.md; the command is a separate system."
+        ],
+        [
+          "B",
+          "Put everything in review-loop.md and delete review-command.md",
+          0,
+          "One file, but it grows past what one doc should hold."
+        ]
+      ],
+      "A, one file per system."
+    ]
+  ],
   "wrapup": {
     "summary": "This plan builds the review command and four reviewer modes in four steps.",
-    "changing": "commands/review.md (new), the reviewer's two files, show-dont-tell.md, verify.py, five docs files and the plugin version.",
-    "blocking": "Your build plan approval line. The time and token figures in the sweep notice are estimates from two earlier reviewer runs of one page each, so real folders will take longer.",
+    "changing": "commands/review.md (new), the reviewer's two files, show-dont-tell.md, verify.py, four doc files (review-loop.md, review-command.md, Decisions.md, docs/5-today/Today.md), CHANGELOG.md and the plugin version.",
+    "blocking": "Your build plan approval line. Your answers to the three questions below. The design page quoted a 900-second agent deadline; the real figure in waits.json is 60 seconds, which is why the first question exists.",
     "next": "After you approve, I build step 1.",
     "todo": [
       "Read the steps in order.",
+      "Answer the three questions under Your choices.",
       "Tap <b>Copy my reply<\/b> and send it: \"Build plan approved: review command\", or say what to change."
     ]
-  },
-  "choices": []
+  }
 };
 // ---- End of PAGE. Nothing below needs editing. ----------------------------------------------
 
