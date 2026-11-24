@@ -363,9 +363,21 @@ def check_approval(page):
     if not isinstance(appr, str) or not appr.strip():
         die("content needs an 'approval' field: the exact phrase the design-loop gate accepts, such as "
             "\"Build plan approved: <feature>\" or \"Design approved: <feature>\" (a QA page gets \"QA passed: <feature>\")")
+    design, plan, qa = load_gate_patterns()
+    lines = appr.split("\n")
+    if len(lines) == 2 and not is_qa_approval(page):  # #600: design line, then build-plan line, same rules each
+        if not (design.search(lines[0]) and plan.search(lines[1])):
+            die("approval has two lines: the first must be \"Design approved: <feature>\" and the second "
+                "\"Build plan approved: <feature>\"; got %r and %r" % tuple(lines))
+        for ln in lines:
+            if ln != ln.strip() or not ln:
+                die("approval line %r must have no spaces at either end" % ln)
+        for ln, p in zip(lines, (design, plan)):
+            if not p.search(ln + " 1A"):
+                die("approval line %r would not open the design-loop gate with picks added" % ln)
+        return
     if appr != appr.strip() or "\n" in appr:
         die("approval must be one line with no spaces at either end")
-    design, plan, qa = load_gate_patterns()
     qa_page = is_qa_approval(page)
     pats = [qa] if qa_page else [design, plan]
     want = "QA passed: <feature>" if qa_page else "Design approved: <feature> or Build plan approved: <feature>"
@@ -389,7 +401,7 @@ def check_approval(page):
 def apply_approval_todo(page):
     """Make the wrap-up's last to-do line say the phrase the copy box holds."""
     import html
-    appr = html.escape(page["approval"], quote=False)
+    appr = html.escape(page["approval"], quote=False).replace("\n", " then ")  # #600: two lines read as one to-do
     if is_qa_approval(page):
         feature = appr.split(":", 1)[1].strip()
         line = ('Tap <b>Copy my reply</b> and send it: "%s", or send "QA failed: %s" with what to change.'
