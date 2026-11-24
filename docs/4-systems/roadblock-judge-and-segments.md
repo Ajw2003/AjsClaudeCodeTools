@@ -3,7 +3,8 @@
 **Owns:** the written criteria the end-of-reply roadblock judge applies, where the judge runs, the
 shared block cap, the reason standard, and the rule that every wait-bound job runs as independent
 segments of at most 60 seconds. Status: design approved 2026-11-24 as "Design approved: judge
-blocking fix and one-minute segments 1A 2A 3A"; not built yet. Proposal page:
+blocking fix and one-minute segments 1A 2A 3A"; built in plugin 2.93.0 except the 60-second flag
+in the modular-tests gate and audit (issue #611, which waits on #578 and #579). Proposal page:
 `docs/plans/judge-blocking-fix.html`. It extends, and does not replace,
 `docs/4-systems/modular-tests.md` (issue #575) and `docs/4-systems/roadblocks.md` (issue #587).
 

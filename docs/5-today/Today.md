@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+#613 is done on the judge branch except the unbuilt 60-second flag in #611: plugin version 2.93.0, systems doc status, changelog line, and the 12-reply replay (already the core check #608). The inject-size check no longer depends on how deep the checkout is (the plugin root path is measured as 100 characters). A full verify.py at the long worktree path exits 0 (1586 of 1593, 7 skipped), verify_tools 55 of 55. No pull request is open yet.
+
 aj asked for the new judge changes to be live so the judge stops over-firing. I merged `main` and the #610 builder branch into `AjsAgent/judge-blocking-audit`, ran safe_git (282 of 282), delegation (204 of 204) and a full run (only the inject-size check fails), pushed it, and switched the installed plugin to that branch with `tools/use_branch.py` (commit ea6ea6a, version 2.92.0). It takes effect in a new session. Steps #610 and #613's docs/version are not finished; #611's 60-second flag is not built.
 
 aj failed QA with "fix all pre existing failures before we pr to main". All nine Windows failures are fixed (waitfor, guard, page and node checks) plus one in tools/verify_tools.py; a full verify.py passes here (1574 of 1581, 7 skipped). The acceptance run is being repeated because the fixes made its stamp stale; round 2 is not re-stamped yet.

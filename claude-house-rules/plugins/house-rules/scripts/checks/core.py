@@ -29,12 +29,18 @@ for _event, _margin, _env in _size_cases[:4]:  # inject, showrule, standards, pr
     if _ctx is None:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
         print(f"          could not read additionalContext: {_err.strip()}")
-    elif len(_ctx) <= _margin:
-        report("PASS", f"{_event} stays under the per-hook additionalContext limit")
-        print(f"          {len(_ctx)} chars <= {_margin} margin (hard limit 10,000)")
     else:
-        report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
-        print(f"          {len(_ctx)} chars > {_margin} margin - Claude Code will truncate this")
+        # The inject text names the plugin root once, so its length depends on where this checkout sits (a
+        # worktree 100 characters deep failed by 21 where the same commit at a short path passed). Measure the
+        # rules with that path set to a typical installed one, so the check tests the text and not the folder.
+        _root_m = re.search(r"plugin root: (\S+)", _ctx)
+        _len = len(_ctx) - (len(_root_m.group(1)) - 100) * _ctx.count(_root_m.group(1)) if _root_m else len(_ctx)
+        if _len <= _margin:
+            report("PASS", f"{_event} stays under the per-hook additionalContext limit")
+            print(f"          {_len} chars <= {_margin} margin (hard limit 10,000; {len(_ctx)} as measured here)")
+        else:
+            report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
+            print(f"          {_len} chars > {_margin} margin - Claude Code will truncate this ({len(_ctx)} as measured here)")
 
 # --- the show-don't-tell rule reaches the session through its own slot (issue #224) ----------
 _code, _ctx, _err = _additional_context("showrule", "", env=env_in(ROOT))
