@@ -1804,6 +1804,19 @@ report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "importer"
 if _s["stage"] != "build":
     print("          stage %r, feature %r, note %r" % (_s["stage"], _s.get("feature"), _n[:300]))
 
+# #600: two lines in one message, Design then Build plan, no plan issues yet: Build, both approvals, issues owed.
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("Design approved: combo 1A 2B\nBuild plan approved: combo")
+_ma_names = [a.get("stage") for a in _s.get("approvals", [])]
+report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "combo"
+                  and "Design approved" in _ma_names and "Build plan approved" in _ma_names
+                  and "0 labelled issue(s)" in _n and "AjsAgent created this" in _n and "in progress" in _n
+                  and "this turn" in _n) else "FAIL",
+       "design loop (#600): a design line and a build-plan line in one message end in Build with both approvals "
+       "and the plan's issues owed in the same turn")
+print("          #600 state: stage %r, feature %r, approvals %r\n          #600 note: %s"
+      % (_s["stage"], _s.get("feature"), _ma_names, _n))
+
 _ma_set({"feature": "Label setup", "stage": "design", "redo": True,
          "approvals": [{"stage": "QA failed", "name": "Importer", "at": 1}],
          "issues": [{"repo": "o/r", "number": 7, "labelled": True}]},
