@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+The review command is finished on this branch (plugin 2.94.1) and open as pull request 623: the sweep token estimate is fixed (10,000 per batch plus 3,400 per file), the 2 high and 7 medium findings of test 3 are fixed in `scripts/review_plan.py`, and batches are capped at 6 files. All seven verify parts pass (1,602 checks). Acceptance tests 1 to 7 pass; the image-mode run was pointed at the repo's own rules file because the sandbox's installed plugin is the older 2.93.0 (`docs/qa/review-command/round-2/results.md`). The 8 low findings wait for aj at QA.
+
 Acceptance test 3 ran for real: a code-mode review of `scripts/review_plan.py` found 17 problems (2 high, 7 medium, 8 low) and its report is saved in `docs/qa/review-review-plan-2026-11-24/`; I reproduced four of them. Plan: fix the 2 high and 7 medium (deviation D3) after the token-estimate fix (deviation D2, a builder is on it) merges, since both edit the same file. Tests 5, 6 and 7 are still to run.
 
 Acceptance tests 1, 2 and 4 are saved under `docs/qa/review-command/round-1/`. The real sweep over the 14-folder test repo ran all 15 batches one at a time (all `no findings`; 88.9 seconds, 203,394 tokens). The notice said 66,000 tokens, so I logged deviation D2 and a builder is fixing the estimate (10,000 per batch plus 3,400 per file, plugin 2.94.1). Test 3 (a code-mode review of the helper script) is running; tests 5, 6 and 7 are not run yet.

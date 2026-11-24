@@ -13,7 +13,7 @@ aj wants one `/house-rules:review` command that sends the existing reviewer at c
 
 ## The next step
 
-All build steps and fixes are done on this branch (plugin 2.94.1); all seven verify parts pass (1,602 checks). Acceptance tests 1 to 4, 6 and 7 pass; test 5 passed for style and was NOT TESTED for image mode (the sandbox reviewer ran the older installed plugin 2.93.0; see docs/qa/review-command/round-2/results.md). The estimate-fix branch from the earlier handoff was never pushed, so its fix (10,000 tokens per batch plus 3,400 per file) and the D3 fixes were redone on this branch. The 8 low findings of docs/qa/review-review-plan-2026-11-24/report.md are left for aj at QA. What remains: aj's QA of the pull request, the image-mode retest on a 2.94.x install, and issue #622 (stale deadline in the visual-loop skill).
+The review command is built, fixed and open as pull request 623 (plugin 2.94.1). All seven verify parts pass (1,602 checks) and acceptance tests 1 to 7 pass; the image-mode test was re-run with the reviewer told to read the repo's rules file, because the sandbox's installed plugin is 2.93.0 (docs/qa/review-command/round-2/results.md). The estimate-fix branch from the earlier handoff was never pushed, so its fix (10,000 tokens per batch plus 3,400 per file) and the D3 fixes were redone on this branch. What remains: aj's QA of the pull request, the 8 low findings of docs/qa/review-review-plan-2026-11-24/report.md, and issue #622 (stale deadline in the visual-loop skill).
 
 ## What is unverified
 
