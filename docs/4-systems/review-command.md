@@ -37,7 +37,7 @@ One command, `/house-rules:review`, that sends the existing reviewer helper at c
 
 - The command file uses the braced `${CLAUDE_PLUGIN_ROOT}`; the unbraced form broke `/house-rules:harvest-scan` (Decisions, 2026-09-20).
 - One reviewer at a time, at most two, per the delegation rule.
-- Every wait has a deadline from `rules/waits.json` (agent: 900 seconds), checked each minute with `scripts/waitfor.py`. A folder past it is listed as not reviewed, never dropped silently.
+- Every wait has a deadline from `rules/waits.json` (agent: 60 seconds, one segment), checked each minute with `scripts/waitfor.py`. A folder past it is listed as not reviewed, never dropped silently.
 - `docs/page-style.json` describes handover pages, not app screens, so style mode does not read it.
 
 ## Known unknowns
