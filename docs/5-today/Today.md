@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj sent screenshots of their answers to choices 4 to 8 on the first proposal page (choices 9 and 10 were lost when a tab was closed). I saved them to `docs/plans/2026-11-24-visual-docs-and-roadmap-answers.md` and to the new page's database. Choice 8 was an own answer that asks for two labelled roadmaps on one page, In dev (latest branch) and Shipped (main). Choices 1 to 3, 9 and 10 still need answers.
+
 aj filled in the published proposal page and could not copy the answers out. Cause found by running the page: all ten choices shared one radio-group name (`share`), so only one pick could be kept and the reply read "1A 2A … 10A" from a single click. I did not republish over aj's open tab, because that could have wiped what they typed. Fixed in the content (ten separate group names), and a separate copy now saves answers to the artifact's database as they change (`docs/generated/answers-save.js`). aj's earlier typed answers still sit only in their old browser tab.
 
 The visual skills proposal now carries four review rounds' findings: the roadmap reads GitHub through `gh api` (because `gh issue list` is refused in cloud sessions), the git hook is added after any existing one, a new pick asks how fresh the views should be, and one asks where an issue closed without a merge goes. It has ten picks and is stamped open-risks. Still nothing built; waiting on aj's picks and a named second repo to test on.

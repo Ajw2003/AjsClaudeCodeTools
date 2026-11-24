@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Saved aj's recovered answers to the visual skills proposal (choices 4 to 8) in `docs/plans/2026-11-24-visual-docs-and-roadmap-answers.md` and in the new page's database, so they appear pre-filled; choices 1 to 3, 9 and 10 are still open.
+
 Fixed the visual skills proposal page: its ten choices shared one radio-group name, so only one answer could be kept and the reply was wrong. Each choice now has its own name. Added `docs/generated/answers-save.js`, which saves a handover page's answers to the artifact database as they change, and a copy of the proposal page that uses it.
 
 Reworked the visual roadmap proposal to run locally with no GitHub Actions: refreshes come from the plugin's session hook, a git post-merge hook, session start and a manual command, and GitHub Pages is an optional publish step, off by default. Nine picks now. Still nothing built.
