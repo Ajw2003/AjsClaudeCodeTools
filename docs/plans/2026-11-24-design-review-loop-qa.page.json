@@ -27,9 +27,9 @@
    [
     "file",
     "Windows",
-    "Two Windows-only bugs fixed",
+    "Every Windows failure is fixed",
     "",
-    "Your first PC run failed everything. The design_loop checks crashed because a test stood in for gh (the GitHub command-line tool) with a shell script, which Windows cannot run. Also, a plan page saved with Windows line endings looked changed after review, so its review stamp no longer matched. Both are fixed, and the passing round 2 run covers them.",
+    "You asked for all pre-existing failures to be fixed before the pull request. A full run of verify.py on your PC now passes 1574 of 1581 checks, and the other 7 are skipped. tools/verify_tools.py passes 55 of 55, docref.py check (do the doc pointers still resolve) reports OK, and docs_drift.py (do cited code lines still exist) finds 0 drifted citations. The nine old failures were three waitfor checks, three guard checks, two page checks and one node check. All nine also failed on a clean main.",
     "Nothing from you."
    ],
    [
@@ -74,17 +74,30 @@
    "scripts/page_criteria.py: _stamp_hash.",
    null,
    null
+  ],
+  [
+   "chg",
+   "Older Windows failures (#592)",
+   "Nine checks that already failed on main now pass.",
+   [
+    "Four causes. waitfor ran checks under cmd.exe and called os.killpg, which Windows does not have. The guard refused Windows paths and looked for /tmp under C:\tmp. The page writing note lost its page path to JSON escaping. Two tests faked node and claude with shell scripts that Windows cannot run.",
+    "waitfor now uses sh and taskkill. The guard now follows quoted Windows paths and maps /tmp to the Windows Temp folder. The page path is now decoded from the JSON escaping. The fake node is now a Python stand-in and the fake claude is a claude.cmd file."
+   ],
+   "waitfor.py, house_rules/core.py, house_rules/safe_git.py, tools/force_update.py and their checks.",
+   null,
+   null
   ]
  ],
  "qa": {
   "feature": "design review loop",
   "base": "origin/main",
   "unverified": [
-   "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. One cause is known: the waitfor timeout check fails because os.killpg does not exist on Windows. The waitfor success and exit-2 checks fail with the wrong exit code, and the guard, page and node checks fail without a cause found. Main also crashes the design_loop part on Windows, which this branch fixes.",
-   "The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures.",
-   "The deviation check works by matching phrases, and it has not been seen firing in a live session.",
-   "No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately.",
-   "Round 1 was written into ledger form afterwards from report.md, not from a fresh run"
+   "I did not look at the 7 skipped checks in the full verify.py run. They are designed to skip when a tool is missing.",
+   "One timing-based check, prompttimer (two runs at the same time), failed once in one full run and passed in the next two full runs. It may be sensitive to timing.",
+   "I did not raise the plugin version number for the hook fixes.",
+   "The deviation check works by matching phrases. I have not seen it fire in a live session.",
+   "No test covers the two-round cap, the re-review of changed picks, or running the page-mode check and the plan-mode check separately.",
+   "I wrote round 1 into the ledger afterwards, from report.md. It did not come from a fresh run."
   ],
   "files": {}
  },

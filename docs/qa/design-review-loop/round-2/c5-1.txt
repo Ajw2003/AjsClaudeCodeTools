@@ -11,7 +11,7 @@ no option given: every part (core, safe_git, design_loop, writing, delegation, d
 Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (80.6 s)
+PART core - passed (50.7 s)
 ==============================================================================
 
 
@@ -30,7 +30,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART safe_git - passed (144.1 s)
+PART safe_git - passed (103.1 s)
 ==============================================================================
 
 
@@ -49,7 +49,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART design_loop - passed (229.2 s)
+PART design_loop - passed (168.7 s)
 ==============================================================================
 
 
@@ -68,7 +68,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART writing - passed (11.8 s)
+PART writing - passed (7.1 s)
 ==============================================================================
 
 
@@ -87,7 +87,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART delegation - passed (184.8 s)
+PART delegation - passed (124.4 s)
 ==============================================================================
 
 
@@ -148,7 +148,7 @@ RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART docs - passed (66.2 s)
+PART docs - passed (37.7 s)
 ==============================================================================
 
 
@@ -167,7 +167,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART make_page - passed (181.2 s)
+PART make_page - passed (136.9 s)
 ==============================================================================
 
 
@@ -187,14 +187,14 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    80.6 s  passed
-  safe_git        0 checks  PASS   144.1 s  passed
-  design_loop     0 checks  PASS   229.2 s  passed
-  writing         0 checks  PASS    11.8 s  passed
-  delegation      5 checks  PASS   184.8 s  passed
-  docs            0 checks  PASS    66.2 s  passed
-  make_page       0 checks  PASS   181.2 s  passed
-  wall-clock 229.2 s
+  core            0 checks  PASS    50.7 s  passed
+  safe_git        0 checks  PASS   103.1 s  passed
+  design_loop     0 checks  PASS   168.7 s  passed
+  writing         0 checks  PASS     7.1 s  passed
+  delegation      5 checks  PASS   124.4 s  passed
+  docs            0 checks  PASS    37.7 s  passed
+  make_page       0 checks  PASS   136.9 s  passed
+  wall-clock 168.7 s
 
 --------------------------------
 RESULT: PASS - all 5 checks passed. The hooks are behaving as written.

@@ -11,7 +11,7 @@ no option given: every part (core, safe_git, design_loop, writing, delegation, d
 Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
 
 ==============================================================================
-PART core - passed (42.5 s)
+PART core - passed (50.2 s)
 ==============================================================================
 
 
@@ -30,7 +30,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART safe_git - passed (88.3 s)
+PART safe_git - passed (101.9 s)
 ==============================================================================
 
 
@@ -49,7 +49,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART design_loop - passed (147.5 s)
+PART design_loop - passed (166.9 s)
 ==============================================================================
 
 
@@ -112,7 +112,7 @@ RESULT: PASS - all 22 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART writing - passed (6.9 s)
+PART writing - passed (7.2 s)
 ==============================================================================
 
 
@@ -131,7 +131,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART delegation - passed (127.3 s)
+PART delegation - passed (122.6 s)
 ==============================================================================
 
 
@@ -143,7 +143,7 @@ house-rules hooks - verification (Python) - part: delegation
 
  1. PASS  acceptance: stamp refused when ledger status is not NEXT: done
 
-          acceptance: refusing to stamp, ledger status for C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-oo4hqj4a\acc-kthjdroi\repo\docs\qa\f is not NEXT: done:
+          acceptance: refusing to stamp, ledger status for C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-b_7x40vf\acc-90aannzm\repo\docs\qa\f is not NEXT: done:
 
 rounds: 0 (cap 4)
 
@@ -161,7 +161,7 @@ NEXT: fix
 
  3. PASS  acceptance: stamp written when ledger status is NEXT: done
 
-          acceptance: stamped C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-oo4hqj4a\acc-kthjdroi\repo\docs\qa\f\acceptance-stamp.json
+          acceptance: stamped C:\Users\aj\AppData\Local\Temp\house-rules-verify-delegation-b_7x40vf\acc-90aannzm\repo\docs\qa\f\acceptance-stamp.json
 
 
 
@@ -186,7 +186,7 @@ RESULT: PASS - all 5 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART docs - passed (34.9 s)
+PART docs - passed (37.4 s)
 ==============================================================================
 
 
@@ -205,7 +205,7 @@ RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
 
 
 ==============================================================================
-PART make_page - passed (134.9 s)
+PART make_page - passed (137.2 s)
 ==============================================================================
 
 
@@ -241,14 +241,14 @@ RESULT: PASS - all 8 checks passed. The hooks are behaving as written.
 
 ==============================================================================
 Parts:
-  core            0 checks  PASS    42.5 s  passed
-  safe_git        0 checks  PASS    88.3 s  passed
-  design_loop    22 checks  PASS   147.5 s  passed
-  writing         0 checks  PASS     6.9 s  passed
-  delegation      5 checks  PASS   127.3 s  passed
-  docs            0 checks  PASS    34.9 s  passed
-  make_page       8 checks  PASS   134.9 s  passed
-  wall-clock 147.5 s
+  core            0 checks  PASS    50.2 s  passed
+  safe_git        0 checks  PASS   101.9 s  passed
+  design_loop    22 checks  PASS   166.9 s  passed
+  writing         0 checks  PASS     7.2 s  passed
+  delegation      5 checks  PASS   122.6 s  passed
+  docs            0 checks  PASS    37.4 s  passed
+  make_page       8 checks  PASS   137.2 s  passed
+  wall-clock 166.9 s
 
 --------------------------------
 RESULT: PASS - all 35 checks passed. The hooks are behaving as written.

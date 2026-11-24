@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.92.0 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="5ca018962ced101f17f75e31b117e805096d9cb337b9b31cbd26f7f6eba9b059;clean;1">
+<meta name="house-rules-reviewed" content="c2bb46ee472ca8933d6b59d7e30bfb45c2e0d8ab8f34eceb196079aa0f4c6747;clean;1">
 <meta name="house-rules-page" content="qa">
 <title>Design Review Loop QA</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -260,7 +260,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Open docs/qa/design-review-loop/round-2.md and expect nine PASS lines and the line STATUS: pass.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: design review loop", or send "QA failed: design review loop" with what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. One cause is known: the waitfor timeout check fails because os.killpg does not exist on Windows. The waitfor success and exit-2 checks fail with the wrong exit code, and the guard, page and node checks fail without a cause found. Main also crashes the design_loop part on Windows, which this branch fixes. The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures. The deviation check works by matching phrases, and it has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.</p></details></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">I did not look at the 7 skipped checks in the full verify.py run. They are designed to skip when a tool is missing. One timing-based check, prompttimer (two runs at the same time), failed once in one full run and passed in the next two full runs. It may be sensitive to timing. I did not raise the plugin version number for the hook fixes. The deviation check works by matching phrases. I have not seen it fire in a live session. No test covers the two-round cap, the re-review of changed picks, or running the page-mode check and the plan-mode check separately. I wrote round 1 into the ledger afterwards, from report.md. It did not come from a fresh run.</p></details></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -309,9 +309,9 @@ const PAGE = {
       [
         "file",
         "Windows",
-        "Two Windows-only bugs fixed",
+        "Every Windows failure is fixed",
         "",
-        "Your first PC run failed everything. The design_loop checks crashed because a test stood in for gh (the GitHub command-line tool) with a shell script, which Windows cannot run. Also, a plan page saved with Windows line endings looked changed after review, so its review stamp no longer matched. Both are fixed, and the passing round 2 run covers them.",
+        "You asked for all pre-existing failures to be fixed before the pull request. A full run of verify.py on your PC now passes 1574 of 1581 checks, and the other 7 are skipped. tools/verify_tools.py passes 55 of 55, docref.py check (do the doc pointers still resolve) reports OK, and docs_drift.py (do cited code lines still exist) finds 0 drifted citations. The nine old failures were three waitfor checks, three guard checks, two page checks and one node check. All nine also failed on a clean main.",
         "Nothing from you."
       ],
       [
@@ -368,8 +368,20 @@ const PAGE = {
     ],
     [
       "chg",
+      "Older Windows failures (#592)",
+      "Nine checks that already failed on main now pass.",
+      [
+        "Four causes. waitfor ran checks under cmd.exe and called os.killpg, which Windows does not have. The guard refused Windows paths and looked for /tmp under C:\tmp. The page writing note lost its page path to JSON escaping. Two tests faked node and claude with shell scripts that Windows cannot run.",
+        "waitfor now uses sh and taskkill. The guard now follows quoted Windows paths and maps /tmp to the Windows Temp folder. The page path is now decoded from the JSON escaping. The fake node is now a Python stand-in and the fake claude is a claude.cmd file."
+      ],
+      "waitfor.py, house_rules/core.py, house_rules/safe_git.py, tools/force_update.py and their checks.",
+      null,
+      null
+    ],
+    [
+      "chg",
       "Files changed, counted from git against origin/main",
-      "69 files, +7308 −3006",
+      "73 files, +7378 −3027",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -484,8 +496,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/design_loop.py",
-          205,
-          25,
+          206,
+          26,
           [
             [
               "Not in the plan",
@@ -496,8 +508,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/make_page.py",
-          204,
-          3,
+          220,
+          5,
           [
             [
               "Not in the plan",
@@ -508,8 +520,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
-          1,
-          1,
+          8,
+          7,
           [
             [
               "Not in the plan",
@@ -532,8 +544,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/core.py",
-          42,
-          4,
+          54,
+          7,
           [
             [
               "Not in the plan",
@@ -546,6 +558,18 @@ const PAGE = {
           "claude-house-rules/plugins/house-rules/scripts/house_rules/design_loop.py",
           98,
           6,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
+          10,
+          3,
           [
             [
               "Not in the plan",
@@ -606,6 +630,18 @@ const PAGE = {
           "claude-house-rules/plugins/house-rules/scripts/page_criteria.py",
           37,
           0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "claude-house-rules/plugins/house-rules/scripts/waitfor.py",
+          12,
+          2,
           [
             [
               "Not in the plan",
@@ -700,7 +736,7 @@ const PAGE = {
         ],
         [
           "docs/5-today/Today.md",
-          31,
+          33,
           1,
           [
             [
@@ -1201,15 +1237,39 @@ const PAGE = {
               0
             ]
           ]
+        ],
+        [
+          "tools/force_update.py",
+          3,
+          1,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "tools/verify_tools.py",
+          7,
+          3,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
         ]
       ]
     ],
     [
       "keep",
       "Still unverified",
-      "5 things not yet proven",
+      "6 things not yet proven",
       null,
-      "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. One cause is known: the waitfor timeout check fails because os.killpg does not exist on Windows. The waitfor success and exit-2 checks fail with the wrong exit code, and the guard, page and node checks fail without a cause found. Main also crashes the design_loop part on Windows, which this branch fixes. The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures. The deviation check works by matching phrases, and it has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.",
+      "I did not look at the 7 skipped checks in the full verify.py run. They are designed to skip when a tool is missing. One timing-based check, prompttimer (two runs at the same time), failed once in one full run and passed in the next two full runs. It may be sensitive to timing. I did not raise the plugin version number for the hook fixes. The deviation check works by matching phrases. I have not seen it fire in a live session. No test covers the two-round cap, the re-review of changed picks, or running the page-mode check and the plan-mode check separately. I wrote round 1 into the ledger afterwards, from report.md. It did not come from a fresh run.",
       null,
       null
     ]
@@ -1218,11 +1278,12 @@ const PAGE = {
     "feature": "design review loop",
     "base": "origin/main",
     "unverified": [
-      "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. One cause is known: the waitfor timeout check fails because os.killpg does not exist on Windows. The waitfor success and exit-2 checks fail with the wrong exit code, and the guard, page and node checks fail without a cause found. Main also crashes the design_loop part on Windows, which this branch fixes.",
-      "The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures.",
-      "The deviation check works by matching phrases, and it has not been seen firing in a live session.",
-      "No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately.",
-      "Round 1 was written into ledger form afterwards from report.md, not from a fresh run"
+      "I did not look at the 7 skipped checks in the full verify.py run. They are designed to skip when a tool is missing.",
+      "One timing-based check, prompttimer (two runs at the same time), failed once in one full run and passed in the next two full runs. It may be sensitive to timing.",
+      "I did not raise the plugin version number for the hook fixes.",
+      "The deviation check works by matching phrases. I have not seen it fire in a live session.",
+      "No test covers the two-round cap, the re-review of changed picks, or running the page-mode check and the plan-mode check separately.",
+      "I wrote round 1 into the ledger afterwards, from report.md. It did not come from a fresh run."
     ],
     "files": {}
   },
