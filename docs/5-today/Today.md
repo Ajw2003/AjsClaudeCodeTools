@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj asked me to note that the guards look over-zealous and may waste usage: recorded in `docs/guard-friction-2026-11-24.md` (six cases, four open questions, nothing changed).
+
 aj chose A for recording the acceptance rounds: `docs/qa/design-review-loop/run_acceptance.py` runs C1 to C9 one by one and saves each output. A first test run here is in progress; its result is not yet read. Nothing is recorded or stamped.
 
 Plan page fixed (Acceptance tests item, stale text, reviewed with open risks, rebuilt), C1 evidence saved, C5 sample card and check added; full `verify.py` 1582 of 1582 (output in `docs/qa/design-review-loop/round-2/run-1.txt`). The acceptance rounds were not recorded: a hand-written passing round file was refused by the auto-mode classifier, so no acceptance stamp and no QA page yet. Pull request opened with `Refs #592`.

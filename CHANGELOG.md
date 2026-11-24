@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Note only, nothing changed: `docs/guard-friction-2026-11-24.md` records six cases from one session where the guards (mostly the roadblock judge) looked over-zealous and may have wasted usage; the token cost was not measured.
+
 Design review loop (#592): `docs/qa/design-review-loop/run_acceptance.py` runs each acceptance criterion C1 to C9 through `verify.py --only` and saves each one's own output under `docs/qa/design-review-loop/round-2/`, so aj can run it and the acceptance rounds can be recorded from real output (aj chose option A). A search text that matches no check counts as a failure.
 
 Design review loop (#592): the build plan page now carries its Acceptance tests item, a page-mode review of it is saved (`docs/qa/design-review-loop/page-review-findings.md`, 12 findings, 10 applied, 2 left as open risks), and the self-test has a sample handover card (`templates/selftest/handover-card.md`) with a check. The acceptance stamp is not issued: the repeat run was not recorded as rounds.
