@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj chose A for recording the acceptance rounds: `docs/qa/design-review-loop/run_acceptance.py` runs C1 to C9 one by one and saves each output. A first test run here is in progress; its result is not yet read. Nothing is recorded or stamped.
+
 Plan page fixed (Acceptance tests item, stale text, reviewed with open risks, rebuilt), C1 evidence saved, C5 sample card and check added; full `verify.py` 1582 of 1582 (output in `docs/qa/design-review-loop/round-2/run-1.txt`). The acceptance rounds were not recorded: a hand-written passing round file was refused by the auto-mode classifier, so no acceptance stamp and no QA page yet. Pull request opened with `Refs #592`.
 
 aj chose A2 for the combined approval (acceptance criterion C6): built as `_plan_unreviewed` in `design_loop.py`, with four new cases (no plan page, unstamped, stale, and a plan approval on its own message unaffected); ledger row D7 and `review-loop.md` updated. C1 (reviewer findings not saved) and C5 (self-judging test card format unchecked) are still open.
