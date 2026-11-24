@@ -163,6 +163,16 @@ PIC_MIME = {".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", 
 def embed_pictures(page, content_dir, project):
     """Set each local picture's src to a data: address, so the page is one self-contained file."""
     n = 0
+    for item in page.get("changes") or []:  # an inline svg that is not well-formed XML shows as a broken picture
+        for d in walk(item):
+            m = re.match(r"^data:image/svg\+xml(;[^,]*)?,(.*)$", d.get("src") or "", re.S | re.I)
+            if m:
+                body = urllib.parse.unquote(m.group(2)) if "base64" not in (m.group(1) or "") else base64.b64decode(m.group(2)).decode("utf-8", "replace")
+                try:
+                    xml.dom.minidom.parseString(body.encode("utf-8"))
+                except Exception as e:
+                    die("Changes item '%s' has an inline svg picture that is not valid XML: %s"
+                        % (item[1] if isinstance(item, list) and len(item) > 1 else "?", e))
     for d in walk(page):
         src = d.get("src")
         if not isinstance(src, str) or re.match(r"^(data:|#)", src):
