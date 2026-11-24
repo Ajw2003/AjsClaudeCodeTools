@@ -243,7 +243,7 @@ def event_handover():
     if page_note:
         parts.append(page_note)
     if editor_owed:
-        parts.append(EDITOR_NOTE % editor_owed)
+        parts.append((EDITOR_NOTE if editor_owed.startswith("this reply is") else PAGE_NOTE) % editor_owed)
     if parity_word:
         parts.append(_parity_report_note(parity_word))
     if visual_files:

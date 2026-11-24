@@ -2527,6 +2527,10 @@ def _check_send(ctx):
 def _check_editor(ctx):
     if _page_escape(ctx) or not ctx.get("editor_owed"):
         return ""
+    if not ctx["editor_owed"].startswith("this reply is"):  # #594: a page owes a review stamp
+        return ("spawn @house-rules:reviewer (Agent tool, subagent_type house-rules:reviewer) in PAGE mode, apply "
+                "its findings, rebuild with make_page.py build ... --reviewed clean --rounds N (or open-risks "
+                "after round 2), then send the page (%s)" % ctx["editor_owed"])
     return ("hand the text to @house-rules:editor (Agent tool, subagent_type house-rules:editor), "
             "apply its rewrites, then send the reply (%s)" % ctx["editor_owed"])
 

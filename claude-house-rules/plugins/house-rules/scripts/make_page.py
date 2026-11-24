@@ -530,6 +530,14 @@ def build(args):
         i = html.index("<svg width=\"0\"") if "<svg width=\"0\"" in html else html.index("<script>")
         html = html[:i] + block + html[i:]
     html = "<!doctype html>\n<!-- house-rules make_page %s -->\n" % plugin_version() + html
+    if args.reviewed:  # last step: the hash must cover the final HTML
+        if not 1 <= args.rounds <= 2:
+            die("--rounds is %r; the cap is 2, so it must be 1 or 2" % args.rounds)
+        if HERE not in sys.path:
+            sys.path.insert(0, HERE)
+        import page_criteria
+        i = html.index("\n", html.index("<meta charset")) + 1
+        html = html[:i] + page_criteria.stamp_line(html, args.reviewed, args.rounds) + html[i:]
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
     print("make_page: wrote %s (%d picture(s) embedded)" % (out, npics))
@@ -855,6 +863,8 @@ def main(argv=None):
     b.add_argument("content")
     b.add_argument("--out")
     b.add_argument("--project")
+    b.add_argument("--reviewed", choices=("clean", "open-risks"))
+    b.add_argument("--rounds", type=int, default=1)
     st = sub.add_parser("start")
     st.add_argument("type")
     st.add_argument("--out")
