@@ -1,0 +1,175 @@
+{
+ "title": "Judge and segments build plan",
+ "eyebrow": "Build plan \u00b7 nothing built yet",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: judge blocking fix and one-minute segments",
+ "short": {
+  "lead": "The build is eight steps, one issue each under #605 (Roadblock judge tuning and one-minute segments), starting with the written criteria. I need your approval to begin step 1 (#606, the written criteria).",
+  "hint": "Tap a step to see what it is done when.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Step 1 (#606)",
+    "Write C1 to C5, the reason standard and the six reply forms into rules/detail/roadblocks.md",
+    "",
+    "Done when: `rules/detail/roadblocks.md` holds C1 to C5 and the six forms, `checks.json` maps the section, and the core part of `verify.py` shows no new failure.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22360%22%20height=%22210%22%20viewBox=%220%200%20360%20210%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Ctext%20x=%2210%22%20y=%2218%22%20fill=%22%23333%22%20font-weight=%22bold%22%3EBuild%20order%3C/text%3E%3Crect%20x=%2210%22%20y=%2228%22%20width=%22100%22%20height=%2240%22%20rx=%226%22%20fill=%22%23cfe8cf%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%2260.0%22%20y=%2246.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3E606%20criteria%3C/text%3E%3Ctext%20x=%2260.0%22%20y=%2261.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Efirst%3C/text%3E%3Crect%20x=%22130%22%20y=%2228%22%20width=%22100%22%20height=%2240%22%20rx=%226%22%20fill=%22%23cfe8cf%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22180.0%22%20y=%2246.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3E607%20judge%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%2261.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Eneeds%20606%3C/text%3E%3Crect%20x=%22250%22%20y=%2228%22%20width=%22100%22%20height=%2240%22%20rx=%226%22%20fill=%22%23cfe8cf%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22300.0%22%20y=%2246.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3E608%20cap%3C/text%3E%3Ctext%20x=%22300.0%22%20y=%2261.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Eneeds%20607%3C/text%3E%3Crect%20x=%2210%22%20y=%2280%22%20width=%22100%22%20height=%2240%22%20rx=%226%22%20fill=%22%23cfe3f8%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%2260.0%22%20y=%2298.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3E609%20messages%3C/text%3E%3Ctext%20x=%2260.0%22%20y=%22113.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Eneeds%20606%3C/text%3E%3Crect%20x=%22130%22%20y=%2280%22%20width=%22100%22%20height=%2240%22%20rx=%226%22%20fill=%22%23cfe3f8%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22180.0%22%20y=%2298.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3E610%20segments%3C/text%3E%3Ctext%20x=%22180.0%22%20y=%22113.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Eneeds%20606,%20607%3C/text%3E%3Crect%20x=%22250%22%20y=%2280%22%20width=%22100%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fde9b8%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22300.0%22%20y=%2298.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3E611%20verify.py%3C/text%3E%3Ctext%20x=%22300.0%22%20y=%22113.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Efree%20to%20start%3C/text%3E%3Crect%20x=%2210%22%20y=%22132%22%20width=%22100%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fde9b8%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%2260.0%22%20y=%22150.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3E612%20page%20check%3C/text%3E%3Ctext%20x=%2260.0%22%20y=%22165.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Efree%20to%20start%3C/text%3E%3Crect%20x=%22130%22%20y=%22132%22%20width=%22220%22%20height=%2240%22%20rx=%226%22%20fill=%22%23e6e6e6%22%20stroke=%22%23445%22/%3E%3Ctext%20x=%22240.0%22%20y=%22150.0%22%20text-anchor=%22middle%22%20fill=%22%23111%22%3E613%20docs,%20version,%20replay%3C/text%3E%3Ctext%20x=%22240.0%22%20y=%22165.0%22%20text-anchor=%22middle%22%20fill=%22%23333%22%20font-size=%2210%22%3Elast,%20needs%20all%20the%20others%3C/text%3E%3Ctext%20x=%2210%22%20y=%22196%22%20fill=%22%23333%22%20font-size=%2210%22%3EGreen:%20judge%20path.%20Blue:%20needs%20the%20criteria.%20Yellow:%20can%20run%20any%20time.%3C/text%3E%3C/svg%3E",
+     "alt": "Build order: 606 first, then 607 and 609, then 608 and 610; 611 and 612 can start any time; 613 last",
+     "caption": "Which issue needs which before it can start."
+    }
+   ],
+   [
+    "hammer",
+    "Step 2 (#607)",
+    "Move the judge into the scripted Stop hook",
+    "",
+    "Done when: `hooks.json` has no prompt-type Stop entry; a stub-claude case shows a flagged reply gets a block naming a criterion, and a reply that meets C1 to C5 is left alone.",
+    "Nothing from you."
+   ],
+   [
+    "hammer",
+    "Step 3 (#608)",
+    "One shared cap of two blocks with a reset",
+    "",
+    "Done when: A case replays 12 identical flagged replies and sees at most 2 blocks then a warning; a case with a tool call between blocks sees the check run again.",
+    "Nothing from you."
+   ],
+   [
+    "hammer",
+    "Step 4 (#609)",
+    "Narrow the phrase lists and write block messages that carry the passing reply",
+    "",
+    "Done when: Cases show a reply ending in a next step passes, an Unverified line passes, and a block message names a criterion and shows the six forms.",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Step 5 (#610)",
+    "The segment plan, 60-second deadlines and the launch guard",
+    "",
+    "Done when: Guard cases: a 280-second launch is refused with the form to copy; the same launch with a valid Cannot split reason passes; a generic reason is refused; a known runner with no timeout counts as over 60 seconds.",
+    "Nothing from you."
+   ],
+   [
+    "flask",
+    "Step 6 (#611)",
+    "verify.py prints each part as it finishes; the modular-tests gate and audit flag modules over 60 seconds",
+    "",
+    "Done when: `verify.py` output shows a fast part before a slower earlier part; a flagged module appears in the audit output with its time.",
+    "Nothing from you."
+   ],
+   [
+    "wrench",
+    "Step 7 (#612)",
+    "The page check reads picture markup correctly and the page build refuses a malformed picture",
+    "",
+    "Done when: A case feeds a page with an inline picture and expects no findings from it; a case feeds a picture with a raw angle bracket and expects the build to refuse.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Step 8 (#613)",
+    "Docs, changelog, version, decisions entry and a replay of 12 blocked replies",
+    "",
+    "Done when: The changelog line and version exist, the decisions entry is dated, `verify.py` exits 0 on a runner-like path, and the replay shows at most 2 blocks.",
+    "Nothing from you."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "The five criteria",
+   "Step 1 (#606)",
+   "",
+   "Done when: `rules/detail/roadblocks.md` holds C1 to C5 and the six forms, `checks.json` maps the section, and the core part of `verify.py` shows no new failure.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "The scripted judge",
+   "Step 2 (#607)",
+   "",
+   "Done when: `hooks.json` has no prompt-type Stop entry; a stub-claude case shows a flagged reply gets a block naming a criterion, and a reply that meets C1 to C5 is left alone.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "The shared cap",
+   "Step 3 (#608)",
+   "",
+   "Done when: A case replays 12 identical flagged replies and sees at most 2 blocks then a warning; a case with a tool call between blocks sees the check run again.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Fewer false alarms and block messages",
+   "Step 4 (#609)",
+   "",
+   "Done when: Cases show a reply ending in a next step passes, an Unverified line passes, and a block message names a criterion and shows the six forms.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Segments and the launch guard",
+   "Step 5 (#610)",
+   "",
+   "Done when: Guard cases: a 280-second launch is refused with the form to copy; the same launch with a valid Cannot split reason passes; a generic reason is refused; a known runner with no timeout counts as over 60 seconds.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Tests print as they finish",
+   "Step 6 (#611)",
+   "",
+   "Done when: `verify.py` output shows a fast part before a slower earlier part; a flagged module appears in the audit output with its time.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "The page check",
+   "Step 7 (#612)",
+   "",
+   "Done when: A case feeds a page with an inline picture and expects no findings from it; a case feeds a picture with a raw angle bracket and expects the build to refuse.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Docs, version and replay",
+   "Step 8 (#613)",
+   "",
+   "Done when: The changelog line and version exist, the decisions entry is dated, `verify.py` exits 0 on a runner-like path, and the replay shows at most 2 blocks.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "This plan builds the judge tuning and the one-minute segment rule in eight steps, each tracked as its own issue under #605 (Roadblock judge tuning and one-minute segments).",
+  "changing": "rules/detail/roadblocks.md, hooks/hooks.json, scripts/house_rules/core.py, rules/waits.json, rules/detail/waits.md, the launch guard, scripts/verify.py, scripts/clarity.py, scripts/make_page.py, the changelog and the plugin version.",
+  "blocking": "Your approval of this plan. The plugin's own verify.py fails here on this Windows machine in places that pass on main's Linux CI, so builders will compare against that baseline instead of expecting all green.",
+  "next": "After you approve, one builder starts step 1 (#606, the written criteria) on its own branch.",
+  "todo": [
+   "Read the steps in order.",
+   "Tap <b>Copy my reply</b> and send it with \"Build plan approved: judge blocking fix and one-minute segments\"."
+  ]
+ }
+}
