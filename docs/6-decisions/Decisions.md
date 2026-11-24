@@ -17,6 +17,20 @@ pointer, when a later entry replaces it.
 
 **Status.** Active. Extends, and does not supersede, the modular-tests entry for #575 and the roadblock entries for #587.
 
+## 2026-11-24 - Review command: one front door for the reviewer, four new modes
+
+**Context.** The reviewer helper only ran when a skill or aj spawned it by hand, and judged pages, plans, acceptance runs and diffs. aj wanted it deployable anywhere at any time, to review parts of a codebase, images, visual style and whole codebases, and asked whether to extend the reviewer or make a new general critic agent.
+
+**Decision.** aj wrote "Design approved: review command 1A 2A 3*" and then "Build plan approved: review command 1A 2A 3A". Design 1A: a short verdict goes to chat and the main session saves the full report to `docs/qa/review-<target name>-<date>/`. Design 2A: a whole-codebase review goes folder by folder, one reviewer at a time, with a merged list ranked by severity and then file. Design 3*, aj's own answer: "A. but uncapped, if over 12 folders tell the user explicitly how many and approximate time to finish and usage". So the extra-input syntax is `/house-rules:review <path> [style] [criteria text]`, with no argument reviewing the uncommitted diff, and the sweep has no folder cap. Plan 1A: a folder is split into batches of files, one reviewer per batch, each sized to finish within the 60-second agent deadline. Plan 2A: files at the repo root are reviewed as one extra unit called root files. Plan 3A: mode lists are updated in `docs/4-systems/review-loop.md` and the command gets its own `docs/4-systems/review-command.md`.
+
+**Why.** The reviewer is already adversarial and read-only, and the design review loop already decided (4A, 2026-11-24, entry below) that the reviewer agent is extended, not duplicated, so a second critic agent was dropped. A reviewer has no Agent tool, so the sweep lives in the command, which the main session runs. The agent deadline is 60 seconds in `rules/waits.json`; the 900 seconds quoted on the design page and in `skills/visual-loop/SKILL.md` was stale (issue #622).
+
+**Rejected.** A new critic agent; chat-only reports; a single sampling pass for the whole repo; a folder cap.
+
+**Status.** Planned and in build (parent issue #617, steps #618 to #621). Plugin version bump in step 4 (#621).
+
+---
+
 ## 2026-11-24 - Design review loop reversals (plugin 2.92.0)
 
 **Context.** The design review loop (#592) is built. Four earlier decisions it replaces are recorded here, each in its own paragraph, so the older entries are not left standing unchallenged.
