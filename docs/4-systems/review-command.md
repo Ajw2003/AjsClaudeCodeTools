@@ -4,16 +4,17 @@
 
 One command, `/house-rules:review`, that sends the existing reviewer helper at code, an image, a screen's style, or a whole repository, in any project that has the plugin installed. It owns the choice of mode from what the user points at, the saving of the report, and the whole-repo sweep. It does not own the reviewer's judging stance; that stays in `agents/reviewer.md`.
 
-**Status: planned (parent issue #617, steps #618 to #621). Nothing is built.** The design was approved on 2026-11-24 as "Design approved: review command 1A 2A 3*". The build plan is `docs/plans/review-command-plan.html` and awaits approval.
+**Status: built (plugin 2.94.0; parent issue #617, steps #618 to #621).** The design was approved on 2026-11-24 as "Design approved: review command 1A 2A 3*". The build plan is `docs/plans/review-command-plan.html`. aj's QA is still to come.
 
-## How it will work
+## How it works
 
 | Piece | Step | What it does |
 |---|---|---|
-| Four new reviewer modes | #618 | `code`, `codebase`, `image` and `style` join `page`, `plan`, `acceptance` and `diff` in `agents/reviewer.md` and `rules/detail/review-modes.md`. Same stance: findings only, no praise. |
-| The command | #619 | `commands/review.md` picks the mode, takes extra input, saves the report and runs the sweep. |
-| Checks | #620 | `verify.py` cases keep the mode lists, the command file and the sweep notice in step. |
-| Docs and version | #621 | This document, a Decisions entry, a CHANGELOG line, the Today note, the version bump. |
+| Four new reviewer modes | #618, built | `code`, `codebase`, `image` and `style` join `page`, `plan`, `acceptance` and `diff` in `agents/reviewer.md` and `rules/detail/review-modes.md`. Same stance: findings only, no praise. |
+| The command | #619, built | `commands/review.md` picks the mode, takes extra input, saves the report and runs the sweep. |
+| Sweep helper | #619, built | `scripts/review_plan.py` (`mode`, `units`, `batches`) picks the mode, lists the units, cuts them into batches and prints the over-12-folders notice, so the counts the user sees come from code. It is a small addition beyond the plan (deviation D1 in `docs/qa/review-command/ledger.md`). |
+| Checks | #620, built | `verify.py` cases keep the mode lists, the command file and the sweep notice in step. |
+| Docs and version | #621, built | This document, a Decisions entry, a CHANGELOG line, the Today note, the version bump. |
 
 ## Decisions that shape it
 
@@ -23,6 +24,12 @@ One command, `/house-rules:review`, that sends the existing reviewer helper at c
 - Question 2, answer A: the sweep goes folder by folder, one reviewer at a time, with a merged list ranked by severity and then file.
 - Question 3, aj's own answer: the sweep has **no folder cap**. Over 12 top-level folders the command first tells the user the folder count, an estimated time and an estimated token use, then runs.
 - Syntax: `/house-rules:review <path> [style] [criteria text]`. No argument reviews the uncommitted diff in diff mode.
+
+## Report folder and batches
+
+- The report folder is `docs/qa/review-<name>-<date>`. The name is the file stem with any leading date dropped (`2026-11-24-foo.html` gives `foo`), or the folder name.
+- A batch is at most 8 files of one top-level folder. The cap comes from `docs/qa/review-command/batch-measurement.md`: one 10-file markdown batch took 71.3 seconds and 43,991 tokens, about 7.1 seconds and 4,400 tokens per file, so 8 files is about 57 seconds, under the agent deadline.
+- That deadline is 60 seconds (`rules/waits.json`). The 900 seconds on the design page and in `skills/visual-loop/SKILL.md` was stale (issue #622).
 
 ## Mode detection order
 
@@ -42,5 +49,6 @@ One command, `/house-rules:review`, that sends the existing reviewer helper at c
 
 ## Known unknowns
 
-- The sweep notice estimates 75 seconds and 50,000 tokens per folder. Both come from two reviewer runs of one page each (73.8 and 77.2 seconds; 50,353 and 49,615 tokens). A real code folder is larger, so the figures are a floor, not a forecast.
+- The sweep notice now uses the per-file figures above (7.1 seconds, 4,400 tokens), measured on markdown only. Code files take longer, so the figures are a floor, not a forecast.
+- A sweep of this repo is 9 folders but 96 batches, so the notice (printed over 12 folders, per aj's answer) does not print for it. aj is asked at QA whether it should also print when batches pass 12. The rule is not changed in code.
 - Claude Code's own built-in `/review` was named by the reviewer from product knowledge and was not tested here; that is why the command is always written with its `house-rules:` prefix.

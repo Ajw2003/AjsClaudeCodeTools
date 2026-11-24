@@ -8,6 +8,8 @@ Review command step 4 (#621) came back from its builder on `AjsAgent/review-comm
 
 Review command step 3 (#620) is merged: seven new `verify.py` cases (checks/docs.py) keep the reviewer's eight modes, the command file and the sweep helper in step, and each was shown failing against a deliberately broken file. All seven verify parts pass on it (docs 174, core 272, writing 24, safe_git 282, delegation 204, design_loop 529, make_page 116). Step 4 (#621, docs and version 2.94.0) is with a builder.
 
+Plugin 2.94.0: the `/house-rules:review` command and four new reviewer modes (code, codebase, image, style) are built and documented; the plugin version is now 2.94.0 (#621, part of #617). Design: `docs/4-systems/review-command.md`.
+
 Review command step 3 (#620) final commit 1d979ba: the seven new `verify.py` cases now use made-up pages, clean up their temp folders, and each was shown failing against a deliberately broken file (the builder's docs run: 174 checks pass). My own run of all seven parts on it is in progress; not merged yet.
 
 Review command step 3 (#620) came back from its builder with seven new `verify.py` cases; I read them and sent back three fixes (use made-up pages instead of two real ones in `docs/plans`, delete the temp folders, and show the other three cases failing against a broken file). Not merged or verified by me yet.

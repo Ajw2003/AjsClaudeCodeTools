@@ -2116,6 +2116,7 @@ _rv_plug = os.path.abspath(_cj_root)
 _rv_agent = read(os.path.join(_rv_plug, "agents", "reviewer.md"))
 _rv_modefile = read(os.path.join(_rv_plug, "rules", "detail", "review-modes.md"))
 _rv_desc = next((l for l in _rv_agent.splitlines() if l.startswith("description:")), "")
+_rv_loopdoc = read(os.path.join(_rv_plug, "..", "..", "..", "docs", "4-systems", "review-loop.md"))
 _rv_miss = []
 for _m in _rv_modes:
     if not re.search(r"\b%s\b" % _m, _rv_desc):
@@ -2124,6 +2125,8 @@ for _m in _rv_modes:
         _rv_miss.append(f"reviewer.md has no '- {_m}:' bullet")
     if not re.search(r"^## %s\b" % _m, _rv_modefile, re.M):
         _rv_miss.append(f"review-modes.md has no '## {_m}' heading")
+    if not re.search(r"\b%s\b" % _m, _rv_loopdoc):
+        _rv_miss.append(f"docs/4-systems/review-loop.md does not name {_m}")
 report("PASS" if not _rv_miss else "FAIL", "review command: all eight modes are in reviewer.md (description and bullet) and review-modes.md (heading)")
 for _x in _rv_miss:
     print(f"          {_x}")
