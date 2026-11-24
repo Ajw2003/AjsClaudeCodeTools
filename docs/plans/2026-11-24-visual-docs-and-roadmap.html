@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.92.0 -->
 <meta charset="utf-8">
+<meta name="house-rules-reviewed" content="2baa6c374fdd597f5da2b5c20811929952bc967da8e5ca71ecdf7d5ce7f6d020;open-risks;2">
 <meta name="house-rules-page" content="proposal">
 <title>Visual docs and self-updating roadmap</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -238,7 +239,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">Proposal: two new house-rules skills for any repo with house rules docs. Visual-docs makes one illustrated overview page from the tier docs. Visual-roadmap redraws two roadmap views on your own machine when issues or merges change, with GitHub Pages as an option and no GitHub Actions. I need your approval and ten picks.</p>
+      <p class="lead" id="lead" data-basic="summary">Proposal: two new house-rules skills for any repo with house rules docs. Visual-docs makes one illustrated overview page from the tier docs. Visual-roadmap redraws two roadmap views on your own machine when issues or merges change, with no GitHub Action of its own and GitHub Pages as an option. I need your approval and ten picks.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -259,7 +260,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Pick your answers in Your choices.</label></li><li><label><input type="checkbox"> Name a second house-rules repo for the tests, and give me access to it.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: visual docs and visual roadmap skills", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">plain-docs writes text copies only; make_page.py builds handover pages (proposal, build plan, QA, review, art); neither makes a project overview.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Local triggers only (suggested)</p></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">plain-docs writes text copies only; make_page.py builds handover pages (proposal, build plan, QA, review, art); neither makes a project overview.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Also refresh on your next prompt, at most once every 5 minutes (suggested)</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -285,7 +286,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: visual docs and visual roadmap skills",
   "short": {
-    "lead": "Proposal: two new house-rules skills for any repo with house rules docs. Visual-docs makes one illustrated overview page from the tier docs. Visual-roadmap redraws two roadmap views on your own machine when issues or merges change, with GitHub Pages as an option and no GitHub Actions. I need your approval and ten picks.",
+    "lead": "Proposal: two new house-rules skills for any repo with house rules docs. Visual-docs makes one illustrated overview page from the tier docs. Visual-roadmap redraws two roadmap views on your own machine when issues or merges change, with no GitHub Action of its own and GitHub Pages as an option. I need your approval and ten picks.",
     "hint": "Tap a step to see what it produces and what it needs from you.",
     "key": [
       [
@@ -332,9 +333,9 @@ const PAGE = {
         "A script that runs on your own machine, with no GitHub Actions. It keeps one data file current and redraws two views whenever an issue or merge changes. It can also publish them to GitHub Pages.",
         "Nothing from you.",
         {
-          "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%228%22 y=%2210%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%2231%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue made in session%3C/text%3E%3Crect x=%228%22 y=%2252%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%2273%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Egit pull or merge%3C/text%3E%3Crect x=%228%22 y=%2294%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%22115%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3ESession start%3C/text%3E%3Crect x=%228%22 y=%22136%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%22157%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EManual command%3C/text%3E%3Cline x1=%22114%22 y1=%2227%22 x2=%22140%22 y2=%2282%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%2269%22 x2=%22140%22 y2=%2288%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%22111%22 x2=%22140%22 y2=%2294%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%22153%22 x2=%22140%22 y2=%22100%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22140%22 y=%2270%22 width=%2276%22 height=%2250%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22178%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eroadmap script%3C/text%3E%3Cline x1=%22218%22 y1=%2295%22 x2=%22236%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22236%22 y=%2250%22 width=%2276%22 height=%2290%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22274%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Edata %2B 2 views%3C/text%3E%3C/svg%3E",
-          "alt": "Four local triggers (an issue made in a session, a git pull or merge, the start of a session, or a manual command) run one script that rewrites the roadmap data and both views.",
-          "caption": "Mock-up of the update triggers. Nothing runs on GitHub."
+          "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%228%22 y=%2210%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%2231%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue or merge in session%3C/text%3E%3Crect x=%228%22 y=%2252%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%2273%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Egit pull or merge%3C/text%3E%3Crect x=%228%22 y=%2294%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%22115%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3ESession start%3C/text%3E%3Crect x=%228%22 y=%22136%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%22157%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EManual command%3C/text%3E%3Cline x1=%22114%22 y1=%2227%22 x2=%22140%22 y2=%2282%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%2269%22 x2=%22140%22 y2=%2288%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%22111%22 x2=%22140%22 y2=%2294%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%22153%22 x2=%22140%22 y2=%22100%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22140%22 y=%2270%22 width=%2276%22 height=%2250%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22178%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eroadmap script%3C/text%3E%3Cline x1=%22218%22 y1=%2295%22 x2=%22236%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22236%22 y=%2250%22 width=%2276%22 height=%2290%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22274%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Edata %2B 2 views%3C/text%3E%3C/svg%3E",
+          "alt": "Four local triggers (an issue or merge in a session, a git pull or merge, the start of a session, or a manual command) run one script that rewrites the roadmap data and both views.",
+          "caption": "Mock-up of the update triggers. Nothing runs on GitHub unless publishing is on."
         }
       ],
       [
@@ -342,7 +343,7 @@ const PAGE = {
         "Risks",
         "What could sink it",
         "",
-        "Reading issues needs the gh command-line tool logged in; without it only merges show (untested on your machine). A change made in the browser appears only at the next refresh. GitHub Pages publishing is untested here, and I have not verified whether branch-based Pages draws on your Actions allowance, so it stays off by default. A repo whose labels or branch names differ from the defaults must set them in its settings file, and In dev stays empty until the dev branch named in the settings exists. Also: the review command is planned, not built (its parent issue 617 and steps 618 to 621), so both skills wait on it. Done when three things hold. After gh issue create, the session refresh shows the new issue as a Backlog dot on the local racetrack page within 60 seconds, tried on this repo and on a second house-rules repo you name. /house-rules:visual-docs stale names a section after one of its docs is edited. /house-rules:review image mode returns the verdict clean on screenshots of each skill's output at 375px wide, in light and dark.",
+        "Reading issues needs the gh command-line tool logged in; without it the script stops and says it cannot read issues (untested on your machine). In a cloud session the local files and the data file's history vanish when the session ends; only publishing to the roadmap-view branch keeps them. A change made in the browser appears only at the next refresh. GitHub Pages publishing is untested here, and I have not verified whether branch-based Pages draws on your Actions allowance, so it stays off by default. A repo whose labels or branch names differ from the defaults must set them in its settings file, and In dev stays empty until the dev branch named in the settings exists. Also: the review command is planned, not built (its parent issue 617 and steps 618 to 621), so both skills wait on it.",
         "Nothing from you."
       ],
       [
@@ -350,7 +351,7 @@ const PAGE = {
         "Check",
         "I run both, then you look",
         "you",
-        "I run each on this repo and on a second house-rules repo you name, screenshot the output in light and dark at phone width, and add cases to verify.py.",
+        "I run each on this repo and on a second house-rules repo you name, screenshot the output in light and dark at phone width, and add cases to verify.py. Done when three things hold. After gh issue create, gh issue close and gh pr merge into main, the session refresh shows each change on the local racetrack page within 60 seconds. /house-rules:visual-docs stale names a section after one of its docs is edited. /house-rules:review image mode returns the verdict clean on screenshots of each skill's output at 375px wide, in light and dark.",
         "Name a second house-rules repo, ideally one with different labels, no dev branch or no Roadmap.md milestones, and give me access to it. Then look at the overview page and the two roadmap views."
       ],
       [
@@ -403,16 +404,16 @@ const PAGE = {
       "Skill 2: visual-roadmap",
       "Two live views of the roadmap, redrawn by a local script; no GitHub Actions.",
       null,
-      "The script reads the repo's issues and pull requests with the gh command-line tool and rewrites one data file. It then redraws both views from that file. Each stage is matched by one or more labels set in the settings file. This repo's labels are the defaults, as an example: in progress is Doing, and needs review or in review is Review. An issue with none of the stage labels is Backlog, and one with two counts as the later stage. Install lists any label in the settings that the repo does not have, so a typo cannot quietly turn every issue into Backlog. A merge into the dev branch moves the issues its description names (with Closes or Part of) to In dev. A merge into the release branch (a setting, default main) moves them to Shipped. An issue closed as not planned leaves the views. Where an issue closed as completed with no merge goes is your pick below. A lock file stops two quick refreshes from overwriting each other.\nFour things start a refresh, and none of them is on GitHub. The plugin's session hook runs it after an issue is created or closed in a session. A git post-merge hook runs it after a pull or merge. Starting a session runs it once, which catches changes made in the browser. /house-rules:visual-roadmap update runs it on demand.\nBranch names are settings for each repo, because repos differ. This repo, for example, has no dev branch: on 2026-11-24 none of its 176 branches on GitHub was named dev. There the In dev stage stays empty, and the view says why: no branch named dev was found. Run /house-rules:visual-roadmap install in any repo with house rules docs. A repo missing any of the six tier folders is told which ones and pointed to the project-docs skill. Install adds a settings file (dev and release branch names, the labels for each stage, a milestone mapping, publishing on or off) and the git hook. Nothing in the skill is tied to this repo.",
+      "The script reads the repo's issues and pull requests through GitHub's REST API with gh api, because gh issue list is refused in Claude Code cloud sessions (tested 2026-11-24). It then rewrites one data file. It then redraws both views from that file. Each stage is matched by one or more labels set in the settings file. This repo's labels are the defaults, as an example: in progress is Doing, and needs review or in review is Review. An issue with none of the stage labels is Backlog, and one with two counts as the later stage. Install lists any label in the settings that the repo does not have, so a typo cannot quietly turn every issue into Backlog. A merge into the dev branch moves the issues its description closes (Closes #n) to In dev. A Part of link moves nothing. A merge into the release branch (a setting, default main) moves them to Shipped. An issue closed as not planned leaves the views. Where an issue closed as completed with no merge goes is your pick below. A lock file stops two quick refreshes from overwriting each other. Each trigger starts the refresh in the background and returns at once, so no hook waits on GitHub.\nFour things start a refresh, and none of them is on GitHub. The plugin's session hook runs it after an issue is created, closed or relabelled, or a pull request is merged, in a session (gh issue create, close or edit, gh pr merge, or the GitHub tools' issue_write or merge_pull_request). A git post-merge hook runs it after a pull or merge. Starting a session runs it once, which catches changes made in the browser. /house-rules:visual-roadmap update runs it on demand.\nBranch names are settings for each repo, because repos differ. This repo, for example, has no dev branch: no branch on GitHub was named dev when checked on 2026-11-24. There the In dev stage stays empty, and the view says why: no branch named dev was found. Run /house-rules:visual-roadmap install in any repo with house rules docs. A repo missing any of the six tier folders is told which ones and pointed to the project-docs skill. Install adds a settings file (dev and release branch names, the labels for each stage, a milestone mapping, publishing on or off) and a new git post-merge hook. The hook is added after any existing one, never in its place, and it respects core.hooksPath. Session start reinstalls it on a device that lacks it. Nothing in the skill is tied to this repo.",
       [
         "docs/2-roadmap/Roadmap.md is edited by hand; the issue labels already say whose move it is.",
         "One script, one settings file, one data file, two generated picture files and a git post-merge hook. No GitHub Action.",
         "The roadmap stays current on your own machine without drawing on your Actions allowance, and shows what is only in dev and what has shipped."
       ],
       {
-        "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%228%22 y=%2210%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%2231%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue made in session%3C/text%3E%3Crect x=%228%22 y=%2252%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%2273%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Egit pull or merge%3C/text%3E%3Crect x=%228%22 y=%2294%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%22115%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3ESession start%3C/text%3E%3Crect x=%228%22 y=%22136%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%22157%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EManual command%3C/text%3E%3Cline x1=%22114%22 y1=%2227%22 x2=%22140%22 y2=%2282%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%2269%22 x2=%22140%22 y2=%2288%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%22111%22 x2=%22140%22 y2=%2294%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%22153%22 x2=%22140%22 y2=%22100%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22140%22 y=%2270%22 width=%2276%22 height=%2250%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22178%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eroadmap script%3C/text%3E%3Cline x1=%22218%22 y1=%2295%22 x2=%22236%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22236%22 y=%2250%22 width=%2276%22 height=%2290%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22274%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Edata %2B 2 views%3C/text%3E%3C/svg%3E",
-        "alt": "Four local triggers (an issue made in a session, a git pull or merge, the start of a session, or a manual command) run one script that rewrites the roadmap data and both views.",
-        "caption": "Mock-up of the update triggers. Nothing runs on GitHub."
+        "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%228%22 y=%2210%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%2231%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EIssue or merge in session%3C/text%3E%3Crect x=%228%22 y=%2252%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%2273%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Egit pull or merge%3C/text%3E%3Crect x=%228%22 y=%2294%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%22115%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3ESession start%3C/text%3E%3Crect x=%228%22 y=%22136%22 width=%22104%22 height=%2234%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2260%22 y=%22157%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EManual command%3C/text%3E%3Cline x1=%22114%22 y1=%2227%22 x2=%22140%22 y2=%2282%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%2269%22 x2=%22140%22 y2=%2288%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%22111%22 x2=%22140%22 y2=%2294%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22114%22 y1=%22153%22 x2=%22140%22 y2=%22100%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22140%22 y=%2270%22 width=%2276%22 height=%2250%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22178%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eroadmap script%3C/text%3E%3Cline x1=%22218%22 y1=%2295%22 x2=%22236%22 y2=%2295%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22236%22 y=%2250%22 width=%2276%22 height=%2290%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22274%22 y=%2299%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Edata %2B 2 views%3C/text%3E%3C/svg%3E",
+        "alt": "Four local triggers (an issue or merge in a session, a git pull or merge, the start of a session, or a manual command) run one script that rewrites the roadmap data and both views.",
+        "caption": "Mock-up of the update triggers. Nothing runs on GitHub unless publishing is on."
       }
     ],
     [
@@ -454,7 +455,7 @@ const PAGE = {
       "Where the output is written",
       "Local files by default; GitHub Pages is an optional extra.",
       null,
-      "By default the script writes to docs/generated/roadmap/ in the repo. That is one HTML page showing both views, where hover works, plus the two picture files. The install command adds a line to .gitignore so refreshes cause no commits.\nWith publishing switched on in the settings file, the script also pushes the same files to a roadmap-view branch, never to main, so the rule that main changes only by pull request holds. GitHub Pages then serves that branch as a web page. Switching Pages on is one setting in the repo; the script tries it with gh and says so if it cannot. The data file is the only source of truth, and the views can always be rebuilt from it.",
+      "By default the script writes to docs/generated/roadmap/ in the repo. That is one HTML page showing both views, where hover works, plus the two picture files. The install command adds a line to .gitignore so refreshes cause no commits.\nWith publishing switched on in the settings file, the script also pushes the same files to a roadmap-view branch, never to main, so the rule that main changes only by pull request holds. GitHub Pages then serves that branch as a public web page (unverified here). A private repo needs a paid plan for Pages. The script tries to switch Pages on with gh api and says so if it cannot. The data file is the only source of truth, and the views can always be rebuilt from it.",
       [
         "The repo rule: main only changes by pull request; docs/generated/ already holds generated files in this repo.",
         "Local files by default; one extra branch only when publishing is on.",
@@ -462,7 +463,7 @@ const PAGE = {
       ],
       {
         "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2220%22 width=%22120%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2270%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EUpdate script%3C/text%3E%3Cline x1=%22132%22 y1=%2240%22 x2=%22160%22 y2=%2240%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22160%22 y=%2220%22 width=%22150%22 height=%2240%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22235%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Edocs/generated/roadmap%3C/text%3E%3Crect x=%2210%22 y=%2280%22 width=%22120%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2270%22 y=%22104%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EOptional: publish on%3C/text%3E%3Cline x1=%22132%22 y1=%22100%22 x2=%22160%22 y2=%22100%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22160%22 y=%2280%22 width=%22150%22 height=%2240%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22235%22 y=%22104%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eroadmap-view branch%3C/text%3E%3Cline x1=%22235%22 y1=%22122%22 x2=%22235%22 y2=%22136%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22160%22 y=%22136%22 width=%22150%22 height=%2236%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22235%22 y=%22158%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3EGitHub Pages page%3C/text%3E%3C/svg%3E",
-        "alt": "The script always writes local files. If publishing is switched on, it also pushes them to a roadmap-view branch that GitHub Pages serves. No GitHub Action is involved.",
+        "alt": "The script always writes local files. If publishing is switched on, it also pushes them to a roadmap-view branch that GitHub Pages serves. Publishing may start GitHub's own Pages deploy run (unverified).",
         "caption": "Mock-up of where the output is written."
       }
     ],
@@ -487,22 +488,28 @@ const PAGE = {
   "choices": [
     [
       "share",
-      "What refreshes the roadmap?",
+      "How fresh should the views be?",
       [
         [
           "A",
-          "Local triggers only (suggested)",
+          "Also refresh on your next prompt, at most once every 5 minutes (suggested)",
           1,
-          "A session hook, a git post-merge hook, session start and a manual command. Nothing on GitHub; a change made in the browser shows at the next trigger, not instantly."
+          "During a session the views are never more than 5 minutes behind. Between sessions they stay as old as the last session."
         ],
         [
           "B",
-          "Local triggers plus an optional GitHub Action, off by default",
+          "The four triggers only",
           0,
-          "Instant for browser changes, but it uses Actions minutes whenever it is switched on."
+          "A change made outside a session can stay unseen until the next session start, pull or update command, with no upper limit."
+        ],
+        [
+          "C",
+          "Add a local scheduled job (cron or Task Scheduler)",
+          0,
+          "Fresh between sessions too, but it is a new install step on each device, outside Claude."
         ]
       ],
-      "You asked that the roadmap not depend on Actions, so the default has to work without them."
+      "You asked for no Actions, so freshness has to come from your own machine, and A costs nothing extra."
     ],
     [
       "share",
@@ -537,7 +544,7 @@ const PAGE = {
           "A",
           "Local files only (suggested)",
           1,
-          "Opens from disk in any browser, costs nothing and needs no GitHub setting."
+          "Opens from disk in any browser, costs nothing and needs no GitHub setting, but in a cloud session nothing survives the session."
         ],
         [
           "B",
@@ -707,9 +714,9 @@ const PAGE = {
     ]
   ],
   "wrapup": {
-    "summary": "A proposal for two new house-rules skills: visual-docs, which makes one illustrated overview page from the tier docs, and visual-roadmap, a local script that redraws two roadmap views when issues or merges change, with GitHub Pages as an option and no GitHub Actions.",
+    "summary": "A proposal for two new house-rules skills. Visual-docs makes one illustrated overview page from the tier docs. Visual-roadmap is a local script that redraws two roadmap views when issues or merges change, with no GitHub Action of its own and GitHub Pages as an option.",
     "changing": "Nothing is built. After approval, and once the review command is merged, this adds these things. Two skill folders under claude-house-rules/plugins/house-rules/skills/, where the roadmap one comes with an install command that sets it up in any house-rules repo. One refresh script with its session hook and git hook. In each repo where you run install, a settings file. In this repo, cases in verify.py.",
-    "blocking": "Your approval and ten picks: what refreshes the roadmap, the two views, where views live, how the visual-docs page is checked and when, how the dev branch is found, the docs page scope, the docs page layout, milestone grouping, and where an issue closed without a merge goes.",
+    "blocking": "Your approval and ten picks: how fresh the views are, the two views, where views live, how the visual-docs page is checked and when, how the dev branch is found, the docs page scope, the docs page layout, milestone grouping, and where an issue closed without a merge goes.",
     "next": "I log the decision, then send a build plan page with one parent issue and one child issue per step for you to approve before I build anything.",
     "todo": [
       "Pick your answers in Your choices.",
