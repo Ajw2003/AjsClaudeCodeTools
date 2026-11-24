@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+The roadblock judge kept blocking status replies while the runner's test run was under way (about twelve blocks, logged in `docs/roadblock-judge-friction-2026-11-24.md`); aj was offered `HOUSE_RULES_ROADBLOCKS=off` for this session and has not answered.
+
 aj asked me to note that the roadblock judge looks over-zealous and may waste usage: recorded in `docs/roadblock-judge-friction-2026-11-24.md` (the roadblock judge, three cases, three open questions, nothing changed).
 
 aj chose A for recording the acceptance rounds: `docs/qa/design-review-loop/run_acceptance.py` runs C1 to C9 one by one and saves each output. A first test run here is in progress; its result is not yet read. Nothing is recorded or stamped.
