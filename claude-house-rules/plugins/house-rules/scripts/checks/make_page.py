@@ -354,6 +354,22 @@ _mp_cases.append(("ledger_note (#598): the QA page lists the parked rows with 0 
 _rc, _o = _park()
 _mp_cases.append(("ledger_note (#598): a missing required option is refused, naming it",
                   _rc == 2 and "--question" in _o))
+def _dev(*a):
+    r = subprocess.run([sys.executable, os.path.join(HERE, "ledger_note.py"), "deviate", "Demo Feature", "--step", "7", "--plan", "p",
+                        "--done", "d", "--why", "w", "--undo", "u"] + list(a), cwd=_d, stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE, universal_newlines=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+_rc, _o = _dev()
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#599): deviate adds D1 to the Deviations table, above the parked rows, printing where",
+                  _rc == 0 and _o.startswith("deviated D1 in ") and "| D1 | 7 | p | d | w | u |" in _ledg
+                  and _ledg.index("| D1 ") < _ledg.index("## Parked decisions") and "| P2 " in _ledg))
+_rc, _o = _dev("--plan", "a|b")
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#599): a second deviate is D2 and a | in a cell is escaped",
+                  _rc == 0 and _o.startswith("deviated D2 in ") and "| D2 | 7 | a\\|b |" in _ledg))
 os.remove(os.path.join(_qaf, "ledger.md"))
 _mp_cases.append(("rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3307 chars",
                   all(w in read(os.path.join(HERE, "..", "rules", "show-dont-tell.md")) for w in ("ledger_note.py park", "[HARD STOP]"))
