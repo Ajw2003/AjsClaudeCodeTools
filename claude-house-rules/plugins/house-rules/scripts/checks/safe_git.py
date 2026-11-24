@@ -2095,14 +2095,14 @@ print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
 
 
 # --- #562: a background launch with no deadline is refused; an unchecked one is reported once ---
-_bg_big, _bg_ok = (_wait_run("make", True, t) for t in (1300000, 1200000))
+_bg_big, _bg_ok = (_wait_run("make", True, t) for t in (61000, 60000))
 _bg_missing = run_hook("guard", json.dumps({"session_id": "wt", "cwd": _rr_dir, "tool_name": "Bash",
                        "tool_input": {"command": "make", "run_in_background": True}}),
                        env=env_in(_rr_dir, HOUSE_RULES_RERUNS="off"))[1]
 _bgd = '"permissionDecision":"deny"'
-report("PASS" if _bgd in _bg_missing and "1200000" in _bg_missing and "waitfor.py" in _bg_missing else "FAIL",
-       "bg deadline: a background command with no timeout is refused, naming 1200000 ms and waitfor.py")
-report("PASS" if _bgd in _bg_big and "1200000" in _bg_big else "FAIL",
+report("PASS" if _bgd in _bg_missing and "60000" in _bg_missing and "waitfor.py" in _bg_missing else "FAIL",
+       "bg deadline: a background command with no timeout is refused, naming 60000 ms and waitfor.py")
+report("PASS" if _bgd in _bg_big and "60000" in _bg_big else "FAIL",
        "bg deadline: a timeout over the largest deadline is refused")
 report("PASS" if _bgd not in _bg_ok else "FAIL", "bg deadline: a timeout inside the limit passes")
 report("PASS" if _bgd in _wait_run("timeout 90 python x.py") else "FAIL", "bg deadline: a foreground timeout 90 is still refused")

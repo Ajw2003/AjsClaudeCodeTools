@@ -696,7 +696,7 @@ def _split_reason_ok(desc):
     if not m:
         return False
     body = m.group(1)
-    return all(re.search(r"%s\s*:\s*[^;\s][^;]{2,}" % p, body, re.I) for p in _SPLIT_PARTS)
+    return all(re.search(r"\b%s\s*:\s*[^;\s][^;]{2,}" % p, body, re.I) for p in _SPLIT_PARTS)
 
 
 def _known_runner(cmd):
@@ -711,8 +711,7 @@ def _wait_check(payload, subject):
     try:
         ti = json.loads(payload).get("tool_input") or {}
     except (ValueError, AttributeError) as exc:
-        sys.stderr.write("house-rules guard: the wait check could not read the payload (%s), so it was skipped.
-" % exc)
+        sys.stderr.write("house-rules guard: the wait check could not read the payload (%s), so it was skipped.\n" % exc)
         return None
     if not isinstance(ti, dict):
         return None

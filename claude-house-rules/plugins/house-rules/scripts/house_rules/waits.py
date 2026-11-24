@@ -11,8 +11,8 @@ import sys
 DEFAULTS = {"first_check_seconds": 60, "interval_seconds": 60, "stalled_after_quiet_checks": 3,
             "foreground_limit_seconds": 60,
             "deadline_seconds": {"command": 60, "agent": 60, "build": 60, "ci": 60},
-            "long_runners": ["unity", "dotnet build", "dotnet test", "msbuild", "gradle", "docker build", "npm run build",
-                             "npm test", "pytest", "verify.py", "cargo build"]}
+            "long_runners": ["unity", "dotnet build", "dotnet test", "msbuild", "gradle", "docker build",
+                             "pytest", "verify.py", "cargo build"]}
 _ENV = {"first_check_seconds": "HOUSE_RULES_WAIT_FIRST_CHECK", "interval_seconds": "HOUSE_RULES_WAIT_INTERVAL",
         "stalled_after_quiet_checks": "HOUSE_RULES_WAIT_STALLED_AFTER",
         "foreground_limit_seconds": "HOUSE_RULES_WAIT_FOREGROUND_LIMIT"}
