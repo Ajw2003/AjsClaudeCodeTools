@@ -27,7 +27,8 @@ def tree(root):
         sys.exit(2)
     lines = []
     for p in sorted(set(x for x in r.stdout.decode("utf-8").split("\0") if x)):
-        if p.startswith("docs/qa/") or p == ".claude/house-rules-loop.json":
+        # built pages are left out too (P3): building the QA page must not make the stamp stale
+        if p.startswith("docs/qa/") or p == ".claude/house-rules-loop.json" or (p.startswith("docs/plans/") and p.endswith(".html")):
             continue
         fp = os.path.join(root, p)
         if not os.path.isfile(fp):  # tracked but deleted in the working tree
