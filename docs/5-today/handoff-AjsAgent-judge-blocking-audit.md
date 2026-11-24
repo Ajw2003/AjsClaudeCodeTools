@@ -4,6 +4,8 @@
 A test session was blocked 12 times in a row by the end-of-reply roadblock judge, and the model was never told which reply would pass. This branch holds a proposal page that fixes the judge on both sides, and generalises the already approved modular-tests design (issue #575) from tests to every wait-bound job: independent segments of at most 60 seconds, each printing its own result, so failures are caught early.
 
 ## Where it stands
+Build plan approved 2026-11-24; stage is Build. Builders are running for #606 and #612; their branches are not merged or verified yet.
+
 Design approved by aj on 2026-11-24 (1A 2A 3A). Planning is done: systems doc, parent issue #605 and steps #606 to #613, decisions entry, changelog line, and a build plan page waiting for aj's approval. No code is changed.
 
 Proposal only; no plugin code is changed. `docs/plans/judge-blocking-fix.json` and `docs/plans/judge-blocking-fix.html` are built and were sent to aj. Cause found by reading the code: three Stop-time checks stack on one reply, and the model judge in `hooks.json` has no block counter at all. aj corrected the direction: the judge stays and is tuned. The page proposes four written criteria (shared by the judge, the block message and the rules), a judge that sees the real attempts and shares one cap of two blocks, narrower phrase lists ("next step" is removed because the house rules require it), and block messages that name the failed criterion and carry a copyable passing reply, including an Unverified form. Waiting on aj's choices and approval line "Design approved: judge blocking fix and one-minute segments".
