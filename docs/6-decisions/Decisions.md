@@ -7,6 +7,15 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-23 - Roadblock checks get their own Stop hook so unattended mode keeps them
+
+**Decision.** aj chose option B on the page `docs/plans/2026-11-23-roadblock-unattended-hook/proposal.html`: the roadblock check (and later the goal check) runs from a second Stop hook that unattended mode leaves on. Options A (keep them inside the handover hook with the rest off) and C (drop them from unattended) were not chosen.
+**Why.** Step 1 (#588) found that `unattended on` sets `HOUSE_RULES_HANDOVER=off` (`core.py` line 2749) and `event_handover` returns at once on that toggle (`hook.py` line 101), so the stall scan could never run in the mode it was written for. `HOUSE_RULES_ROADBLOCKS` is in no mode group, so a hook gated only by it survives unattended mode.
+**Replaces.** Adjusts where the check runs in the detection-fix and audit entries below; their rules are unchanged.
+**Status.** Current. Being built under #588.
+
+---
+
 ## 2026-11-23 - Roadblock check audit: model judge, method classes, and a goal check for stalls
 
 **Decision.** aj approved "Design approved: roadblock check audit 1B 2A 3A 4* 5A". (1B) A model judge runs on every turn end. (2A) A different method means a different class from a closed table. (3A) A licence, login, purchase or destructive step is marked NEEDS YOU and exempts that part only. (4, aj's own) Stall phrases are checked only at the end of the turn, then a separate goal check reads the session's goal and decides whether the session genuinely cannot move forward unattended or can carry on until the goals are reached. (5A) Unattended runs and bypass mode only.
