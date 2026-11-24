@@ -1,0 +1,36 @@
+$ units
+unit: d01 files: 1
+unit: d02 files: 1
+unit: d03 files: 1
+unit: d04 files: 1
+unit: d05 files: 1
+unit: d06 files: 1
+unit: d07 files: 1
+unit: d08 files: 1
+unit: d09 files: 1
+unit: d10 files: 1
+unit: d11 files: 1
+unit: d12 files: 1
+unit: d13 files: 1
+unit: d14 files: 1
+unit: root files files: 1
+folders: 14
+files: 15
+batches: 15
+notice: This sweep covers 14 folders, 15 files, in 15 batches run one at a time. Estimated time about 2 minutes and about 66,000 tokens (7.1 seconds and 4,400 tokens per file, measured on one 10-file markdown batch); code files take longer, so treat both as a minimum.
+$ batches
+d01	1	d01/mod.py
+d02	1	d02/mod.py
+d03	1	d03/mod.py
+d04	1	d04/mod.py
+d05	1	d05/mod.py
+d06	1	d06/mod.py
+d07	1	d07/mod.py
+d08	1	d08/mod.py
+d09	1	d09/mod.py
+d10	1	d10/mod.py
+d11	1	d11/mod.py
+d12	1	d12/mod.py
+d13	1	d13/mod.py
+d14	1	d14/mod.py
+root files	1	settings.toml
