@@ -2,9 +2,11 @@
 """ledger_note.py - park a question in a feature's QA ledger instead of stopping work (#598).
 
   ledger_note.py park FEATURE --step S --question Q --default D --affects A [--answer HOW]
+  ledger_note.py deviate FEATURE --step S --plan P --done D --why W --undo U   (#599)
 
-Appends row P<n> to the Parked decisions table of docs/qa/<folder>/ledger.md under the git project
-root (created with both tables if absent). Prints `parked P<n> in <path>`. STDLIB ONLY.
+Appends row P<n> to the Parked decisions table (or D<n> to the Deviations table) of
+docs/qa/<folder>/ledger.md under the git project root (created with both tables if absent). Prints
+`parked P<n> in <path>` or `deviated D<n> in <path>`. STDLIB ONLY.
 """
 import argparse
 import os
@@ -29,7 +31,6 @@ Every change from the approved build plan, and every question parked instead of 
 | # | Step | Question | Default taken for now | What it affects | How to answer |
 |---|---|---|---|---|---|
 """
-ROW = re.compile(r"^\| P(\d+) ", re.M)
 
 
 def cell(s):
@@ -44,7 +45,15 @@ def main(argv):
     for o in ("step", "question", "default", "affects"):
         p.add_argument("--" + o, required=True)
     p.add_argument("--answer", default="Reply with the answer to restore your choice; the default is easy to undo.")
+    d = sub.add_parser("deviate")
+    d.add_argument("feature")
+    for o in ("step", "plan", "done", "why", "undo"):
+        d.add_argument("--" + o, required=True)
     a = ap.parse_args(argv)
+    if a.cmd == "park":
+        L, head, vals, verb = "P", "Question", (a.step, a.question, a.default, a.affects, a.answer), "parked"
+    else:
+        L, head, vals, verb = "D", "The plan said", (a.step, a.plan, a.done, a.why, a.undo), "deviated"
     r = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        universal_newlines=True)
     if r.returncode:
@@ -55,16 +64,16 @@ def main(argv):
     if os.path.isfile(path):
         with open(path, encoding="utf-8") as f:
             text = f.read()
-    n = max([int(x) for x in ROW.findall(text)] or [0]) + 1
-    row = "| P%d | %s |\n" % (n, " | ".join(cell(x) for x in (a.step, a.question, a.default, a.affects, a.answer)))
-    # Insert after the last P row, else after the Parked table's divider; a later section stays intact.
+    n = max([int(x) for x in re.findall(r"^\| %s(\d+) " % L, text, re.M)] or [0]) + 1
+    row = "| %s%d | %s |\n" % (L, n, " | ".join(cell(x) for x in vals))
+    # Insert after the last row of this kind, else after its table's divider; a later section stays intact.
     lines = text.splitlines(True)
     at = None
     for i, ln in enumerate(lines):
-        if ln.startswith("| P") or (at is None and ln.startswith("|---") and i and "Question" in lines[i - 1]):
+        if ln.startswith("| %s" % L) or (at is None and ln.startswith("|---") and i and head in lines[i - 1]):
             at = i + 1
     if at is None:
-        sys.stderr.write("ledger_note.py: %s has no Parked decisions table; add one or move the file away\n" % path)
+        sys.stderr.write("ledger_note.py: %s has no %s table; add one or move the file away\n" % (path, "Parked decisions" if L == "P" else "Deviations"))
         return 2
     if not lines[at - 1].endswith("\n"):
         lines[at - 1] += "\n"
@@ -72,7 +81,7 @@ def main(argv):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.writelines(lines)
-    print("parked P%d in %s" % (n, path))
+    print("%s %s%d in %s" % (verb, L, n, path))
     return 0
 
 
