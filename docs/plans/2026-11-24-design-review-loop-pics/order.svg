@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="12">
+<style>
+.bg{fill:#fff}.t{fill:#1b1f2a}.m{fill:#5b6275}.ln{stroke:#8a92a6;fill:none;stroke-width:1.5}
+.new{fill:#fde0dc;stroke:#c0392b}.reuse{fill:#dff3e4;stroke:#2e8b57}.adapt{fill:#fff1cc;stroke:#b8860b}.you{fill:#dbe7ff;stroke:#2f5fd0}
+@media (prefers-color-scheme:dark){.bg{fill:#14171f}.t{fill:#eef0f6}.m{fill:#a4abbd}.ln{stroke:#6c748a}.new{fill:#4a1f1b;stroke:#ff8a7a}.reuse{fill:#1f3a2a;stroke:#5fcf8c}.adapt{fill:#4a3d12;stroke:#e0b94a}.you{fill:#1d2c55;stroke:#7aa2ff}}
+</style>
+<rect class="bg" width="680" height="300"/>
+<text class="t" x="16" y="22" font-weight="700">Build order. An arrow means "must be done first".</text>
+<g stroke-width="1.5">
+<rect class="reuse" x="16" y="40" width="112" height="44" rx="8"/><text class="t" x="72" y="59" text-anchor="middle">1 Reviewer</text><text class="m" x="72" y="75" text-anchor="middle" font-size="10">#593</text>
+<rect class="reuse" x="156" y="40" width="112" height="44" rx="8"/><text class="t" x="212" y="59" text-anchor="middle">2 Stamp</text><text class="m" x="212" y="75" text-anchor="middle" font-size="10">#594</text>
+<rect class="reuse" x="296" y="40" width="112" height="44" rx="8"/><text class="t" x="352" y="59" text-anchor="middle">3 Acceptance run</text><text class="m" x="352" y="75" text-anchor="middle" font-size="10">#595</text>
+<rect class="reuse" x="436" y="40" width="112" height="44" rx="8"/><text class="t" x="492" y="59" text-anchor="middle">5 Self-judging test</text><text class="m" x="492" y="75" text-anchor="middle" font-size="10">#597</text>
+<rect class="reuse" x="156" y="120" width="112" height="44" rx="8"/><text class="t" x="212" y="139" text-anchor="middle">8 One approval</text><text class="m" x="212" y="155" text-anchor="middle" font-size="10">#600</text>
+<rect class="you" x="16" y="200" width="150" height="48" rx="8"/><text class="t" x="91" y="219" text-anchor="middle">Wait: 2.90.0 merges</text><text class="m" x="91" y="235" text-anchor="middle" font-size="10">issues #587 to #591</text>
+<rect class="adapt" x="196" y="200" width="112" height="44" rx="8"/><text class="t" x="252" y="219" text-anchor="middle">6 Parked ledger</text><text class="m" x="252" y="235" text-anchor="middle" font-size="10">#598</text>
+<rect class="adapt" x="336" y="200" width="112" height="44" rx="8"/><text class="t" x="392" y="219" text-anchor="middle">7 Deviations</text><text class="m" x="392" y="235" text-anchor="middle" font-size="10">#599</text>
+<rect class="adapt" x="476" y="200" width="112" height="44" rx="8"/><text class="t" x="532" y="219" text-anchor="middle">4 QA gate</text><text class="m" x="532" y="235" text-anchor="middle" font-size="10">#596</text>
+<rect class="new" x="576" y="260" width="92" height="30" rx="8"/><text class="t" x="622" y="279" text-anchor="middle">9 Docs, tests</text>
+</g>
+<g class="ln"><path d="M128 62h28M268 62h28M408 62h28M212 84v36M166 224h30M308 222h28M448 222h28M352 84v20h180v96M532 244v16h44"/></g>
+<text class="m" x="16" y="284">Green: can start now. Yellow: touches the 2.90.0 code. Blue: waits on you. Red: last.</text>
+</svg>

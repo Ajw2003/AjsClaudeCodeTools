@@ -707,6 +707,8 @@ except Exception:
     pass
 _loop_cases.append(("a helper starts knowing the feature, its stage and issues, and that it only builds",
                     '"blockers"' in _so and "Build" in _so and "#102" in _so and "never design" in _so))
+_loop_cases.append(("a helper is told to park a reversible question with ledger_note.py park, and to report only a [HARD STOP] (#598)",
+                    "ledger_note.py park" in _so and "[HARD STOP]" in _so))
 _loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
                     and _loop_edit("app.py", session_id="other") == "allow"))
 _loop_log("build log for blockers")
@@ -1806,6 +1808,19 @@ report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "importer"
 if _s["stage"] != "build":
     print("          stage %r, feature %r, note %r" % (_s["stage"], _s.get("feature"), _n[:300]))
 
+# #600: two lines in one message, Design then Build plan, no plan issues yet: Build, both approvals, issues owed.
+_ma_set({"feature": "", "stage": "design"})
+_n, _s = _ma_say("Design approved: combo 1A 2B\nBuild plan approved: combo")
+_ma_names = [a.get("stage") for a in _s.get("approvals", [])]
+report("PASS" if (_s["stage"] == "build" and _s.get("feature") == "combo"
+                  and "Design approved" in _ma_names and "Build plan approved" in _ma_names
+                  and "0 labelled issue(s)" in _n and "AjsAgent created this" in _n and "in progress" in _n
+                  and "this turn" in _n) else "FAIL",
+       "design loop (#600): a design line and a build-plan line in one message end in Build with both approvals "
+       "and the plan's issues owed in the same turn")
+print("          #600 state: stage %r, feature %r, approvals %r\n          #600 note: %s"
+      % (_s["stage"], _s.get("feature"), _ma_names, _n))
+
 _ma_set({"feature": "Label setup", "stage": "design", "redo": True,
          "approvals": [{"stage": "QA failed", "name": "Importer", "at": 1}],
          "issues": [{"repo": "o/r", "number": 7, "labelled": True}]},
@@ -2236,8 +2251,28 @@ _CW_WRITE = json.dumps({"type": "assistant", "message": {"content": [{"type": "t
                         "input": {"file_path": os.path.join(_cw_pages, "plan.html"), "content": "<p>x</p>"}}]}})
 _CW_EDITOR = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent",
                          "input": {"subagent_type": "house-rules:editor", "prompt": "edit the page"}}]}})
-_cw_t_page = _hand_transcript("cw-page", [_CW_USER, _CW_WRITE])
-_cw_t_edited = _hand_transcript("cw-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR])
+# #594: a page owes a review stamp (page_criteria.stamp_line), not an editor run.
+import page_criteria as _cw_pcrit
+_CW_HEAD = '<!doctype html>\n<meta charset="utf-8">\n'
+
+
+def _cw_page_t(name, body, stamp=None, kind=None, edit_after=""):
+    """Writes docs/plans/<name> (stamp = (verdict, rounds) or a raw content value) and returns a transcript that wrote it."""
+    meta = '<meta name="house-rules-page" content="%s">\n' % kind if kind else ""
+    html = _CW_HEAD + meta + body
+    if stamp:
+        line = (_cw_pcrit.stamp_line(html, *stamp) if isinstance(stamp, tuple)
+                else '<meta name="house-rules-reviewed" content="%s">\n' % stamp)
+        html = _CW_HEAD + line + meta + body
+    with open(os.path.join(_cw_pages, name), "w", encoding="utf-8", newline="\n") as f:
+        f.write(html + edit_after)
+    w = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Write",
+                    "input": {"file_path": os.path.join(_cw_pages, name), "content": "x"}}]}})
+    return _hand_transcript("cw-" + name, [_CW_USER, w])
+
+
+_cw_t_page = _cw_page_t("plan.html", "<p>x</p>\n")
+_cw_t_edited = _cw_page_t("stamped.html", "<p>x</p>\n", stamp=("clean", 1))
 _cw_t_none = _hand_transcript("cw-none", [_CW_USER])
 
 
@@ -2246,14 +2281,28 @@ def _cw_editor(transcript, text="The page is up."):
                                              transcript_path=transcript), env=_loop_env)[1]
 
 
-_cw_cases.append(("editor: writing a page under docs/plans with no editor run gets the reminder",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+_cw_cases.append(("editor (#594): writing a page under docs/plans with no stamp is owed, naming the reviewer and the stamp",
+                  "no review stamp" in _cw_editor(_cw_t_page) and "house-rules:reviewer" in _cw_editor(_cw_t_page)
+                  and "--reviewed clean --rounds" in _cw_editor(_cw_t_page)
+                  and "HOUSE_RULES_CLEAR_WRITING=off" in _cw_editor(_cw_t_page)))
 _cw_cases.append(("#537: HOUSE_RULES_PAGES=off: a written docs/plans page with no editor run is not asked for the editor pass",
-        "no @house-rules:editor helper ran" not in run_hook("handover", stop_payload(
+        "review stamp" not in run_hook("handover", stop_payload(
             last_assistant_message="The page is up.", cwd=_loop_dir, stop_hook_active=True, transcript_path=_cw_t_page),
             env=dict(_loop_env, HOUSE_RULES_PAGES="off"))[1]))
-_cw_cases.append(("editor: the same turn with the editor helper run stays quiet about it",
-                  "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_edited)))
+_cw_cases.append(("editor (#594): a page with a current stamp stays quiet",
+                  "review stamp" not in _cw_editor(_cw_t_edited) and "stamp is stale" not in _cw_editor(_cw_t_edited)))
+_cw_cases.append(("editor (#594): a stamped page edited afterwards is stale and owed",
+                  "stamp is stale: the page changed after review" in _cw_editor(
+                      _cw_page_t("stale.html", "<p>x</p>\n", stamp=("clean", 1), edit_after="<p>more</p>\n"))))
+_cw_cases.append(("editor (#594): the open-risks verdict with 2 rounds is a valid stamp",
+                  "stamp" not in _cw_editor(_cw_page_t("risks.html", "<p>x</p>\n", stamp=("open-risks", 2)))))
+_cw_cases.append(("editor (#594): rounds 3 is invalid and owed",
+                  "invalid" in _cw_editor(_cw_page_t("r3.html", "<p>x</p>\n", stamp=("clean", 3)))))
+_cw_cases.append(("editor (#594): review and qa pages are exempt",
+                  all("stamp" not in _cw_editor(_cw_page_t("ex-%s.html" % k, "<p>x</p>\n", kind=k)) for k in ("review", "qa"))))
+_cw_cases.append(("editor (#594): proposal, build-plan, art and a page with no type need a stamp",
+                  all("no review stamp" in _cw_editor(_cw_page_t("need-%s.html" % k, "<p>x</p>\n", kind=None if k == "none" else k))
+                      for k in ("proposal", "build-plan", "art", "none"))))
 def _cw_editor_on(transcript, text):
     return run_hook("handover", stop_payload(last_assistant_message=text, cwd=_loop_dir, stop_hook_active=True,
                                              transcript_path=transcript), env=dict(_loop_env, HOUSE_RULES_EDITOR="on"))[1]
@@ -2267,7 +2316,7 @@ _cw_cases.append(("editor: with HOUSE_RULES_EDITOR=on, a reply of 160 words or m
 _cw_cases.append(("editor (#325): a 200-word reply with no page and no editor run gets no editor reminder by default",
                   "no @house-rules:editor helper ran" not in _cw_editor(_cw_t_none, _cw_200)))
 _cw_cases.append(("editor (#325): a turn that wrote a docs/plans page still owes the editor by default",
-                  "no @house-rules:editor helper ran" in _cw_editor(_cw_t_page)))
+                  "no review stamp" in _cw_editor(_cw_t_page)))
 
 # A page written by a shell command never passes the Write hook (found in the real run, #250).
 with open(os.path.join(_cw_pages, "shellpage.html"), "w", encoding="utf-8") as _f:
@@ -2279,7 +2328,7 @@ _cw_t_shell = _hand_transcript("cw-shell", [
                 "input": {"command": "printf '<p>x</p>' > docs/plans/shellpage.html"}}]}})])
 _cw_shell_out = _cw_editor(_cw_t_shell)
 _cw_cases.append(("page: a page written by a shell command is checked at the end of the reply, editor reminder too",
-                  "the page shellpage.html" in _cw_shell_out and "no @house-rules:editor helper ran" in _cw_shell_out))
+                  "shellpage.html: no review stamp" in _cw_shell_out))
 
 # #284: in a git repository a page counts as written only when git shows it new, edited, or committed
 # since aj's message; a cloned page has a fresh file time but an old commit, so it does not count.
@@ -2378,8 +2427,10 @@ _ck_t_read = _hand_transcript("ck-read", _ck_user("check it", [json.dumps({"type
     {"type": "tool_use", "id": "r1", "name": "Bash", "input": {"command": "python3 t.py"}}]}})]))
 # #559: the edited page is then sent, as the send-page checkpoint requires; this fixture is about the editor rule
 _CK_SEND = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "SendUserFile",
-                       "input": {"file_path": os.path.join(_cw_pages, "plan.html")}}]}})
-_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, _CW_WRITE, _CW_EDITOR, _CK_SEND])
+                       "input": {"file_path": os.path.join(_cw_pages, "stamped.html")}}]}})
+_ck_t_edited = _hand_transcript("ck-edited", [_CW_USER, json.dumps({"type": "assistant", "message": {"content": [{
+    "type": "tool_use", "name": "Write", "input": {"file_path": os.path.join(_cw_pages, "stamped.html"), "content": "x"}}]}}),
+    _CK_SEND])
 
 # 1 page rule (long reply) - editor ran, so only the page rule is in play
 _ck_long = " ".join(["Words"] * 230) + "."
@@ -3102,9 +3153,13 @@ _d = _p5_repo(_hq_build)
 _hq_cases.append(("a Build edit is allowed before any question", _p5_edit(_d)[0] == "allow"))
 run_hook("handover", stop_payload(last_assistant_message="Step done.", cwd=_d), env=_loop_env)
 _hq_cases.append(("a Build reply with no question holds nothing", not _ma_stage(_d).get("held") and _p5_edit(_d)[0] == "allow"))
-run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
+_, _hq_out, _ = run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
+_hq_cases.append(("#598: a plain question in Build holds nothing, edits stay allowed, and the end-of-reply output carries the park note",
+                  not _ma_stage(_d).get("held") and _p5_edit(_d)[0] == "allow"
+                  and "Build stage: park a reversible question with ledger_note.py park" in _hq_out))
+run_hook("handover", stop_payload(last_assistant_message="Step done.\n\n[HARD STOP] Delete the user table?", cwd=_d), env=_loop_env)
 _dec, _why = _p5_edit(_d)
-_hq_cases.append(("a Build reply ending with a question to aj sets held and the next code edit is refused with the note",
+_hq_cases.append(("#598: a [HARD STOP] question in Build sets held and the next code edit is refused with the note",
                   _ma_stage(_d).get("held") is True and _dec == "deny"
                   and "the last reply asked aj a question, so code edits wait for their answer." in _why))
 _ma_say(_d, "[Subagent hand-back] The builder finished.")
@@ -3130,6 +3185,59 @@ _hq_cases.append(("the retry (stop_hook_active) passes", not _hq_stop("I went wi
 _hq_cases.append(("a quoted line or a code fence does not fire",
                   not _hq_stop("> I went with option B\n\n```\nI chose x\n```", False)))
 _hq_cases.append(("a reply that deals in options does not fire", not _hq_stop("Option A or B? I suggest A.", False)))
+_d = _p5_repo(_hq_build)
+_p5_root, _p5_old = _hq_root, _p5_root
+
+
+def _hq_build_stop(reply):
+    _, out, _ = run_hook("handover", stop_payload(last_assistant_message=reply, cwd=_d, session_id="verify-decided-b"), env=_loop_env)
+    return out
+
+
+_o = _hq_build_stop("I went with option B for the layout.")
+_hq_cases.append(("#598: in Build, 'I went with' fires and says to park it in the ledger", "decided for you" in _o and "ledger_note.py" in _o))
+_hq_cases.append(("#598: in Build, a reply naming the ledger, ledger_note.py or P7 does not fire",
+                  all("decided for you" not in _hq_build_stop("I went with option B (see the ledger).") + _hq_build_stop(
+                      "I chose X, parked with ledger_note.py.") + _hq_build_stop("I chose X, row P7.") for _ in (0,))))
+_p5_root = _p5_old
+# ---- #598: noask in the Build stage, with someone present ----
+_na_root = tempfile.mkdtemp(prefix="noask-build-")
+_na_cases = []
+_na_p5, _p5_root = _p5_root, _na_root
+
+
+def _na(stage, tool="AskUserQuestion", mode="default", q="Blue or green?", env=None):
+    d = _p5_repo(dict(_hq_build, stage=stage))
+    p = {"hook_event_name": "PreToolUse", "session_id": "na", "cwd": d, "tool_name": tool,
+         "tool_input": {"questions": [{"question": q, "header": "Colour"}]}}
+    if mode:
+        p["permission_mode"] = mode
+    e = dict(_loop_env, HOUSE_RULES_UNATTENDED="off")
+    e.update(env or {})
+    return run_hook("noask", json.dumps(p), env=e)
+
+
+_o = _na("build")
+_na_cases.append(("attended Build plain question is denied with the park text naming ledger_note.py",
+                  '"permissionDecision":"deny"' in _o[1] and "Build stage" in _o[1] and "ledger_note.py" in _o[1] and "[HARD STOP]" in _o[1]))
+_na_cases.append(("attended Build question with [HARD STOP] is allowed", _na("build", q="[HARD STOP] Delete the data?")[1] == ""))
+for _s in ("design", "plan", "qa"):
+    _na_cases.append(("attended %s question is allowed as before" % _s, _na(_s)[1] == ""))
+_na_cases.append(("attended Build ExitPlanMode is untouched", _na("build", tool="ExitPlanMode")[1] == ""))
+_na_cases.append(("unattended denies with the old text and names ledger_note.py park",
+                  all(t in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1] for t in ("nobody is there to answer", "ledger_note.py park"))))
+_na_cases.append(("bypassPermissions denies with the old text and names ledger_note.py park",
+                  all(t in _na("design", mode="bypassPermissions")[1] for t in ("nobody is there to answer", "ledger_note.py park"))))
+_o = _na("design", mode=None)
+_na_cases.append(("missing permission_mode: allowed outside Build (said on stderr)", _o[1] == "" and "no permission_mode" in _o[2]))
+_na_cases.append(("missing permission_mode: a plain question in Build is denied", '"permissionDecision":"deny"' in _na("build", mode=None)[1]))
+_o = _na("build", env={"HOUSE_RULES_LOOP": "off"})
+_na_cases.append(("loop off: nothing, said on stderr", _o[1] == "" and "could not be read" in _o[2] and "HOUSE_RULES_LOOP=off" in _o[2]))
+for _t, _ok in _na_cases:
+    report("PASS" if _ok else "FAIL", "noask in Build (#598): " + _t)
+_p5_root = _na_p5
+shutil.rmtree(_na_root, True)
+
 for _t, _ok in _hq_cases:
     report("PASS" if _ok else "FAIL", "held question and decided-for-you (#459, #460): " + _t)
 shutil.rmtree(_hq_root, True)
@@ -3576,7 +3684,7 @@ _pf14_root = tempfile.mkdtemp(prefix="pf14-", dir=_FIXTURE_ROOT)
 _loop_gh("in progress", 7)
 _p5_root, _p5_old = _pf14_root, _p5_root
 _d = _p5_repo(_hq_build)
-run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
+run_hook("handover", stop_payload(last_assistant_message="Step done.\n\n[HARD STOP] Should the header be blue or green?", cwd=_d), env=_loop_env)
 _pf14_held = _ma_stage(_d).get("held") is True
 _p5_root = _p5_old
 _pf14.append(("proof (#514) #463: 'I went with option B' is sent back as decided for you, and a question in Build sets the hold",

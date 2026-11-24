@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 330" width="680" height="330" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="13">
+<style>
+.bg{fill:#fff}.t{fill:#1b1f2a}.m{fill:#5b6275}.ln{stroke:#8a92a6;fill:none;stroke-width:1.5}
+.reuse{fill:#dff3e4;stroke:#2e8b57}.adapt{fill:#fff1cc;stroke:#b8860b}.new{fill:#fde0dc;stroke:#c0392b}.you{fill:#dbe7ff;stroke:#2f5fd0}
+@media (prefers-color-scheme:dark){.bg{fill:#14171f}.t{fill:#eef0f6}.m{fill:#a4abbd}.ln{stroke:#6c748a}
+.reuse{fill:#1f3a2a;stroke:#5fcf8c}.adapt{fill:#4a3d12;stroke:#e0b94a}.new{fill:#4a1f1b;stroke:#ff8a7a}.you{fill:#1d2c55;stroke:#7aa2ff}}
+</style>
+<rect class="bg" width="680" height="330"/>
+<text class="t" x="16" y="24" font-weight="700">Today</text>
+<g stroke-width="1.5">
+<rect class="reuse" x="16" y="34" width="104" height="44" rx="8"/><text class="t" x="68" y="61" text-anchor="middle">Design page</text>
+<rect class="adapt" x="136" y="34" width="104" height="44" rx="8"/><text class="t" x="188" y="61" text-anchor="middle">Editor: words</text>
+<rect class="you" x="256" y="34" width="96" height="44" rx="8"/><text class="t" x="304" y="61" text-anchor="middle">You approve</text>
+<rect class="reuse" x="368" y="34" width="96" height="44" rx="8"/><text class="t" x="416" y="61" text-anchor="middle">Build</text>
+<rect class="adapt" x="480" y="34" width="84" height="44" rx="8"/><text class="t" x="522" y="61" text-anchor="middle">QA page</text>
+<rect class="you" x="580" y="34" width="84" height="44" rx="8"/><text class="t" x="622" y="61" text-anchor="middle">You test</text>
+</g>
+<g class="ln"><path d="M120 56h16M240 56h16M352 56h16M464 56h16M564 56h16"/></g>
+<text class="t" x="16" y="116" font-weight="700">Proposed</text>
+<g stroke-width="1.5">
+<rect class="reuse" x="16" y="126" width="96" height="44" rx="8"/><text class="t" x="64" y="153" text-anchor="middle">Design page</text>
+<rect class="new" x="124" y="126" width="112" height="44" rx="8"/><text class="t" x="180" y="146" text-anchor="middle">Reviewer</text><text class="m" x="180" y="161" text-anchor="middle" font-size="11">flaws + words</text>
+<rect class="you" x="248" y="126" width="80" height="44" rx="8"/><text class="t" x="288" y="153" text-anchor="middle">You approve</text>
+<rect class="reuse" x="340" y="126" width="88" height="44" rx="8"/><text class="t" x="384" y="153" text-anchor="middle">Plan page</text>
+<rect class="new" x="440" y="126" width="112" height="44" rx="8"/><text class="t" x="496" y="146" text-anchor="middle">Reviewer</text><text class="m" x="496" y="161" text-anchor="middle" font-size="11">plan vs design</text>
+<rect class="you" x="564" y="126" width="100" height="44" rx="8"/><text class="t" x="614" y="153" text-anchor="middle">You approve</text>
+<rect class="reuse" x="16" y="206" width="96" height="44" rx="8"/><text class="t" x="64" y="233" text-anchor="middle">Build</text>
+<rect class="new" x="124" y="206" width="140" height="44" rx="8"/><text class="t" x="194" y="226" text-anchor="middle">Acceptance run</text><text class="m" x="194" y="241" text-anchor="middle" font-size="11">runs it, screenshots it</text>
+<rect class="adapt" x="276" y="206" width="112" height="44" rx="8"/><text class="t" x="332" y="226" text-anchor="middle">QA page</text><text class="m" x="332" y="241" text-anchor="middle" font-size="11">needs the stamp</text>
+<rect class="you" x="400" y="206" width="120" height="44" rx="8"/><text class="t" x="460" y="226" text-anchor="middle">You say</text><text class="t" x="460" y="241" text-anchor="middle">pass or fail</text>
+</g>
+<g class="ln"><path d="M112 148h12M236 148h12M328 148h12M428 148h12M552 148h12M614 170v18H64v18M112 228h12M264 228h12M388 228h12"/></g>
+<g stroke-width="1.5"><rect class="reuse" x="16" y="282" width="14" height="14" rx="3"/><rect class="adapt" x="150" y="282" width="14" height="14" rx="3"/><rect class="new" x="284" y="282" width="14" height="14" rx="3"/><rect class="you" x="418" y="282" width="14" height="14" rx="3"/></g>
+<text class="m" x="36" y="294">reused</text><text class="m" x="170" y="294">adapted</text><text class="m" x="304" y="294">new</text><text class="m" x="438" y="294">your move</text>
+</svg>

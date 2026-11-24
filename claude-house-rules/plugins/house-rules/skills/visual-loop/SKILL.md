@@ -39,6 +39,14 @@ Tools: `scripts/visualcheck.py` (capture), `scripts/ledger.py` (the written reco
    `rules/waits.json` (`deadline_seconds`: command 600, agent 900, build 1200). At a deadline or stall, record it and carry on.
 9. **Never stop to ask aj.** Only the final summary says what is left: failing criteria, blocked.md, missing tools.
 
+## Whole-feature acceptance
+Same loop, widened to a whole feature before QA. Criteria come from the "Acceptance tests" item of the approved build plan page,
+one criterion per design item. Add proof type `run` for a feature with no screen: `python3 scripts/acceptance.py run --out
+docs/qa/<feature>/round-N -- <command...>` saves output and exit code to `run-N.txt`, a text file the reviewer Reads like an image.
+Spawn the reviewer in ACCEPTANCE mode (`@house-rules:reviewer`, see `rules/detail/review-modes.md`); it may write only under
+`docs/qa/<feature>/`. On `NEXT: done` run `python3 scripts/acceptance.py stamp docs/qa/<feature>`. On blocked write `blocked.md`
+and carry on; never ask aj.
+
 ## Limits, plainly
 - A model can miss things in its own work; that is why a separate reviewer judges, but the reviewer can miss things too.
 - Contact sheets sample frames; motion between two sampled frames is not seen.

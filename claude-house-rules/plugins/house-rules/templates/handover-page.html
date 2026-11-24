@@ -101,6 +101,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .ci b{display:block}
 .ci small{color:var(--muted);font-size:.86rem}
 .ci .detail{padding:0 14px 14px 14px}
+.ci .detail p{white-space:pre-line}
 .fromto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:.88rem}
 .fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
 .fromto span.to{background:var(--accent-soft)}
@@ -412,11 +413,12 @@ function reply() {
     if (c && c.value === "own") { const t = document.querySelector(`.owntext[data-for=${id}]`).value.trim(); return [i + 1, t ? "own" : null, t]; }
     return [i + 1, c && c.value];
   });
-  const A = PAGE.approval || PAGE.replyPrefix;  // replyPrefix: only for pages built before approval existed
+  const [A, ...more] = (PAGE.approval || PAGE.replyPrefix).split("\n");  // replyPrefix: only for pages built before approval existed
+  const tail = more.map(l => "\n" + l).join("");  // #600: a second approval line (build plan) follows the design line and its picks
   out.textContent = picks.length
     ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
-      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
-    : A;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
+      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("") + tail
+    : A + tail;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
   const m = picks.filter(([, v]) => !v).map(([n]) => n);
   miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
   const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);

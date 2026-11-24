@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="13">
+<style>
+.bg{fill:#fff}.t{fill:#1b1f2a}.m{fill:#5b6275}.box{fill:#f1f3f9;stroke:#8a92a6}.hd{fill:#fde0dc;stroke:#c0392b}.ok{fill:#dff3e4;stroke:#2e8b57}
+@media (prefers-color-scheme:dark){.bg{fill:#14171f}.t{fill:#eef0f6}.m{fill:#a4abbd}.box{fill:#1d212d;stroke:#6c748a}.hd{fill:#4a1f1b;stroke:#ff8a7a}.ok{fill:#1f3a2a;stroke:#5fcf8c}}
+</style>
+<rect class="bg" width="680" height="300"/>
+<text class="t" x="16" y="24" font-weight="700">Six things the reviewer hunts for, and what it does with each</text>
+<g stroke-width="1.5">
+<rect class="hd" x="16" y="38" width="200" height="38" rx="8"/><text class="t" x="28" y="62">Hole: a case nobody covered</text>
+<rect class="hd" x="16" y="86" width="200" height="38" rx="8"/><text class="t" x="28" y="110">Trap: a step that bites later</text>
+<rect class="hd" x="16" y="134" width="200" height="38" rx="8"/><text class="t" x="28" y="158">Contradiction: two parts disagree</text>
+<rect class="hd" x="16" y="182" width="200" height="38" rx="8"/><text class="t" x="28" y="206">Reversal: undoes a past decision</text>
+<rect class="hd" x="16" y="230" width="200" height="38" rx="8"/><text class="t" x="28" y="254">Open question: left unanswered</text>
+</g>
+<g stroke="#8a92a6" stroke-width="1.5" fill="none"><path d="M216 57h40M216 105h40M216 153h40M216 201h40M216 249h40"/></g>
+<g stroke-width="1.5">
+<rect class="ok" x="256" y="38" width="408" height="38" rx="8"/><text class="t" x="268" y="62">Adds the missing case to the page, with a test for it</text>
+<rect class="ok" x="256" y="86" width="408" height="38" rx="8"/><text class="t" x="268" y="110">Rewrites the step so the trap cannot spring</text>
+<rect class="ok" x="256" y="134" width="408" height="38" rx="8"/><text class="t" x="268" y="158">Names both parts and fixes the one that is wrong</text>
+<rect class="ok" x="256" y="182" width="408" height="38" rx="8"/><text class="t" x="268" y="206">Cites the Decisions.md entry; the page now says it is a reversal</text>
+<rect class="ok" x="256" y="230" width="408" height="38" rx="8"/><text class="t" x="268" y="254">A fact: looks it up and answers. A choice: becomes your option</text>
+</g>
+<text class="m" x="16" y="288" font-size="12">Each fix is a before-and-after line; the main session applies it, then the reviewer reads the page again.</text>
+</svg>

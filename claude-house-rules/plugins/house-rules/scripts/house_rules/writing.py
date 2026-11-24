@@ -131,6 +131,15 @@ EDITOR_NOTE = (
 )
 
 
+PAGE_NOTE = (
+    "House rules, review before sending: %s. Spawn @house-rules:reviewer (Agent tool, subagent_type "
+    "house-rules:reviewer) in PAGE mode on the page, apply its findings, then rebuild with make_page.py build "
+    "... --reviewed clean --rounds N (N is 1 or 2); after round 2 with findings left, add them to the page as "
+    "open risks and use --reviewed open-risks --rounds 2. Then send the page. HOUSE_RULES_CLEAR_WRITING=off "
+    "turns this off."
+)
+
+
 def _pages_changed_this_turn(transcript_path, cwd):
     """(pages, problem): docs/plans/*.html pages modified since aj's last message, however they
     were written. No pages when the project has no docs/plans folder or the message carries no
@@ -180,15 +189,35 @@ def _editor_enabled():
     return os.environ.get("HOUSE_RULES_EDITOR", "off").strip().lower() not in _TOGGLE_OFF
 
 
+def _page_stamp_owed(written):
+    """#594: why a docs/plans page written this turn is owed a review pass ("" when none is)."""
+    if not _pages_enabled():
+        return ""
+    import sys
+    if SCRIPTS_DIR not in sys.path:
+        sys.path.insert(0, SCRIPTS_DIR)
+    import page_criteria
+    owed = []
+    for p in sorted(set(written)):
+        if not _PLANS_PAGE_RE.search(str(p).replace("\\", "/")):
+            continue
+        try:
+            with open(p, encoding="utf-8", newline="") as f:
+                why = page_criteria.stamp_problem(f.read())
+        except OSError as exc:
+            why = "could not be read to check its review stamp (%s)" % exc
+        if why:
+            owed.append("%s: %s" % (os.path.basename(p), why))
+    return "; ".join(owed)
+
+
 def _editor_owed(written, tool_uses, reply):
-    """What makes the editor helper owed this turn ("" when nothing does, or when it ran)."""
+    """What makes the editor helper owed this turn: ("" when nothing does, or when it ran) for a long
+    reply; pages are owed a review stamp instead (#594), see PAGE_NOTE."""
     for block in tool_uses:
         inp = block.get("input") if isinstance(block.get("input"), dict) else {}
         if block.get("name") in ("Agent", "Task") and str(inp.get("subagent_type", "")).endswith("editor"):
             return ""
-    pages = [os.path.basename(p) for p in written if _pages_enabled() and _PLANS_PAGE_RE.search(str(p).replace("\\", "/"))]
-    if pages:
-        return "this turn wrote the page %s" % ", ".join(sorted(set(pages)))
     if not _editor_enabled():  # #325: the long-reply trigger needs HOUSE_RULES_EDITOR=on
         return ""
     words = len(_WORD_RE.findall(_MD_FENCED_BLOCK_RE.sub("", reply or "")))
@@ -383,8 +412,8 @@ def handover_page_editor_check(transcript_path, payload, written_now, turn_recor
             note = _page_writing_note(pg)
             if note:
                 shell_page_notes.append(note)
-        editor_owed = _editor_owed(written_now + shell_pages, list(_turn_tool_uses(turn_records)),
-                                   reply_text if have_reply else "")
+        editor_owed = _page_stamp_owed(written_now + shell_pages) or _editor_owed(
+            written_now + shell_pages, list(_turn_tool_uses(turn_records)), reply_text if have_reply else "")
     return shell_page_notes, editor_owed, trace_lines_early
 
 

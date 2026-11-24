@@ -4,9 +4,43 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+<<<<<<< HEAD
 Plugin 2.91.0: quieter hook messages (#583 to #586). The plugin's status messages (`trace()` and `trace_noop()`) now go to a log file you read with `/house-rules:hook-log` instead of repeating in chat, `HOUSE_RULES_TRACE=chat` brings them back, and overlapping autosaves no longer collide on one scratch file (`house-rules-autosave-<branch>.index.<pid>`); an autosave error prints one line once per session. Design approved as "Design approved: quieter hook messages 1* 2A", option A for choice 1. Detail: `docs/4-systems/hook-message-log.md`.
 
 Modular tests, designed and planned, not built yet (#575 to #582): a rule that every test is a module that runs alone or chained, a write-time refusal of tests that are not, an audit list of old ones, and a skill and command to convert them. Design approved as "Design approved: modular tests 1A 2* 3A". Detail: `docs/4-systems/modular-tests.md`.
+=======
+Step 7 of the design review loop (issue #599, the deviations ledger) was handed to a helper and is not built or checked yet: it adds `ledger_note.py deviate`, a rule line and helper note about logging departures from the plan, and a one-shot end-of-reply check that is a phrase heuristic.
+
+Step 6 of the design review loop (issue #598) is built: in Build with someone present, a plain question is refused and the agent parks it in the ledger; only a [HARD STOP] question is asked, and only a [HARD STOP] last paragraph holds code edits. The QA page parser also reads a pipe inside a ledger cell. My own runs: `verify.py` 1559 of 1559, `tools/verify_tools.py` exit 0, and the real hook fired in every stage and mode. A standalone-only test failure that also exists on `main` is noted in the ledger.
+
+Step 6 of the design review loop (issue #598), second half: in Build, with someone present, a question that can be undone is denied and the agent is told to park it with `ledger_note.py park`; only a question marked [HARD STOP] still stops the work or holds code edits, and the `decided for you` row stays quiet when the reply names the ledger. The QA page parser now reads a `\|` in a ledger cell as a `|`. Other stages are unchanged.
+
+Step 6 of the design review loop (issue #598), first half: `scripts/ledger_note.py park` writes a parked-decision row into `docs/qa/<feature>/ledger.md`, the rule text and the helper start note tell the agent to park a reversible question in Build and keep a [HARD STOP] for what cannot be undone; the hooks that stop asking are being built. My own runs: `verify.py` 1544 of 1544 and a real `park` run in a temp repo.
+
+Step 4 of the design review loop (issue #596) is built: the QA page builder refuses without a current acceptance stamp, accepts an empty unverified list, opens with the deviations and parked decisions from `docs/qa/<feature>/ledger.md`, and shows a "Needs your machine" step with one command; multi-line details now keep their line breaks on every page. The stamp fingerprint also leaves out built pages, `docs/plans/*.page.json`, `docs/5-today/` and `CHANGELOG.md`, so writing the QA page after the run does not make the stamp stale (parked decisions P3 and P4). My own runs: `verify.py` 1538 of 1538, `tools/verify_tools.py` exit 0, and a real stamp-and-build of a QA page, looked at in light and dark at 375px.
+
+The design review loop build is paused at step 4 (issue #596): the Build-stage hold on a reply that ends in a question (issue #506) refused the builder's edits, and nothing of step 4 was written. The incident, a parked decision about the stamp fingerprint (P3) and a deviation about command display (D9) are in `docs/qa/design-review-loop/ledger.md`.
+
+Step 8 of the design review loop (issue #600) is built: one page and one reply can approve the design and the build plan together, as two lines in one message. The approval reader already handled that (no code change, one new test); the page builder now accepts and shows a two-line approval. My own `verify.py` run passed 1473 of 1473, and the copy button on a two-line page, clicked in a real browser, put both lines on the clipboard.
+
+Step 8 of the design review loop (issue #600) is built: one reply can approve the design and the build plan together (two lines), and a page may offer both lines. The approval reader needed no change; the plan's issues are owed in the same turn by the existing rule. Detail: `docs/4-systems/design-loop.md`, "Combined approval".
+
+Step 5 of the design review loop (issue #597) is built: a self-judging test template (`templates/selftest/selftest.py`) that prints one RESULT line and exits 0, 1 or 2, plus the instructions for when and how to hand it to aj (`rules/detail/selftest.md`). My own `verify.py` run passed 1469 of 1469, and I ran the template three ways (pass, one failing check, a missing library). Not tested on Windows or Python 3.8.
+
+Step 3 of the design review loop (issue #595) is built: a whole feature can be run and judged through the existing visual loop, then stamped with `scripts/acceptance.py stamp`; the stamp goes stale when the source changes (reports under `docs/qa/` are left out of the fingerprint). Every build plan page now needs an "Acceptance tests" item. My own `verify.py` run passed 1465 of 1465; the stamp was refused in this repo where no passing ledger exists. Not tried: a live run with the reviewer in acceptance mode.
+
+Step 2 of the design review loop (issue #594) is built: a design, plan or other page now needs a review stamp, and a reply linking a page with no stamp or a stale one is sent back. Review and QA pages are exempt. Detail: `make_page.py build --reviewed clean|open-risks --rounds 1|2`, `page_criteria.py`, `house_rules/writing.py`; my own `verify.py` run passed 1453 of 1453, and a real stamp on a copy of the plan page went stale after one edit. Detail: `docs/qa/design-review-loop/ledger.md` lists the deviations and parked decisions so far.
+
+Step 1 of the design review loop (issue #593): the reviewer helper now has page, plan and acceptance modes as well as its old diff mode, and a real first run on the approved design page found seven things, which are logged in `docs/qa/design-review-loop/ledger.md`. Detail: `agents/reviewer.md`, `rules/detail/review-modes.md`, `scripts/checks/delegation.py`; verify.py passes 1444 of 1444.
+
+The design loop's stage file now records the nine step issues (#593 to #601) of the design review loop plan, so "Build plan approved: design review loop" can be checked against them.
+
+The design review loop was approved and planned (nothing built): parent issue #592, nine step issues #593 to #601, a build plan page, a systems doc and a decisions entry. Detail: `docs/plans/2026-11-24-design-review-loop-plan.html`, `docs/4-systems/review-loop.md`; steps 6 and 7 wait for version 2.90.0 to merge.
+
+The design review loop proposal page now covers unattended mode: when the build plan must change, work keeps going and each deviation is logged for aj at the end. Detail: a new "Unattended mode" item, a deviations picture and an eighth choice in `docs/plans/2026-11-24-design-review-loop.html`; still nothing built.
+
+Proposal page for a design review loop (nothing built): a reviewer replaces the editor for design and plan pages, an acceptance run tests the finished feature before QA, and questions are parked and answered in one batch instead of halting work. Detail: `docs/plans/2026-11-24-design-review-loop.html`, awaiting aj's approval and eight picks.
+>>>>>>> origin/AjsAgent/sleepy-albattani-bxj5wx
 
 The second run of the five live roadblock sessions (`live_roadblocks.py`, corrected prompts) was started on the branch build 2.90.0; its results are not recorded yet.
 

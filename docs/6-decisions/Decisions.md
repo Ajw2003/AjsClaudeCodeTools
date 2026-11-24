@@ -7,6 +7,20 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-24 - Design review loop: a reviewer, an acceptance run, parked questions, a deviations ledger
+
+**Context.** The editor checked only wording, aj did the final testing, and routine work stopped for questions and approvals. aj's goal: a smoother loop from idea to finished product, with nothing left for aj to test by hand and no stops mid-work that can wait for a stage boundary. Unattended mode 2.87.0 is in main; "never wait" 2.90.0 (issues #587 to #591) is on branch `AjsAgent/affectionate-lovelace-r0zfgg` and not yet merged.
+
+**Decision.** aj wrote "Design approved: design review loop 1A 2A 3A 4A 5* 6A 7A 8A". 1A: the reviewer answers facts and turns real design choices into options. 2A: a stamp gate. 3A: two review rounds. 4A: the reviewer agent is extended, not duplicated. 5*, aj's own answer: every page gets the full review except review pages and QA pages. 6A: parked questions reach aj as one batch on the QA page. 7A: one combined approval for design and plan. 8A: every departure from a build plan step is logged as a deviation. Plan: parent issue #592, steps #593 to #601, systems doc `docs/4-systems/review-loop.md`.
+
+**Why.** Design flaws live in designs and plans, so that is where review time goes. A gate, unlike a reminder, makes "only after review and testing" true. Parking removes stops without removing aj's decisions, and the build plan stays the contract.
+
+**Reverses (each gets its own entry when built).** The editor as the only pass before a page (#249, #325). The non-empty "unverified" rule on QA pages (#264, #268). The Build hold on every question (#506). Helpers passing questions to aj (#458 to #460).
+
+**Status.** Standing once built. Nothing is built yet; steps 6 and 7 wait for 2.90.0 to merge.
+
+---
+
 ## 2026-11-23 - Roadblock checks get their own Stop hook so unattended mode keeps them
 
 **Decision.** aj chose option B on the page `docs/plans/2026-11-23-roadblock-unattended-hook/proposal.html`: the roadblock check (and later the goal check) runs from a second Stop hook that unattended mode leaves on. Options A (keep them inside the handover hook with the rest off) and C (drop them from unattended) were not chosen.
