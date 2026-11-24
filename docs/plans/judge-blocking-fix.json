@@ -4,7 +4,7 @@
  "pageType": "proposal",
  "approval": "Design approved: judge blocking fix and modular tests",
  "short": {
-  "lead": "The end-of-reply judge blocked 12 times in a row, and the long waits behind it come from tests that run as one slow block. I propose two linked fixes: stop the judge looping and tell the model which reply passes; and make tests independent modules that each run in under a minute and print their own result, plus a reusable skill that converts existing tests.",
+  "lead": "The end-of-reply judge blocked 12 times in a row even when three different ways had been tried, because its criteria are one sentence and the model is never told what passes. I propose keeping the judge and tuning it: write the criteria down, make them visible to the model, cap the blocks, and name the exact fix in every block. A second part, tests that are independent modules finishing within a minute, extends the design you already approved.",
   "hint": "Tap a step to see what it changes. The choices at the end are yours.",
   "key": [
    [
@@ -33,14 +33,14 @@
    [
     "hammer",
     "Judge side",
-    "One gate, one cap, fewer false alarms",
+    "Same judge, written criteria, one cap",
     "",
-    "Delete the model judge, share one cap of two blocks, and narrow the phrase lists that trigger a block.",
+    "Keep the judge, write four criteria down, share one cap of two blocks, and narrow the phrase lists.",
     "Nothing from you.",
     {
-     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22200%22 viewBox=%220 0 360 200%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EAfter: one gate, one counter%3C/text%3E%3Crect x=%2220%22 y=%2230%22 width=%22320%22 height=%2236%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%2246.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EPhrase and record check%3C/text%3E%3Ctext x=%22180.0%22 y=%2261.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eclaims narrowed to tools and machines%3C/text%3E%3Crect x=%2220%22 y=%2276%22 width=%22320%22 height=%2236%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%2292.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EGoal check %28Haiku%29%3C/text%3E%3Ctext x=%22180.0%22 y=%22107.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Enext step is no longer a stall phrase%3C/text%3E%3Crect x=%2220%22 y=%22122%22 width=%22320%22 height=%2236%22 rx=%226%22 fill=%22%23cfe3f8%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%22138.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EOne shared cap: 2 blocks%3C/text%3E%3Ctext x=%22180.0%22 y=%22153.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eresets only after real tool work%3C/text%3E%3Ctext x=%2210%22 y=%22182%22 fill=%22%23333%22%3EModel judge A deleted. After the cap: pass and warn.%3C/text%3E%3C/svg%3E",
-     "alt": "One gate with a shared cap of two blocks",
-     "caption": "The proposed shape."
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22204%22 viewBox=%220 0 360 204%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EAfter: the same judge, with written criteria%3C/text%3E%3Crect x=%2220%22 y=%2228%22 width=%22320%22 height=%2234%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%2243.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EModel judge: four written criteria%3C/text%3E%3Ctext x=%22180.0%22 y=%2258.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Esees the real attempts, names the criterion it failed%3C/text%3E%3Crect x=%2220%22 y=%2270%22 width=%22320%22 height=%2234%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%2285.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EPhrase and record check%3C/text%3E%3Ctext x=%22180.0%22 y=%22100.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Ecounts the methods%3B claims narrowed%3C/text%3E%3Crect x=%2220%22 y=%22112%22 width=%22320%22 height=%2234%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%22127.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EGoal check %28Haiku%29%3C/text%3E%3Ctext x=%22180.0%22 y=%22142.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Enext step is no longer a stall phrase%3C/text%3E%3Crect x=%2220%22 y=%22154%22 width=%22320%22 height=%2234%22 rx=%226%22 fill=%22%23cfe3f8%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%22169.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EOne shared cap: 2 blocks%3C/text%3E%3Ctext x=%22180.0%22 y=%22184.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eresets only after real tool work%3C/text%3E%3Ctext x=%2210%22 y=%22198%22 fill=%22%23333%22 font-size=%2210%22%3EAfter the cap the reply goes out with a visible warning.%3C/text%3E%3C/svg%3E",
+     "alt": "The model judge with four written criteria, the two scripted checks and one shared cap of two blocks",
+     "caption": "The proposed shape. The judge stays."
     }
    ],
    [
@@ -48,11 +48,11 @@
     "Model side",
     "Block messages hand over the passing reply",
     "",
-    "Each block message includes one copyable reply: a Roadblock record, a No other method line, a NEEDS YOU line, or a Goal status line.",
+    "Each block names the criterion that failed and gives a reply that passes, including an Unverified line.",
     "Nothing from you.",
     {
-     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22200%22 viewBox=%220 0 360 200%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EThe reply the block message hands over%3C/text%3E%3Crect x=%2210%22 y=%2228%22 width=%22340%22 height=%22150%22 rx=%226%22 fill=%22%23f4f4f4%22 stroke=%22%23445%22/%3E%3Ctext x=%2220%22 y=%2248%22 fill=%22%23111%22 font-family=%22monospace%22%3ERoadblock record:%3C/text%3E%3Ctext x=%2220%22 y=%2266%22 fill=%22%23111%22 font-family=%22monospace%22%3E1. which unity - not found%3C/text%3E%3Ctext x=%2220%22 y=%2282%22 fill=%22%23111%22 font-family=%22monospace%22%3E2. ls Unity folder - missing%3C/text%3E%3Ctext x=%2220%22 y=%2298%22 fill=%22%23111%22 font-family=%22monospace%22%3E3. winget list Unity - no match%3C/text%3E%3Ctext x=%2220%22 y=%22122%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  No other method: %26lt%3Breason%26gt%3B%3C/text%3E%3Ctext x=%2220%22 y=%22140%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  NEEDS YOU: %26lt%3Blicence%7Clogin%7Cpurchase%26gt%3B%3C/text%3E%3Ctext x=%2220%22 y=%22162%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  Goal status: reached %7C continuing: %26lt%3Bstep%26gt%3B%3C/text%3E%3C/svg%3E",
-     "alt": "A reply card with the accepted forms",
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22204%22 viewBox=%220 0 360 204%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EReplies the judge accepts%3C/text%3E%3Crect x=%2210%22 y=%2228%22 width=%22340%22 height=%22166%22 rx=%226%22 fill=%22%23f4f4f4%22 stroke=%22%23445%22/%3E%3Ctext x=%2220%22 y=%2246%22 fill=%22%23111%22 font-family=%22monospace%22%3ERoadblock record:%3C/text%3E%3Ctext x=%2220%22 y=%2262%22 fill=%22%23111%22 font-family=%22monospace%22%3E1. which unity - not found%3C/text%3E%3Ctext x=%2220%22 y=%2276%22 fill=%22%23111%22 font-family=%22monospace%22%3E2. ls Unity folder - missing%3C/text%3E%3Ctext x=%2220%22 y=%2290%22 fill=%22%23111%22 font-family=%22monospace%22%3E3. gh run list - no build%3C/text%3E%3Ctext x=%2220%22 y=%22112%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  No other method: %26lt%3Breason%26gt%3B%3C/text%3E%3Ctext x=%2220%22 y=%22128%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  NEEDS YOU: %26lt%3Blicence%7Clogin%7Cpurchase%26gt%3B%3C/text%3E%3Ctext x=%2220%22 y=%22144%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  Unverified: %26lt%3Bwhat%26gt%3B - %26lt%3Bwhy%26gt%3B - %26lt%3Bcheck%26gt%3B%3C/text%3E%3Ctext x=%2220%22 y=%22160%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  Goal status: reached %7C continuing: %26lt%3Bstep%26gt%3B%3C/text%3E%3Ctext x=%2220%22 y=%22182%22 fill=%22%23333%22 font-size=%2210%22%3EEach line is checked against the real tool calls.%3C/text%3E%3C/svg%3E",
+     "alt": "The reply forms the judge accepts",
      "caption": "The accepted reply forms."
     }
    ],
@@ -85,33 +85,33 @@
    "What exists today",
    "Three checks run on every Stop, and they do not know about each other.",
    null,
-   "The model judge (the Stop entry of type prompt in hooks.json) reads only the last reply, keeps no count, and always answers \"try three different methods and list them\", even when the reply already did. The phrase and record check (scripts/house_rules/core.py, roadblock_check) blocks at most twice per user message. The goal check (same file, _goal_check) blocks up to six times on its own counter. The counters live in separate files, so nothing limits the total number of blocks. I looked for the transcript of the blocked session by listing the newest transcripts, searching them for the judge's wording, and reading the counter files and the hook log. I found only synthetic test transcripts, so I have not reproduced the 12 blocks. Every live counter file stops at 2, which points at the uncapped model judge.",
+   "The judge is the Stop entry of type prompt in hooks.json. Its criteria are one sentence: flag a claim that something cannot be done, verified, tested or reached unless the reply lists three different methods. It never defines a different method, it sees only the last reply and not the tool calls, and it names no criterion when it blocks. So a model that really ran three checks can still fail, as happened to me four times in this session: the judge said that three ways of reading the same output were one method, and it flagged plain notes of what was not checked. It also keeps no count. The scripted record check (scripts/house_rules/core.py, roadblock_check) already defines methods by class and caps at two blocks; the goal check caps at six on a separate counter. I did not find the transcript of your 12-block session, so the 12 is not reproduced.",
    [
-    "Three Stop checks with caps of none, 2 and 6.",
-    "Nothing yet.",
-    "Your test run was blocked 12 times."
+    "A judge with a one-sentence rule and no count.",
+    "The same judge with four written criteria and a shared cap.",
+    "A model that did the work passes, and a model that did not is told exactly what is missing."
    ],
    null
   ],
   [
-   "cut",
-   "Delete the model judge",
-   "It repeats what the two scripted checks already do, cannot count its own blocks, and cannot see the tool history.",
+   "adapt",
+   "Write the judge's criteria down",
+   "Four numbered criteria, the same text in the judge, the block message and the rules.",
    null,
-   "A prompt hook cannot keep state, so it cannot be capped. The record check already reads the real transcript and is the better judge of whether three methods were tried. Deleting the hooks.json entry removes the only uncapped block. The verify.py test case for issue #591 (core.py:1477) currently checks that the entry exists. I change it to check that the entry is gone.",
+   "The criteria live once, in rules/detail/roadblocks.md. C1, what triggers it: a claim that something is missing, unreachable or impossible and that stops the task. A note of what was not checked is not a trigger when it has the Unverified form. C2, what passes: three attempts in this turn, each aimed at the claimed thing, each from a different method class (existence check, disk search, package database, run it, ask the environment, other source such as CI, git history or docs); reading one output three ways is one method. C3, proof: the attempts appear in the real tool calls, which the judge is shown. C4, the exits: No other method with its reason, NEEDS YOU for a licence, login, purchase or destructive step, or an Unverified line. The judge returns the criterion it failed and the exact thing to add.",
    [
-    "The hooks.json Stop prompt hook.",
-    "The entry is removed.",
-    "No more unlimited blocks."
+    "One sentence, and the model has to guess what passes.",
+    "Four criteria, one source, quoted in every block.",
+    "The model always knows what to fix."
    ],
    null
   ],
   [
    "adapt",
    "One shared cap",
-   "The record check and the goal check share one counter, which allows two blocks per user message.",
+   "The judge, the record check and the goal check share one counter of two blocks per user message.",
    null,
-   "After two blocks the reply goes out with a visible warning, as the record check does today. The counter resets only when the turn made at least one real tool call after the last block, so a model that keeps working is checked again, while a model that only rewords its reply is not blocked a third time.",
+   "After two blocks the reply goes out with a visible warning. The counter resets only when the turn made at least one real tool call after the last block, so a model that keeps working is checked again, while a model that only rewords its reply is not blocked a third time. A prompt hook cannot keep a count, so the choice below decides where the judge runs.",
    [
     "Two counters with caps 2 and 6.",
     "One counter with cap 2.",
@@ -124,7 +124,7 @@
    "Fewer false alarms",
    "Stop treating ordinary words as roadblocks.",
    null,
-   "The words \"next step\" are removed from the stall list, because the house rules themselves tell every reply to end with one next step. The claim list drops the bare phrases \"could not\", \"unable to\" and \"I can't\", and keeps phrases about a missing tool, machine or access. A reply with a NEEDS YOU line is exempt from the goal check too.",
+   "The words \"next step\" are removed from the stall list, because the house rules themselves tell every reply to end with one next step. The claim list drops the bare phrases \"could not\", \"unable to\" and \"I can't\", and keeps phrases about a missing tool, machine or access. The judge no longer flags a plain Unverified note, which the evidence rule requires. A reply with a NEEDS YOU line is exempt from the goal check too.",
    [
     "_STALL_RE and _ROADBLOCK_RE in core.py.",
     "Narrower lists, and NEEDS YOU exempts both checks.",
@@ -137,7 +137,7 @@
    "The passing reply, spelled out",
    "The block message includes the exact lines to paste.",
    null,
-   "Each block names the claim it matched (quoted), what is missing, how many blocks remain, and one of four accepted forms: a Roadblock record of three numbered methods with what each returned, a No other method line with the reason, a NEEDS YOU line, or a Goal status line. The record is still checked against the real failed tool calls, so invented methods do not pass. The same forms are written into rules/detail/roadblocks.md so the model knows them before it is blocked.",
+   "Each block quotes the claim it matched, names the failed criterion (C1 to C4), says which method classes the record already holds and which are missing with a concrete command for each, says how many blocks remain, and shows one of five accepted forms: a Roadblock record of three numbered methods with what each returned, a No other method line with the reason, a NEEDS YOU line, an Unverified line (what, why, and the command that would check it), or a Goal status line. The record is still checked against the real failed tool calls, so invented methods do not pass. The same forms are written into rules/detail/roadblocks.md so the model knows them before it is blocked.",
    [
     "Messages say only to try three methods.",
     "Messages carry a copyable accepted reply.",
@@ -202,7 +202,7 @@
    "Flaws I found in this design",
    "Four known gaps, each with its answer.",
    null,
-   "One: deleting the model judge means roadblock wording that the phrase list misses is no longer caught. I accept this, because the goal check still covers unattended runs. Two: a model could write fake methods, so the record is checked against real failed tool calls. Three: a shared cap of two with no reset would leave a long unattended run unchecked, so the cap resets after real tool work. Four: I have not confirmed whether Claude Code's own limit of 8 consecutive blocks applies to prompt hooks. Beyond the missing cap, the 12 is unexplained, so the build plan adds a replay of a real session to check.",
+   "One: a stricter, written judge could still disagree with the scripted record check; both read the same criteria text and the same method classes, so they cannot differ on what counts. Two: a model could write fake methods, so the record is checked against real failed tool calls. Three: a shared cap of two with no reset would leave a long unattended run unchecked, so the cap resets after real tool work. Four: I have not confirmed whether Claude Code's own limit of 8 consecutive blocks applies to prompt hooks. Beyond the missing cap, the 12 is unexplained, so the build plan adds a replay of a real session to check.",
    [
     "None of these gaps is handled today.",
     "Each gap has a test or a stated limit.",
@@ -227,28 +227,22 @@
  "choices": [
   [
    "first",
-   "What should happen to the model judge?",
+   "Where should the judge run so it can see the attempts and keep a count?",
    [
     [
      "A",
-     "Delete it",
+     "Move it into the scripted Stop hook (a nested Haiku call, like the goal check)",
      1,
-     "It cannot be capped and the scripted checks cover the same ground."
+     "It can read the real tool calls, share the counter, and return the failed criterion. It adds up to 22 seconds only when a claim is flagged."
     ],
     [
      "B",
-     "Keep it, run only when the scripted checks pass",
+     "Leave it as the prompt hook; add the written criteria and pass on the retry",
      0,
-     "It would still be uncapped, and it would add a delay to every reply."
-    ],
-    [
-     "C",
-     "Replace it with a scripted call that is cap-aware",
-     0,
-     "This needs more code and gives the same result as deleting it."
+     "Smallest change, but it still cannot see the tool calls or count, so it can still misjudge a model that did the work."
     ]
    ],
-   "Deleting is the shortest change and removes the only uncapped block."
+   "The judge has to see the real attempts to be fair, and only a script can see them and keep a count."
   ],
   [
    "share",
@@ -298,8 +292,8 @@
  "wrapup": {
   "summary": "A proposal with two linked parts: stop the end-of-reply judge looping, and force tests into independent modules that finish within a minute.",
   "changing": "Nothing is built. It would edit hooks.json, scripts/house_rules/core.py, rules/detail/roadblocks.md and verify.py, and extend the approved modular-tests design (issues 575 to 582) with a time budget, per-module results and an independence proof.",
-  "blocking": "Your approval and your three choices: the model judge, the shared cap, and where the 60-second flag lives.",
-  "next": "After you approve, I record the decision, create one parent issue with a child issue per part, write a build plan, and start with the judge fix.",
+  "blocking": "Your approval and your three choices: where the judge runs, the shared cap, and where the 60-second flag lives.",
+  "next": "After you approve, I record the decision, create one parent issue with a child issue per part, write a build plan, and start with the judge criteria and a replay of 12 blocked replies as a verify.py case.",
   "todo": [
    "Pick an option under Your choices.",
    "Tap <b>Copy my reply</b>.",
