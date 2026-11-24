@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.92.0 -->
 <meta charset="utf-8">
+<meta name="house-rules-reviewed" content="5561909909d00f2c364bf2c4010d7c85ae41e947f9bcd8129fc1e2cb2096443c;clean;2">
 <meta name="house-rules-page" content="proposal">
 <title>Visual docs and self-updating roadmap</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -316,7 +317,7 @@ const PAGE = {
         "Skill 1",
         "visual-docs",
         "",
-        "A skill that reads the tier docs and writes one condensed, illustrated page with a diagram per idea, in human wording.",
+        "A skill that reads the tier docs and writes one condensed, illustrated page with a diagram per idea, in plain wording.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2210%22 width=%22300%22 height=%2226%22 rx=%226%22 fill=%22%23b9e6c3%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22160%22 y=%2227%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E1. The pitch, one line%3C/text%3E%3Crect x=%2210%22 y=%2242%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2282%22 y=%2266%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E2. Pillars%3C/text%3E%3Crect x=%22165%22 y=%2242%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22237%22 y=%2266%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E3. How it works%3C/text%3E%3Crect x=%2210%22 y=%2288%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2282%22 y=%22112%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E4. Parts and state%3C/text%3E%3Crect x=%22165%22 y=%2288%22 width=%22145%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22237%22 y=%22112%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E5. Road ahead%3C/text%3E%3Crect x=%2210%22 y=%22134%22 width=%22300%22 height=%2236%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22160%22 y=%22156%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3E6. Risks and open questions%3C/text%3E%3C/svg%3E",
@@ -342,7 +343,7 @@ const PAGE = {
         "Risks",
         "What could sink it",
         "",
-        "The Action may lack write access in this repo (untested); GitHub shows HTML as source code; In dev stays empty until a dev branch exists. Also: the review command is planned, not built (issues 617 to 621), so both skills wait on it. Done when three things hold. Opening an issue here moves a dot on the roadmap SVG within 5 minutes. /house-rules:visual-docs stale names a section after one of its docs is edited. /house-rules:review image mode returns VERDICT: clean on screenshots of each skill's output at 375px wide, in light and dark.",
+        "The Action may lack write access in this repo (untested); GitHub shows HTML as source code; In dev stays empty until a dev branch exists. Also: the review command is planned, not built (its parent issue 617 and steps 618 to 621), so both skills wait on it. Done when three things hold. Opening an issue here moves a dot on the racetrack picture (an SVG file) within 5 minutes. /house-rules:visual-docs stale names a section after one of its docs is edited. /house-rules:review image mode returns the verdict clean on screenshots of each skill's output at 375px wide, in light and dark.",
         "Nothing from you."
       ],
       [
@@ -351,7 +352,7 @@ const PAGE = {
         "I run both, then you look",
         "you",
         "I run each on this repo, screenshot the output in light and dark at phone width, and add cases to verify.py.",
-        "Look at the two pages."
+        "Look at the overview page and the two roadmap views."
       ],
       [
         "lock",
@@ -471,11 +472,11 @@ const PAGE = {
       "What the review command gives these skills",
       "Both skills reuse the reviewer; no new critic agent is made.",
       null,
-      "This revision assumes the branch AjsAgent/jolly-dirac-fvh4cg is merged and its parent issue 617 and steps 618 to 621 are built. That adds /house-rules:review and four reviewer modes: code, codebase, image and style, beside the existing page, plan, acceptance and diff. Reports are saved under docs/qa/review-<target>-<date>/. The design review loop decision of 2026-11-24, answer 4A (extend the reviewer, never duplicate it), still holds, so neither visual skill adds an agent.\nVisual-docs uses the page check named in the pick below on its finished page. It uses image mode on screenshots of that page at 375px in light and dark, because its pictures sit inside the page and have no file of their own. Visual-roadmap runs two reviews on each of its two pictures when it is built: image mode, and style mode with the stated style passed as criteria text (the legend's colours and the stage names). Whether .svg counts as an image extension is not yet decided in the review command's plan. The roadmap Action runs on GitHub, where no Claude session exists, so that review happens at build time only, never on each update.",
+      "This revision assumes the branch AjsAgent/jolly-dirac-fvh4cg is merged and its parent issue 617 and steps 618 to 621 are built. That adds /house-rules:review and four reviewer modes: code, codebase, image and style, beside the existing page, plan, acceptance and diff. Reports are saved under docs/qa/review-<target>-<date>/. The design review loop decision of 2026-11-24, answer 4A (extend the reviewer, never duplicate it), still holds, so neither visual skill adds an agent.\nVisual-docs uses the page check named in the pick below on its finished page. It uses image mode on screenshots of that page at 375px in light and dark, because its pictures sit inside the page and have no file of their own. Visual-roadmap runs two reviews on each of its two pictures when it is built: image mode, and style mode with the stated style passed as criteria text (the legend's colours and the stage names). The review command's plan has not yet decided whether image mode accepts .svg files. The roadmap Action runs on GitHub, where no Claude session exists, so that review happens at build time only, never on each update.",
       [
         "The reviewer has modes page, plan, acceptance and diff today; visual-loop uses it on screenshots; the review command is designed and planned, nothing built.",
         "Nothing new here: this item only records what the two skills reuse once it lands.",
-        "Each review costs 75 seconds and 50,000 tokens (rounded averages of two measured page reviews). Visual-docs runs at least two per build, and visual-roadmap runs four once, when it is built."
+        "Each review costs 75 seconds and 50,000 tokens (rounded averages of two measured page reviews). Visual-docs runs two or more per build (a wording check, then an image review of screenshots), and visual-roadmap runs four once, when it is built (two reviews on each of its two pictures)."
       ],
       {
         "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23eef2fb%22/%3E%3Crect x=%2210%22 y=%2220%22 width=%22110%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2265%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Evisual-docs page%3C/text%3E%3Crect x=%2210%22 y=%2270%22 width=%22110%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%2265%22 y=%2294%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3ERoadmap SVGs%3C/text%3E%3Cline x1=%22122%22 y1=%2240%22 x2=%22170%22 y2=%2240%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Cline x1=%22122%22 y1=%2290%22 x2=%22170%22 y2=%2290%22 stroke=%22%2335508a%22 stroke-width=%222%22/%3E%3Crect x=%22170%22 y=%2220%22 width=%22140%22 height=%2240%22 rx=%226%22 fill=%22%23c9d8f7%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22240%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Epage %2B image review%3C/text%3E%3Crect x=%22170%22 y=%2270%22 width=%22140%22 height=%2240%22 rx=%226%22 fill=%22%23dde3ee%22 stroke=%22%2335508a%22/%3E%3Ctext x=%22240%22 y=%2294%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eimage %2B style review%3C/text%3E%3Ctext x=%22160%22 y=%22150%22 text-anchor=%22middle%22 fill=%22%2314213d%22%3Eroadmap review: build time only%3C/text%3E%3C/svg%3E",
@@ -558,7 +559,7 @@ const PAGE = {
           "Lives in the tier folder, but every update becomes a pull request to review."
         ]
       ],
-      "It avoids pull-request noise on main, but write access is untested."
+      "It avoids pull-request noise on main."
     ],
     [
       "share",
@@ -593,7 +594,7 @@ const PAGE = {
           "A",
           "A new page template for the six sections (suggested)",
           1,
-          "Reuses make_page.py's colours and pictures, but its own layout; it asks you to approve nothing, which the current templates do."
+          "Reuses make_page.py's colours and pictures but has its own layout. Unlike the current templates, it asks you to approve nothing."
         ],
         [
           "B",
@@ -618,7 +619,7 @@ const PAGE = {
           "B",
           "Stage only",
           0,
-          "Simpler, but the page would say the phases are not shown."
+          "Simpler, but the views would not show the phases, and the page would say so."
         ]
       ],
       "The phase order is a standing decision, so the views should not drop it."
