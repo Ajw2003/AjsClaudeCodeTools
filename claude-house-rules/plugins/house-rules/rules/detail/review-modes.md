@@ -12,7 +12,7 @@ Read a design or build-plan page cold, with no author reasoning. Hunt for:
 
 A question the code or docs can answer: look it up and write the answer into the findings.
 A question that is a design choice: do not decide it. Return it as lettered options with one marked suggestion.
-Also apply the wording rules in agents/editor.md.
+Also apply the wording rules in agents/editor.md. Put wording findings in the same numbered list as the design findings, each tagged `wording`.
 Output: `before` -> `after` lines, a few words of why each, then `VERDICT: clean` or `VERDICT: <n> findings`. Not limited to 10 lines.
 
 ## plan
