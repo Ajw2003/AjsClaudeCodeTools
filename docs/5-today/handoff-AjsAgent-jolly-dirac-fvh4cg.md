@@ -17,6 +17,8 @@ Wait for "Build plan approved: review command" with answers to the three questio
 
 ## What is unverified
 
+- Last turn's edits were docs only; the second plan review's findings were applied but not re-reviewed (stamp is open-risks).
+
 - The per-folder time and token figures in the sweep notice are placeholders until step 2 measures a real folder.
 - `rules/waits.json` says the agent deadline is 60 seconds; `skills/visual-loop/SKILL.md` and the design page say 900. The file was read, not tested with a real sweep.
 - Claude Code's own built-in `/review` was named from product knowledge and not tested.
