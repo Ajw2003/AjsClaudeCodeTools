@@ -29,7 +29,7 @@ decision in `docs/6-decisions/Decisions.md`, create one parent issue and one chi
 
 ## What is unverified
 
-- Round 3 and the editor pass on the any-repo wording: results not yet applied when this note was written.
+- Round 3 is applied. Round 4 (review of the local-first rework) had not reported when this note was written; the page is stamped open-risks, round 3.
 - Neither skill has been tried on a second repo; only this repo is reachable from here.
 - Whether branch-based GitHub Pages draws on the Actions allowance is unverified; the page says so and keeps Pages off by default.
 - Reading issues locally needs `gh` logged in on aj's machine; not checked.
