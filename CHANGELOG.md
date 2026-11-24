@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command acceptance test 3 is saved (`docs/qa/review-review-plan-2026-11-24/report.md`): a real code-mode review of `scripts/review_plan.py` found 17 problems (2 high, 7 medium, 8 low); four were re-run and reproduce (a `-build-plan` page finds no design page, `./` is not treated as the whole repo, a missing `--root` prints a traceback, folder-style plans share one report name). The 2 high and 7 medium will be fixed after the token-estimate fix merges (deviation D3); the low ones are left for aj to decide.
+
 Review command acceptance tests 1, 2 and 4 are saved in `docs/qa/review-command/round-1/`. The real 15-batch sweep (every batch `no findings`) took 89 seconds and 203,394 tokens, so the notice's token estimate (66,000) was 3.1 times too low while its time estimate held. A fix is with a builder (about 10,000 tokens per batch plus 3,400 per file, plugin 2.94.1), logged as deviation D2 in `docs/qa/review-command/ledger.md`.
 
 Review command step 4 (#621) is merged: plugin 2.94.0, the eight reviewer modes in `review-loop.md`, `review-command.md` marked built, and the mode-list check now covers `review-loop.md`; all seven verify parts pass on it (docs 174, core 272, writing 24, safe_git 282, delegation 204, design_loop 529, make_page 116). The plan's acceptance tests have started: test 1 (mode choice, 9 cases) and test 2 (eight modes in three files) pass, and the 14-folder sweep fixture prints its notice; outputs are in `docs/qa/review-command/round-1/`.

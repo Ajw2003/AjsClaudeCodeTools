@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Acceptance test 3 ran for real: a code-mode review of `scripts/review_plan.py` found 17 problems (2 high, 7 medium, 8 low) and its report is saved in `docs/qa/review-review-plan-2026-11-24/`; I reproduced four of them. Plan: fix the 2 high and 7 medium (deviation D3) after the token-estimate fix (deviation D2, a builder is on it) merges, since both edit the same file. Tests 5, 6 and 7 are still to run.
+
 Acceptance tests 1, 2 and 4 are saved under `docs/qa/review-command/round-1/`. The real sweep over the 14-folder test repo ran all 15 batches one at a time (all `no findings`; 88.9 seconds, 203,394 tokens). The notice said 66,000 tokens, so I logged deviation D2 and a builder is fixing the estimate (10,000 per batch plus 3,400 per file, plugin 2.94.1). Test 3 (a code-mode review of the helper script) is running; tests 5, 6 and 7 are not run yet.
 
 All four build steps of the review command (#618 to #621) are merged into `AjsAgent/jolly-dirac-fvh4cg` at plugin 2.94.0, and all seven verify parts pass on the merged code. The acceptance tests are running: tests 1 and 2 pass (saved in `docs/qa/review-command/round-1/`); test 4's real sweep over a 14-folder fixture is in progress, one reviewer at a time, and tests 3, 5, 6 and 7 follow. Issues still say `in progress`; they switch to `needs review` after the acceptance tests.
