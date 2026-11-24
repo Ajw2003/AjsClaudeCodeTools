@@ -4,11 +4,10 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-<<<<<<< HEAD
 Plugin 2.90.0: quieter hook messages (#583 to #586). The plugin's status messages (`trace()` and `trace_noop()`) now go to a log file you read with `/house-rules:hook-log` instead of repeating in chat, `HOUSE_RULES_TRACE=chat` brings them back, and overlapping autosaves no longer collide on one scratch file (`house-rules-autosave-<branch>.index.<pid>`); an autosave error prints one line once per session. Design approved as "Design approved: quieter hook messages 1* 2A", option A for choice 1. Detail: `docs/4-systems/hook-message-log.md`.
 
 Modular tests, designed and planned, not built yet (#575 to #582): a rule that every test is a module that runs alone or chained, a write-time refusal of tests that are not, an audit list of old ones, and a skill and command to convert them. Design approved as "Design approved: modular tests 1A 2* 3A". Detail: `docs/4-systems/modular-tests.md`.
-=======
+
 The second run of the five live roadblock sessions (`live_roadblocks.py`, corrected prompts) was started on the branch build 2.90.0; its results are not recorded yet.
 
 The live roadblock test script `live_roadblocks.py` was corrected after its first run: the unattended-stall prompt no longer says "create only a.txt" (which made the goal check rightly pass the reply), and the bypass test now sets `CLAUDE_CODE_ENABLE_ASK_USER_QUESTION_TOOL=1` because headless sessions otherwise have no question tool; the rerun result is on the next line.
@@ -20,7 +19,6 @@ The roadblock record check now counts a filtered search that finds nothing (for 
 A live test script for the roadblock fix, `docs/plans/2026-11-23-roadblock-unattended-hook/live_roadblocks.py`, starts five real headless sessions on the branch build (curly apostrophe, `git ls-files` only, three methods listed, unattended stall, bypass question); its first run was under way when this line was written, so no result is recorded yet.
 
 Plugin 2.90.0: roadblock detection fix (#587, steps #588 to #591). A reply that says it cannot do something now passes only after three failed attempts by different methods, curly apostrophes and more wordings are caught, and a model judge plus a goal check stop a reply that ends with "Next step" while work can carry on; in unattended or bypass-permission mode a design question is chosen by the agent and recorded, never waited on (the `noask` hook now covers `bypassPermissions`), and a licence, login, purchase or destructive step blocks only its own part. `HOUSE_RULES_ROADBLOCKS=off` and `HOUSE_RULES_GOALCHECK=off` switch the parts off. Detail: `docs/4-systems/roadblocks.md`.
->>>>>>> origin/main
 
 Plugin 2.89.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
 
