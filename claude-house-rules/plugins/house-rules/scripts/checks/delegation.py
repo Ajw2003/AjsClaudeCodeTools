@@ -2339,7 +2339,7 @@ try:
     commit_case("acceptance: tree changes when a source file is edited", _t0 != _t1, _t0 + _t1)
     _w("docs/qa/f/note.md", "x")
     _w("docs/qa/f/criteria.md", "C1. x | proof: run | page: p\n# edited\n")
-    commit_case("acceptance: tree ignores edits and new files under docs/qa/", _ac("tree", "--root", _ar)[1] == _t1)
+    commit_case("acceptance: tree ignores edits and new files under docs/qa/", _ac("tree", "--root", _ar)[1] == _t1, "tree moved")
     code, out = _ac("stamp", _fd, "--root", _ar)
     commit_case("acceptance: stamp refused when ledger status is not NEXT: done", code == 2 and "not NEXT: done" in out
                 and not os.path.exists(os.path.join(_fd, "acceptance-stamp.json")), out)

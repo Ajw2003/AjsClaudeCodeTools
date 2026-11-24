@@ -643,7 +643,7 @@ _mp_cases.append(("acceptance (#595): an Acceptance item with empty detail is re
 _apj["changes"][-1][4] = "Run each design item and see it work."
 json.dump(_apj, open(_apc, "w", encoding="utf-8"))
 _rc, _o = _mp("build", _apc, "--project", _ap)
-_mp_cases.append(("acceptance (#595): a build plan with a filled Acceptance item builds", _rc == 0, _o))
+_mp_cases.append(("acceptance (#595): a build plan with a filled Acceptance item builds", _rc == 0))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
