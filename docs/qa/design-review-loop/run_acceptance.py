@@ -4,7 +4,7 @@
     python docs/qa/design-review-loop/run_acceptance.py [C1 C5 ...]
 
 With criterion ids it runs only those; with none it runs all nine. It prints a line before and after each
-run, because each run takes one to two minutes.
+run and a `still running` line every 20 seconds, because each run takes one to two minutes.
 
 Run it from the repo root on branch ccr-1839130d-clohr1. For every criterion it runs verify.py once per
 search text (`verify.py --only <text>` runs only the checks whose title contains the text), saves the full
@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 VERIFY = os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scripts", "verify.py")
@@ -39,6 +40,29 @@ PASS_RE = re.compile(r"^\s*\d+\.\s+PASS\b", re.M)
 FAIL_RE = re.compile(r"^\s*\d+\.\s+FAIL\b", re.M)
 
 
+HEARTBEAT_SECONDS = 20  # aj's rule: a test prints progress at least every minute
+
+
+def run_with_heartbeat(cid, text):
+    """verify.py --only TEXT, printing a line every HEARTBEAT_SECONDS until it ends (15 minute limit)."""
+    proc = subprocess.Popen([sys.executable, VERIFY, "--only", text], cwd=ROOT, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, universal_newlines=True)
+    start = time.time()
+    while True:
+        try:
+            out, err = proc.communicate(timeout=HEARTBEAT_SECONDS)
+            break
+        except subprocess.TimeoutExpired:
+            waited = int(time.time() - start)
+            if waited > 900:
+                proc.kill()
+                out, err = proc.communicate()
+                err += "\nrun_acceptance: killed after 900 seconds"
+                break
+            print("%s: still running, %d seconds so far" % (cid, waited), flush=True)
+    return subprocess.CompletedProcess(proc.args, proc.returncode, out, err)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     lines, failed = [], 0
@@ -52,8 +76,7 @@ def main():
             path = os.path.join(OUT, name)
             first_file = first_file or "round-2/" + name
             print("%s: running verify.py --only %r (1 to 2 minutes)..." % (cid, text), flush=True)
-            r = subprocess.run([sys.executable, VERIFY, "--only", text], cwd=ROOT, capture_output=True,
-                               text=True, timeout=900)
+            r = run_with_heartbeat(cid, text)
             with open(path, "w", encoding="utf-8") as f:
                 f.write("$ verify.py --only %r\nexit %d\n\n%s\n--- stderr ---\n%s" % (text, r.returncode, r.stdout, r.stderr))
             p, fl = len(PASS_RE.findall(r.stdout)), len(FAIL_RE.findall(r.stdout))
