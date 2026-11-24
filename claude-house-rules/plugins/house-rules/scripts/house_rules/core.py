@@ -2729,13 +2729,19 @@ def unattended():
 
 
 def event_noask():
-    """PreToolUse on AskUserQuestion|ExitPlanMode: unattended, deny so the agent decides itself. Else silent."""
-    if not unattended():
+    """PreToolUse on AskUserQuestion|ExitPlanMode: unattended or bypassPermissions, deny so the agent chooses
+    itself and carries on (#590). A payload with no permission_mode is treated as attended, said on stderr."""
+    mode = _field(_MODE_RE, _PAYLOAD_CACHE or "")
+    if not (unattended() or mode == "bypassPermissions"):
+        if not mode:
+            sys.stderr.write("house-rules: the PreToolUse payload carried no permission_mode, so the question "
+                             "was allowed (treated as attended).\n")
         return 0
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-          "permissionDecisionReason": "This is an unattended run (HOUSE_RULES_UNATTENDED=on): nobody is there to "
-          "answer. Choose the safest option yourself, record the question and your choice in the final report, "
-          "and carry on."}})
+          "permissionDecisionReason": "This is an unattended or bypass-permission run: nobody is there to "
+          "answer. Choose the most reasonable reversible option yourself, record the question and your choice "
+          "in the final report, and carry on. A licence, login, purchase or destructive step blocks only its "
+          "own part (mark it NEEDS YOU); the rest carries on."}})
     return 0
 
 

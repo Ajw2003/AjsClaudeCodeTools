@@ -57,7 +57,17 @@ are pre-approved.
    - **Case 91 changed:** its example reason (`checks/core.py:1113`) was a missing editor; it is now a
      four-hour suite, because a missing-tool reason is exactly what this check blocks.
 
-## Detection fix (designed 2026-11-23, not built)
+## What was built (plugin 2.90.0, #587 steps #588 to #591)
+
+- **Record check (#589).** A roadblock claim passes only when the turn's tool results show three failed attempts naming the claimed thing, in three method classes; a reply marking NEEDS YOU for a licence, login, purchase or destructive step is exempt.
+- **Own Stop hook (#588).** The `roadblocks` handler runs from its own Stop hook, not inside `handover`, because `unattended on` switches `handover` off and the check must still run unattended. Blocks twice per user message, then warns. Curly apostrophes and the wider phrase list are matched. Stall phrases (next step, not done, I've stopped) are scanned only in unattended or bypass sessions; a Stop payload with no `permission_mode` is treated as attended and says so.
+- **Judge (#591).** A `type: "prompt"` Stop hook asks a model whether the reply's roadblock is genuine.
+- **Goal check (#591).** On a stall phrase in unattended or bypass mode a nested `claude -p` call reads the goal and blocks (up to 6 times) when work can continue.
+- **Never wait (#590).** In unattended or `permission_mode` `bypassPermissions` sessions the `noask` hook (`event_noask`, `scripts/house_rules/core.py`) denies `AskUserQuestion` and `ExitPlanMode` with the reason to choose a reasonable reversible option, record it in the report and carry on; a licence, login, purchase or destructive step blocks only its own part (NEEDS YOU). A payload with no `permission_mode` is treated as attended and announced on stderr. One sentence in `rules/show-dont-tell.md` says the same. The approval gate before source edits is unchanged.
+- **Off-switches.** `HOUSE_RULES_ROADBLOCKS=off` (record check and stall scan), `HOUSE_RULES_GOALCHECK=off` (goal check).
+- **Unverified.** The `bypassPermissions` value was read from Claude Code's mode list, not seen in a live bypass session; the plan's headless QA steps are on the QA page.
+
+## Detection fix (designed 2026-11-23)
 
 Parent issue #587; steps #588 (detection), #589 (evidence rule), #590 (never wait, docs, version).
 aj approved "Design approved: roadblock detection fix 1* 2* 3*" on

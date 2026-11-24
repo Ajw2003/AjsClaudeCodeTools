@@ -4,7 +4,7 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-Roadblock detection fix, step 1 (#588) is built and the roadblock check is moving to its own Stop hook (aj chose option B) so unattended mode no longer switches it off: curly apostrophes and the new phrase list are caught, the check blocks twice per user message, and stall phrases are scanned only in unattended or bypass mode; the full test run still shows 8 Windows failures not yet baselined, and the own-hook move is in progress.
+Plugin 2.90.0: roadblock detection fix (#587, steps #588 to #591). A reply that says it cannot do something now passes only after three failed attempts by different methods, curly apostrophes and more wordings are caught, and a model judge plus a goal check stop a reply that ends with "Next step" while work can carry on; in unattended or bypass-permission mode a design question is chosen by the agent and recorded, never waited on (the `noask` hook now covers `bypassPermissions`), and a licence, login, purchase or destructive step blocks only its own part. `HOUSE_RULES_ROADBLOCKS=off` and `HOUSE_RULES_GOALCHECK=off` switch the parts off. Detail: `docs/4-systems/roadblocks.md`.
 
 Plugin 2.89.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
 
