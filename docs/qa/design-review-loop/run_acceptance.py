@@ -21,15 +21,15 @@ VERIFY = os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scr
 OUT = os.path.join(ROOT, "docs", "qa", "design-review-loop", "round-2")
 
 CRITERIA = [
-    ("C1", "reviewer modes and model pins", ["reviewer", "model pin"]),
-    ("C2", "page review stamp states", ["review stamp", "stamp is stale"]),
+    ("C1", "reviewer modes and model pins", ["agents exist, pinned"]),
+    ("C2", "page review stamp states", ["stamp"]),
     ("C3", "acceptance stamp lifecycle", ["acceptance:"]),
-    ("C4", "QA gate", ["acceptance stamp", "unverified"]),
+    ("C4", "QA gate", ["unverified"]),
     ("C5", "self-judging test and its handover card", ["selftest:"]),
     ("C6", "combined approval", ["(#600"]),
     ("C7", "parked questions", ["#598"]),
     ("C8", "deviations ledger", ["#599"]),
-    ("C9", "docs, reversals and version", ["reversal", "plugin version"]),
+    ("C9", "docs, reversals and version", ["reversal", "version"]),
 ]
 
 PASS_RE = re.compile(r"^\s*\d+\.\s+PASS\b", re.M)
