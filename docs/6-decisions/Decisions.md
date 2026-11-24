@@ -7,6 +7,24 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-24 - Design review loop reversals (plugin 2.92.0)
+
+**Context.** The design review loop (#592) is built. Four earlier decisions it replaces are recorded here, each in its own paragraph, so the older entries are not left standing unchallenged.
+
+**Decision 1, the editor is no longer the only pass before a page (reverses #249, #325).** A design, plan or other page needs a review stamp from the reviewer helper (hunts for design holes, then checks wording); the editor remains for long replies. Review and QA pages are exempt.
+
+**Decision 2, QA pages may have an empty unverified list (reverses #264, #268).** The QA gate requires a current acceptance stamp instead: the finished feature was run and screenshotted before aj is asked to judge it, so "unverified" is no longer padded to be non-empty.
+
+**Decision 3, a question in Build no longer holds code edits by default (reverses #506).** With someone present, a plain question is refused and parked in the ledger; only a `[HARD STOP]` question (licence, login, purchase, deletion, money, secrets, people) is asked and holds edits.
+
+**Decision 4, helpers no longer pass their questions to aj (reverses #458 to #460).** A helper's reversible question is parked in the ledger and reaches aj as one batch on the QA page.
+
+**Why.** Each reversal removes a stop or a manual test that can wait for a stage boundary, without removing aj's decisions.
+
+**Status.** Standing, plugin 2.92.0.
+
+---
+
 ## 2026-11-24 - Design review loop: a reviewer, an acceptance run, parked questions, a deviations ledger
 
 **Context.** The editor checked only wording, aj did the final testing, and routine work stopped for questions and approvals. aj's goal: a smoother loop from idea to finished product, with nothing left for aj to test by hand and no stops mid-work that can wait for a stage boundary. Unattended mode 2.87.0 is in main; "never wait" 2.90.0 (issues #587 to #591) is on branch `AjsAgent/affectionate-lovelace-r0zfgg` and not yet merged.
@@ -17,7 +35,7 @@ pointer, when a later entry replaces it.
 
 **Reverses (each gets its own entry when built).** The editor as the only pass before a page (#249, #325). The non-empty "unverified" rule on QA pages (#264, #268). The Build hold on every question (#506). Helpers passing questions to aj (#458 to #460).
 
-**Status.** Standing once built. Nothing is built yet; steps 6 and 7 wait for 2.90.0 to merge.
+**Status.** Built in plugin 2.92.0; the four reversals are recorded in the entries below.
 
 ---
 

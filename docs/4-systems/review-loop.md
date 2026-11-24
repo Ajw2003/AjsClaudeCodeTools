@@ -4,9 +4,9 @@
 
 Making a design and a build plan trustworthy before aj sees them, proving a finished feature works before aj is asked to judge it, and keeping routine work moving by parking questions and logging deviations instead of stopping. It sits on top of the design loop (`design-loop.md`). Issue #592; design page `docs/plans/2026-11-24-design-review-loop.html`; build plan page `docs/plans/2026-11-24-design-review-loop-plan.html`.
 
-**Status: planned, nothing built.** Each section below says what will be built and which issue builds it. This page is rewritten as built when each step lands.
+**Status: built (plugin 2.92.0).** Steps #593 to #600 are built and #601 closes the docs. The acceptance run of the whole feature and aj's QA are the remaining checks.
 
-## How it will work
+## How it works
 
 | Piece | Built by | What it does |
 |---|---|---|
@@ -15,8 +15,8 @@ Making a design and a build plan trustworthy before aj sees them, proving a fini
 | Acceptance run | #595 | Reviewer runs and screenshots the whole feature against the acceptance list the build plan carries, reusing the visual loop (four rounds, never asks aj). `scripts/acceptance.py stamp` writes `docs/qa/<feature>/acceptance-stamp.json`, tied to a fingerprint of the source tree (not the commit), and `check` says current or stale (deviations D3 and D5, parked decisions P3 and P4). |
 | QA gate | #596 | QA mode refuses without a current acceptance stamp, accepts an empty unverified list, and opens with the ledger. |
 | Self-judging test | #597 | The fallback when this machine genuinely cannot test something: one test that decides pass or fail itself, handed over as one command. |
-| Parked questions | #598 | First half built (see "Parked questions" below): the script, the rule text and the helper note. The hooks that stop asking in Build are not built yet. |
-| Deviations ledger | #599 | In unattended or bypass mode, every departure from the plan is logged in the same ledger file. Intent changes park that piece only. |
+| Parked questions | #598 | Built. In Build with someone present, a plain question is refused and parked with `ledger_note.py park`; only a `[HARD STOP]` question is asked and held. See "Parked questions" below. |
+| Deviations ledger | #599 | Built. `ledger_note.py deviate` logs what the plan said, what was done, why and how to undo it; a change to what aj approved is parked instead. With nobody present (unattended or bypass mode), a reply that admits a departure with no `ledger_note.py` call that turn is sent back once by the `deviation` checkpoint in `design_loop.py` (`_check_deviation`). The phrase list is a heuristic; an unknown permission mode counts as attended. |
 | Combined approval | #600 | One approval line moves Design to Build when the reviewed plan is present. |
 
 ## Invariants it must keep
