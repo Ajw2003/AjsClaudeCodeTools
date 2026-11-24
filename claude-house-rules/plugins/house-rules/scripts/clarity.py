@@ -254,14 +254,15 @@ _PAGE_BLOCK_RE = re.compile(r"const PAGE = \{(.*?)\n\};", re.DOTALL)
 _JS_STRING_RE = re.compile(r'"((?:[^"\\]|\\.)*)"')
 _SCRIPT_STYLE_RE = re.compile(r"<(script|style)\b.*?</\1>", re.DOTALL | re.IGNORECASE)
 _TAG_RE = re.compile(r"<[^>]+>")
-_DATA_URI_RE = re.compile(r"data:[^\s\"'()<>]*")
+_DATA_URI_RE = re.compile(r"data:[^\"'()<>]*")  # spaces allowed: an inline svg uri has raw ones
+_SVG_RE = re.compile(r"<svg\b.*?</svg>", re.DOTALL | re.IGNORECASE)
 _BLOB_RE = re.compile(r"[^\s.!?;:,]{60,}")  # 60+ unbroken characters, no sentence punctuation: base64, not prose
 
 
 def page_text(html):
     """What a reader sees on an HTML page: the visible text outside scripts and styles, plus the
     strings of a template page's PAGE block. Each string becomes its own paragraph."""
-    html = _BLOB_RE.sub(" ", _DATA_URI_RE.sub(" ", html or ""))
+    html = _BLOB_RE.sub(" ", _DATA_URI_RE.sub(" ", _SVG_RE.sub(" ", html or "")))
     parts = []
     m = _PAGE_BLOCK_RE.search(html)
     if m:
