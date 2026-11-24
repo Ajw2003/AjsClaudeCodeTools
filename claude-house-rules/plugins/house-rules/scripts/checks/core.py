@@ -1282,10 +1282,11 @@ report("PASS" if not _rb_blocked(_rb_rec("ok", _RB_3), _RB_R3) else "FAIL",
 # "(Bash completed with no output)" with is_error false, so a filtered search that found nothing must still count.
 _RB_EMPTY = [_RB_B("which unity"), _RB_B("ls /usr/bin | grep unity", "(Bash completed with no output)", False),
              _RB_B("pip show unity")]
-report("PASS" if not _rb_blocked(_rb_rec("empty", _RB_EMPTY), _RB_R3) else "FAIL",
+_RB_RLS = _RB_R + " I tried which unity, ls for unity and pip show unity."
+report("PASS" if not _rb_blocked(_rb_rec("empty", _RB_EMPTY), _RB_RLS) else "FAIL",
        "#589: a filtered search that finds nothing (exit 0, no output) counts as a failed attempt")
 report("PASS" if _rb_blocked(_rb_rec("emptyls", [_RB_B("which unity"), _RB_B("ls /empty", "(Bash completed with no output)", False),
-                                                 _RB_B("pip show unity")]), _RB_R3) else "FAIL",
+                                                 _RB_B("pip show unity")]), _RB_RLS) else "FAIL",
        "#589: a plain ls of an empty folder (no filter) does not count as a failed attempt")
 report("PASS" if _rb_blocked(_rb_rec("ex", [_RB_B("which unity"), _RB_B("where unity"), _RB_B("command -v unity")]),
                               _RB_R + " I tried which, where and command -v for unity.") else "FAIL",
