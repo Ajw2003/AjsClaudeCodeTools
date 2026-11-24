@@ -1,6 +1,7 @@
 <!doctype html>
-<!-- house-rules make_page 2.89.0 -->
+<!-- house-rules make_page 2.92.0 -->
 <meta charset="utf-8">
+<meta name="house-rules-reviewed" content="eaa374f33de8a2c8eb8d34aa941d4091c67b8236c76baa31dab595cfe5246df3;open-risks;1">
 <meta name="house-rules-page" content="build-plan">
 <title>Design Review Loop Build Plan</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -104,6 +105,7 @@ details[open] > summary .more::after{content:" ▲"} details:not([open]) > summa
 .ci b{display:block}
 .ci small{color:var(--muted);font-size:.86rem}
 .ci .detail{padding:0 14px 14px 14px}
+.ci .detail p{white-space:pre-line}
 .fromto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:.88rem}
 .fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
 .fromto span.to{background:var(--accent-soft)}
@@ -237,7 +239,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">Nine steps, issues #593 to #601 under parent issue #592, build the approved design review loop. Steps 1 to 3, 5 and 8 can start now. Steps 6 and 7 wait for version 2.90.0 to merge. The build plan is the contract: I log any departure from it and report it at the end.</p>
+      <p class="lead" id="lead" data-basic="summary">Nine steps, issues #593 to #601 under parent issue #592, build the approved design review loop. Version 2.90.0 merged (pull request 602), so all nine steps are built. The build plan is the contract: I log any departure from it and report it at the end.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -257,8 +259,8 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the steps in order.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b>, then paste it into the chat and send it.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: design review loop", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 1: reviewer helper (issue #593)</h3><p data-basic="done-when">Done when: the reviewer file has the three modes, the model-pin test still passes, and a real page-mode run on the approved design page returns findings, each with the current text and its replacement. Touches agents/reviewer.md, scripts/checks/delegation.py and the editor's wording rules, which move into the reviewer file.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 2: review stamp (issue #594)</h3><p data-basic="done-when">Done when: test cases show a missing, a stale and a current stamp each handled, and review pages and QA pages exempt from the stamp. Touches make_page.py and the end-of-reply page check in scripts/house_rules/writing.py, replacing the editor reminder on design pages, plan pages and all other pages.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 3: acceptance run (issue #595)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: a test feature with two planted flaws fails round one and passes after a fix, the stamp matches the fixing commit, and any later commit makes the stamp stale. Touches the visual-loop skill, a new hook that records the acceptance stamp, and the build-plan page, which now lists one acceptance test per design item.</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 5: self-judging test (issue #597)</h3><p data-basic="done-when">Done when: a test template and builder instructions exist, a sample test run here prints PASS or FAIL on its own, and its handover card passes the format check.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 8: one approval (issue #600)</h3><p data-basic="done-when">Done when: test cases show the combined line moving the stage when reviewed plan issues exist, refusing when they do not, and the old two-step approval still working. Touches scripts/house_rules/design_loop.py (approvals) and make_page.py (the approval-line check).</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 6: parked ledger (issue #598)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: test cases show a reversible question parked with a ledger row and no hold on edits, an irreversible question still put to you, and a helper's question parked. Touches the 2.90.0 question hook in scripts/house_rules/core.py, the hold that stops edits during Build, and the rule text in rules/show-dont-tell.md. Waits for 2.90.0 to merge.</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 7: deviations ledger (issue #599)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: test cases show a deviation logged with what the plan said, what was done, why and how to undo it, a change of intent parking that piece while the rest continues, an unrecognised permission mode treated as attended (someone is present), and a missing entry caught at turn end. Waits for step 6, which waits for 2.90.0.</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 4: QA gate (issue #596)</h3><p data-basic="done-when">Done when: test cases show QA mode refusing when the stamp is missing or stale, building the page when the unverified list is empty, and opening with the parked-decisions and deviations ledger. Touches make_page.py, where the check at line 281 is reversed.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 9: docs, decisions, full run (issue #601)</h3><p data-basic="done-when">Done when: verify.py and tools/verify_tools.py both exit 0 with the output quoted, the doc-ref and docs-drift checks pass, four reversal entries are added to docs/6-decisions/Decisions.md, and the plugin version and changelog are updated.</p></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Build plan approved: design review loop", or say what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 1: reviewer helper (issue #593)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: the reviewer file has the three modes, the model-pin test still passes, and a real page-mode run on the approved design page returns findings, each with the current text and its replacement. Touches agents/reviewer.md, scripts/checks/delegation.py and the editor's wording rules, which the reviewer's page mode points to in agents/editor.md (D1).</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 2: review stamp (issue #594)</h3><p data-basic="done-when">Done when: test cases show a missing, a stale and a current stamp each handled, and review pages and QA pages exempt from the stamp. Touches make_page.py and the end-of-reply page check in scripts/house_rules/writing.py, replacing the editor reminder on design pages, plan pages and all other pages.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 3: acceptance run (issue #595)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: a test feature with two planted flaws fails round one and passes after a fix, the stamp matches a fingerprint of the source tree (docs/qa/, built plan pages, page.json, docs/5-today/ and CHANGELOG.md left out), and any later source change makes it stale. Touches the visual-loop skill, scripts/acceptance.py stamp and check (D3, D5, P3, P4), and the build-plan page, which now lists one acceptance test per design item.</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 5: self-judging test (issue #597)</h3><p data-basic="done-when">Done when: a test template and builder instructions exist, a sample test run here prints PASS or FAIL on its own, and its handover card passes the format check.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 8: one approval (issue #600)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: test cases show the combined line moving the stage when a -plan.html page for the feature in docs/plans/ carries a current review stamp; otherwise the design half applies and the plan half is refused with the reason (D7, aj's pick A2); a plan approval sent on its own is not held to the stamp, and the old two-step approval still working. Touches scripts/house_rules/design_loop.py (approvals) and make_page.py (the approval-line check).</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 6: parked ledger (issue #598)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: test cases show a reversible question parked with a ledger row and no hold on edits, an irreversible question still put to you, and a helper's question parked. Touches the 2.90.0 question hook in scripts/house_rules/core.py, the hold that stops edits during Build, and the rule text in rules/show-dont-tell.md. Waits for 2.90.0 to merge.</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 7: deviations ledger (issue #599)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: test cases show a deviation logged with what the plan said, what was done, why and how to undo it, a change of intent parking that piece while the rest continues, an unrecognised permission mode treated as attended (someone is present), and a missing entry caught at turn end. Waits for step 6, which waits for 2.90.0.</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 4: QA gate (issue #596)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: test cases show QA mode refusing when the stamp is missing or stale, building the page when the unverified list is empty, and opening with the parked-decisions and deviations ledger. Touches apply_qa in make_page.py, which now accepts an empty unverified list. Built ahead of steps 6 and 7 (D8).</p></details></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Step 9: docs, decisions, full run (issue #601)</h3><p data-basic="done-when">Done when: verify.py and tools/verify_tools.py both exit 0 with the output quoted, the doc-ref and docs-drift checks pass, four reversal entries are added to docs/6-decisions/Decisions.md, and the plugin version and changelog are updated.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Acceptance tests (all steps)</h3><details><summary>Show</summary><p data-basic="done-when">Done when: each passes with its evidence saved under docs/qa/design-review-loop/: C1 reviewer modes and a saved page-mode run; C2 page stamp states; C3 acceptance stamp lifecycle; C4 QA gate; C5 self-judging test and its handover card; C6 combined approval; C7 parked questions; C8 deviations ledger; C9 docs, version and the full test run.</p></details></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -270,7 +272,7 @@ dialog.lightbox button{margin-top:10px}
     <button class="secondary" id="prev" type="button">‹ Back</button>
     <button class="primary" id="next" type="button">Next ›</button>
   </div>
-  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, I build step 1 with a builder helper, then steps 2, 3, 5 and 8 one at a time. I stop before step 6 until 2.90.0 is merged, and record steps 6 and 7 as owed.</span></aside>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">The reviewer runs the acceptance criteria, then I build the QA page and open the pull request.</span></aside>
 </div>
 
 <script>
@@ -280,11 +282,11 @@ const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http
 const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
 const PAGE = {
   "title": "Design Review Loop Build Plan",
-  "eyebrow": "Build plan · design approved 2026-11-24 · nothing built yet",
+  "eyebrow": "Build plan · design approved 2026-11-24 · all nine steps built (plugin 2.92.0), awaiting QA",
   "pageType": "build-plan",
   "approval": "Build plan approved: design review loop",
   "short": {
-    "lead": "Nine steps, issues #593 to #601 under parent issue #592, build the approved design review loop. Steps 1 to 3, 5 and 8 can start now. Steps 6 and 7 wait for version 2.90.0 to merge. The build plan is the contract: I log any departure from it and report it at the end.",
+    "lead": "Nine steps, issues #593 to #601 under parent issue #592, build the approved design review loop. Version 2.90.0 merged (pull request 602), so all nine steps are built. The build plan is the contract: I log any departure from it and report it at the end.",
     "hint": "Tap a step to see what it builds and how it is checked. The Changes section below gives each step's files and done-test.",
     "key": [
       [
@@ -311,14 +313,6 @@ const PAGE = {
         }
       ],
       [
-        "lock",
-        "Wait for 2.90.0",
-        "Version 2.90.0 must be merged to main",
-        "you",
-        "Issues #587 to #591 on branch AjsAgent/affectionate-lovelace-r0zfgg.",
-        "Merge that branch when you have judged it. Until then, steps 6 and 7 are owed, and I will say so rather than skip them quietly."
-      ],
-      [
         "hammer",
         "Steps 6, 7, 4",
         "Parked ledger, deviations ledger, QA gate (steps 6, 7 and 4)",
@@ -342,7 +336,7 @@ const PAGE = {
       "Step 1: reviewer helper (issue #593)",
       "One reviewer agent file with three modes: page, plan and acceptance.",
       "None",
-      "Done when: the reviewer file has the three modes, the model-pin test still passes, and a real page-mode run on the approved design page returns findings, each with the current text and its replacement. Touches agents/reviewer.md, scripts/checks/delegation.py and the editor's wording rules, which move into the reviewer file.",
+      "Done when: the reviewer file has the three modes, the model-pin test still passes, and a real page-mode run on the approved design page returns findings, each with the current text and its replacement. Touches agents/reviewer.md, scripts/checks/delegation.py and the editor's wording rules, which the reviewer's page mode points to in agents/editor.md (D1).",
       "None",
       "None"
     ],
@@ -360,7 +354,7 @@ const PAGE = {
       "Step 3: acceptance run (issue #595)",
       "The reviewer runs and screenshots the whole feature.",
       "None",
-      "Done when: a test feature with two planted flaws fails round one and passes after a fix, the stamp matches the fixing commit, and any later commit makes the stamp stale. Touches the visual-loop skill, a new hook that records the acceptance stamp, and the build-plan page, which now lists one acceptance test per design item.",
+      "Done when: a test feature with two planted flaws fails round one and passes after a fix, the stamp matches a fingerprint of the source tree (docs/qa/, built plan pages, page.json, docs/5-today/ and CHANGELOG.md left out), and any later source change makes it stale. Touches the visual-loop skill, scripts/acceptance.py stamp and check (D3, D5, P3, P4), and the build-plan page, which now lists one acceptance test per design item.",
       "None",
       "None"
     ],
@@ -378,7 +372,7 @@ const PAGE = {
       "Step 8: one approval (issue #600)",
       "One approval line moves the feature from the Design stage to the Build stage.",
       "None",
-      "Done when: test cases show the combined line moving the stage when reviewed plan issues exist, refusing when they do not, and the old two-step approval still working. Touches scripts/house_rules/design_loop.py (approvals) and make_page.py (the approval-line check).",
+      "Done when: test cases show the combined line moving the stage when a -plan.html page for the feature in docs/plans/ carries a current review stamp; otherwise the design half applies and the plan half is refused with the reason (D7, aj's pick A2); a plan approval sent on its own is not held to the stamp, and the old two-step approval still working. Touches scripts/house_rules/design_loop.py (approvals) and make_page.py (the approval-line check).",
       "None",
       "None"
     ],
@@ -405,7 +399,7 @@ const PAGE = {
       "Step 4: QA gate (issue #596)",
       "A QA page cannot be built without a current acceptance stamp.",
       "None",
-      "Done when: test cases show QA mode refusing when the stamp is missing or stale, building the page when the unverified list is empty, and opening with the parked-decisions and deviations ledger. Touches make_page.py, where the check at line 281 is reversed.",
+      "Done when: test cases show QA mode refusing when the stamp is missing or stale, building the page when the unverified list is empty, and opening with the parked-decisions and deviations ledger. Touches apply_qa in make_page.py, which now accepts an empty unverified list. Built ahead of steps 6 and 7 (D8).",
       "None",
       "None"
     ],
@@ -423,19 +417,26 @@ const PAGE = {
       "Risks I would flag",
       "Rule size, an unseen mode value, and shared files.",
       "None",
-      "The rules injected each session have a character limit, so step 6's rule text may need other rules trimmed to fit. The value for bypass permission mode was read from Claude Code's list of modes. I have not seen it in a live session. Steps 2, 6 and 8 all edit files that other sessions also touch, so each is built one at a time on the branch. The cost of Opus reviews, in tokens and time, is not yet measured. I will report it after step 1.",
+      "The rules injected each session have a character limit, so step 6's rule text may need other rules trimmed to fit. The value for bypass permission mode was read from Claude Code's list of modes. I have not seen it in a live session. Steps 2, 6 and 8 all edit files that other sessions also touch, so each is built one at a time on the branch. The cost of Opus reviews, in tokens and time, is not yet measured (review-loop.md, Known unknowns); it was promised after step 1 and is owed. Open risks left by the page review: no test yet covers choice 3A (at most two review rounds, leftovers shown as open risks) or the rule that changed picks rebuild and re-review the plan; the acceptance list lacks separate tests for page mode answering facts and offering lettered options, plan mode flagging a design item with no step, and the acceptance run's report, screenshots and four-round cap.",
+      "None",
+      "None"
+    ],
+    [
+      "chg",
+      "Acceptance tests (all steps)",
+      "One test per design item, run by the reviewer in acceptance mode before QA.",
+      "None",
+      "Done when: each passes with its evidence saved under docs/qa/design-review-loop/: C1 reviewer modes and a saved page-mode run; C2 page stamp states; C3 acceptance stamp lifecycle; C4 QA gate; C5 self-judging test and its handover card; C6 combined approval; C7 parked questions; C8 deviations ledger; C9 docs, version and the full test run.",
       "None",
       "None"
     ]
   ],
   "wrapup": {
     "summary": "A nine-step build plan for the approved design review loop, under parent issue #592.",
-    "changing": "Nothing is built yet. Approving moves the stage to Build. Code changes are in the plugin's agent, page builder, hooks and tests, plus docs and the decisions log.",
-    "blocking": "Your approval. Separately, steps 6 and 7 wait for you to merge version 2.90.0 (issues #587 to #591) from branch AjsAgent/affectionate-lovelace-r0zfgg. I will not merge another session's branch myself.",
-    "next": "After you approve, I build step 1 with a builder helper, then steps 2, 3, 5 and 8 one at a time. I stop before step 6 until 2.90.0 is merged, and record steps 6 and 7 as owed.",
+    "changing": "All nine steps are built (plugin 2.92.0). Code changes are in the plugin's agent, page builder, hooks and tests, plus docs and the decisions log. Departures from this plan are listed in docs/qa/design-review-loop/ledger.md (D1 to D9, P1 to P4).",
+    "blocking": "Nothing. The acceptance run and your QA verdict are what is left.",
+    "next": "The reviewer runs the acceptance criteria, then I build the QA page and open the pull request.",
     "todo": [
-      "Read the steps in order.",
-      "Tap <b>Copy my reply<\/b>, then paste it into the chat and send it.",
       "Tap <b>Copy my reply<\/b> and send it: \"Build plan approved: design review loop\", or say what to change."
     ]
   },
@@ -537,11 +538,12 @@ function reply() {
     if (c && c.value === "own") { const t = document.querySelector(`.owntext[data-for=${id}]`).value.trim(); return [i + 1, t ? "own" : null, t]; }
     return [i + 1, c && c.value];
   });
-  const A = PAGE.approval || PAGE.replyPrefix;  // replyPrefix: only for pages built before approval existed
+  const [A, ...more] = (PAGE.approval || PAGE.replyPrefix).split("\n");  // replyPrefix: only for pages built before approval existed
+  const tail = more.map(l => "\n" + l).join("");  // #600: a second approval line (build plan) follows the design line and its picks
   out.textContent = picks.length
     ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
-      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
-    : A;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
+      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("") + tail
+    : A + tail;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
   const m = picks.filter(([, v]) => !v).map(([n]) => n);
   miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
   const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
