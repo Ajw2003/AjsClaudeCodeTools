@@ -746,6 +746,7 @@ TIER_TOOLS = {
     "reviewer": ["Read", "Grep", "Glob", "Bash", "Write"],
     "editor": ["Read"],
 }
+TIER_EFFORT = {"scout": "low", "builder": "low", "reviewer": "medium", "editor": "low"}  # reviewer: Decisions.md 2026-11-24
 agentdrift = []
 for _name, _model in TIERS.items():
     _f = os.path.join(AGENTS_DIR, _name + ".md")
@@ -757,6 +758,8 @@ for _name, _model in TIERS.items():
         agentdrift.append(f"{_name}.md does not pin model: {_model}")
     if not re.search(rf"^name: {_name}$", _t, re.MULTILINE):
         agentdrift.append(f"{_name}.md has no name: {_name}")
+    if not re.search(rf"^effort: {TIER_EFFORT[_name]}$", _t, re.MULTILINE):
+        agentdrift.append(f"{_name}.md does not pin effort: {TIER_EFFORT[_name]}")
     _tm = re.search(r"^tools:\s*(.+)$", _t, re.MULTILINE)
     _got = [x.strip() for x in _tm.group(1).split(",")] if _tm else []
     if _got != TIER_TOOLS[_name]:
