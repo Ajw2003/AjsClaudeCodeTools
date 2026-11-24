@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj approved the build plan ("Build plan approved: review command 1A 2A 3A"); the stage is Build. Issues #618 to #621 say `in progress`, the Decisions entry is written, and a builder is working on step 1 (#618, four new reviewer modes) in its own worktree; steps 2 to 4 wait on it one at a time. Nothing is merged or verified yet.
+
 The systems doc `docs/4-systems/review-command.md` had a 900-second agent deadline in its invariants; it now says 60 seconds (the value in `rules/waits.json`), and the final plan page was re-sent after two review rounds. Still waiting on aj's three answers and "Build plan approved: review command".
 
 aj approved the review command design ("Design approved: review command 1A 2A 3*"; 3*: no folder cap, a notice over 12 folders). The stage is Plan: parent issue #617 and steps #618 to #621 are open, the systems doc `docs/4-systems/review-command.md` is written as planned, and the build plan page `docs/plans/review-command-plan.html` was reviewed twice (15 findings, then 13, all applied; stamped open-risks) and is waiting on aj's three answers and approval. The stale deadline line in `skills/visual-loop/SKILL.md` is issue #622. One fact corrected: the agent deadline in `rules/waits.json` is 60 seconds, not the 900 quoted on the design page and in `skills/visual-loop/SKILL.md`; the plan asks aj how a sweep should handle it. Nothing is built.
