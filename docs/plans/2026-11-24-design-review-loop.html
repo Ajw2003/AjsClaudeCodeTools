@@ -1,0 +1,779 @@
+<!doctype html>
+<!-- house-rules make_page 2.89.0 -->
+<meta charset="utf-8">
+<meta name="house-rules-page" content="proposal">
+<title>Design Review Loop</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#566174; --line:#d5dbe6;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --you:#b35f00; --you-soft:#fdeed9;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.55 var(--body)}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:1.9rem;font-weight:800}
+h2{font-size:1.45rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.ico{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* stepper */
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stepper button{border:0;background:none;display:grid;justify-items:center;gap:4px;padding:4px 0;font-size:.72rem;color:var(--muted)}
+.stepper .bar{width:100%;height:6px;border-radius:3px;background:var(--line)}
+.stepper button.done .bar{background:var(--accent)}
+.stepper button[aria-current="step"]{color:var(--fg);font-weight:700}
+.stepper button[aria-current="step"] .bar{background:var(--accent)}
+
+.panel{display:grid;gap:18px}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.lead{font-size:1.1rem}
+
+/* at-a-glance strip */
+.glance{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.g{display:grid;justify-items:center;gap:4px;width:56px;text-align:center;font-size:.72rem;color:var(--muted)}
+.g span.c{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
+.arrow{color:var(--muted);font-size:1.1rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
+.glance .lk .ico{width:14px;height:14px}
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p,.crb li{font-size:.9rem}
+.crb ul.cl{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.sd h3{display:flex;gap:8px;align-items:center}
+.sd .back{padding-left:0}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.key i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent)}
+.key i.y{border-radius:4px;background:var(--you-soft);border-color:var(--you)}
+
+/* stage list */
+.stages{display:grid;gap:8px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.st > summary{list-style:none;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;cursor:pointer;min-height:48px}
+.st > summary::-webkit-details-marker{display:none}
+.st .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.st.you .c{border-radius:11px;background:var(--you-soft);color:var(--you)}
+.st.you{border-color:var(--you)}
+.st .nm b{display:block}
+.st .nm small{color:var(--muted);font-size:.85rem}
+.more{font-size:.78rem;color:var(--accent);font-weight:700;white-space:nowrap}
+details[open] > summary .more::after{content:" ▲"} details:not([open]) > summary .more::after{content:" ▼"}
+.detail{padding:0 14px 14px 68px;display:grid;gap:8px;font-size:.92rem}
+@media (max-width:420px){.detail{padding-left:14px}}
+.row{display:grid;grid-template-columns:72px 1fr;gap:8px}
+.row > span:first-child{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.back{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--you);padding-left:12px}
+
+/* created / changed */
+.cc{display:grid;gap:8px}
+.ci{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.ci > summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;cursor:pointer;min-height:48px}
+.ci > summary::-webkit-details-marker{display:none}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ci b{display:block}
+.ci small{color:var(--muted);font-size:.86rem}
+.ci .detail{padding:0 14px 14px 14px}
+.fromto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:.88rem}
+.fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
+.fromto span.to{background:var(--accent-soft)}
+.flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch;font-size:.84rem}
+.flow > span{border-radius:8px;padding:8px;background:var(--bg);display:grid;gap:2px;align-content:start;min-width:0}
+.flow > span.mid{background:var(--accent-soft)}
+.flow > i{align-self:center;color:var(--muted);font-style:normal}
+.flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+@media (max-width:479px){.flow{grid-template-columns:minmax(0,1fr)}.flow > i{justify-self:center;transform:rotate(90deg)}}
+.files{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.files h4{margin:0;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.frow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;align-items:baseline}
+.frow code{font-size:.82rem;word-break:break-all}
+.files .n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.parts{margin:0 0 4px;padding-left:18px;display:grid;gap:4px;font-size:.86rem}
+.parts li span:first-child{margin-right:8px}
+
+/* choices */
+.q{display:grid;gap:8px}
+.q h3{display:flex;gap:10px;align-items:flex-start}
+.qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input[type=radio]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.opt small{display:block;color:var(--muted);font-size:.86rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+.rec{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.rec .ico{width:12px;height:12px}
+.why{font-size:.88rem}
+.why summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:32px}
+.why p{margin-top:6px;color:var(--muted)}
+
+/* wrap-up */
+.wrapup{display:grid;gap:10px}
+.wu{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.wu .c{width:40px;height:40px;border-radius:10px;display:grid;place-items:center}
+.wu h3{margin-bottom:2px}
+.wu p,.wu li{font-size:.94rem}
+.wu ol{margin:4px 0 0;padding-left:20px;display:grid;gap:4px}
+.wu.do{border:2px solid var(--you)}
+.reply{display:grid;gap:8px}
+.reply pre{white-space:pre-wrap;margin:0;background:var(--card);border:1px dashed var(--accent);border-radius:10px;padding:12px;font-size:.92rem}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:12px;padding:14px 18px;font-weight:800;min-height:48px}
+.secondary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:700;min-height:48px}
+.nav{display:flex;justify-content:space-between;gap:10px}
+.nav .primary{margin-left:auto}
+.nextbox{position:sticky;bottom:0;z-index:3;background:var(--card);border:2px solid var(--you);border-radius:12px;padding:10px 14px;display:grid;gap:2px;font-size:.92rem}
+.nextbox b{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--you)}
+.wu li label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.wu li label > span{min-width:0;overflow-wrap:anywhere}
+.wu li code{font-size:.82rem;overflow-wrap:anywhere;word-break:break-all}
+.wu li input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--accent)}
+.status{font-size:.88rem;color:var(--muted)}
+.missing{color:var(--gap);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.panel{animation:in .2s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+<style>
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.g.done span.c{background:var(--ok-soft);color:var(--ok)}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+/* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+.pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+.pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+.pic img,.cmp img{display:block;max-width:100%;height:auto;background:var(--bg)}
+.pic,.pic button{width:100%;box-sizing:border-box}
+/* A tall screenshot shrunk to fit a short box is a sliver: fill the width and show its top instead. */
+.pic button img{width:100%;max-height:280px;object-fit:cover;object-position:top;border-radius:6px}
+.pic figcaption,.cmp figcaption{font-size:.86rem;color:var(--muted)}
+.pic,.cmp{margin:0}
+.cmp{display:grid;gap:6px;min-width:0}
+.cmp-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+body{overflow-wrap:anywhere}
+.crb p,.crb li,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
+@media (max-width:479px){.cr{grid-template-columns:minmax(0,1fr)}}
+.cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
+.cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cmp-slide{display:none;gap:6px;min-width:0}
+.cmp-frame{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.cmp-frame img{width:100%}
+.cmp-frame img + img{position:absolute;inset:0;height:100%;object-fit:fill;clip-path:inset(0 0 0 var(--pos,50%))}
+.cmp-slide input[type=range]{width:100%;accent-color:var(--accent);min-height:44px;margin:0}
+@media (max-width:639px){.cmp-side{display:none}.cmp-slide{display:grid}}
+dialog.lightbox{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:12px;width:min(96vw,960px);max-height:94vh;box-sizing:border-box;overflow:auto}
+dialog.lightbox::backdrop{background:rgba(0,0,0,.6)}
+dialog.lightbox img{display:block;width:100%;height:auto}
+dialog.lightbox p{margin-top:8px;font-size:.9rem}
+dialog.lightbox button{margin-top:10px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L3 15l3 3 8-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+</defs></svg>
+
+<!--
+  Handover page template (house-rules, issue #233). The approved format: four parts in this order -
+  In short, Changes, Choices, Wrap-up - and a part is left out only when it would be empty.
+  Copy this file, edit PAGE below, and nothing else. Every part keeps four rules:
+  detail only on tap; names, never bare numbers; one colour, one meaning (orange = the user acts,
+  green = done, nothing else orange); I check it first (phone width, light and dark, every tap,
+  a bare-number search). Rule: rules/detail/show-dont-tell.md.
+-->
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="eyebrow" id="eyebrow"></span>
+    <h1 id="title"></h1>
+  </header>
+  <nav class="stepper" aria-label="Steps" id="stepper"></nav>
+  <section class="panel" data-part="short" aria-labelledby="h-short">
+    <h2 id="h-short" tabindex="-1">In short</h2>
+    <div class="card">
+      <p class="lead" id="lead" data-basic="summary">Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Seven choices at the end are yours.</p>
+      <div class="key" id="key"></div>
+      <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
+      <p class="muted" style="font-size:.85rem" id="hint"></p>
+      <div class="sd" id="sd" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="panel" data-part="changes" aria-labelledby="h-changes" hidden>
+    <h2 id="h-changes" tabindex="-1">What this creates or changes</h2>
+    <p class="muted" id="cc-count"></p>
+    <div class="cc" id="cc"></div>
+  </section>
+  <section class="panel" data-part="choices" aria-labelledby="h-choices" hidden>
+    <h2 id="h-choices" tabindex="-1">Your choices</h2>
+    <p class="muted">My suggestion is marked, nothing is picked for you, and each has room for your own answer.</p>
+    <div id="qs" style="display:grid;gap:22px"></div>
+  </section>
+  <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
+    <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
+    <div class="wrapup" id="wrapup"></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Pick your answers in Choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b>.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: design review loop", or say what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">agents/editor.md is Sonnet at low effort, can only read, and fixes wording. agents/reviewer.md is Opus but checks only finished diffs, and only when asked.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Answer facts, turn choices into options</p></div></div></div>
+    <div class="reply">
+      <pre id="out" aria-live="polite"></pre>
+      <p class="status" id="miss"></p>
+      <button class="primary" id="copy" type="button">Copy my reply</button>
+      <p class="status" id="st"></p>
+    </div>
+  </section>
+  <div class="nav">
+    <button class="secondary" id="prev" type="button">‹ Back</button>
+    <button class="primary" id="next" type="button">Next ›</button>
+  </div>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">I log the decision, write the build plan as a page, put it through the same review, then create one issue per step.</span></aside>
+</div>
+
+<script>
+// ---- PAGE: the only part you edit. Example content shows every field. ----------------------
+// Tiny inline SVGs so the template stays one file; real pages use a data: URI or a path next to the page.
+const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
+const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
+const PAGE = {
+  "title": "Design Review Loop",
+  "eyebrow": "house-rules plugin · change to the design loop · nothing built yet",
+  "pageType": "proposal",
+  "approval": "Design approved: design review loop",
+  "short": {
+    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Seven choices at the end are yours.",
+    "hint": "Tap a step to see what it produces. The sections below explain each part, and the choices at the end are yours.",
+    "key": [
+      [
+        "I do it",
+        ""
+      ],
+      [
+        "You decide",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "bulb",
+        "Review the design",
+        "A reviewer reads each design page and build plan",
+        "",
+        "A reviewed page: every flaw fixed, or turned into a choice for you.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2ODAgMzMwIiB3aWR0aD0iNjgwIiBoZWlnaHQ9IjMzMCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxTZWdvZSBVSSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIj4KPHN0eWxlPgouYmd7ZmlsbDojZmZmfS50e2ZpbGw6IzFiMWYyYX0ubXtmaWxsOiM1YjYyNzV9Lmxue3N0cm9rZTojOGE5MmE2O2ZpbGw6bm9uZTtzdHJva2Utd2lkdGg6MS41fQoucmV1c2V7ZmlsbDojZGZmM2U0O3N0cm9rZTojMmU4YjU3fS5hZGFwdHtmaWxsOiNmZmYxY2M7c3Ryb2tlOiNiODg2MGJ9Lm5ld3tmaWxsOiNmZGUwZGM7c3Ryb2tlOiNjMDM5MmJ9LnlvdXtmaWxsOiNkYmU3ZmY7c3Ryb2tlOiMyZjVmZDB9CkBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6ZGFyayl7LmJne2ZpbGw6IzE0MTcxZn0udHtmaWxsOiNlZWYwZjZ9Lm17ZmlsbDojYTRhYmJkfS5sbntzdHJva2U6IzZjNzQ4YX0KLnJldXNle2ZpbGw6IzFmM2EyYTtzdHJva2U6IzVmY2Y4Y30uYWRhcHR7ZmlsbDojNGEzZDEyO3N0cm9rZTojZTBiOTRhfS5uZXd7ZmlsbDojNGExZjFiO3N0cm9rZTojZmY4YTdhfS55b3V7ZmlsbDojMWQyYzU1O3N0cm9rZTojN2FhMmZmfX0KPC9zdHlsZT4KPHJlY3QgY2xhc3M9ImJnIiB3aWR0aD0iNjgwIiBoZWlnaHQ9IjMzMCIvPgo8dGV4dCBjbGFzcz0idCIgeD0iMTYiIHk9IjI0IiBmb250LXdlaWdodD0iNzAwIj5Ub2RheTwvdGV4dD4KPGcgc3Ryb2tlLXdpZHRoPSIxLjUiPgo8cmVjdCBjbGFzcz0icmV1c2UiIHg9IjE2IiB5PSIzNCIgd2lkdGg9IjEwNCIgaGVpZ2h0PSI0NCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iNjgiIHk9IjYxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5EZXNpZ24gcGFnZTwvdGV4dD4KPHJlY3QgY2xhc3M9ImFkYXB0IiB4PSIxMzYiIHk9IjM0IiB3aWR0aD0iMTA0IiBoZWlnaHQ9IjQ0IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIxODgiIHk9IjYxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5FZGl0b3I6IHdvcmRzPC90ZXh0Pgo8cmVjdCBjbGFzcz0ieW91IiB4PSIyNTYiIHk9IjM0IiB3aWR0aD0iOTYiIGhlaWdodD0iNDQiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjMwNCIgeT0iNjEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllvdSBhcHByb3ZlPC90ZXh0Pgo8cmVjdCBjbGFzcz0icmV1c2UiIHg9IjM2OCIgeT0iMzQiIHdpZHRoPSI5NiIgaGVpZ2h0PSI0NCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iNDE2IiB5PSI2MSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QnVpbGQ8L3RleHQ+CjxyZWN0IGNsYXNzPSJhZGFwdCIgeD0iNDgwIiB5PSIzNCIgd2lkdGg9Ijg0IiBoZWlnaHQ9IjQ0IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSI1MjIiIHk9IjYxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5RQSBwYWdlPC90ZXh0Pgo8cmVjdCBjbGFzcz0ieW91IiB4PSI1ODAiIHk9IjM0IiB3aWR0aD0iODQiIGhlaWdodD0iNDQiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjYyMiIgeT0iNjEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllvdSB0ZXN0PC90ZXh0Pgo8L2c+CjxnIGNsYXNzPSJsbiI+PHBhdGggZD0iTTEyMCA1NmgxNk0yNDAgNTZoMTZNMzUyIDU2aDE2TTQ2NCA1NmgxNk01NjQgNTZoMTYiLz48L2c+Cjx0ZXh0IGNsYXNzPSJ0IiB4PSIxNiIgeT0iMTE2IiBmb250LXdlaWdodD0iNzAwIj5Qcm9wb3NlZDwvdGV4dD4KPGcgc3Ryb2tlLXdpZHRoPSIxLjUiPgo8cmVjdCBjbGFzcz0icmV1c2UiIHg9IjE2IiB5PSIxMjYiIHdpZHRoPSI5NiIgaGVpZ2h0PSI0NCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iNjQiIHk9IjE1MyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+RGVzaWduIHBhZ2U8L3RleHQ+CjxyZWN0IGNsYXNzPSJuZXciIHg9IjEyNCIgeT0iMTI2IiB3aWR0aD0iMTEyIiBoZWlnaHQ9IjQ0IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIxODAiIHk9IjE0NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UmV2aWV3ZXI8L3RleHQ+PHRleHQgY2xhc3M9Im0iIHg9IjE4MCIgeT0iMTYxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjExIj5mbGF3cyArIHdvcmRzPC90ZXh0Pgo8cmVjdCBjbGFzcz0ieW91IiB4PSIyNDgiIHk9IjEyNiIgd2lkdGg9IjgwIiBoZWlnaHQ9IjQ0IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIyODgiIHk9IjE1MyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+WW91IGFwcHJvdmU8L3RleHQ+CjxyZWN0IGNsYXNzPSJyZXVzZSIgeD0iMzQwIiB5PSIxMjYiIHdpZHRoPSI4OCIgaGVpZ2h0PSI0NCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iMzg0IiB5PSIxNTMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlBsYW4gcGFnZTwvdGV4dD4KPHJlY3QgY2xhc3M9Im5ldyIgeD0iNDQwIiB5PSIxMjYiIHdpZHRoPSIxMTIiIGhlaWdodD0iNDQiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjQ5NiIgeT0iMTQ2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5SZXZpZXdlcjwvdGV4dD48dGV4dCBjbGFzcz0ibSIgeD0iNDk2IiB5PSIxNjEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTEiPnBsYW4gdnMgZGVzaWduPC90ZXh0Pgo8cmVjdCBjbGFzcz0ieW91IiB4PSI1NjQiIHk9IjEyNiIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0NCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iNjE0IiB5PSIxNTMiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllvdSBhcHByb3ZlPC90ZXh0Pgo8cmVjdCBjbGFzcz0icmV1c2UiIHg9IjE2IiB5PSIyMDYiIHdpZHRoPSI5NiIgaGVpZ2h0PSI0NCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iNjQiIHk9IjIzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QnVpbGQ8L3RleHQ+CjxyZWN0IGNsYXNzPSJuZXciIHg9IjEyNCIgeT0iMjA2IiB3aWR0aD0iMTQwIiBoZWlnaHQ9IjQ0IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIxOTQiIHk9IjIyNiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QWNjZXB0YW5jZSBydW48L3RleHQ+PHRleHQgY2xhc3M9Im0iIHg9IjE5NCIgeT0iMjQxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjExIj5ydW5zIGl0LCBzY3JlZW5zaG90cyBpdDwvdGV4dD4KPHJlY3QgY2xhc3M9ImFkYXB0IiB4PSIyNzYiIHk9IjIwNiIgd2lkdGg9IjExMiIgaGVpZ2h0PSI0NCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iMzMyIiB5PSIyMjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlFBIHBhZ2U8L3RleHQ+PHRleHQgY2xhc3M9Im0iIHg9IjMzMiIgeT0iMjQxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjExIj5uZWVkcyB0aGUgc3RhbXA8L3RleHQ+CjxyZWN0IGNsYXNzPSJ5b3UiIHg9IjQwMCIgeT0iMjA2IiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjQ0IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSI0NjAiIHk9IjIyNiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+WW91IHNheTwvdGV4dD48dGV4dCBjbGFzcz0idCIgeD0iNDYwIiB5PSIyNDEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPnBhc3Mgb3IgZmFpbDwvdGV4dD4KPC9nPgo8ZyBjbGFzcz0ibG4iPjxwYXRoIGQ9Ik0xMTIgMTQ4aDEyTTIzNiAxNDhoMTJNMzI4IDE0OGgxMk00MjggMTQ4aDEyTTU1MiAxNDhoMTJNNjE0IDE3MHYxOEg2NHYxOE0xMTIgMjI4aDEyTTI2NCAyMjhoMTJNMzg4IDIyOGgxMiIvPjwvZz4KPGcgc3Ryb2tlLXdpZHRoPSIxLjUiPjxyZWN0IGNsYXNzPSJyZXVzZSIgeD0iMTYiIHk9IjI4MiIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiByeD0iMyIvPjxyZWN0IGNsYXNzPSJhZGFwdCIgeD0iMTUwIiB5PSIyODIiIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgcng9IjMiLz48cmVjdCBjbGFzcz0ibmV3IiB4PSIyODQiIHk9IjI4MiIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiByeD0iMyIvPjxyZWN0IGNsYXNzPSJ5b3UiIHg9IjQxOCIgeT0iMjgyIiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHJ4PSIzIi8+PC9nPgo8dGV4dCBjbGFzcz0ibSIgeD0iMzYiIHk9IjI5NCI+cmV1c2VkPC90ZXh0Pjx0ZXh0IGNsYXNzPSJtIiB4PSIxNzAiIHk9IjI5NCI+YWRhcHRlZDwvdGV4dD48dGV4dCBjbGFzcz0ibSIgeD0iMzA0IiB5PSIyOTQiPm5ldzwvdGV4dD48dGV4dCBjbGFzcz0ibSIgeD0iNDM4IiB5PSIyOTQiPnlvdXIgbW92ZTwvdGV4dD4KPC9zdmc+Cg==",
+          "alt": "Two rows of boxes. Today: design page, editor, you approve, build, QA page, you test. Proposed: design page, reviewer, you approve, plan page, reviewer, you approve, build, acceptance run, QA page, you say pass or fail.",
+          "caption": "The loop today and as proposed. Red boxes are new, yellow are adapted, green are reused, blue are your moves."
+        }
+      ],
+      [
+        "hammer",
+        "Build",
+        "Builders build the approved plan",
+        "",
+        "The same steps as today, with one test per design item written alongside.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "Acceptance run",
+        "The reviewer runs and screenshots the whole feature",
+        "",
+        "A report with screenshots under docs/qa/<feature>/ and a stamp for the current commit.",
+        "Nothing from you."
+      ],
+      [
+        "eye",
+        "QA",
+        "You answer QA passed or QA failed",
+        "you",
+        "The QA page, which can only be built once the stamp matches.",
+        "Your verdict. No manual testing."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "change",
+      "The editor becomes a reviewer",
+      "One helper reads each page for flaws and for words.",
+      null,
+      "The reviewer reads a page cold, without the author's reasoning. It hunts for holes, traps, contradictions, reversals and unanswered questions, then checks the wording. It returns before-and-after lines and the main session applies them. It runs on Opus, because judging a design needs more than grammar.",
+      [
+        "agents/editor.md is Sonnet at low effort, can only read, and fixes wording. agents/reviewer.md is Opus but checks only finished diffs, and only when asked.",
+        "reviewer.md gains a page mode with the six checks. The wording rules from editor.md move into it.",
+        "A page reaches you with its flaws already fixed or listed as your choices."
+      ],
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2ODAgMzAwIiB3aWR0aD0iNjgwIiBoZWlnaHQ9IjMwMCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxTZWdvZSBVSSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIj4KPHN0eWxlPgouYmd7ZmlsbDojZmZmfS50e2ZpbGw6IzFiMWYyYX0ubXtmaWxsOiM1YjYyNzV9LmJveHtmaWxsOiNmMWYzZjk7c3Ryb2tlOiM4YTkyYTZ9Lmhke2ZpbGw6I2ZkZTBkYztzdHJva2U6I2MwMzkyYn0ub2t7ZmlsbDojZGZmM2U0O3N0cm9rZTojMmU4YjU3fQpAbWVkaWEgKHByZWZlcnMtY29sb3Itc2NoZW1lOmRhcmspey5iZ3tmaWxsOiMxNDE3MWZ9LnR7ZmlsbDojZWVmMGY2fS5te2ZpbGw6I2E0YWJiZH0uYm94e2ZpbGw6IzFkMjEyZDtzdHJva2U6IzZjNzQ4YX0uaGR7ZmlsbDojNGExZjFiO3N0cm9rZTojZmY4YTdhfS5va3tmaWxsOiMxZjNhMmE7c3Ryb2tlOiM1ZmNmOGN9fQo8L3N0eWxlPgo8cmVjdCBjbGFzcz0iYmciIHdpZHRoPSI2ODAiIGhlaWdodD0iMzAwIi8+Cjx0ZXh0IGNsYXNzPSJ0IiB4PSIxNiIgeT0iMjQiIGZvbnQtd2VpZ2h0PSI3MDAiPlNpeCB0aGluZ3MgdGhlIHJldmlld2VyIGh1bnRzIGZvciwgYW5kIHdoYXQgaXQgZG9lcyB3aXRoIGVhY2g8L3RleHQ+CjxnIHN0cm9rZS13aWR0aD0iMS41Ij4KPHJlY3QgY2xhc3M9ImhkIiB4PSIxNiIgeT0iMzgiIHdpZHRoPSIyMDAiIGhlaWdodD0iMzgiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjI4IiB5PSI2MiI+SG9sZTogYSBjYXNlIG5vYm9keSBjb3ZlcmVkPC90ZXh0Pgo8cmVjdCBjbGFzcz0iaGQiIHg9IjE2IiB5PSI4NiIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIzOCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iMjgiIHk9IjExMCI+VHJhcDogYSBzdGVwIHRoYXQgYml0ZXMgbGF0ZXI8L3RleHQ+CjxyZWN0IGNsYXNzPSJoZCIgeD0iMTYiIHk9IjEzNCIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIzOCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iMjgiIHk9IjE1OCI+Q29udHJhZGljdGlvbjogdHdvIHBhcnRzIGRpc2FncmVlPC90ZXh0Pgo8cmVjdCBjbGFzcz0iaGQiIHg9IjE2IiB5PSIxODIiIHdpZHRoPSIyMDAiIGhlaWdodD0iMzgiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjI4IiB5PSIyMDYiPlJldmVyc2FsOiB1bmRvZXMgYSBwYXN0IGRlY2lzaW9uPC90ZXh0Pgo8cmVjdCBjbGFzcz0iaGQiIHg9IjE2IiB5PSIyMzAiIHdpZHRoPSIyMDAiIGhlaWdodD0iMzgiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjI4IiB5PSIyNTQiPk9wZW4gcXVlc3Rpb246IGxlZnQgdW5hbnN3ZXJlZDwvdGV4dD4KPC9nPgo8ZyBzdHJva2U9IiM4YTkyYTYiIHN0cm9rZS13aWR0aD0iMS41IiBmaWxsPSJub25lIj48cGF0aCBkPSJNMjE2IDU3aDQwTTIxNiAxMDVoNDBNMjE2IDE1M2g0ME0yMTYgMjAxaDQwTTIxNiAyNDloNDAiLz48L2c+CjxnIHN0cm9rZS13aWR0aD0iMS41Ij4KPHJlY3QgY2xhc3M9Im9rIiB4PSIyNTYiIHk9IjM4IiB3aWR0aD0iNDA4IiBoZWlnaHQ9IjM4IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIyNjgiIHk9IjYyIj5BZGRzIHRoZSBtaXNzaW5nIGNhc2UgdG8gdGhlIHBhZ2UsIHdpdGggYSB0ZXN0IGZvciBpdDwvdGV4dD4KPHJlY3QgY2xhc3M9Im9rIiB4PSIyNTYiIHk9Ijg2IiB3aWR0aD0iNDA4IiBoZWlnaHQ9IjM4IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIyNjgiIHk9IjExMCI+UmV3cml0ZXMgdGhlIHN0ZXAgc28gdGhlIHRyYXAgY2Fubm90IHNwcmluZzwvdGV4dD4KPHJlY3QgY2xhc3M9Im9rIiB4PSIyNTYiIHk9IjEzNCIgd2lkdGg9IjQwOCIgaGVpZ2h0PSIzOCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iMjY4IiB5PSIxNTgiPk5hbWVzIGJvdGggcGFydHMgYW5kIGZpeGVzIHRoZSBvbmUgdGhhdCBpcyB3cm9uZzwvdGV4dD4KPHJlY3QgY2xhc3M9Im9rIiB4PSIyNTYiIHk9IjE4MiIgd2lkdGg9IjQwOCIgaGVpZ2h0PSIzOCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iMjY4IiB5PSIyMDYiPkNpdGVzIHRoZSBEZWNpc2lvbnMubWQgZW50cnk7IHRoZSBwYWdlIG5vdyBzYXlzIGl0IGlzIGEgcmV2ZXJzYWw8L3RleHQ+CjxyZWN0IGNsYXNzPSJvayIgeD0iMjU2IiB5PSIyMzAiIHdpZHRoPSI0MDgiIGhlaWdodD0iMzgiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjI2OCIgeT0iMjU0Ij5BIGZhY3Q6IGxvb2tzIGl0IHVwIGFuZCBhbnN3ZXJzLiBBIGNob2ljZTogYmVjb21lcyB5b3VyIG9wdGlvbjwvdGV4dD4KPC9nPgo8dGV4dCBjbGFzcz0ibSIgeD0iMTYiIHk9IjI4OCIgZm9udC1zaXplPSIxMiI+RWFjaCBmaXggaXMgYSBiZWZvcmUtYW5kLWFmdGVyIGxpbmU7IHRoZSBtYWluIHNlc3Npb24gYXBwbGllcyBpdCwgdGhlbiB0aGUgcmV2aWV3ZXIgcmVhZHMgdGhlIHBhZ2UgYWdhaW4uPC90ZXh0Pgo8L3N2Zz4K",
+        "alt": "Five problem types on the left, each with an arrow to the action the reviewer takes: add the missing case, rewrite the step, fix the wrong part, cite the old decision, answer the fact or offer the choice.",
+        "caption": "What the reviewer looks for and what it does about each find."
+      }
+    ],
+    [
+      "change",
+      "Questions get answered, not passed along",
+      "Facts are looked up. Choices become your options.",
+      null,
+      "A question the code or docs can answer, such as whether the QA builder accepts an empty list, the reviewer looks up and writes into the page. A question that is really a design choice cannot be settled by a helper, because decisions come only from you. The reviewer turns it into a lettered option with its suggestion marked.",
+      [
+        "The 'decided for you' check sends back any reply that settles a design point alone (docs/4-systems/design-loop.md, Long replies row).",
+        "A rule for the reviewer: facts get answered, choices become options.",
+        "Fewer loose questions reach you, and the number of real decisions stays the same."
+      ]
+    ],
+    [
+      "change",
+      "Questions are parked, not asked mid-work",
+      "Work keeps going; you answer once, in a batch.",
+      null,
+      "When a question comes up in Build, the agent takes the safest default that can be undone, records it in a parked-decisions ledger with how to undo it, and keeps building. Helpers do the same. Everything parked reaches you together on the QA page, with options. Anything not undoable, or touching money, secrets, other people or deleted data, still asks first.",
+      [
+        "In Build, a reply ending in a question holds code edits until you answer (#506). Helpers' questions go to you, and the 'decided for you' check sends back any reply that settles a point alone.",
+        "A ledger file per feature, and a rule that reversible questions are parked. The hold and the check apply only to what cannot be parked.",
+        "Routine work no longer stops. You answer parked questions once, with the work already done."
+      ],
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2ODAgMjMwIiB3aWR0aD0iNjgwIiBoZWlnaHQ9IjIzMCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxTZWdvZSBVSSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIj4KPHN0eWxlPgouYmd7ZmlsbDojZmZmfS50e2ZpbGw6IzFiMWYyYX0ubXtmaWxsOiM1YjYyNzV9Lmxue3N0cm9rZTojOGE5MmE2O2ZpbGw6bm9uZTtzdHJva2Utd2lkdGg6MS41fQoubmV3e2ZpbGw6I2ZkZTBkYztzdHJva2U6I2MwMzkyYn0ueW91e2ZpbGw6I2RiZTdmZjtzdHJva2U6IzJmNWZkMH0ucmV1c2V7ZmlsbDojZGZmM2U0O3N0cm9rZTojMmU4YjU3fS5hZGFwdHtmaWxsOiNmZmYxY2M7c3Ryb2tlOiNiODg2MGJ9CkBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6ZGFyayl7LmJne2ZpbGw6IzE0MTcxZn0udHtmaWxsOiNlZWYwZjZ9Lm17ZmlsbDojYTRhYmJkfS5sbntzdHJva2U6IzZjNzQ4YX0ubmV3e2ZpbGw6IzRhMWYxYjtzdHJva2U6I2ZmOGE3YX0ueW91e2ZpbGw6IzFkMmM1NTtzdHJva2U6IzdhYTJmZn0ucmV1c2V7ZmlsbDojMWYzYTJhO3N0cm9rZTojNWZjZjhjfS5hZGFwdHtmaWxsOiM0YTNkMTI7c3Ryb2tlOiNlMGI5NGF9fQo8L3N0eWxlPgo8cmVjdCBjbGFzcz0iYmciIHdpZHRoPSI2ODAiIGhlaWdodD0iMjMwIi8+Cjx0ZXh0IGNsYXNzPSJ0IiB4PSIxNiIgeT0iMjQiIGZvbnQtd2VpZ2h0PSI3MDAiPkEgcXVlc3Rpb24gY29tZXMgdXAgbWlkLWJ1aWxkOiBwYXJrIGl0LCBrZWVwIHdvcmtpbmcsIGFuc3dlciBvbmNlPC90ZXh0Pgo8ZyBzdHJva2Utd2lkdGg9IjEuNSI+CjxyZWN0IGNsYXNzPSJhZGFwdCIgeD0iMTYiIHk9IjQyIiB3aWR0aD0iMTQwIiBoZWlnaHQ9IjU2IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSI4NiIgeT0iNjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlF1ZXN0aW9uIGFwcGVhcnM8L3RleHQ+PHRleHQgY2xhc3M9Im0iIHg9Ijg2IiB5PSI4NCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxMSI+cmV2ZXJzaWJsZT88L3RleHQ+CjxyZWN0IGNsYXNzPSJuZXciIHg9IjE5MCIgeT0iNDIiIHdpZHRoPSIxNTAiIGhlaWdodD0iNTYiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjI2NSIgeT0iNjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlRha2UgdGhlIHNhZmUgZGVmYXVsdDwvdGV4dD48dGV4dCBjbGFzcz0ibSIgeD0iMjY1IiB5PSI4NCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxMSI+d3JpdGUgaXQgaW4gdGhlIGxlZGdlcjwvdGV4dD4KPHJlY3QgY2xhc3M9InJldXNlIiB4PSIzNzQiIHk9IjQyIiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjU2IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSI0MzkiIHk9IjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5LZWVwIGJ1aWxkaW5nPC90ZXh0Pjx0ZXh0IGNsYXNzPSJtIiB4PSI0MzkiIHk9Ijg0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjExIj5ubyBzdG9wPC90ZXh0Pgo8cmVjdCBjbGFzcz0ieW91IiB4PSI1MzgiIHk9IjQyIiB3aWR0aD0iMTI2IiBoZWlnaHQ9IjU2IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSI2MDEiIHk9IjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5PbmUgYmF0Y2g8L3RleHQ+PHRleHQgY2xhc3M9Im0iIHg9IjYwMSIgeT0iODQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTEiPm9uIHRoZSBRQSBwYWdlPC90ZXh0Pgo8cmVjdCBjbGFzcz0ieW91IiB4PSIxNiIgeT0iMTM2IiB3aWR0aD0iMzI0IiBoZWlnaHQ9IjU2IiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIxNzgiIHk9IjE2MCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tm90IHJldmVyc2libGUsIG9yIHRvdWNoZXMgbW9uZXksIHNlY3JldHMsPC90ZXh0Pjx0ZXh0IGNsYXNzPSJ0IiB4PSIxNzgiIHk9IjE3OCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+b3RoZXIgcGVvcGxlLCBvciBkZWxldGVzIGRhdGE6IGFzayBub3c8L3RleHQ+CjwvZz4KPGcgY2xhc3M9ImxuIj48cGF0aCBkPSJNMTU2IDcwaDM0TTM0MCA3MGgzNE01MDQgNzBoMzRNODYgOTh2MzgiLz48L2c+Cjx0ZXh0IGNsYXNzPSJtIiB4PSI5NCIgeT0iMTIyIiBmb250LXNpemU9IjExIj5ubzwvdGV4dD48dGV4dCBjbGFzcz0ibSIgeD0iMTYyIiB5PSI2MiIgZm9udC1zaXplPSIxMSI+eWVzPC90ZXh0Pgo8dGV4dCBjbGFzcz0ibSIgeD0iMzYwIiB5PSIxNjYiPk9ubHkgdGhlc2Ugc3RpbGwgc3RvcCB0aGUgd29yay48L3RleHQ+Cjwvc3ZnPgo=",
+        "alt": "A question appears. If it can be undone, take the safe default, write it in the ledger, keep building, and bring it to you in one batch on the QA page. If not, ask now.",
+        "caption": "Only questions that cannot be undone still stop the work."
+      }
+    ],
+    [
+      "change",
+      "Fewer approval stops before building",
+      "The design and the build plan can be approved in one reply.",
+      null,
+      "Today you approve the design, wait for a plan, then approve the plan, which is two stops. The reviewer would check the design and a draft plan together, and one page would carry both. You send one approval line. If your picks change the plan, the plan is rebuilt and re-reviewed before building starts, with no second stop.",
+      [
+        "Stage words 'Design approved' and 'Build plan approved' are separate stops (docs/4-systems/design-loop.md, Approvals row).",
+        "A combined page, and one reply moves the feature from Design to Build, with the plan reviewed.",
+        "One approval instead of two before any code."
+      ]
+    ],
+    [
+      "change",
+      "The build plan gets the same review",
+      "The plan is checked against the design it came from.",
+      null,
+      "The reviewer asks whether every design item has a step, and whether any step has no design behind it. It checks that the steps run in a workable order, and that each issue says what done looks like. It also requires one acceptance test per design item, written now, which the final run executes later.",
+      [
+        "The plan page is checked for wording, and for the more-than-three-steps issue rule.",
+        "A plan review, and an acceptance list written at plan time.",
+        "Gaps between the design and the plan are caught before any code is written."
+      ]
+    ],
+    [
+      "new",
+      "Acceptance run before QA",
+      "The reviewer tests the whole feature, not one step.",
+      null,
+      "At the end of Build the reviewer starts the product, drives each flow, screenshots each state and compares it with the approved design page. A failed item goes back to a builder, for at most four rounds, the cap the visual loop already uses. A pass writes a report and a stamp for the current commit.",
+      [
+        "skills/visual-loop already captures, critiques and fixes in up to 4 rounds (max_rounds in rules/visual.json), for visual changes only.",
+        "The visual loop widened to whole features. A product with no screen, such as this plugin's hooks, is judged on run output: verify.py plus real hook payloads.",
+        "You get pictures of the finished feature before you are asked anything."
+      ]
+    ],
+    [
+      "new",
+      "No QA without the stamp",
+      "A page or a build only moves on once its review is current.",
+      null,
+      "A page carries a stamp: a fingerprint of its content plus the reviewer's verdict. Editing the page afterwards makes the stamp stale. A reply that links a design or plan page with no current stamp is sent back once. The QA page builder refuses to build without an acceptance stamp for the current commit.",
+      [
+        "The editor check is a reminder at reply end (EDITOR_NOTE, scripts/house_rules/writing.py:126). make_page.py's QA mode only checks that the 'unverified' list is not empty (make_page.py:281).",
+        "Stamps recorded by a hook, the way qa_page is today, never by hand.",
+        "A page that reaches you has been reviewed in its final form."
+      ]
+    ],
+    [
+      "new",
+      "Untestable here: one self-judging test",
+      "You run one command and read PASS or FAIL.",
+      null,
+      "If the reviewer truly cannot test something here, such as phone sensors, a GPU or your own accounts, a builder writes an automated test that decides pass or fail itself. It runs here first against stand-ins. You get one command in the step-card format. QA's 'still unverified' list may then be empty.",
+      [
+        "make_page.py refuses an empty unverified list (make_page.py:281).",
+        "That rule is reversed, and a 'needs your machine' step with one command is added.",
+        "The most you ever run is one command. Nothing is ticked or judged by hand."
+      ],
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2ODAgMjIwIiB3aWR0aD0iNjgwIiBoZWlnaHQ9IjIyMCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxTZWdvZSBVSSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIj4KPHN0eWxlPgouYmd7ZmlsbDojZmZmfS50e2ZpbGw6IzFiMWYyYX0ubXtmaWxsOiM1YjYyNzV9Lmxue3N0cm9rZTojOGE5MmE2O2ZpbGw6bm9uZTtzdHJva2Utd2lkdGg6MS41fQoubmV3e2ZpbGw6I2ZkZTBkYztzdHJva2U6I2MwMzkyYn0ueW91e2ZpbGw6I2RiZTdmZjtzdHJva2U6IzJmNWZkMH0ucmV1c2V7ZmlsbDojZGZmM2U0O3N0cm9rZTojMmU4YjU3fQpAbWVkaWEgKHByZWZlcnMtY29sb3Itc2NoZW1lOmRhcmspey5iZ3tmaWxsOiMxNDE3MWZ9LnR7ZmlsbDojZWVmMGY2fS5te2ZpbGw6I2E0YWJiZH0ubG57c3Ryb2tlOiM2Yzc0OGF9Lm5ld3tmaWxsOiM0YTFmMWI7c3Ryb2tlOiNmZjhhN2F9LnlvdXtmaWxsOiMxZDJjNTU7c3Ryb2tlOiM3YWEyZmZ9LnJldXNle2ZpbGw6IzFmM2EyYTtzdHJva2U6IzVmY2Y4Y319Cjwvc3R5bGU+CjxyZWN0IGNsYXNzPSJiZyIgd2lkdGg9IjY4MCIgaGVpZ2h0PSIyMjAiLz4KPHRleHQgY2xhc3M9InQiIHg9IjE2IiB5PSIyNCIgZm9udC13ZWlnaHQ9IjcwMCI+V2hlbiB0aGlzIG1hY2hpbmUgcmVhbGx5IGNhbm5vdCB0ZXN0IGl0IChwaG9uZSBzZW5zb3JzLCBhIEdQVSwgeW91ciBsb2dpbnMpPC90ZXh0Pgo8ZyBzdHJva2Utd2lkdGg9IjEuNSI+CjxyZWN0IGNsYXNzPSJuZXciIHg9IjE2IiB5PSI0MiIgd2lkdGg9IjE0NCIgaGVpZ2h0PSI2MCIgcng9IjgiLz48dGV4dCBjbGFzcz0idCIgeD0iODgiIHk9IjY4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5SZXZpZXdlciBzYXlzPC90ZXh0Pjx0ZXh0IGNsYXNzPSJ0IiB4PSI4OCIgeT0iODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPiJjYW5ub3QgcnVuIGhlcmUiPC90ZXh0Pgo8cmVjdCBjbGFzcz0ibmV3IiB4PSIxODAiIHk9IjQyIiB3aWR0aD0iMTQ0IiBoZWlnaHQ9IjYwIiByeD0iOCIvPjx0ZXh0IGNsYXNzPSJ0IiB4PSIyNTIiIHk9IjY4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CdWlsZGVyIHdyaXRlcyBvbmU8L3RleHQ+PHRleHQgY2xhc3M9InQiIHg9IjI1MiIgeT0iODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPnNlbGYtanVkZ2luZyB0ZXN0PC90ZXh0Pgo8cmVjdCBjbGFzcz0icmV1c2UiIHg9IjM0NCIgeT0iNDIiIHdpZHRoPSIxNDQiIGhlaWdodD0iNjAiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjQxNiIgeT0iNjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlJ1biBoZXJlIGFnYWluc3Q8L3RleHQ+PHRleHQgY2xhc3M9InQiIHg9IjQxNiIgeT0iODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPnN0YW5kLWlucywgdG8gcHJvdmUgaXQ8L3RleHQ+CjxyZWN0IGNsYXNzPSJ5b3UiIHg9IjUwOCIgeT0iNDIiIHdpZHRoPSIxNTYiIGhlaWdodD0iNjAiIHJ4PSI4Ii8+PHRleHQgY2xhc3M9InQiIHg9IjU4NiIgeT0iNjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllvdSBydW4gb25lIGNvbW1hbmQ8L3RleHQ+PHRleHQgY2xhc3M9InQiIHg9IjU4NiIgeT0iODYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPmFuZCByZWFkIFBBU1Mgb3IgRkFJTDwvdGV4dD4KPC9nPgo8ZyBjbGFzcz0ibG4iPjxwYXRoIGQ9Ik0xNjAgNzJoMjBNMzI0IDcyaDIwTTQ4OCA3MmgyMCIvPjwvZz4KPGcgY2xhc3M9Im0iPjx0ZXh0IHg9IjE2IiB5PSIxMzYiPlRoZSB0ZXN0IGRlY2lkZXMgcGFzcyBvciBmYWlsIGl0c2VsZi4gWW91IG5ldmVyIGp1ZGdlIGEgc2NyZWVuc2hvdCBvciB0aWNrIGEgbGlzdC48L3RleHQ+Cjx0ZXh0IHg9IjE2IiB5PSIxNTgiPkl0IGZvbGxvd3MgdGhlIGhhbmRvdmVyIGNhcmQgZm9ybWF0IGFuZCBzYXlzIFVOVEVTVEVEIHdoZW4gaXQgd2FzIG5vdCBydW4gb24geW91ciBtYWNoaW5lLjwvdGV4dD4KPHRleHQgeD0iMTYiIHk9IjE4MCI+VGhlIFFBIHBhZ2UgbGlzdHMgaXQgYXMgb25lIHN0ZXAsIG5ldmVyIGFzIGEgcGlsZSBvZiBtYW51YWwgY2hlY2tzLjwvdGV4dD48L2c+Cjwvc3ZnPgo=",
+        "alt": "Four boxes in a row: the reviewer says it cannot run the feature here, a builder writes a self-judging test, the test is run here against stand-ins, then you run one command and read PASS or FAIL.",
+        "caption": "The fallback path when this machine cannot test something."
+      }
+    ],
+    [
+      "keep",
+      "What stays the same",
+      "Your approvals, labels, branches and QA verdict.",
+      null,
+      "Only your messages move a stage, and QA passed or QA failed stays your answer. The wording-only editor stays for long replies when HOUSE_RULES_EDITOR=on, because a reply has no design to review. Turning the design loop off still turns all of this off.",
+      [
+        "docs/4-systems/design-loop.md, Invariants.",
+        "Nothing changes here.",
+        "You approve and judge exactly as you do now."
+      ]
+    ],
+    [
+      "keep",
+      "Reversals, named",
+      "This undoes earlier decisions.",
+      null,
+      "The editor is no longer the only pass before a page (#249, #325). QA pages no longer must list something unverified (#264, #268). Build no longer holds edits on every question (#506), and helpers park questions instead of passing them to you (#458 to #460). Each gets a dated entry in docs/6-decisions/Decisions.md, with a pointer left where each was written.",
+      [
+        "docs/6-decisions/Decisions.md holds both earlier entries.",
+        "Two dated reversal entries.",
+        "Nothing for you to do."
+      ]
+    ],
+    [
+      "keep",
+      "Risks I would flag",
+      "Cost, shared blind spots, and judging pictures.",
+      null,
+      "Opus on every design and plan page costs more than Sonnet, and I have not measured how much. The reviewer is still a Claude model reading Claude's work, so a cold read and a fixed checklist reduce shared blind spots but do not remove them. A model judging screenshots can pass a bad one, so each design item should also carry a mechanical check where one exists.",
+      [
+        "tools/measure_footprint.py measures the installed plugin's token cost.",
+        "A measured cost per review, reported after the first real run.",
+        "You see the real number before deciding to keep Opus."
+      ]
+    ]
+  ],
+  "choices": [
+    [
+      "share",
+      "What does the reviewer do with an unanswered question?",
+      [
+        [
+          "A",
+          "Answer facts, turn choices into options",
+          1,
+          "A fact is looked up and written in. A real design choice becomes a lettered option with a suggestion."
+        ],
+        [
+          "B",
+          "Decide everything and log it",
+          0,
+          "Fastest for you, but it reverses the rule that decisions come only from you."
+        ],
+        [
+          "C",
+          "Only list the questions",
+          0,
+          "Safe, but it hands you the same loose questions you get today."
+        ]
+      ],
+      "A keeps the rule that you design, and still removes the questions the code can answer."
+    ],
+    [
+      "lock",
+      "How hard is the gate?",
+      [
+        [
+          "A",
+          "Stamp gate",
+          1,
+          "An unreviewed or stale page is sent back once, and the QA page will not build without a current acceptance stamp."
+        ],
+        [
+          "B",
+          "Reminder only",
+          0,
+          "A note at reply end, like the editor today. It can be ignored."
+        ]
+      ],
+      "Only a gate makes 'only after review and testing' true. A reminder was easy to skip."
+    ],
+    [
+      "swings",
+      "How many review rounds before the leftovers go on the page?",
+      [
+        [
+          "A",
+          "Two rounds",
+          1,
+          "Leftover findings are shown on the page as open risks, not hidden."
+        ],
+        [
+          "B",
+          "Four rounds",
+          0,
+          "Matches the visual loop's cap, and costs more Opus time."
+        ],
+        [
+          "C",
+          "One round",
+          0,
+          "Cheapest, but a fix is never re-read."
+        ]
+      ],
+      "Each fix can create a new flaw, so a re-read is needed and a cap stops endless loops. Two is my estimate and is not measured."
+    ],
+    [
+      "grip",
+      "One agent file or two?",
+      [
+        [
+          "A",
+          "Extend reviewer.md with page, plan and acceptance modes",
+          1,
+          "One file to maintain. It gains write access for screenshots and reports, limited to docs/."
+        ],
+        [
+          "B",
+          "New design-reviewer agent, reviewer.md unchanged",
+          0,
+          "reviewer.md stays read-only for diffs, at the cost of a second file with overlapping rules."
+        ]
+      ],
+      "A follows the repo's reuse rule. B is safer if you want the diff reviewer to stay read-only."
+    ],
+    [
+      "block",
+      "Which pages get the full review?",
+      [
+        [
+          "A",
+          "Proposal and build-plan pages only",
+          1,
+          "QA, review and art pages keep a wording pass."
+        ],
+        [
+          "B",
+          "Every page",
+          0,
+          "Simplest rule, but a QA page has no design to find flaws in."
+        ]
+      ],
+      "Design flaws live in designs and plans, so that is where the Opus time goes."
+    ],
+    [
+      "swings",
+      "Where do parked questions reach you?",
+      [
+        [
+          "A",
+          "One batch on the QA page",
+          1,
+          "Work runs to QA uninterrupted. You answer all parked items once, and a changed answer goes back through QA failed."
+        ],
+        [
+          "B",
+          "At the end of each build step",
+          0,
+          "Smaller batches and earlier answers, but one stop per step."
+        ]
+      ],
+      "A removes the stops. The cost is that a wrong default can cost rework, which is why only undoable ones park."
+    ],
+    [
+      "lock",
+      "How many approvals before building?",
+      [
+        [
+          "A",
+          "One combined reply for design and plan",
+          1,
+          "Both are reviewed together on one page."
+        ],
+        [
+          "B",
+          "Two replies, as today",
+          0,
+          "You see the plan before approving it, at the cost of a second stop."
+        ]
+      ],
+      "A matches your goal of fewer stops. If your picks change the plan, it is rebuilt and re-reviewed before building."
+    ]
+  ],
+  "wrapup": {
+    "summary": "A change to the design loop: a reviewer replaces the editor for design and plan pages, and an acceptance run tests the finished feature before QA.",
+    "changing": "Nothing is built. If you approve, this edits the reviewer agent, make_page.py, the page checks in writing.py, the stage tracker and verify.py, and adds docs and two dated reversal entries in Decisions.md.",
+    "blocking": "Your approval and your seven picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, which pages are reviewed, where parked questions land, and how many approvals before building.",
+    "next": "I log the decision, write the build plan as a page, put it through the same review, then create one issue per step.",
+    "todo": [
+      "Pick your answers in Choices.",
+      "Tap <b>Copy my reply<\/b>.",
+      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: design review loop\", or say what to change."
+    ]
+  }
+};
+// ---- End of PAGE. Nothing below needs editing. ----------------------------------------------
+
+const ic = id => `<svg class="ico"><use href="#i-${id}"/></svg>`;
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// A picture is found by shape (src or before), not position, because flow and files before it are optional.
+const picOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && (x.src || x.before));
+let picN = 0; const PICS = [];
+const picHtml = p => {
+  if (!p) return "";
+  if (p.before && p.after) {
+    const id = "cmp" + (picN++), cap = p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : "";
+    const im = x => `<img src="${esc(x.src)}" alt="${esc(x.alt || p.caption || "")}">`;
+    return `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
+      <div class="cmp-slide"><div class="cmp-frame">${im(p.before)}${im(p.after)}</div><label for="${id}">Reveal after over before: drag to compare</label><input type="range" id="${id}" min="0" max="100" value="50" aria-label="Compare before and after: ${esc(p.caption || "")}"></div>${cap}</figure>`;
+  }
+  const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+  return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+};
+document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+let boxFrom = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-pic]");
+  if (b) { const p = PICS[+b.dataset.pic]; boxFrom = b; box.querySelector("img").src = p.src; box.querySelector("img").alt = p.alt; box.querySelector("p").textContent = p.caption; box.showModal(); return; }
+  if (e.target === box || e.target.closest("dialog.lightbox")) box.close();  // tap anywhere on it closes; Escape does too
+});
+box.addEventListener("close", () => { if (boxFrom) boxFrom.focus(); boxFrom = null; });
+document.title = PAGE.title;
+document.getElementById("title").textContent = PAGE.title;
+document.getElementById("eyebrow").textContent = PAGE.eyebrow;
+document.getElementById("lead").textContent = PAGE.short.lead;
+document.getElementById("hint").textContent = PAGE.short.hint;
+document.getElementById("key").innerHTML = PAGE.short.key.map(([l, k]) =>
+  `<span><i class="${k === "you" ? "y" : ""}"${k === "done" ? ' style="background:var(--ok-soft);border-color:var(--ok)"' : ""}></i>${esc(l)}</span>`).join("");
+
+// A part is left out only when it would be empty.
+const PARTS = [["short", "In short"], ["changes", "Changes"], ["choices", "Choices"], ["wrapup", "Wrap-up"]]
+  .filter(([id]) => id === "short" || id === "wrapup" || (PAGE[id] && PAGE[id].length));
+document.querySelectorAll("[data-part]").forEach(p => { if (!PARTS.some(([id]) => id === p.dataset.part)) p.remove(); });
+
+const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+const lst = v => Array.isArray(v) ? `<ul class="cl">${v.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p>${esc(v)}</p>`;
+const glance = document.getElementById("glance"), sd = document.getElementById("sd");
+glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
+  `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
+function showItem(n) {
+  glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
+  const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
+  const row = PAGE.short.items[n], summary = PAGE.kind === "summary";
+  const strip = Array.isArray(row[6]) && row[6].length === 3 && row[6].every(x => typeof x === "string") ? row[6] : null;
+  const needsYou = !summary && !/^Nothing/.test(Array.isArray(requires) ? requires.join(" ") : requires);
+  sd.innerHTML = `<h3>${esc(t)}</h3>${strip ? flow(strip) : ""}<div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span>${lst(creates)}</div>
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${summary ? ic("check") + "Decided by" : ic("hand") + "Requires"}</span>${lst(requires)}</div></div>${picHtml(pic)}`;
+}
+glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
+if (PAGE.short.items.length) showItem(0);
+
+if (document.getElementById("cc")) {
+  const counts = { new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
+  document.getElementById("cc-count").textContent =
+    `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
+  // A New item's picture (#241): what sets it off -> what it does -> what you get.
+  // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
+  const lineCounts = (a, r) => `+${a} \u2212${r}`;
+  const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+    fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+      (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
+}
+
+if (document.getElementById("qs")) {
+  document.getElementById("qs").innerHTML = PAGE.choices.map(([id, q, opts, why], n) =>
+    `<fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n + 1}</span>${esc(q)}</h3></legend>
+     ${opts.map(o => { const [v, l, rec, d] = o; return `<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${esc(l)}</b>${rec ? '<span class="rec">' + ic("check") + 'Suggested</span>' : ""}${d ? `<small>${esc(d)}</small>` : ""}</span></label>${picHtml(picOf(o, 4))}`; }).join("")}
+     <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to: ${esc(q)}" placeholder="Type your idea here"></span></label>
+     ${why ? `<details class="why"><summary>Why I suggest this</summary><p>${esc(why)}</p></details>` : ""}</fieldset>`).join("");
+}
+
+const W = PAGE.wrapup;
+document.getElementById("wrapup").innerHTML = [
+  ["file", "Summary", W.summary, "accent"], ["swap", "What's changing", W.changing, "accent"],
+  ["stop", "What's blocking", W.blocking, "gap"], ["next", "What's next", W.next, "ok"]
+].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("");
+// The to-do list is ticked off; make_page.py writes the same list and next-step text into the file so a reader without script sees them.
+document.getElementById("todo").innerHTML = W.todo.map(x => `<li><label><input type="checkbox"><span>${x}</span></label></li>`).join("");
+document.getElementById("nextstep").textContent = W.next || W.todo[0].replace(/<[^>]*>/g, "");
+
+const out = document.getElementById("out"), miss = document.getElementById("miss");
+function reply() {
+  const picks = PAGE.choices.map(([id], i) => {
+    const c = document.querySelector(`input[name=${id}]:checked`);
+    if (c && c.value === "own") { const t = document.querySelector(`.owntext[data-for=${id}]`).value.trim(); return [i + 1, t ? "own" : null, t]; }
+    return [i + 1, c && c.value];
+  });
+  const A = PAGE.approval || PAGE.replyPrefix;  // replyPrefix: only for pages built before approval existed
+  out.textContent = picks.length
+    ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
+      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("")
+    : A;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
+  const m = picks.filter(([, v]) => !v).map(([n]) => n);
+  miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
+  const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
+}
+document.addEventListener("change", reply);
+document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
+document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
+  // navigator.clipboard is missing on file:// and other non-https pages, so it is called inside a promise and falls back to execCommand.
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(out); getSelection().removeAllRanges(); getSelection().addRange(r);
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    st.textContent = ok ? "Copied. Paste it into the chat." : "Couldn't copy automatically. The reply is selected; copy it by hand."; };
+  Promise.resolve().then(() => navigator.clipboard.writeText(out.textContent))
+  .then(() => st.textContent = "Copied. Paste it into the chat.").catch(fallback); };
+
+let cur = 1;
+const stepper = document.getElementById("stepper");
+stepper.style.gridTemplateColumns = `repeat(${PARTS.length},1fr)`;
+stepper.innerHTML = PARTS.map(([, s], i) => `<button type="button" data-go="${i + 1}"><span class="bar"></span>${s}</button>`).join("");
+function go(n, focus = true) {
+  cur = Math.min(PARTS.length, Math.max(1, n));
+  const id = PARTS[cur - 1][0];
+  document.querySelectorAll("[data-part]").forEach(p => p.hidden = p.dataset.part !== id);
+  stepper.querySelectorAll("button").forEach((b, i) => { b.classList.toggle("done", i + 1 < cur); if (i + 1 === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  document.getElementById("prev").hidden = cur === 1;
+  const nx = document.getElementById("next"); nx.hidden = cur === PARTS.length; nx.textContent = cur === PARTS.length - 1 ? "Wrap-up ›" : "Next ›";
+  if (focus) { document.getElementById("h-" + id).focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+}
+stepper.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(+b.dataset.go); });
+document.getElementById("prev").onclick = () => go(cur - 1);
+document.getElementById("next").onclick = () => go(cur + 1);
+go(1, false); reply();
+</script>

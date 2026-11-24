@@ -4,7 +4,7 @@
   "pageType": "proposal",
   "approval": "Design approved: design review loop",
   "short": {
-    "lead": "Today a helper called the editor checks only the wording of a page, and you do the final testing. This change replaces it with a reviewer that hunts for design flaws before you see a page, and adds an acceptance run that tests and screenshots the finished feature before QA. Five choices at the end are yours.",
+    "lead": "Today the editor checks only the wording of a page, you do the final testing, and routine work stops for questions and approvals. This change adds a reviewer that hunts for design flaws before you see a page, an acceptance run that tests the finished feature before QA, and a rule that questions are parked and answered in one batch instead of halting work. Seven choices at the end are yours.",
     "hint": "Tap a step to see what it produces. The sections below explain each part, and the choices at the end are yours.",
     "key": [["I do it", ""], ["You decide", "you"]],
     "items": [
@@ -22,6 +22,13 @@
     ["change", "Questions get answered, not passed along", "Facts are looked up. Choices become your options.", null,
      "A question the code or docs can answer, such as whether the QA builder accepts an empty list, the reviewer looks up and writes into the page. A question that is really a design choice cannot be settled by a helper, because decisions come only from you. The reviewer turns it into a lettered option with its suggestion marked.",
      ["The 'decided for you' check sends back any reply that settles a design point alone (docs/4-systems/design-loop.md, Long replies row).", "A rule for the reviewer: facts get answered, choices become options.", "Fewer loose questions reach you, and the number of real decisions stays the same."]],
+    ["change", "Questions are parked, not asked mid-work", "Work keeps going; you answer once, in a batch.", null,
+     "When a question comes up in Build, the agent takes the safest default that can be undone, records it in a parked-decisions ledger with how to undo it, and keeps building. Helpers do the same. Everything parked reaches you together on the QA page, with options. Anything not undoable, or touching money, secrets, other people or deleted data, still asks first.",
+     ["In Build, a reply ending in a question holds code edits until you answer (#506). Helpers' questions go to you, and the 'decided for you' check sends back any reply that settles a point alone.", "A ledger file per feature, and a rule that reversible questions are parked. The hold and the check apply only to what cannot be parked.", "Routine work no longer stops. You answer parked questions once, with the work already done."],
+     {"src": "docs/plans/2026-11-24-design-review-loop-pics/parked.svg", "alt": "A question appears. If it can be undone, take the safe default, write it in the ledger, keep building, and bring it to you in one batch on the QA page. If not, ask now.", "caption": "Only questions that cannot be undone still stop the work."}],
+    ["change", "Fewer approval stops before building", "The design and the build plan can be approved in one reply.", null,
+     "Today you approve the design, wait for a plan, then approve the plan, which is two stops. The reviewer would check the design and a draft plan together, and one page would carry both. You send one approval line. If your picks change the plan, the plan is rebuilt and re-reviewed before building starts, with no second stop.",
+     ["Stage words 'Design approved' and 'Build plan approved' are separate stops (docs/4-systems/design-loop.md, Approvals row).", "A combined page, and one reply moves the feature from Design to Build, with the plan reviewed.", "One approval instead of two before any code."]],
     ["change", "The build plan gets the same review", "The plan is checked against the design it came from.", null,
      "The reviewer asks whether every design item has a step, and whether any step has no design behind it. It checks that the steps run in a workable order, and that each issue says what done looks like. It also requires one acceptance test per design item, written now, which the final run executes later.",
      ["The plan page is checked for wording, and for the more-than-three-steps issue rule.", "A plan review, and an acceptance list written at plan time.", "Gaps between the design and the plan are caught before any code is written."]],
@@ -38,8 +45,8 @@
     ["keep", "What stays the same", "Your approvals, labels, branches and QA verdict.", null,
      "Only your messages move a stage, and QA passed or QA failed stays your answer. The wording-only editor stays for long replies when HOUSE_RULES_EDITOR=on, because a reply has no design to review. Turning the design loop off still turns all of this off.",
      ["docs/4-systems/design-loop.md, Invariants.", "Nothing changes here.", "You approve and judge exactly as you do now."]],
-    ["keep", "Two reversals, named", "This undoes two earlier decisions.", null,
-     "First, the editor is no longer the only pass before a page (decided with the editor reminder, #249 and #325). Second, QA pages no longer must list something unverified (decided with the QA stage, #264 and #268). Both get a dated entry in docs/6-decisions/Decisions.md, with a pointer left where each was written.",
+    ["keep", "Reversals, named", "This undoes earlier decisions.", null,
+     "The editor is no longer the only pass before a page (#249, #325). QA pages no longer must list something unverified (#264, #268). Build no longer holds edits on every question (#506), and helpers park questions instead of passing them to you (#458 to #460). Each gets a dated entry in docs/6-decisions/Decisions.md, with a pointer left where each was written.",
      ["docs/6-decisions/Decisions.md holds both earlier entries.", "Two dated reversal entries.", "Nothing for you to do."]],
     ["keep", "Risks I would flag", "Cost, shared blind spots, and judging pictures.", null,
      "Opus on every design and plan page costs more than Sonnet, and I have not measured how much. The reviewer is still a Claude model reading Claude's work, so a cold read and a fixed checklist reduce shared blind spots but do not remove them. A model judging screenshots can pass a bad one, so each design item should also carry a mechanical check where one exists.",
@@ -67,12 +74,20 @@
     ["block", "Which pages get the full review?", [
       ["A", "Proposal and build-plan pages only", 1, "QA, review and art pages keep a wording pass."],
       ["B", "Every page", 0, "Simplest rule, but a QA page has no design to find flaws in."]],
-      "Design flaws live in designs and plans, so that is where the Opus time goes."]
+      "Design flaws live in designs and plans, so that is where the Opus time goes."],
+    ["swings", "Where do parked questions reach you?", [
+      ["A", "One batch on the QA page", 1, "Work runs to QA uninterrupted. You answer all parked items once, and a changed answer goes back through QA failed."],
+      ["B", "At the end of each build step", 0, "Smaller batches and earlier answers, but one stop per step."]],
+      "A removes the stops. The cost is that a wrong default can cost rework, which is why only undoable ones park."],
+    ["lock", "How many approvals before building?", [
+      ["A", "One combined reply for design and plan", 1, "Both are reviewed together on one page."],
+      ["B", "Two replies, as today", 0, "You see the plan before approving it, at the cost of a second stop."]],
+      "A matches your goal of fewer stops. If your picks change the plan, it is rebuilt and re-reviewed before building."]
   ],
   "wrapup": {
     "summary": "A change to the design loop: a reviewer replaces the editor for design and plan pages, and an acceptance run tests the finished feature before QA.",
     "changing": "Nothing is built. If you approve, this edits the reviewer agent, make_page.py, the page checks in writing.py, the stage tracker and verify.py, and adds docs and two dated reversal entries in Decisions.md.",
-    "blocking": "Your approval and your five picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, and which pages are reviewed.",
+    "blocking": "Your approval and your seven picks: how questions are handled, how hard the gate is, how many rounds, one agent or two, which pages are reviewed, where parked questions land, and how many approvals before building.",
     "next": "I log the decision, write the build plan as a page, put it through the same review, then create one issue per step.",
     "todo": ["Pick your answers in Choices.", "Tap <b>Copy my reply</b>.", "Send it with \"Design approved: design review loop\", or tell me what to change."]
   }
