@@ -4,11 +4,10 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
-<<<<<<< HEAD
 Plugin 2.91.0: quieter hook messages (#583 to #586). The plugin's status messages (`trace()` and `trace_noop()`) now go to a log file you read with `/house-rules:hook-log` instead of repeating in chat, `HOUSE_RULES_TRACE=chat` brings them back, and overlapping autosaves no longer collide on one scratch file (`house-rules-autosave-<branch>.index.<pid>`); an autosave error prints one line once per session. Design approved as "Design approved: quieter hook messages 1* 2A", option A for choice 1. Detail: `docs/4-systems/hook-message-log.md`.
 
 Modular tests, designed and planned, not built yet (#575 to #582): a rule that every test is a module that runs alone or chained, a write-time refusal of tests that are not, an audit list of old ones, and a skill and command to convert them. Design approved as "Design approved: modular tests 1A 2* 3A". Detail: `docs/4-systems/modular-tests.md`.
-=======
+
 Step 7 of the design review loop (issue #599, the deviations ledger) was handed to a helper and is not built or checked yet: it adds `ledger_note.py deviate`, a rule line and helper note about logging departures from the plan, and a one-shot end-of-reply check that is a phrase heuristic.
 
 Step 6 of the design review loop (issue #598) is built: in Build with someone present, a plain question is refused and the agent parks it in the ledger; only a [HARD STOP] question is asked, and only a [HARD STOP] last paragraph holds code edits. The QA page parser also reads a pipe inside a ledger cell. My own runs: `verify.py` 1559 of 1559, `tools/verify_tools.py` exit 0, and the real hook fired in every stage and mode. A standalone-only test failure that also exists on `main` is noted in the ledger.
@@ -40,7 +39,6 @@ The design review loop was approved and planned (nothing built): parent issue #5
 The design review loop proposal page now covers unattended mode: when the build plan must change, work keeps going and each deviation is logged for aj at the end. Detail: a new "Unattended mode" item, a deviations picture and an eighth choice in `docs/plans/2026-11-24-design-review-loop.html`; still nothing built.
 
 Proposal page for a design review loop (nothing built): a reviewer replaces the editor for design and plan pages, an acceptance run tests the finished feature before QA, and questions are parked and answered in one batch instead of halting work. Detail: `docs/plans/2026-11-24-design-review-loop.html`, awaiting aj's approval and eight picks.
->>>>>>> origin/AjsAgent/sleepy-albattani-bxj5wx
 
 The second run of the five live roadblock sessions (`live_roadblocks.py`, corrected prompts) was started on the branch build 2.90.0; its results are not recorded yet.
 
