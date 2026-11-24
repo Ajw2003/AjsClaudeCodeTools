@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.93.0 -->
 <meta charset="utf-8">
+<meta name="house-rules-reviewed" content="3be68458e9151fe934ababbb0b06977a482e3d90c1a0f6d3108d5f4c5a3c2e42;open-risks;2">
 <meta name="house-rules-page" content="proposal">
 <title>A review command for any target</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -238,7 +239,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">Add one /house-rules:review command that sends the existing reviewer, with four new modes, at any code, image, style or whole repo, and you answer two questions below.</p>
+      <p class="lead" id="lead" data-basic="summary">Add one /house-rules:review command that sends the existing reviewer, with four new modes, at code, an image, a screen's style or a whole repo, and you answer three questions below.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -259,7 +260,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the suggestion.</label></li><li><label><input type="checkbox"> Pick an option under Your choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: review command", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today the reviewer runs only when a skill or you spawn it by hand.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Short verdict in chat, full report saved to docs/qa/review-NAME/ by the main session</p></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today the reviewer runs when a skill, the design loop's review step, or you spawn it.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Short verdict in chat, full report saved to docs/qa/review-&lt;target name&gt;-&lt;date&gt;/ by the main session</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -285,7 +286,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: review command",
   "short": {
-    "lead": "Add one /house-rules:review command that sends the existing reviewer, with four new modes, at any code, image, style or whole repo, and you answer two questions below.",
+    "lead": "Add one /house-rules:review command that sends the existing reviewer, with four new modes, at code, an image, a screen's style or a whole repo, and you answer three questions below.",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -306,7 +307,7 @@ const PAGE = {
         "Type /house-rules:review with a path or an image. The command picks the mode and sends the reviewer. A bare /review is Claude Code's own command, so ours is always prefixed.",
         "Nothing from you.",
         {
-          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22320%22%20height%3D%22180%22%3E%3Crect%20width%3D%22320%22%20height%3D%22180%22%20fill%3D%22%23e3eafc%22/%3E%3Ctext%20x%3D%2216%22%20y%3D%2234%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3Ereview%20src/%20-%3E%20code%3C/text%3E%3Ctext%20x%3D%2216%22%20y%3D%2260%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3Ereview%20logo.png%20-%3E%20image%3C/text%3E%3Ctext%20x%3D%2216%22%20y%3D%2286%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3Ereview%20.%20-%3E%20codebase%3C/text%3E%3C/svg%3E",
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22320%22%20height%3D%22180%22%3E%3Crect%20width%3D%22320%22%20height%3D%22180%22%20fill%3D%22%23e3eafc%22/%3E%3Ctext%20x%3D%2216%22%20y%3D%2234%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3E/house-rules%3Areview%20src/%20-%3E%20code%3C/text%3E%3Ctext%20x%3D%2216%22%20y%3D%2260%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3E/house-rules%3Areview%20logo.png%20-%3E%20image%3C/text%3E%3Ctext%20x%3D%2216%22%20y%3D%2286%22%20font-family%3D%22sans-serif%22%20font-size%3D%2214%22%20fill%3D%22%231b2a4a%22%3E/house-rules%3Areview%20.%20-%3E%20codebase%3C/text%3E%3C/svg%3E",
           "alt": "The command picks a mode from what you point it at",
           "caption": "The command picks a mode from what you point it at"
         }
@@ -330,7 +331,7 @@ const PAGE = {
         "You approve it",
         "you",
         "A line in the decisions log.",
-        "Answer both questions, then send the approval line."
+        "Answer the three questions, then send the approval line."
       ]
     ]
   },
@@ -340,9 +341,9 @@ const PAGE = {
       "/house-rules:review command",
       "One front door that works in any project the plugin is installed in.",
       null,
-      "Mode is chosen in this order: a dot means codebase; an image extension means image; a build-plan page under docs/plans means plan; any other HTML page means page; any other file or folder means code. Style runs only when you name it. The command, not the reviewer, runs a codebase sweep: it spawns one reviewer per folder, one at a time, then merges and ranks the findings by severity, then file. It stops at a folder cap and a deadline set through waitfor.py.",
+      "Mode is chosen in this order: the path . on its own means codebase; an image extension means image; a page whose house-rules-page tag says build-plan means plan (the command also passes the approved design page named in that plan); any other HTML page means page; any other file or folder means code. With no argument it reviews the uncommitted diff in diff mode. To use style mode, write the word style after the path. To give image criteria, write them after the path as plain text (question 3). If you pick 2A, the command runs the codebase sweep: it spawns one reviewer per top-level folder, one at a time, up to a cap of 12 folders, merges and ranks findings by severity then file, and lists every folder over the cap or past the deadline as not reviewed. The deadline comes from rules/waits.json (agent: 900 seconds per reviewer) and is checked each minute with waitfor.py. If you pick 2B, it runs one sampling pass.",
       [
-        "Today the reviewer runs only when a skill or you spawn it by hand.",
+        "Today the reviewer runs when a skill, the design loop's review step, or you spawn it.",
         "A command file that spawns the reviewer with the right mode and prompt, and runs the sweep.",
         "You type one line anywhere; nothing in the project needs setting up."
       ],
@@ -353,7 +354,7 @@ const PAGE = {
       "Reviewer agent: four new modes",
       "code, codebase, image and style join page, plan, acceptance and diff.",
       null,
-      "code reviews a named area. codebase reviews one folder of a repo for the command's sweep. image judges pictures with the Read tool against criteria you give, or a fixed default list of hierarchy, contrast, alignment and consistency. style compares screens against docs/page-style.json or a style you state; with neither, it stops and says so. The reviewer returns its text and the main session saves the report, as the visual loop does.",
+      "code reviews a named area. codebase reviews one folder of a repo; the command calls it once per folder if you pick 2A. image judges pictures with the Read tool against criteria you give, or a fixed default list of hierarchy, contrast, alignment and consistency. style compares screens (image files you name, or a page you name) against a style you state or the project's own UI style guide; docs/page-style.json describes handover pages, not app screens, so it is not used. With neither a stated style nor a guide, it stops and says so. The reviewer returns its text and the main session saves the report, as the visual loop does.",
       [
         "Four modes; no image, style or whole-repo mode; the reviewer's own description line names only the current four.",
         "Eight modes in the same agent, same harsh stance: findings only, no praise.",
@@ -366,7 +367,7 @@ const PAGE = {
       "Files that name the reviewer's modes",
       "Description line, mode bullets, modes file and docs.",
       null,
-      "These move together: the description line and bullets in agents/reviewer.md, rules/detail/review-modes.md, a verify.py case per mode and for the command, the line in show-dont-tell.md saying the style file is read only by the builder, docs/4-systems/review-loop.md, a Decisions entry, a CHANGELOG line and the version bump. The command file must not use a bare CLAUDE_PLUGIN_ROOT, which broke harvest-scan before.",
+      "These move together: the description line and bullets in agents/reviewer.md, rules/detail/review-modes.md, a verify.py case per mode and for the command, the line in show-dont-tell.md saying the style file is read only by the builder, docs/4-systems/review-loop.md, a Decisions entry, a CHANGELOG line and the version bump. The command file must use the braced ${CLAUDE_PLUGIN_ROOT}; the unbraced form broke /house-rules:harvest-scan (Decisions 2026-09-20).",
       [
         "Each file lists four modes.",
         "Each lists eight, and verify.py checks it.",
@@ -379,7 +380,7 @@ const PAGE = {
       "visual-loop skill",
       "Kept as it is.",
       null,
-      "Its reviewer prompt names no mode, so it runs as diff mode with its own instructions. That stays the same.",
+      "Its round reviewer names no mode and keeps running as diff mode, not the new image mode; whole-feature acceptance keeps acceptance mode.",
       [
         "The visual loop runs today.",
         "Unchanged.",
@@ -395,7 +396,7 @@ const PAGE = {
       [
         [
           "A",
-          "Short verdict in chat, full report saved to docs/qa/review-NAME/ by the main session",
+          "Short verdict in chat, full report saved to docs/qa/review-<target name>-<date>/ by the main session",
           1,
           "Follows the rule that artifacts live in the project, and the reviewer itself writes nothing new."
         ],
@@ -409,12 +410,31 @@ const PAGE = {
       "A, so a whole-codebase review survives the session."
     ],
     [
+      "syntax",
+      "How do you give the command extra input?",
+      [
+        [
+          "A",
+          "/house-rules:review <path> [style] [criteria text]; no argument reviews the uncommitted diff",
+          1,
+          "One line covers every mode, and diff mode stays reachable."
+        ],
+        [
+          "B",
+          "No argument stops and prints the usage",
+          0,
+          "Safer against a mistyped command, but diff mode then needs its own argument."
+        ]
+      ],
+      "A, because every mode stays one short line."
+    ],
+    [
       "scale",
       "How does a whole-codebase review run?",
       [
         [
           "A",
-          "Folder by folder, one reviewer at a time, merged ranked list, with a folder cap and a deadline",
+          "Top-level folder by top-level folder, one reviewer at a time, merged ranked list, with a cap of 12 folders and a deadline",
           1,
           "Keeps each pass small and obeys the one-at-a-time rule."
         ],
@@ -431,7 +451,7 @@ const PAGE = {
   "wrapup": {
     "summary": "This proposal adds one review command and four modes to the existing reviewer.",
     "changing": "A new commands/review.md, four modes in the reviewer and its modes file, the docs that list the modes, and verify.py cases.",
-    "blocking": "Your answers to the two questions above, then the approval line.",
+    "blocking": "Your answers to the three questions above, then the approval line.",
     "next": "After you approve, the work is planned in a build plan.",
     "todo": [
       "Read the suggestion.",
