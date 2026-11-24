@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Step 1 (#618, four reviewer modes) is merged into `AjsAgent/jolly-dirac-fvh4cg` after all seven verify parts passed on it (delegation 204 on both the baseline and the step 1 branch). Step 2 (#619, the command) starts once a measured per-batch time and token figure is in.
+
 Step 1 (#618, four reviewer modes) is built on the branch `AjsAgent/review-command-step1` (commit 8446569) and not merged yet. My own `verify.py` runs on it: core 272, docs 167 and writing 24 checks pass; the make_page and design_loop parts are running in the background and unread. The first builder run stopped because its automatic worktree started from an old commit; I made the worktree by hand from this branch.
 
 aj approved the build plan ("Build plan approved: review command 1A 2A 3A"); the stage is Build. Issues #618 to #621 say `in progress`, the Decisions entry is written, and a builder is working on step 1 (#618, four new reviewer modes) in its own worktree; steps 2 to 4 wait on it one at a time. Nothing is merged or verified yet.
