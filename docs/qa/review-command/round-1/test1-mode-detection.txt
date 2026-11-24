@@ -1,0 +1,44 @@
+$ review_plan.py mode 
+mode: diff
+report: docs/qa/review-rv-acc-ccmd-2026-11-24
+criteria: none
+exit=0
+$ review_plan.py mode src
+mode: code
+report: docs/qa/review-src-2026-11-24
+criteria: none
+exit=0
+$ review_plan.py mode one.py
+mode: code
+report: docs/qa/review-one-2026-11-24
+criteria: none
+exit=0
+$ review_plan.py mode logo.png
+mode: image
+report: docs/qa/review-logo-2026-11-24
+criteria: none
+exit=0
+$ review_plan.py mode .
+mode: codebase
+report: docs/qa/review-rv-acc-ccmd-2026-11-24
+criteria: none
+exit=0
+$ review_plan.py mode review-command-plan.html
+mode: plan
+report: docs/qa/review-review-command-plan-2026-11-24
+criteria: none
+design: /tmp/rv-acc-ccMd/2026-11-24-review-command.html
+exit=0
+$ review_plan.py mode 2026-11-24-review-command.html
+mode: page
+report: docs/qa/review-review-command-2026-11-24
+criteria: none
+exit=0
+$ review_plan.py mode src style calm
+mode: style
+report: docs/qa/review-src-2026-11-24
+criteria: calm
+exit=0
+$ review_plan.py mode nope
+error: nope not found
+exit=2
