@@ -728,7 +728,7 @@ def _write_subagent_ledger(transcript_path, payload):
 
 
 def _override_note(asked, file_declared):
-    """" (override typed at spawn; the agent file says X)" when the parent asked for a model, else nothing."""
+    """The " (override typed at spawn; ...)" tail when the parent asked for a model, else nothing."""
     if not asked.get("model"):
         return ""
     return " (override typed at spawn; the agent file declares %s)" % (file_declared or "no model")
