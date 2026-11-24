@@ -5,7 +5,7 @@
  "kind": "summary",
  "approval": "Review read: roadblock live status",
  "short": {
-  "lead": "The branch is merged with main and pushed, but the five live sessions could not run because the 5-hour usage limit is reached until 9:20pm, so three findings remain.",
+  "lead": "Superseded: the live tests have since run and four of five cases behave correctly (see the QA page for pull request 602). At the time of writing, main was merged into the branch and pushed, but the five live test sessions could not run because the 5-hour usage limit was reached until 9:20pm.",
   "hint": "Tap a finding.",
   "key": [
    [
@@ -23,8 +23,8 @@
     "Finding 1",
     "Live sessions blocked by the usage limit",
     "",
-    "Running claude -p with a plain prompt returns the 5-hour limit message, so all five sessions in live_roadblocks.py exited 1 before any hook ran.",
-    "Rerun live_roadblocks.py after 9:20pm.",
+    "Running claude -p (Claude Code's non-interactive mode) with a plain prompt returned the 5-hour limit message. So all five sessions in live_roadblocks.py exited with code 1 before any hook ran.",
+    "Done later: the rerun after switching the CLI login is recorded on the QA page.",
     {
      "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
      "alt": "Placeholder tile; no diagram applies to this status page.",
@@ -36,16 +36,16 @@
     "Finding 2",
     "The one live PASS proves nothing",
     "",
-    "The three-methods case passed only because it expected zero blocks and no session ran at all.",
-    "Ignore that result; the rerun is the evidence."
+    "The three-methods case passed only because it expected zero blocks, and no session ran at all, so zero blocks were seen.",
+    "Ignore that result. The later rerun is the real evidence."
    ],
    [
     "search",
     "Finding 3",
     "verify_tools.py fails check A16 on this machine",
     "",
-    "The check tries to uninstall house-rules@aj-house-rules, which is not installed here. The merge did not cause it.",
-    "Run it on a machine with the plugin installed, or leave it as a known local failure."
+    "Check A16 tries to uninstall house-rules@aj-house-rules, which is not installed on this machine. The merge did not cause the failure.",
+    "Run verify_tools.py on a machine that has the plugin installed, or leave this as a known failure on this machine."
    ]
   ]
  },
@@ -53,9 +53,9 @@
   [
    "keep",
    "Main merged into the branch and pushed (accdfae9)",
-   "verify.py shows 8 of 994 failing, the same Windows list as before the merge.",
+   "verify.py shows 8 of 994 checks failing. These are the same 8 Windows failures as before the merge.",
    null,
-   "Fix: none needed.",
+   "Fix: nothing to do.",
    null,
    null
   ],
@@ -64,7 +64,7 @@
    "Handoff note updated (2e8d33a2)",
    "The next session can pick up from the 9:20pm rerun.",
    null,
-   "Fix: none needed.",
+   "Fix: nothing to do.",
    null,
    null
   ]
@@ -72,8 +72,8 @@
  "wrapup": {
   "summary": "The roadblock fix branch is current with main and pushed; live verification is waiting on the usage limit.",
   "changing": "Nothing further changed in code; the branch now includes main and a handoff update.",
-  "blocking": "The live sessions wait until 9:20pm; the QA page and pull request with Refs #587 wait on their results.",
-  "next": "Tell me to rerun the live tests after 9:20pm.",
+  "blocking": "Nothing waits now: the live tests have run, and the QA page and pull request 602 (which carries Refs #587) are open.",
+  "next": "Read the QA page for pull request 602.",
   "todo": [
    "After 9:20pm, tell the agent to rerun live_roadblocks.py.",
    "Tap <b>Copy my reply</b> and send it."
