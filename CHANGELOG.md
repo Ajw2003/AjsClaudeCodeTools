@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Fixed the visual skills proposal page: its ten choices shared one radio-group name, so only one answer could be kept and the reply was wrong. Each choice now has its own name. Added `docs/generated/answers-save.js`, which saves a handover page's answers to the artifact database as they change, and a copy of the proposal page that uses it.
+
 Reworked the visual roadmap proposal to run locally with no GitHub Actions: refreshes come from the plugin's session hook, a git post-merge hook, session start and a manual command, and GitHub Pages is an optional publish step, off by default. Nine picks now. Still nothing built.
 
 Reworded the visual skills proposal so both skills work in any repo with house rules docs: an install command and per-repo settings file for the roadmap Action, and roadmap grouping that follows each repo's own `docs/2-roadmap/Roadmap.md`. Still nothing built.
