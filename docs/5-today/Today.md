@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+aj asked for two new skills: `visual-docs` (an illustrated overview page built from the tier docs) and `visual-roadmap` (a GitHub Action that redraws two roadmap views on issue and merge events). I built a proposal page, `docs/plans/2026-11-24-visual-docs-and-roadmap.html`, with five choices for aj; nothing is built and no issues exist yet. The repo has no dev branch today (only `main` and session branches), so the dev branch name is proposed as a setting.
+
 Pull request 614 (design review loop, acceptance round 2, Windows fixes) is merged. I found one test fix, in `checks/delegation.py`, that was never committed and opened pull request 615 for it. The judge branch (`AjsAgent/judge-blocking-audit`) has #613 done except the 60-second flag in #611, which waits on #578 and #579 (both open, nothing built); its pull request into main is not open yet.
 
 aj failed QA with "fix all pre existing failures before we pr to main". All nine Windows failures are fixed (waitfor, guard, page and node checks) plus one in tools/verify_tools.py; a full verify.py passes here (1574 of 1581, 7 skipped). The acceptance run is being repeated because the fixes made its stamp stale; round 2 is not re-stamped yet.
