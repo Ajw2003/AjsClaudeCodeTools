@@ -2774,7 +2774,7 @@ def event_noask():
     if not (unattended() or mode == "bypassPermissions"):
         if not mode:
             sys.stderr.write("house-rules: the PreToolUse payload carried no permission_mode, so the question "
-                             "was allowed (treated as attended).\n")
+                             "was treated as attended (allowed, except in Build, where a plain question is refused).\n")
         return _noask_build(park)
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
           "permissionDecisionReason": "This is an unattended or bypass-permission run: nobody is there to "
