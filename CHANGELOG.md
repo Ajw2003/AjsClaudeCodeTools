@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Step 8 of the design review loop (issue #600) is built: one page and one reply can approve the design and the build plan together, as two lines in one message. The approval reader already handled that (no code change, one new test); the page builder now accepts and shows a two-line approval. My own `verify.py` run passed 1473 of 1473, and the copy button on a two-line page, clicked in a real browser, put both lines on the clipboard.
+
 Step 8 of the design review loop (issue #600) is built: one reply can approve the design and the build plan together (two lines), and a page may offer both lines. The approval reader needed no change; the plan's issues are owed in the same turn by the existing rule. Detail: `docs/4-systems/design-loop.md`, "Combined approval".
 
 Step 5 of the design review loop (issue #597) is built: a self-judging test template (`templates/selftest/selftest.py`) that prints one RESULT line and exits 0, 1 or 2, plus the instructions for when and how to hand it to aj (`rules/detail/selftest.md`). My own `verify.py` run passed 1469 of 1469, and I ran the template three ways (pass, one failing check, a missing library). Not tested on Windows or Python 3.8.
