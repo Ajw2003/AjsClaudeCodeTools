@@ -1,6 +1,6 @@
 # Today — 2026-11-23
 
-Roadblock detection fix (parent #587; steps #588, #589, #591, #590) on `AjsAgent/affectionate-lovelace-r0zfgg`: aj approved the build plan ("Build plan approved: roadblock detection fix"); stage is Build. A builder is on step 1 (#588); nothing is built or verified yet. Handoff: `docs/5-today/handoff-AjsAgent-affectionate-lovelace-r0zfgg.md`.
+Roadblock detection fix (parent #587; steps #588, #589, #591, #590) on `AjsAgent/affectionate-lovelace-r0zfgg`: aj approved the build plan ("Build plan approved: roadblock detection fix"); stage is Build. Step 1 (#588) is built (c97034f7). Unattended mode switches off the Stop hook the check lives in, so aj chose option B (its own Stop hook, decisions log 17bbb92b); a second builder is moving it and has not reported. My full verify.py matched the first builder's: 8 of 966 failed on this Windows PC, not yet baselined. Handoff: `docs/5-today/handoff-AjsAgent-affectionate-lovelace-r0zfgg.md`.
 
 # 2026-11-22
 

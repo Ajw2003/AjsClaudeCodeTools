@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Roadblock detection fix, step 1 (#588) is built and the roadblock check is moving to its own Stop hook (aj chose option B) so unattended mode no longer switches it off: curly apostrophes and the new phrase list are caught, the check blocks twice per user message, and stall phrases are scanned only in unattended or bypass mode; the full test run still shows 8 Windows failures not yet baselined, and the own-hook move is in progress.
+
 Plugin 2.89.0: clear roadblocks (#569 to #572). A reply that says "I can't", "is not installed", "not on your machine", "no access to" or "you need to install" with no probe (`which`, `ls`, `uname`, `hostname`, an install, `list_computer_folders`) that turn is blocked twice per user message, then goes out with a visible warning. State file in the temp directory; it fails open with a message; `HOUSE_RULES_ROADBLOCKS=off` switches it off. Detail: `docs/4-systems/roadblocks.md`.
 
 GitHub's CI run passed on the CI-fix commit for pull request #573; it now waits for aj to merge.
