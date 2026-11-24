@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+`run_acceptance.py` now prints a `still running` line every 20 seconds, a line before and after each run, and takes optional criterion ids (`C1 C5`) to run only those; aj's rule is that a handed-over test prints progress at least every minute. Tested here with `C1` (five progress lines, then PASS).
+
 Acceptance runner test run passed here (all nine criteria, Linux); aj gave the clone path on their PC and was handed a three-step PowerShell card to run it there and push the outputs. The path is recorded in the gitignored `rules/handover-target.md`, not in the repo. A throwaway-folder install of the branch build (`CLAUDE_CONFIG_DIR`) worked: plugin 2.92.0 at commit 184dcf9 with a reviewer that has Write.
 
 Note only, nothing changed: `docs/roadblock-judge-friction-2026-11-24.md` records three cases from one session where the roadblock judge looked over-zealous and may have wasted usage; the token cost was not measured.
