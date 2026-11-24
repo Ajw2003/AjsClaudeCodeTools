@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+The visual skills proposal now carries four review rounds' findings: the roadmap reads GitHub through `gh api` (because `gh issue list` is refused in cloud sessions), the git hook is added after any existing one, a new pick asks how fresh the views should be, and one asks where an issue closed without a merge goes. It has ten picks and is stamped open-risks. Still nothing built; waiting on aj's picks and a named second repo to test on.
+
 aj said the roadmap must not depend on GitHub Actions: the budget might run out, or the Action could exhaust it. I reworked the proposal so the roadmap refreshes locally (session hook, git post-merge hook, session start, manual command), with GitHub Pages as an optional publish step that stays off by default. The page has nine picks. The reworked page has not been reviewed yet.
 
 aj corrected the visual skills proposal: the self-updating roadmap must work in any repo that has house rules docs, not just this one. I reworded the page so repo facts are examples, added a per-repo install command and settings file, and made roadmap grouping follow each repo's own roadmap tier. Review and editor passes on that revision are in progress.
