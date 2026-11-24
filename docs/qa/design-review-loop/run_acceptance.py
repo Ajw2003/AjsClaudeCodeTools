@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Runs each acceptance criterion (C1 to C9) of the design review loop and saves each one's own output.
 
-    python docs/qa/design-review-loop/run_acceptance.py
+    python docs/qa/design-review-loop/run_acceptance.py [C1 C5 ...]
+
+With criterion ids it runs only those; with none it runs all nine. It prints a line before and after each
+run, because each run takes one to two minutes.
 
 Run it from the repo root on branch ccr-1839130d-clohr1. For every criterion it runs verify.py once per
 search text (`verify.py --only <text>` runs only the checks whose title contains the text), saves the full
@@ -39,18 +42,23 @@ FAIL_RE = re.compile(r"^\s*\d+\.\s+FAIL\b", re.M)
 def main():
     os.makedirs(OUT, exist_ok=True)
     lines, failed = [], 0
+    only = [a.upper() for a in sys.argv[1:]]
     for cid, what, texts in CRITERIA:
+        if only and cid not in only:
+            continue
         notes, ok, first_file = [], True, ""
         for i, text in enumerate(texts, 1):
             name = "%s-%d.txt" % (cid.lower(), i)
             path = os.path.join(OUT, name)
             first_file = first_file or "round-2/" + name
+            print("%s: running verify.py --only %r (1 to 2 minutes)..." % (cid, text), flush=True)
             r = subprocess.run([sys.executable, VERIFY, "--only", text], cwd=ROOT, capture_output=True,
                                text=True, timeout=900)
             with open(path, "w", encoding="utf-8") as f:
                 f.write("$ verify.py --only %r\nexit %d\n\n%s\n--- stderr ---\n%s" % (text, r.returncode, r.stdout, r.stderr))
             p, fl = len(PASS_RE.findall(r.stdout)), len(FAIL_RE.findall(r.stdout))
             notes.append("%r: %d pass, %d fail, exit %d" % (text, p, fl, r.returncode))
+            print("%s: done, %s" % (cid, notes[-1]), flush=True)
             if p == 0 or fl or r.returncode:
                 ok = False
         failed += 0 if ok else 1
