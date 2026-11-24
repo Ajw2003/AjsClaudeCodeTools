@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Reworded the visual skills proposal so both skills work in any repo with house rules docs: an install command and per-repo settings file for the roadmap Action, and roadmap grouping that follows each repo's own `docs/2-roadmap/Roadmap.md`. Still nothing built.
+
 Revised the visual skills proposal (`docs/plans/2026-11-24-visual-docs-and-roadmap.html`) to assume the review command on branch `AjsAgent/jolly-dirac-fvh4cg` is merged: both skills now check their output with `/house-rules:review` (page, image and style modes), no new agent is added, and two more picks say how the visual-docs page is checked and when. Still nothing built.
 
 Added a proposal page for two new skills, `visual-docs` (one illustrated overview page built from the tier docs) and `visual-roadmap` (a GitHub Action that redraws two roadmap views on issue and merge events): `docs/plans/2026-11-24-visual-docs-and-roadmap.html`. Nothing is built; it waits on aj's approval and five picks.

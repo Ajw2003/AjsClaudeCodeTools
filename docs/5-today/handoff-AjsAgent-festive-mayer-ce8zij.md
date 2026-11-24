@@ -9,6 +9,8 @@ suggested) whenever an issue opens or closes or a pull request merges into the d
 
 ## Where it stands
 
+- aj's correction (2026-11-24): both skills must work in any repo with house rules docs, not only this one. The page now says so: visual-roadmap ships an install command (`/house-rules:visual-roadmap install`) that adds the workflow and a per-repo settings file (dev branch name, label per stage), and repo facts are labelled as examples. A round-3 review and an editor pass were started on that revision.
+
 - Nothing is built. The only output is a proposal page,
   `docs/plans/2026-11-24-visual-docs-and-roadmap.html`, with its content file beside it, and a
   `CHANGELOG.md` line and `docs/5-today/Today.md` entry. Committed and pushed on this branch.
@@ -28,7 +30,8 @@ decision in `docs/6-decisions/Decisions.md`, create one parent issue and one chi
 
 ## What is unverified
 
-- A third review pass after the round-2 edits has not run.
+- Round 3 and the editor pass on the any-repo wording: results not yet applied when this note was written.
+- Neither skill has been tried on a second repo; only this repo is reachable from here.
 - Both skills depend on the review command, which is planned and not built; whether `.svg` counts as an image for its image mode is undecided.
 - The pictures are mock-ups, not output of the real skills.
 - Nothing about the GitHub Action design has been run: workflow permissions and whether an Action can
