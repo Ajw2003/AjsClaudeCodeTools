@@ -9,11 +9,11 @@ aj wants one `/house-rules:review` command that sends the existing reviewer at c
 - Design approved by aj: "Design approved: review command 1A 2A 3*". 3* means the sweep has no folder cap; over 12 top-level folders the command first states the folder count, estimated time and usage.
 - Stage: Plan. Parent issue #617; steps #618 (modes), #619 (command), #620 (verify.py checks), #621 (docs and version).
 - Written so far, docs only: `docs/plans/2026-11-24-review-command.html` (design), `docs/plans/review-command-plan.html` (build plan), `docs/4-systems/review-command.md`.
-- The plan was reviewed once (15 findings, all applied). It now carries three questions for aj: how a sweep handles the 60-second agent deadline, whether repo-root files are reviewed, and where the mode lists live.
+- The plan was reviewed twice (15 findings, then 13, all applied) and is stamped open-risks. It carries three questions for aj: how a sweep handles the 60-second agent deadline, whether repo-root files are reviewed, and where the mode lists live.
 
 ## The next step
 
-Run a second plan review, stamp the plan page, send it, and wait for "Build plan approved: review command" with answers to the three questions. Build nothing before that line.
+Wait for "Build plan approved: review command" with answers to the three questions. Build nothing before that line.
 
 ## What is unverified
 
@@ -24,4 +24,4 @@ Run a second plan review, stamp the plan page, send it, and wait for "Build plan
 
 ## Issue numbers
 
-#617 (parent), #618, #619, #620, #621. Related: #610 (the 60-second segments).
+#617 (parent), #618, #619, #620, #621. Related: #610 (the 60-second segments), #622 (visual-loop skill quotes old deadlines).
