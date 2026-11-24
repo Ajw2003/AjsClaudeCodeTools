@@ -1717,7 +1717,14 @@ _OUTSIDE_PATTERNS = [
 
 def _extract_file_path(payload):
     m = _FILE_PATH_RE.search(payload)
-    return m.group(1) if m else None
+    if not m:
+        return None
+    path = m.group(1)
+    try:
+        path = json.loads('"%s"' % path)  # undo JSON escaping: a Windows path arrives with doubled backslashes
+    except ValueError:
+        path = m.group(1)  # not valid JSON text: keep it as written
+    return path
 
 
 def _is_outside_project(file_path):
@@ -2278,10 +2285,12 @@ def is_owned_branch(branch, extra=()):
 _ANY_C_FLAG_RE = re.compile(r"(^|\s)-C(\s|=)")
 
 
-_GIT_C_DIR_RE = re.compile(r"""\bgit\s+-C\s*(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))""")
+# Inside double quotes a backslash is literal unless it escapes $ ` " \ or a newline, so a Windows path
+# like "C:\Users\x" is followed; an escaping backslash still leaves the target unclear.
+_GIT_C_DIR_RE = re.compile(r"""\bgit\s+-C\s*(?:"((?:[^"$`\\]|\\(?![$`"\\\n]))+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))""")
 
 
-_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"([^"$`\\]+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*(?:&&|;)""")
+_LEADING_CD_RE = re.compile(r"""^\s*cd\s+(?:"((?:[^"$`\\]|\\(?![$`"\\\n]))+)"|'([^']+)'|([^\s;&|"'$`\\()<>~*?]+))\s*(?:&&|;)""")
 
 
 # A statement-leading NAME=value, NAME="value" or NAME='value' followed by ; or && (#261).
@@ -2769,16 +2778,54 @@ def event_noask():
     """PreToolUse on AskUserQuestion|ExitPlanMode: unattended or bypassPermissions, deny so the agent chooses
     itself and carries on (#590). A payload with no permission_mode is treated as attended, said on stderr."""
     mode = _field(_MODE_RE, _PAYLOAD_CACHE or "")
+    park = "python3 %s park <feature> --step <n> --question ... --default ... --affects ..." % os.path.join(
+        SCRIPTS_DIR, "ledger_note.py")
     if not (unattended() or mode == "bypassPermissions"):
         if not mode:
             sys.stderr.write("house-rules: the PreToolUse payload carried no permission_mode, so the question "
-                             "was allowed (treated as attended).\n")
-        return 0
+                             "was treated as attended (allowed, except in Build, where a plain question is refused).\n")
+        return _noask_build(park)
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
           "permissionDecisionReason": "This is an unattended or bypass-permission run: nobody is there to "
           "answer. Choose the most reasonable reversible option yourself, record the question and your choice "
-          "in the final report, and carry on. A licence, login, purchase or destructive step blocks only its "
-          "own part (mark it NEEDS YOU); the rest carries on."}})
+          "in the final report (park it with `%s`), and carry on. A licence, login, purchase or destructive "
+          "step blocks only its own part (mark it NEEDS YOU); the rest carries on." % park}})
+    return 0
+
+
+NOASK_STAGE_HOOKS = []  # fn(payload) -> (stage or None, why it could not be read); the design loop registers
+
+
+def register_noask_stage(fn):
+    _register(NOASK_STAGE_HOOKS, fn)
+    return fn
+
+
+def _noask_build(park):
+    """#598: attended, in the Build stage, AskUserQuestion is denied unless a question carries [HARD STOP]."""
+    try:
+        data = json.loads(_PAYLOAD_CACHE or "")
+        if data.get("tool_name") != "AskUserQuestion":
+            return 0
+        stage, why = None, "the design loop part is not loaded"
+        for fn in NOASK_STAGE_HOOKS:
+            stage, why = fn(_PAYLOAD_CACHE)
+        if stage != "build":
+            if stage is None:
+                sys.stderr.write("house-rules: the Build-stage question rule did nothing, because the stage "
+                                 "could not be read (%s).\n" % why)
+            return 0
+        if "[HARD STOP]" in json.dumps(data.get("tool_input") or {}, ensure_ascii=False):
+            return 0
+    except Exception as exc:
+        sys.stderr.write("house-rules: the Build-stage question rule could not run (%s: %s), so the question "
+                         "was allowed.\n" % (type(exc).__name__, exc))
+        return 0
+    emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+          "permissionDecisionReason": "This is the Build stage: a question that can be undone does not stop "
+          "the work. Take the safest reversible default, record it with `%s`, and carry on. Ask again with "
+          "[HARD STOP] in the question only when it cannot be undone or touches money, secrets, other people, "
+          "outward posts or deleted data." % park}})
     return 0
 
 

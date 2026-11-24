@@ -20,6 +20,43 @@ from html.parser import HTMLParser
 MAX_BLOCK_WORDS = 60  # docs/page-style.json overrides it via check(max_block_words=)
 MAX_SUMMARY_WORDS = 40
 TYPES = ("proposal", "build-plan", "qa", "review", "art")
+# #594: the review stamp. Pages of these types need none.
+STAMP_EXEMPT = ("review", "qa")
+STAMP_MAX_ROUNDS = 2
+_STAMP_LINE_RE = re.compile(r'^<meta name="house-rules-reviewed" content="([^"]*)">[ \t]*\r?\n?', re.M)
+_PAGE_META_RE = re.compile(r'<meta name="house-rules-page" content="([^"]*)"')
+
+
+def _stamp_hash(html):
+    import hashlib
+    # CRLF and LF hash alike: a page saved with Windows line endings is not a changed page.
+    body = _STAMP_LINE_RE.sub("", html, count=1).replace("\r\n", "\n")
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def stamp_line(html, verdict, rounds):
+    """The stamp meta line for this final HTML (the hash skips the line itself)."""
+    return '<meta name="house-rules-reviewed" content="%s;%s;%d">\n' % (_stamp_hash(html), verdict, rounds)
+
+
+def stamp_problem(html):
+    """"" when the page needs no stamp or carries a current one; else the reason it is owed."""
+    m = _PAGE_META_RE.search(html)
+    if m and m.group(1).strip() in STAMP_EXEMPT:
+        return ""
+    s = _STAMP_LINE_RE.search(html)
+    if not s:
+        return "no review stamp"
+    parts = s.group(1).split(";")
+    try:
+        ok = len(parts) == 3 and parts[1] in ("clean", "open-risks") and 1 <= int(parts[2]) <= STAMP_MAX_ROUNDS
+    except ValueError:
+        ok = False
+    if not ok:
+        return "review stamp is invalid (needs <sha256>;clean|open-risks;1|2)"
+    if parts[0] != _stamp_hash(html):
+        return "stamp is stale: the page changed after review"
+    return ""
 BUILDER_MARK = re.compile(r"<!--\s*house-rules make_page\b")
 PICTURES = ("img", "svg", "canvas", "video", "picture")
 BLOCKS = ("p", "li", "td", "th", "blockquote", "figcaption", "div")

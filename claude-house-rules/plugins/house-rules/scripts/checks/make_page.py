@@ -252,6 +252,30 @@ def _mp_qa_content(name, qa):
     return c
 
 
+_acc = __import__("acceptance")
+_qaf = os.path.join(_d, "docs", "qa", "demo-feature")
+
+
+def _mp_stamp(proj=_d, folder=_qaf):
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, "acceptance-stamp.json"), "w", encoding="utf-8") as f:
+        json.dump({"tree": _acc.tree(proj)}, f)
+
+
+def _mp_text(name):
+    p = os.path.join(_d, "docs", "plans", name + ".html")
+    return open(p, encoding="utf-8").read() if os.path.isfile(p) else ""
+
+
+_rc, _o = _mp("build", _mp_qa_content("qa0", _qa), "--project", _d)
+_mp_cases.append(("make_page (#596): QA mode with no acceptance stamp is refused (exit 2), naming the stamp and the acceptance run",
+                  _rc == 2 and "stamp missing" in _o and "acceptance run first" in _o and "acceptance.py stamp" in _o))
+_mp_stamp()
+with open(os.path.join(_d, "planned.py"), "a", encoding="utf-8") as _f:
+    _f.write("d\n")
+_rc, _o = _mp("build", _mp_qa_content("qa0", _qa), "--project", _d)
+_mp_cases.append(("make_page (#596): QA mode with a stale stamp is refused (exit 2)", _rc == 2 and "stale" in _o))
+_mp_git(_d, "checkout", "-q", "planned.py")
 _stage = os.path.join(_d, ".claude", "house-rules-loop.json")
 _rc, _o = _mp("build", _mp_qa_content("qa1", _qa), "--project", _d)
 _mp_cases.append(("make_page: QA mode with no stage file builds, creates none and says it did not record",
@@ -269,9 +293,106 @@ _mp_cases.append(("make_page: QA mode marks an unplanned file 'Not in the plan' 
 _mp_cases.append(("make_page: QA mode sets approval to the QA passed phrase and adds the Still unverified item",
                   _pg.get("approval") == "QA passed: demo feature" and "replyPrefix" not in _pg
                   and any(c[0] == "keep" and c[1] == "Still unverified" and c[2] == "1 things not yet proven" for c in _pg["changes"])))
+_rc, _o = _mp("build", _mp_qa_content("qa1", _qa), "--project", _d)
+_mp_cases.append(("make_page (#596): building the same QA page twice works (the built page does not stale the stamp)", _rc == 0))
 _rc, _o = _mp("build", _mp_qa_content("qa2", dict(_qa, unverified=[])), "--project", _d)
-_mp_cases.append(("make_page: QA mode with an empty unverified list is refused with exit 2",
-                  _rc == 2 and "unverified" in _o))
+_t2 = _mp_text("qa2")
+_mp_cases.append(("make_page (#596): QA mode with an empty unverified list builds and says nothing is unverified, 0 things",
+                  _rc == 0 and "Nothing is unverified: every acceptance item passed the acceptance run" in _t2
+                  and "0 things not yet proven" in _t2))
+_mp_cases.append(("make_page (#596): a non-empty unverified list is unchanged",
+                  "1 things not yet proven" in _mp_text("qa1") and "The live run." in _mp_text("qa1")))
+_nm = {"title": "Run it", "folder": "/home/aj/proj", "shell": "bash", "command": 'git -C "/home/aj/proj" status', "expect": "clean tree"}
+_rc, _o = _mp("build", _mp_qa_content("qa4", dict(_qa, needs_machine=[_nm, dict(_nm, title="Second", untested=False)])), "--project", _d)
+_t4 = _mp_text("qa4")
+_mp_cases.append(("make_page (#596): needs_machine renders one item with UNTESTED first, folder, shell, command, what aj sees; untested false drops the line",
+                  _rc == 0 and "Needs your machine" in _t4 and "2 step(s), one command each" in _t4
+                  and "Run it\\nUNTESTED:\\nFolder: /home/aj/proj, shell: bash\\nCommand: git -C" in _t4
+                  and "You should see: clean tree" in _t4 and "Second\\nFolder:" in _t4))
+_rc, _o = _mp("build", _mp_qa_content("qa5", dict(_qa, needs_machine=[dict(_nm, command="")])), "--project", _d)
+_mp_cases.append(("make_page (#596): a needs_machine entry missing a field is refused, naming the entry and the field",
+                  _rc == 2 and "entry 0 (Run it) needs command" in _o))
+_mp_cases.append(("make_page (#596): no ledger file adds no deviations item", "Deviations and parked" not in _mp_text("qa1")))
+with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
+    _f.write("| # | s | plan | done | why | undo |\n|---|---|---|---|---|---|\n| D1 | 1 | p | Did the thing. | w | u |\n"
+             "| D2 | 1 | p | Did another. | w | u |\n\n| # | s | Question | Default |\n| P1 | 2 | Which way? | x |\n")
+_rc, _o = _mp("build", _mp_qa_content("qa6", _qa), "--project", _d)
+_t6 = _mp_text("qa6")
+_mp_cases.append(("make_page (#596): ledger rows come first with right counts",
+                  _rc == 0 and "2 deviation(s), 1 parked" in _t6 and "D1: Did the thing.\\nD2: Did another.\\nP1: Which way?" in _t6
+                  and _t6.index("Deviations and parked") < _t6.index("Files changed, counted")))
+with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
+    _f.write("# empty\n")
+_rc, _o = _mp("build", _mp_qa_content("qa7", _qa), "--project", _d)
+_mp_cases.append(("make_page (#596): a ledger with no D or P rows says None recorded, 0 and 0",
+                  _rc == 0 and "None recorded" in _mp_text("qa7") and "0 deviation(s), 0 parked" in _mp_text("qa7")))
+os.remove(os.path.join(_qaf, "ledger.md"))
+
+
+def _park(*a):
+    r = subprocess.run([sys.executable, os.path.join(HERE, "ledger_note.py"), "park", "Demo Feature", "--step", "6", "--default", "d",
+                        "--affects", "x"] + list(a), cwd=_d, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+_rc1, _o1 = _park("--question", "First?")
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#598): park creates the file with both tables and P1, printing where",
+                  _rc1 == 0 and _o1.startswith("parked P1 in ") and "## Deviations" in _ledg and "## Parked decisions" in _ledg
+                  and "| # | Step | The plan said | What was done | Why | How to undo |" in _ledg
+                  and "| P1 | 6 | First? | d | x | Reply with the answer" in _ledg))
+_rc2, _o2 = _park("--question", "Use a|b?\nsecond line")
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#598): a second park is P2 after P1, and a | or newline in a cell is escaped",
+                  _rc2 == 0 and _o2.startswith("parked P2 in ") and _ledg.index("| P1 ") < _ledg.index("| P2 ")
+                  and "| P2 | 6 | Use a\\|b? second line | d | x |" in _ledg))
+_rc, _o = _mp("build", _mp_qa_content("qa8", _qa), "--project", _d)
+_mp_cases.append(("make_page (#598): an escaped pipe in a parked question is shown whole, as a |",
+                  "P2: Use a|b? second line" in _mp_text("qa8")))
+_mp_cases.append(("ledger_note (#598): the QA page lists the parked rows with 0 deviations, 2 parked",
+                  _rc == 0 and "0 deviation(s), 2 parked" in _mp_text("qa8") and "P1: First?" in _mp_text("qa8")))
+_rc, _o = _park()
+_mp_cases.append(("ledger_note (#598): a missing required option is refused, naming it",
+                  _rc == 2 and "--question" in _o))
+def _dev(*a):
+    r = subprocess.run([sys.executable, os.path.join(HERE, "ledger_note.py"), "deviate", "Demo Feature", "--step", "7", "--plan", "p",
+                        "--done", "d", "--why", "w", "--undo", "u"] + list(a), cwd=_d, stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE, universal_newlines=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+_rc, _o = _dev()
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#599): deviate adds D1 to the Deviations table, above the parked rows, printing where",
+                  _rc == 0 and _o.startswith("deviated D1 in ") and "| D1 | 7 | p | d | w | u |" in _ledg
+                  and _ledg.index("| D1 ") < _ledg.index("## Parked decisions") and "| P2 " in _ledg))
+_rc, _o = _dev("--plan", "a|b")
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#599): a second deviate is D2 and a | in a cell is escaped",
+                  _rc == 0 and _o.startswith("deviated D2 in ") and "| D2 | 7 | a\\|b |" in _ledg))
+os.remove(os.path.join(_qaf, "ledger.md"))
+_mp_cases.append(("rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3307 chars",
+                  all(w in read(os.path.join(HERE, "..", "rules", "show-dont-tell.md")) for w in ("ledger_note.py park", "[HARD STOP]"))
+                  and len(read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))) <= 3307))
+# P3: the fingerprint ignores built pages but not plan markdown or source
+_t0 = _acc.tree(_d)
+os.makedirs(os.path.join(_d, "docs", "plans"), exist_ok=True)
+with open(os.path.join(_d, "docs", "plans", "zz.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>a</p>")
+_t1 = _acc.tree(_d)
+with open(os.path.join(_d, "docs", "plans", "zz.html"), "w", encoding="utf-8") as _f:
+    _f.write("<p>b</p>")
+_t2f = _acc.tree(_d)
+with open(os.path.join(_d, "docs", "plans", "zz.md"), "w", encoding="utf-8") as _f:
+    _f.write("m")
+_t3 = _acc.tree(_d)
+with open(os.path.join(_d, "extra.py"), "a", encoding="utf-8") as _f:
+    _f.write("z\n")
+_t4f = _acc.tree(_d)
+_mp_cases.append(("acceptance (P3): the fingerprint ignores docs/plans/*.html added or edited, changes for docs/plans/*.md and for source",
+                  _t0 == _t1 == _t2f and _t3 != _t2f and _t4f != _t3))
+os.remove(os.path.join(_d, "docs", "plans", "zz.md"))
+_mp_git(_d, "checkout", "-q", "extra.py")
 os.makedirs(os.path.dirname(_stage))
 with open(_stage, "w", encoding="utf-8") as _f:
     json.dump({"feature": "demo", "stage": "Build"}, _f)
@@ -304,6 +425,18 @@ _pw = {n: _mp_page_of(os.path.join(_d, "docs", "plans", n + ".html")) for n in (
 _mp_cases.append(("make_page: the last to-do line carries the approval phrase, HTML-escaped",
                   bool(_pw) and all(pg["wrapup"]["todo"][-1] == 'Tap <b>Copy my reply</b> and send it: "Build plan approved: guards &lt;audit&gt; &amp; more", or say what to change.'
                                     for pg in _pw.values())))
+# #600: a two-line approval, the design line then the build-plan line.
+_two = "Design approved: combo\nBuild plan approved: combo"
+_rc, _o = _mp("build", _mp_content("two", approval=_two, choices=_ch), "--project", _d)
+_pg2 = _mp_page_of(os.path.join(_d, "docs", "plans", "two.html")) if _rc == 0 else None
+_mp_cases.append(("make_page (#600): a two-line approval (design, then build plan) builds and the page holds both lines",
+                  bool(_pg2) and _pg2["approval"] == _two and "Design approved: combo" in _pg2["wrapup"]["todo"][-1]
+                  and "Build plan approved: combo" in _pg2["wrapup"]["todo"][-1]))
+_rc, _o = _mp("build", _mp_content("twobad", approval="Design approved: combo\nGuards audit"), "--project", _d)
+_mp_cases.append(("make_page (#600): a bad second approval line is refused and the message names it",
+                  _rc != 0 and "'Guards audit'" in _o))
+_rc, _o = _mp("build", _mp_content("tworev", approval="Build plan approved: combo\nDesign approved: combo"), "--project", _d)
+_mp_cases.append(("make_page (#600): the two lines in the wrong order are refused", _rc != 0 and "Design approved" in _o))
 _NODE = shutil.which("node") or "/opt/node22/bin/node"
 _PWMOD = "/opt/node22/lib/node_modules"
 _JS = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const out={};
@@ -330,6 +463,37 @@ else:
         _w, _n = _cp[_pgs[0]], _cp[_pgs[1]]
         _mp_cases.append(("make_page: the copied text, with choices (approval then picks) and without (approval alone), matches the gate",
                           _w == _ph + " 1A" and _n == _ph and _gate(_w) and _gate(_n)))
+
+# a multi-line change detail (QA "Needs your machine" step cards) keeps its line breaks in the browser (#596)
+_nl = _mp_content("newlines")
+with open(_nl, encoding="utf-8") as _f:
+    _nlp = json.load(_f)
+_nlp["changes"] = [["chg", "Needs your machine", "1 step", None, "T\nUNTESTED:\nFolder: /p, shell: bash\nCommand: git status", None, None]]
+with open(_nl, "w", encoding="utf-8") as _f:
+    json.dump(_nlp, _f)
+_d = _mp_proj("newlines")
+_mp("style", "--quick", "--project", _d)
+_rc, _o = _mp("build", _nl, "--project", _d)
+_NLJS = (r"""const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();
+await p.goto('file://'+process.argv[2]);const r=await p.evaluate(()=>{const d=document.querySelector('.ci');d.open=true;const e=d.querySelector('.detail p');
+return {ws:getComputedStyle(e).whiteSpace,t:e.innerText}});console.log(JSON.stringify(r));await b.close();})();""")
+if not (_rc == 0 and os.path.isfile(_NODE) and os.path.isdir(os.path.join(_PWMOD, "playwright"))):
+    report("SKIP", "make_page (#596): multi-line detail keeps its lines (no node/playwright or build failed)")
+else:
+    _nlf = os.path.join(_mp_tmp, "nl.js")
+    with open(_nlf, "w", encoding="utf-8") as _f:
+        _f.write(_NLJS)
+    _r = subprocess.run([_NODE, _nlf, os.path.join(_d, "docs", "plans", "newlines.html")], capture_output=True, text=True, timeout=180,
+                        env=dict(os.environ, NODE_PATH=_PWMOD, PLAYWRIGHT_BROWSERS_PATH=os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")))
+    try:
+        _nr = json.loads(_r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        _nr = None
+    if _nr is None:
+        report("SKIP", "make_page (#596): multi-line detail keeps its lines (browser did not run: %s)" % (_r.stderr.strip()[-200:] or "no output"))
+    else:
+        _mp_cases.append(("make_page (#596): a multi-line change detail renders each line on its own line",
+                          _nr["ws"] == "pre-line" and "\nUNTESTED:\n" in _nr["t"]))
 
 # a 40-character unbroken word in card text must not clip on a phone (#288); the old 1fr CSS must be caught
 _LONGW = "HOUSE_RULES_AGENT_NAME_WITH_A_VERY_LONG_TAIL_X"
@@ -406,8 +570,22 @@ _nlog = os.path.join(_mp_tmp, "node-args.bin")
 with open(os.path.join(_nd, "node"), "w", encoding="utf-8") as _f:
     _f.write('#!/bin/sh\nprintf \'%s\\0\' "$@" > "$NODE_ARGS_LOG"\nexit 0\n')
 os.chmod(os.path.join(_nd, "node"), 0o755)
-subprocess.run([sys.executable, "-c",
-                "import importlib.util as u, make_page as m; u.find_spec = lambda n: None; m.visual_check('PAGE.html', {})"],
+_nprobe = "import importlib.util as u, make_page as m; u.find_spec = lambda n: None; m.visual_check('PAGE.html', {})"
+if os.name == "nt":
+    # Windows cannot run a #!/bin/sh script as `node`, and a .cmd wrapper cannot pass the long script argument
+    # faithfully, so the probe records the arguments in a stand-in for subprocess.run instead.
+    _nprobe = ("import importlib.util as u, os, shutil, subprocess, make_page as m\n"
+               "u.find_spec = lambda n: None\n"
+               "shutil.which = lambda n: 'node' if n == 'node' else None\n"
+               "_run = subprocess.run\n"
+               "def _fake(cmd, **k):\n"
+               "    if cmd and cmd[0] == 'node':\n"
+               "        open(os.environ['NODE_ARGS_LOG'], 'wb').write(b''.join(a.encode('utf-8') + b'\\0' for a in cmd[1:]))\n"
+               "        return subprocess.CompletedProcess(cmd, 0, '', '')\n"
+               "    return _run(cmd, **k)\n"
+               "subprocess.run = _fake\n"
+               "m.visual_check('PAGE.html', {})\n")
+subprocess.run([sys.executable, "-c", _nprobe],
                env=dict(os.environ, PATH=_nd, NODE_ARGS_LOG=_nlog, PYTHONPATH=HERE), capture_output=True, text=True, timeout=60)
 try:
     _nargs = open(_nlog, "rb").read().decode("utf-8").split("\0")
@@ -587,8 +765,10 @@ for _typ in _pc.TYPES:
     _raw = re.sub(r"<replace:[^>]*>", "x", _raw)
     with open(_sf, "w", encoding="utf-8") as _f:
         _f.write(_raw)
+    if _typ == "qa":  # the QA gate (#596): the fixture carries a real current stamp for the starter's feature "x"
+        _mp_stamp(_sp, os.path.join(_sp, "docs", "qa", "x"))
     _rc2, _o2 = _mp("build", _sf, "--project", _sp)
-    _bh = os.path.join(_sp, "docs", "plans", "st-" + _typ + ".html")
+    _bh =os.path.join(_sp, "docs", "plans", "st-" + _typ + ".html")
     _bt = open(_bh, encoding="utf-8").read() if os.path.isfile(_bh) else ""
     _stripped = re.sub(r"<!-- house-rules make_page[^>]*-->", "", _bt)
     _msgs = _pc.check(_stripped)
@@ -609,6 +789,41 @@ with open(_bp, "w", encoding="utf-8") as _f:
 _rc, _o = _mp("build", _bp, "--project", _sp)
 _mp_cases.append(("starters (#544): build with an unknown pageType dies naming the five types",
                   _rc == 2 and "proposal, build-plan, qa, review, art" in _o))
+# ---- review stamp (#594) ----
+_rv_out = os.path.join(_sp, "docs", "plans", "rv.html")
+_rc0, _ = _mp("build", _c1, "--project", _sp, "--out", _rv_out)
+with open(_rv_out, encoding="utf-8", newline="") as _f:
+    _rv0 = _f.read()
+_rc1, _ = _mp("build", _c1, "--project", _sp, "--out", _rv_out, "--reviewed", "open-risks", "--rounds", "2")
+with open(_rv_out, encoding="utf-8", newline="") as _f:
+    _rv1 = _f.read()
+_rv_m = re.search(r'^<meta name="house-rules-reviewed" content="([0-9a-f]{64});open-risks;2">\n', _rv1, re.M)
+_mp_cases.append(("stamp (#594): build without --reviewed writes no stamp", _rc0 == 0 and "house-rules-reviewed" not in _rv0))
+_mp_cases.append(("stamp (#594): build with --reviewed writes a stamp whose hash is the sha256 of the page without that line",
+                  _rc1 == 0 and bool(_rv_m) and _rv_m.group(1) == __import__("hashlib").sha256(
+                      _rv1.replace(_rv_m.group(0), "", 1).encode("utf-8")).hexdigest()
+                  ))
+_mp_cases.append(("stamp (#594): the written stamp checks as current, an edit makes it stale",
+                  _pc.stamp_problem(_rv1) == "" and "stale" in _pc.stamp_problem(_rv1 + "<p>x</p>")))
+_rc2, _o2 = _mp("build", _c1, "--project", _sp, "--out", _rv_out, "--reviewed", "clean", "--rounds", "3")
+_mp_cases.append(("stamp (#594): --rounds 3 is refused", _rc2 == 2 and "cap is 2" in _o2))
+# ---- build plan needs an Acceptance tests item (#595) ----
+_ap = _mp_proj("acc-plan", {"use": "defaults"})
+_apc = _mp_content("acc-plan1")
+_apj = json.load(open(_apc, encoding="utf-8"))
+_apj["pageType"] = "build-plan"
+json.dump(_apj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("acceptance (#595): a build plan with no Acceptance item is refused, naming the rule",
+                  _rc == 2 and "needs an Acceptance tests item: one test per design item" in _o))
+_apj["changes"].append(["chg", "Acceptance tests", "One per item.", None, "", None, None])
+json.dump(_apj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("acceptance (#595): an Acceptance item with empty detail is refused", _rc == 2))
+_apj["changes"][-1][4] = "Run each design item and see it work."
+json.dump(_apj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("acceptance (#595): a build plan with a filled Acceptance item builds", _rc == 0))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

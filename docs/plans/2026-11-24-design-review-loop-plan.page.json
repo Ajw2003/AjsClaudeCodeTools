@@ -1,0 +1,161 @@
+{
+ "title": "Design Review Loop Build Plan",
+ "eyebrow": "Build plan · design approved 2026-11-24 · all nine steps built (plugin 2.92.0), awaiting QA",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: design review loop",
+ "short": {
+  "lead": "Nine steps, issues #593 to #601 under parent issue #592, build the approved design review loop. Version 2.90.0 merged (pull request 602), so all nine steps are built. The build plan is the contract: I log any departure from it and report it at the end.",
+  "hint": "Tap a step to see what it builds and how it is checked. The Changes section below gives each step's files and done-test.",
+  "key": [
+   [
+    "I build it",
+    ""
+   ],
+   [
+    "Waits on you",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Steps 1 to 3, 5, 8",
+    "Reviewer, stamp, acceptance run, test fallback, one approval",
+    "",
+    "The parts that do not touch the 2.90.0 code. Issues #593, #594, #595, #597 and #600.",
+    "Nothing from you.",
+    {
+     "src": "docs/plans/2026-11-24-design-review-loop-pics/order.svg",
+     "alt": "Nine boxes in build order. Reviewer, stamp and acceptance run in a row, with the self-judging test after the run and one approval after the stamp. A blue box says wait for 2.90.0 to merge. The parked ledger, deviations ledger and QA gate follow it. Docs and tests come last.",
+     "caption": "An arrow means the step it leaves must be done first. Yellow steps touch the 2.90.0 code."
+    }
+   ],
+   [
+    "hammer",
+    "Steps 6, 7, 4",
+    "Parked ledger, deviations ledger, QA gate (steps 6, 7 and 4)",
+    "",
+    "Issues #598, #599 and #596, in that order.",
+    "Nothing from you."
+   ],
+   [
+    "eye",
+    "Step 9",
+    "Docs, decisions, full test run",
+    "",
+    "Issue #601, then the acceptance run of this feature and the QA page.",
+    "Later, I will ask for your QA verdict."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Step 1: reviewer helper (issue #593)",
+   "One reviewer agent file with three modes: page, plan and acceptance.",
+   "None",
+   "Done when: the reviewer file has the three modes, the model-pin test still passes, and a real page-mode run on the approved design page returns findings, each with the current text and its replacement. Touches agents/reviewer.md, scripts/checks/delegation.py and the editor's wording rules, which the reviewer's page mode points to in agents/editor.md (D1).",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Step 2: review stamp (issue #594)",
+   "Each page carries a fingerprint of its content and a review verdict.",
+   "None",
+   "Done when: test cases show a missing, a stale and a current stamp each handled, and review pages and QA pages exempt from the stamp. Touches make_page.py and the end-of-reply page check in scripts/house_rules/writing.py, replacing the editor reminder on design pages, plan pages and all other pages.",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Step 3: acceptance run (issue #595)",
+   "The reviewer runs and screenshots the whole feature.",
+   "None",
+   "Done when: a test feature with two planted flaws fails round one and passes after a fix, the stamp matches a fingerprint of the source tree (docs/qa/, built plan pages, page.json, docs/5-today/ and CHANGELOG.md left out), and any later source change makes it stale. Touches the visual-loop skill, scripts/acceptance.py stamp and check (D3, D5, P3, P4), and the build-plan page, which now lists one acceptance test per design item.",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Step 5: self-judging test (issue #597)",
+   "A test run by one command that prints one word, PASS or FAIL.",
+   "None",
+   "Done when: a test template and builder instructions exist, a sample test run here prints PASS or FAIL on its own, and its handover card passes the format check.",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Step 8: one approval (issue #600)",
+   "One approval line moves the feature from the Design stage to the Build stage.",
+   "None",
+   "Done when: test cases show the combined line moving the stage when a -plan.html page for the feature in docs/plans/ carries a current review stamp; otherwise the design half applies and the plan half is refused with the reason (D7, aj's pick A2); a plan approval sent on its own is not held to the stamp, and the old two-step approval still working. Touches scripts/house_rules/design_loop.py (approvals) and make_page.py (the approval-line check).",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Step 6: parked ledger (issue #598)",
+   "Reversible questions take a default and work continues.",
+   "None",
+   "Done when: test cases show a reversible question parked with a ledger row and no hold on edits, an irreversible question still put to you, and a helper's question parked. Touches the 2.90.0 question hook in scripts/house_rules/core.py, the hold that stops edits during Build, and the rule text in rules/show-dont-tell.md. Waits for 2.90.0 to merge.",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Step 7: deviations ledger (issue #599)",
+   "Every departure from the plan is logged.",
+   "None",
+   "Done when: test cases show a deviation logged with what the plan said, what was done, why and how to undo it, a change of intent parking that piece while the rest continues, an unrecognised permission mode treated as attended (someone is present), and a missing entry caught at turn end. Waits for step 6, which waits for 2.90.0.",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Step 4: QA gate (issue #596)",
+   "A QA page cannot be built without a current acceptance stamp.",
+   "None",
+   "Done when: test cases show QA mode refusing when the stamp is missing or stale, building the page when the unverified list is empty, and opening with the parked-decisions and deviations ledger. Touches apply_qa in make_page.py, which now accepts an empty unverified list. Built ahead of steps 6 and 7 (D8).",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Step 9: docs, decisions, full run (issue #601)",
+   "Close the loop with proof.",
+   "None",
+   "Done when: verify.py and tools/verify_tools.py both exit 0 with the output quoted, the doc-ref and docs-drift checks pass, four reversal entries are added to docs/6-decisions/Decisions.md, and the plugin version and changelog are updated.",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Risks I would flag",
+   "Rule size, an unseen mode value, and shared files.",
+   "None",
+   "The rules injected each session have a character limit, so step 6's rule text may need other rules trimmed to fit. The value for bypass permission mode was read from Claude Code's list of modes. I have not seen it in a live session. Steps 2, 6 and 8 all edit files that other sessions also touch, so each is built one at a time on the branch. The cost of Opus reviews, in tokens and time, is not yet measured (review-loop.md, Known unknowns); it was promised after step 1 and is owed. Open risks left by the page review: no test yet covers choice 3A (at most two review rounds, leftovers shown as open risks) or the rule that changed picks rebuild and re-review the plan; the acceptance list lacks separate tests for page mode answering facts and offering lettered options, plan mode flagging a design item with no step, and the acceptance run's report, screenshots and four-round cap.",
+   "None",
+   "None"
+  ],
+  [
+   "chg",
+   "Acceptance tests (all steps)",
+   "One test per design item, run by the reviewer in acceptance mode before QA.",
+   "None",
+   "Done when: each passes with its evidence saved under docs/qa/design-review-loop/: C1 reviewer modes and a saved page-mode run; C2 page stamp states; C3 acceptance stamp lifecycle; C4 QA gate; C5 self-judging test and its handover card; C6 combined approval; C7 parked questions; C8 deviations ledger; C9 docs, version and the full test run.",
+   "None",
+   "None"
+  ]
+ ],
+ "wrapup": {
+  "summary": "A nine-step build plan for the approved design review loop, under parent issue #592.",
+  "changing": "All nine steps are built (plugin 2.92.0). Code changes are in the plugin's agent, page builder, hooks and tests, plus docs and the decisions log. Departures from this plan are listed in docs/qa/design-review-loop/ledger.md (D1 to D9, P1 to P4).",
+  "blocking": "Nothing. The acceptance run and your QA verdict are what is left.",
+  "next": "The reviewer runs the acceptance criteria, then I build the QA page and open the pull request.",
+  "todo": [
+   "Read the deviations and parked decisions in docs/qa/design-review-loop/ledger.md."
+  ]
+ }
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="13">
+<style>
+.bg{fill:#fff}.t{fill:#1b1f2a}.m{fill:#5b6275}.ln{stroke:#8a92a6;fill:none;stroke-width:1.5}
+.new{fill:#fde0dc;stroke:#c0392b}.you{fill:#dbe7ff;stroke:#2f5fd0}.reuse{fill:#dff3e4;stroke:#2e8b57}.adapt{fill:#fff1cc;stroke:#b8860b}
+@media (prefers-color-scheme:dark){.bg{fill:#14171f}.t{fill:#eef0f6}.m{fill:#a4abbd}.ln{stroke:#6c748a}.new{fill:#4a1f1b;stroke:#ff8a7a}.you{fill:#1d2c55;stroke:#7aa2ff}.reuse{fill:#1f3a2a;stroke:#5fcf8c}.adapt{fill:#4a3d12;stroke:#e0b94a}}
+</style>
+<rect class="bg" width="680" height="250"/>
+<text class="t" x="16" y="24" font-weight="700">The plan hits a problem in unattended mode</text>
+<g stroke-width="1.5">
+<rect class="adapt" x="16" y="96" width="140" height="56" rx="8"/><text class="t" x="86" y="120" text-anchor="middle">Plan step cannot</text><text class="t" x="86" y="138" text-anchor="middle">go as written</text>
+<rect class="reuse" x="236" y="38" width="220" height="60" rx="8"/><text class="t" x="346" y="62" text-anchor="middle">Only the how changes:</text><text class="t" x="346" y="80" text-anchor="middle">build the safe alternative</text>
+<rect class="new" x="236" y="150" width="220" height="60" rx="8"/><text class="t" x="346" y="174" text-anchor="middle">What you approved changes,</text><text class="t" x="346" y="192" text-anchor="middle">or cannot be undone: park it</text>
+<rect class="you" x="520" y="38" width="144" height="60" rx="8"/><text class="t" x="592" y="62" text-anchor="middle">Deviations ledger</text><text class="m" x="592" y="80" text-anchor="middle" font-size="11">why, and how to undo</text>
+<rect class="you" x="520" y="150" width="144" height="60" rx="8"/><text class="t" x="592" y="174" text-anchor="middle">Parked and owed</text><text class="m" x="592" y="192" text-anchor="middle" font-size="11">rest of the work goes on</text>
+</g>
+<g class="ln"><path d="M156 112l80-44M156 136l80 44M456 68h64M456 180h64"/></g>
+<text class="m" x="16" y="236" font-size="12">Both lists open the QA page. Nothing stops the work.</text>
+</svg>

@@ -1057,6 +1057,28 @@ def _loop_issues_for_apply(state, text, top):
             "issue's labels on GitHub." % (name, ", ".join(added) or "nothing new"))
 
 
+def _plan_unreviewed(top, name):
+    """#600, A2: "" when docs/plans holds a build-plan page for this feature with a current review stamp; else
+    why the combined approval cannot carry the plan. A page that cannot be read counts as unreviewed."""
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    plans = os.path.join(top or "", "docs", "plans")
+    try:
+        names = sorted(n for n in os.listdir(plans) if n.lower().endswith("-plan.html") and slug and slug in n.lower())
+    except OSError:
+        names = []
+    if not names:
+        return 'no build plan page for "%s" (a docs/plans file ending -plan.html and naming it) was found' % name
+    try:
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import page_criteria
+        with open(os.path.join(plans, names[-1]), encoding="utf-8", newline="") as f:
+            problem = page_criteria.stamp_problem(f.read())
+    except Exception as exc:
+        return "the plan page could not be checked (%s: %s)" % (type(exc).__name__, exc)
+    return "%s has %s" % (names[-1], problem) if problem else ""
+
+
 def _loop_apply_stage(state, text, top):
     """Move the stage for one message of aj's. Returns a note for the model, or "" when the
     message approves nothing. Mutates state.
@@ -1069,7 +1091,17 @@ def _loop_apply_stage(state, text, top):
         return _loop_apply_one(state, text, top)
     pieces = [(order, text[start:found[i + 1][0] if i + 1 < len(found) else len(text)])
               for i, (start, order) in enumerate(found)]
-    notes = [_loop_apply_one(state, piece, top) for _order, piece in pieces]  # D5: in the order aj wrote them
+    notes = []
+    for order, piece in pieces:  # D5: in the order aj wrote them
+        if order == 1:  # #600, A2: the combined line carries the plan only when its page was reviewed
+            m = _LOOP_PLAN_RE.search(piece)
+            why = _plan_unreviewed(top, _loop_name(m.group(1))) if m else ""
+            if why:
+                notes.append('Design loop: aj wrote "Build plan approved" in the same message as another approval, '
+                             "but %s, so the build plan approval was not applied. Run the reviewer on the plan "
+                             "page and rebuild it with --reviewed, or aj approves the plan in its own message." % why)
+                continue
+        notes.append(_loop_apply_one(state, piece, top))
     return " ".join(n for n in notes if n)
 
 
@@ -1367,9 +1399,14 @@ def handover_record_offers(payload, have_reply, reply_text, trace_lines):
         if changed:
             _st["offered"] = offered
         # #459: a reply in Build that asks aj something holds code edits until aj's next message
-        if _st.get("stage") == "build" and _asks_aj(reply_text) and not _st.get("held"):
-            _st["held"] = True
-            changed = True
+        if _st.get("stage") == "build" and _asks_aj(reply_text):
+            if "[HARD STOP]" in _MD_FENCED_BLOCK_RE.sub("", reply_text or "").strip().split("\n\n")[-1]:
+                if not _st.get("held"):
+                    _st["held"] = True
+                    changed = True
+            else:  # #598: a plain question in Build parks instead of holding
+                trace_lines.append("Build stage: park a reversible question with ledger_note.py park and end the "
+                                   "reply with the next step; use [HARD STOP] only for what cannot be undone.")
         if changed:
             _loop_write(_gd, _st)
     except Exception as exc:
@@ -1438,8 +1475,9 @@ def _loop_helper_note(payload):
     return (
         "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
         "build plan; you never design, change the plan, or approve anything - an approval only counts from "
-        "aj's own message. Anything unexpected is a question for aj: the main session puts it on a page and "
-        "does not answer it. Code edits are refused outside Build." % (
+        "aj's own message. Park a reversible question with `ledger_note.py park` and keep going; only a "
+        "[HARD STOP] (cannot be undone, or touches money, secrets or other people) is reported back as a "
+        "question. Code edits are refused outside Build." % (
             '"%s"' % state["feature"] if state.get("feature") else "not started",
             LOOP_STAGE_NAMES[state["stage"]],
             "; its issues are %s" % issues if issues else ""))
@@ -2527,6 +2565,10 @@ def _check_send(ctx):
 def _check_editor(ctx):
     if _page_escape(ctx) or not ctx.get("editor_owed"):
         return ""
+    if not ctx["editor_owed"].startswith("this reply is"):  # #594: a page owes a review stamp
+        return ("spawn @house-rules:reviewer (Agent tool, subagent_type house-rules:reviewer) in PAGE mode, apply "
+                "its findings, rebuild with make_page.py build ... --reviewed clean --rounds N (or open-risks "
+                "after round 2), then send the page (%s)" % ctx["editor_owed"])
     return ("hand the text to @house-rules:editor (Agent tool, subagent_type house-rules:editor), "
             "apply its rewrites, then send the reply (%s)" % ctx["editor_owed"])
 
@@ -2800,8 +2842,15 @@ _DECIDED_RE = re.compile(r"(?i)\bI (?:went with|chose|picked|decided on|settled 
 def _check_decided(ctx):
     """#460: a reply that settles a design point on its own is sent back once."""
     text = _MD_FENCED_BLOCK_RE.sub("", ctx.get("reply") or "")
+    build = ctx.get("qa_stage") == "build"
+    if build and re.search(r"(?i:ledger)|\bP\d+\b", text):  # #598: a parked choice is on the ledger
+        return ""
     for line in text.split("\n"):
         if not line.lstrip().startswith(">") and _DECIDED_RE.search(line):
+            if build:
+                return ("a design point is aj's to review; park the choice in the ledger with "
+                        "`python3 %s park ...` instead of only saying \"I went with ...\""
+                        % os.path.join(SCRIPTS_DIR, "ledger_note.py"))
             return ("a design point is aj's to decide; put the choice to aj as options with one marked as the "
                     "suggestion instead of saying \"I went with ...\"")
     return ""
@@ -2851,6 +2900,23 @@ def _check_changelog(ctx):
             % ", ".join(os.path.join(r, "CHANGELOG.md") for r in stale))
 
 
+_DEVIATION_RE = re.compile(
+    r"\b(deviat\w*|depart(?:s|ed|ure)? from (?:the |this )?(?:build )?plan|(?:differs?|changed?|diverg\w*) from (?:the |this )?(?:build )?plan"
+    r"|instead of (?:the )?(?:plan|what the plan)|not as (?:the )?plan(?:ned)?)\b", re.IGNORECASE)
+
+
+def _check_deviation(ctx):
+    """#599: with nobody present (unattended or bypass; an unknown mode counts as attended), a reply that says it
+    departed from the build plan, with no `ledger_note.py` call this turn, is sent back once. A phrase heuristic."""
+    if not ctx.get("hands_off") or ctx.get("ledger_logged"):
+        return ""
+    if not _DEVIATION_RE.search(ctx.get("reply") or ""):
+        return ""
+    return ("log each departure with `python3 %s deviate <feature> --step <n> --plan ... --done ... --why ... "
+            "--undo ...`, or `park` for a change to what aj approved, then say so in one line"
+            % os.path.join(core.SCRIPTS_DIR, "ledger_note.py"))
+
+
 CHECKPOINTS = [
     ("reply ends", "page", _check_page, "report"),  # #309: report only until the restructure
     ("reply ends", "editor", _check_editor, "block"),
@@ -2859,6 +2925,7 @@ CHECKPOINTS = [
     ("reply ends", "plain summary", _check_plain, "block"),
     ("reply ends", "qa page", _check_qa_page, "block"),
     ("reply ends", "decided for you", _check_decided, "block"),
+    ("reply ends", "deviation", _check_deviation, "block"),
     ("reply ends", "changelog", _check_changelog, "block"),
     ("reply ends", "handoff", _check_handoff, "block"),
     ("reply ends", "send page", _check_send, "block"),
@@ -2871,6 +2938,7 @@ CHECKPOINT_RULES = {
     "evidence": "A success claim needs a tool run and its quoted output behind it.",
     "commit": "Files a turn writes are committed on your own branch before it ends.",
     "qa page": "In QA, the build is handed to aj with a QA page built by make_page.py, linked in a reply.",
+    "deviation": "With nobody present, every departure from the build plan is logged in the ledger, not only said in the reply.",
     "decided for you": "Design points are aj's to decide; a reply puts them as options, not as \"I went with ...\".",
     "handoff": "A turn that wrote or committed files is pushed, with a fresh clean handoff note.",
     "send page": "A page written or rebuilt this turn is sent to aj with the file-send tool, after its last change.",
@@ -3483,6 +3551,16 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
         except Exception as exc:
             trace_lines.append("house-rules: the send-page checkpoint could not read the turn (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
+        try:
+            ctx["hands_off"] = core.unattended() or core._field(core._MODE_RE, payload) == "bypassPermissions"
+            if ctx["hands_off"] and transcript_path:
+                recs, _d = core._records_since_last_user_message(transcript_path)
+                ctx["ledger_logged"] = any("ledger_note.py" in str((b.get("input") or {}).get("command", ""))
+                                           for b in core._turn_tool_uses(recs or []))
+        except Exception as exc:
+            ctx["hands_off"] = False
+            trace_lines.append("house-rules: the deviation checkpoint could not read the turn (%s: %s), "
+                               "so it is off for this reply." % (type(exc).__name__, exc))
         missed = _missed_checkpoints(ctx)
         if missed:
             emit({"decision": "block", "reason": _checkpoint_reason(missed)})
@@ -3510,6 +3588,20 @@ def handover_qa_retry(payload, have_reply, reply_text, trace_lines):
                            % (type(exc).__name__, exc))
 
 
+def _noask_stage(payload):
+    """#598: (stage, "") for event_noask, or (None, why it could not be read)."""
+    if not _loop_enabled():
+        return None, "the design loop is off (HOUSE_RULES_LOOP=off)"
+    _top, gd = _issues_locate(_payload_cwd(payload))
+    if not gd:
+        return None, "no git project found from the payload's cwd"
+    state, problem = _loop_read_merged(gd)
+    if problem:
+        return None, problem
+    return state["stage"], ""
+
+
+core.register_noask_stage(_noask_stage)
 core.register_guard_issue(_author_guard)
 core.register_guard_issue(_issues_guard)
 core.register_github_write(_guardgithub_issue_checks)

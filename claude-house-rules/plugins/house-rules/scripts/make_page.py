@@ -48,6 +48,11 @@ STARTERS = os.path.join(PLUGIN, "templates", "starters")
 HEX = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 
 
+def qa_folder(feature):
+    """docs/qa/<folder> name for a feature (ledger_note.py uses it too)."""
+    return feature.lower().replace(" ", "-")
+
+
 def die(msg, code=2):
     print("make_page: " + msg, file=sys.stderr)
     sys.exit(code)
@@ -276,10 +281,48 @@ def apply_qa(page, project):
     for k in ("feature", "base"):
         if not qa.get(k):
             die("QA mode needs qa.%s in the content file; add it" % k)
-    unv = qa.get("unverified")
-    if not isinstance(unv, list) or not unv:
-        die("QA mode needs qa.unverified, a non-empty list of what is not yet proven; a QA page that "
-            "claims everything is proven is refused, so list what you did not check")
+    unv = qa.get("unverified") or []
+    if not isinstance(unv, list):
+        die("qa.unverified must be a list of strings (empty means everything passed the acceptance run)")
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    import acceptance
+    folder = qa.get("folder") or qa_folder(qa["feature"])
+    fpath = os.path.join(project, "docs", "qa", folder)
+    problem = acceptance.stamp_problem(fpath, project)
+    if problem:
+        die("%s (%s). Run the acceptance run first (the visual-loop skill, whole-feature acceptance), "
+            "then `acceptance.py stamp %s`" % (problem, fpath, fpath))
+    machine = []
+    nm = qa.get("needs_machine") or []
+    if not isinstance(nm, list):
+        die("qa.needs_machine must be a list of {title, folder, shell, command, expect, untested}")
+    for i, e in enumerate(nm):
+        if not isinstance(e, dict):
+            die("qa.needs_machine entry %d is not an object" % i)
+        for k in ("title", "folder", "shell", "command", "expect"):
+            if not e.get(k):
+                die("qa.needs_machine entry %d (%s) needs %s" % (i, e.get("title") or "untitled", k))
+        machine.append("\n".join(
+            ([e["title"]] + (["UNTESTED:"] if e.get("untested", True) else [])
+             + ["Folder: %s, shell: %s" % (e["folder"], e["shell"]), "Command: %s" % e["command"],
+                "You should see: %s" % e["expect"]])))
+    ledger = []
+    lp = os.path.join(fpath, "ledger.md")
+    if os.path.isfile(lp):
+        with open(lp, encoding="utf-8") as f:
+            for ln in f.read().splitlines():
+                # split on an unescaped pipe only; ledger_note.py writes a pipe in a cell as \|
+                c = [x.strip().replace("\\|", "|") for x in re.split(r"(?<!\\)\|", ln)]
+                if ln.startswith("| D") and len(c) > 4:
+                    ledger.append(("D", "%s: %s" % (c[1], c[4])))
+                elif ln.startswith("| P") and len(c) > 3:
+                    ledger.append(("P", "%s: %s" % (c[1], c[3])))
+        short = lambda s: s if len(s) <= 160 else s[:157].rstrip() + "..."
+        nd = sum(1 for k, _ in ledger if k == "D")
+        page.setdefault("changes", []).insert(
+            0, ["chg", "Deviations and parked decisions", "%d deviation(s), %d parked" % (nd, len(ledger) - nd), None,
+                "\n".join(short(t) for _, t in ledger) or "None recorded", None, None])
     plan = qa.get("files") or {}
     base = qa["base"]
     rows, seen, tot_a, tot_r = [], set(), 0, 0
@@ -299,8 +342,13 @@ def apply_qa(page, project):
          "%d files, +%d −%d" % (len(seen), tot_a, tot_r),
          None, "The added and removed counts come from git (git diff --numstat %s...HEAD); the estimates "
          "beside them come from the plan." % base, None, rows])
+    if machine:
+        page["changes"].append(["chg", "Needs your machine", "%d step(s), one command each" % len(machine), None,
+                                "\n\n".join(machine), None, None])
     page["changes"].append(["keep", "Still unverified", "%d things not yet proven" % len(unv), None,
-                            " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv), None, None])
+                            " ".join(u if u.rstrip()[-1:] in ".!?" else u.rstrip() + "." for u in unv)
+                            or "Nothing is unverified: every acceptance item passed the acceptance run (stamp for the current source).",
+                            None, None])
     page.setdefault("choices", [])  # a QA page usually has none, and the template maps over the list
     page["approval"] = "QA passed: %s" % qa["feature"]
     page.pop("replyPrefix", None)
@@ -363,9 +411,21 @@ def check_approval(page):
     if not isinstance(appr, str) or not appr.strip():
         die("content needs an 'approval' field: the exact phrase the design-loop gate accepts, such as "
             "\"Build plan approved: <feature>\" or \"Design approved: <feature>\" (a QA page gets \"QA passed: <feature>\")")
+    design, plan, qa = load_gate_patterns()
+    lines = appr.split("\n")
+    if len(lines) == 2 and not is_qa_approval(page):  # #600: design line, then build-plan line, same rules each
+        if not (design.search(lines[0]) and plan.search(lines[1])):
+            die("approval has two lines: the first must be \"Design approved: <feature>\" and the second "
+                "\"Build plan approved: <feature>\"; got %r and %r" % tuple(lines))
+        for ln in lines:
+            if ln != ln.strip() or not ln:
+                die("approval line %r must have no spaces at either end" % ln)
+        for ln, p in zip(lines, (design, plan)):
+            if not p.search(ln + " 1A"):
+                die("approval line %r would not open the design-loop gate with picks added" % ln)
+        return
     if appr != appr.strip() or "\n" in appr:
         die("approval must be one line with no spaces at either end")
-    design, plan, qa = load_gate_patterns()
     qa_page = is_qa_approval(page)
     pats = [qa] if qa_page else [design, plan]
     want = "QA passed: <feature>" if qa_page else "Design approved: <feature> or Build plan approved: <feature>"
@@ -389,7 +449,7 @@ def check_approval(page):
 def apply_approval_todo(page):
     """Make the wrap-up's last to-do line say the phrase the copy box holds."""
     import html
-    appr = html.escape(page["approval"], quote=False)
+    appr = html.escape(page["approval"], quote=False).replace("\n", " then ")  # #600: two lines read as one to-do
     if is_qa_approval(page):
         feature = appr.split(":", 1)[1].strip()
         line = ('Tap <b>Copy my reply</b> and send it: "%s", or send "QA failed: %s" with what to change.'
@@ -489,6 +549,10 @@ def build(args):
         apply_sweep(page)
     if "pageType" in page and page["pageType"] not in PAGE_TYPES:
         die("content 'pageType' is %r; the allowed values are: %s" % (page["pageType"], ", ".join(PAGE_TYPES)))
+    if page.get("pageType") == "build-plan" and not any(
+            isinstance(c, list) and len(c) > 4 and str(c[1]).startswith("Acceptance") and str(c[4] or "").strip()
+            for c in page.get("changes") or []):
+        die("a build plan page needs an Acceptance tests item: one test per design item")
     check_approval(page)
     apply_approval_todo(page)
     page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one
@@ -530,6 +594,14 @@ def build(args):
         i = html.index("<svg width=\"0\"") if "<svg width=\"0\"" in html else html.index("<script>")
         html = html[:i] + block + html[i:]
     html = "<!doctype html>\n<!-- house-rules make_page %s -->\n" % plugin_version() + html
+    if args.reviewed:  # last step: the hash must cover the final HTML
+        if not 1 <= args.rounds <= 2:
+            die("--rounds is %r; the cap is 2, so it must be 1 or 2" % args.rounds)
+        if HERE not in sys.path:
+            sys.path.insert(0, HERE)
+        import page_criteria
+        i = html.index("\n", html.index("<meta charset")) + 1
+        html = html[:i] + page_criteria.stamp_line(html, args.reviewed, args.rounds) + html[i:]
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
     print("make_page: wrote %s (%d picture(s) embedded)" % (out, npics))
@@ -855,6 +927,8 @@ def main(argv=None):
     b.add_argument("content")
     b.add_argument("--out")
     b.add_argument("--project")
+    b.add_argument("--reviewed", choices=("clean", "open-risks"))
+    b.add_argument("--rounds", type=int, default=1)
     st = sub.add_parser("start")
     st.add_argument("type")
     st.add_argument("--out")
