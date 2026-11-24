@@ -417,6 +417,20 @@ def is_qa_approval(page):
     return "qa" in page or str(page.get("approval", "")).startswith("QA passed")
 
 
+def check_choice_ids(page):
+    """The template uses a choice's id (first element) as its radio-group name, so two choices must not share one."""
+    seen, dup = set(), []
+    for q in page.get("choices") or []:
+        if not isinstance(q, list) or not q or not isinstance(q[0], str):
+            continue  # a malformed entry is left to the existing validation
+        if q[0] in seen and q[0] not in dup:
+            dup.append(q[0])
+        seen.add(q[0])
+    if dup:
+        die("choice ids must be different: the id is the radio-group name, so two choices with the same id (%s) "
+            "share one group and only one answer would be kept. Give each choice its own id." % ", ".join(dup))
+
+
 def check_approval(page):
     """The copy box holds the approval phrase (plus picks); it must be text the gate accepts."""
     appr = page.get("approval")
@@ -566,6 +580,7 @@ def build(args):
             for c in page.get("changes") or []):
         die("a build plan page needs an Acceptance tests item: one test per design item")
     check_approval(page)
+    check_choice_ids(page)
     apply_approval_todo(page)
     page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one
     check_reserved(page, style)
