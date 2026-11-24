@@ -10,7 +10,7 @@ Two Windows-only bugs are fixed on branch `AjsAgent/acceptance-round-2-windows-f
 Wait for aj's reply on the QA page: "QA passed: design review loop", or what failed. On a pass, mark the issues and pull request #604 ready for aj's merge decision; on a fail, fix on this branch and rerun the failing criterion with `run_acceptance.py C<n>`.
 
 ## What is unverified
-A full `verify.py` run after both fixes passed 1572 of 1581 checks; nine fail on Windows (guard x3, page checks x2, waitfor x3, node x1), the same nine fail on a clean `main` (which also crashes the `design_loop` part on Windows), so this feature did not cause them; causes not investigated. The deviation check is a phrase heuristic never seen firing live. No test covers the two-round cap or changed-pick re-review. Round 1 was recorded afterwards from the report, not from a fresh run.
+A full `verify.py` run after both fixes passed 1572 of 1581 checks; nine fail on Windows (guard x3, page checks x2, waitfor x3, node x1), the same nine fail on a clean `main` (which also crashes the `design_loop` part on Windows), so this feature did not cause them; one cause found (`waitfor.py` calls `os.killpg`, which Windows lacks; `waitfor` checks 112 and 115 give wrong exit codes too), the guard, page and node causes not found. The deviation check is a phrase heuristic never seen firing live. No test covers the two-round cap or changed-pick re-review. Round 1 was recorded afterwards from the report, not from a fresh run.
 
 ## The issue numbers
 Parent #592; pull request #604 (`Refs #592`).

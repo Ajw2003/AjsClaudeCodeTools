@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.92.0 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="7504d38a5dafa1123e0c1db3a3adf589a6721451646830d912a0b0e644d537c9;clean;1">
+<meta name="house-rules-reviewed" content="5ca018962ced101f17f75e31b117e805096d9cb337b9b31cbd26f7f6eba9b059;clean;1">
 <meta name="house-rules-page" content="qa">
 <title>Design Review Loop QA</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -260,7 +260,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Open docs/qa/design-review-loop/round-2.md and expect nine PASS lines and the line STATUS: pass.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: design review loop", or send "QA failed: design review loop" with what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. Their causes were not investigated. Main also crashes the design_loop part on Windows, which this branch fixes. The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures. The deviation check works by matching phrases, and it has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.</p></details></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. One cause is known: the waitfor timeout check fails because os.killpg does not exist on Windows. The waitfor success and exit-2 checks fail with the wrong exit code, and the guard, page and node checks fail without a cause found. Main also crashes the design_loop part on Windows, which this branch fixes. The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures. The deviation check works by matching phrases, and it has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.</p></details></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -1209,7 +1209,7 @@ const PAGE = {
       "Still unverified",
       "5 things not yet proven",
       null,
-      "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. Their causes were not investigated. Main also crashes the design_loop part on Windows, which this branch fixes. The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures. The deviation check works by matching phrases, and it has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.",
+      "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. One cause is known: the waitfor timeout check fails because os.killpg does not exist on Windows. The waitfor success and exit-2 checks fail with the wrong exit code, and the guard, page and node checks fail without a cause found. Main also crashes the design_loop part on Windows, which this branch fixes. The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures. The deviation check works by matching phrases, and it has not been seen firing in a live session. No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately. Round 1 was written into ledger form afterwards from report.md, not from a fresh run.",
       null,
       null
     ]
@@ -1218,7 +1218,7 @@ const PAGE = {
     "feature": "design review loop",
     "base": "origin/main",
     "unverified": [
-      "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. Their causes were not investigated. Main also crashes the design_loop part on Windows, which this branch fixes.",
+      "Nine checks still fail in a full verify.py run on your Windows PC: three in the guard, two page checks, three waitfor checks and one node check. A full run on a clean main fails the same nine, so this feature did not cause them. One cause is known: the waitfor timeout check fails because os.killpg does not exist on Windows. The waitfor success and exit-2 checks fail with the wrong exit code, and the guard, page and node checks fail without a cause found. Main also crashes the design_loop part on Windows, which this branch fixes.",
       "The full verify.py run after both fixes shows 1572 of 1581 checks passing; the nine above are the only failures.",
       "The deviation check works by matching phrases, and it has not been seen firing in a live session.",
       "No test covers the two-round cap, re-review of changed picks, or the page-mode and plan-mode checks run separately.",
