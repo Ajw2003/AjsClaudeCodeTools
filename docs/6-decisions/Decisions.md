@@ -27,7 +27,7 @@ pointer, when a later entry replaces it.
 
 **Rejected.** A new critic agent; chat-only reports; a single sampling pass for the whole repo; a folder cap.
 
-**Status.** Planned and in build (parent issue #617, steps #618 to #621). Plugin version bump in step 4 (#621).
+**Status.** Built in plugin 2.94.0 (parent issue #617, steps #618 to #621). Beyond the plan: `scripts/review_plan.py` was added (deviation D1 in `docs/qa/review-command/ledger.md`).
 
 ---
 
