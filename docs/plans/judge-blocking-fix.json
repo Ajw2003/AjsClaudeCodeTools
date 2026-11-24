@@ -1,0 +1,309 @@
+{
+ "title": "Judge Loop and Modular Tests",
+ "eyebrow": "house-rules \u00b7 fix proposal \u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: judge blocking fix and modular tests",
+ "short": {
+  "lead": "The end-of-reply judge blocked 12 times in a row, and the long waits behind it come from tests that run as one slow block. I propose two linked fixes: stop the judge looping and tell the model which reply passes, and force tests into independent modules that each run in under a minute and print their own result, with a reusable skill that converts existing tests.",
+  "hint": "Tap a step to see what it changes. The choices at the end are yours.",
+  "key": [
+   [
+    "I build it",
+    ""
+   ],
+   [
+    "You decide",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "Cause",
+    "Three judges, one uncapped",
+    "",
+    "Read from the code: the model judge in hooks.json has no block counter at all.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22200%22 viewBox=%220 0 360 200%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EToday: three judges, one reply%3C/text%3E%3Crect x=%2220%22 y=%2230%22 width=%22320%22 height=%2240%22 rx=%226%22 fill=%22%23f8c9c4%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%2248.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EA  Model judge %28hooks.json%29%3C/text%3E%3Ctext x=%22180.0%22 y=%2263.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eno counter, sees only the last message%3C/text%3E%3Crect x=%2220%22 y=%2280%22 width=%22320%22 height=%2240%22 rx=%226%22 fill=%22%23fde9b8%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%2298.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EB  Phrase and record check%3C/text%3E%3Ctext x=%22180.0%22 y=%22113.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Ecap 2 blocks%3C/text%3E%3Crect x=%2220%22 y=%22130%22 width=%22320%22 height=%2240%22 rx=%226%22 fill=%22%23fde9b8%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%22148.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EC  Goal check %28Haiku%29%3C/text%3E%3Ctext x=%22180.0%22 y=%22163.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Ecap 6 blocks, separate counter%3C/text%3E%3Ctext x=%2210%22 y=%22192%22 fill=%22%23333%22%3ETotal allowed: unbounded %28A%29 %2B 2 %2B 6%3C/text%3E%3C/svg%3E",
+     "alt": "Three stacked boxes: model judge with no counter, phrase check capped at 2, goal check capped at 6",
+     "caption": "Today's three Stop-time judges, as read from hooks.json and core.py."
+    }
+   ],
+   [
+    "hammer",
+    "Judge side",
+    "One gate, one cap, fewer false alarms",
+    "",
+    "Delete the model judge, share one cap of two blocks, and narrow the phrase lists that trigger a block.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22200%22 viewBox=%220 0 360 200%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EAfter: one gate, one counter%3C/text%3E%3Crect x=%2220%22 y=%2230%22 width=%22320%22 height=%2236%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%2246.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EPhrase and record check%3C/text%3E%3Ctext x=%22180.0%22 y=%2261.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eclaims narrowed to tools and machines%3C/text%3E%3Crect x=%2220%22 y=%2276%22 width=%22320%22 height=%2236%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%2292.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EGoal check %28Haiku%29%3C/text%3E%3Ctext x=%22180.0%22 y=%22107.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Enext step is no longer a stall phrase%3C/text%3E%3Crect x=%2220%22 y=%22122%22 width=%22320%22 height=%2236%22 rx=%226%22 fill=%22%23cfe3f8%22 stroke=%22%23445%22 /%3E%3Ctext x=%22180.0%22 y=%22138.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EOne shared cap: 2 blocks%3C/text%3E%3Ctext x=%22180.0%22 y=%22153.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eresets only after real tool work%3C/text%3E%3Ctext x=%2210%22 y=%22182%22 fill=%22%23333%22%3EModel judge A deleted. After the cap: pass and warn.%3C/text%3E%3C/svg%3E",
+     "alt": "One gate with a shared cap of two blocks",
+     "caption": "The proposed shape."
+    }
+   ],
+   [
+    "hammer",
+    "Model side",
+    "Block messages hand over the passing reply",
+    "",
+    "Each block message includes one copyable reply: a Roadblock record, a No other method line, a NEEDS YOU line, or a Goal status line.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22200%22 viewBox=%220 0 360 200%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EThe reply the block message hands over%3C/text%3E%3Crect x=%2210%22 y=%2228%22 width=%22340%22 height=%22150%22 rx=%226%22 fill=%22%23f4f4f4%22 stroke=%22%23445%22/%3E%3Ctext x=%2220%22 y=%2248%22 fill=%22%23111%22 font-family=%22monospace%22%3ERoadblock record:%3C/text%3E%3Ctext x=%2220%22 y=%2266%22 fill=%22%23111%22 font-family=%22monospace%22%3E1. which unity - not found%3C/text%3E%3Ctext x=%2220%22 y=%2282%22 fill=%22%23111%22 font-family=%22monospace%22%3E2. ls Unity folder - missing%3C/text%3E%3Ctext x=%2220%22 y=%2298%22 fill=%22%23111%22 font-family=%22monospace%22%3E3. winget list Unity - no match%3C/text%3E%3Ctext x=%2220%22 y=%22122%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  No other method: %26lt%3Breason%26gt%3B%3C/text%3E%3Ctext x=%2220%22 y=%22140%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  NEEDS YOU: %26lt%3Blicence%7Clogin%7Cpurchase%26gt%3B%3C/text%3E%3Ctext x=%2220%22 y=%22162%22 fill=%22%23555%22 font-family=%22monospace%22%3Eor  Goal status: reached %7C continuing: %26lt%3Bstep%26gt%3B%3C/text%3E%3C/svg%3E",
+     "alt": "A reply card with the accepted forms",
+     "caption": "The accepted reply forms."
+    }
+   ],
+   [
+    "flask",
+    "Tests",
+    "Modules that finish within a minute",
+    "",
+    "A rule, a checker that flags any module over 60 seconds, and a skill that converts old tests.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22360%22 height=%22200%22 viewBox=%220 0 360 200%22 font-family=%22sans-serif%22 font-size=%2212%22%3E%3Ctext x=%2210%22 y=%2218%22 fill=%22%23333%22 font-weight=%22bold%22%3EOne test run, split into modules%3C/text%3E%3Crect x=%2210%22 y=%2230%22 width=%22100%22 height=%2244%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%2260.0%22 y=%2250.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EModule A%3C/text%3E%3Ctext x=%2260.0%22 y=%2265.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eown folder, own RESULT%3C/text%3E%3Crect x=%22130%22 y=%2230%22 width=%22100%22 height=%2244%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%2250.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EModule B%3C/text%3E%3Ctext x=%22180.0%22 y=%2265.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eown folder, own RESULT%3C/text%3E%3Crect x=%22250%22 y=%2230%22 width=%22100%22 height=%2244%22 rx=%226%22 fill=%22%23cfe8cf%22 stroke=%22%23445%22/%3E%3Ctext x=%22300.0%22 y=%2250.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EModule C%3C/text%3E%3Ctext x=%22300.0%22 y=%2265.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Eown folder, own RESULT%3C/text%3E%3Ctext x=%2210%22 y=%2298%22 fill=%22%23333%22%3EEach module: runs alone, under 60 s, prints as it finishes.%3C/text%3E%3Crect x=%2210%22 y=%22112%22 width=%22340%22 height=%2234%22 rx=%226%22 fill=%22%23cfe3f8%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%22127.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EIndependence proof%3C/text%3E%3Ctext x=%22180.0%22 y=%22142.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Erun each alone, then all in shuffled order%3C/text%3E%3Crect x=%2210%22 y=%22154%22 width=%22340%22 height=%2234%22 rx=%226%22 fill=%22%23f8c9c4%22 stroke=%22%23445%22/%3E%3Ctext x=%22180.0%22 y=%22169.0%22 text-anchor=%22middle%22 fill=%22%23111%22%3EOver 60 s%3F Flagged: split it%3C/text%3E%3Ctext x=%22180.0%22 y=%22184.0%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2210%22%3Ethe flag names the module and its time%3C/text%3E%3C/svg%3E",
+     "alt": "Three independent test modules, an independence proof, and a flag for anything over 60 seconds",
+     "caption": "How a converted test run is shaped."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You pick the choices and approve",
+    "you",
+    "I record a dated entry in docs/6-decisions/Decisions.md and write a build plan.",
+    "Send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "What exists today",
+   "Three checks run on every Stop, and they do not know about each other.",
+   null,
+   "The model judge (the Stop entry of type prompt in hooks.json) reads only the last reply, keeps no count, and always answers \"try three different methods and list them\", even when the reply already did. The phrase and record check (scripts/house_rules/core.py, roadblock_check) blocks at most twice per user message. The goal check (same file, _goal_check) blocks up to six times on its own counter. The counters live in separate files, so nothing limits the total number of blocks. I looked for the transcript of the blocked session by listing the newest transcripts, searching them for the judge's wording, and reading the counter files and the hook log. I found only synthetic test transcripts, so I have not reproduced the 12 blocks. Every live counter file stops at 2, which points at the uncapped model judge.",
+   [
+    "Three Stop checks with caps of none, 2 and 6.",
+    "Nothing yet.",
+    "Your test run was blocked 12 times."
+   ],
+   null
+  ],
+  [
+   "cut",
+   "Delete the model judge",
+   "It repeats what the two scripted checks already do, cannot count its own blocks, and cannot see the tool history.",
+   null,
+   "A prompt hook cannot keep state, so it cannot be capped. The record check already reads the real transcript and is the better judge of whether three methods were tried. Deleting the hooks.json entry removes the only uncapped block. The verify.py test case for issue #591 (core.py:1477) currently checks that the entry exists. I change it to check that the entry is gone.",
+   [
+    "The hooks.json Stop prompt hook.",
+    "The entry is removed.",
+    "No more unlimited blocks."
+   ],
+   null
+  ],
+  [
+   "adapt",
+   "One shared cap",
+   "The record check and the goal check share one counter, which allows two blocks per user message.",
+   null,
+   "After two blocks the reply goes out with a visible warning, as the record check does today. The counter resets only when the turn made at least one real tool call after the last block, so a model that keeps working is checked again, while a model that only rewords its reply is not blocked a third time.",
+   [
+    "Two counters with caps 2 and 6.",
+    "One counter with cap 2.",
+    "The worst case is two blocks, not twelve."
+   ],
+   null
+  ],
+  [
+   "adapt",
+   "Fewer false alarms",
+   "Stop treating ordinary words as roadblocks.",
+   null,
+   "The words \"next step\" are removed from the stall list, because the house rules themselves tell every reply to end with one next step. The claim list drops the bare phrases \"could not\", \"unable to\" and \"I can't\", and keeps phrases about a missing tool, machine or access. A reply with a NEEDS YOU line is exempt from the goal check too.",
+   [
+    "_STALL_RE and _ROADBLOCK_RE in core.py.",
+    "Narrower lists, and NEEDS YOU exempts both checks.",
+    "Normal status replies pass."
+   ],
+   null
+  ],
+  [
+   "new",
+   "The passing reply, spelled out",
+   "The block message includes the exact lines to paste.",
+   null,
+   "Each block names the claim it matched (quoted), what is missing, how many blocks remain, and one of four accepted forms: a Roadblock record of three numbered methods with what each returned, a No other method line with the reason, a NEEDS YOU line, or a Goal status line. The record is still checked against the real failed tool calls, so invented methods do not pass. The same forms are written into rules/detail/roadblocks.md so the model knows them before it is blocked.",
+   [
+    "Messages say only to try three methods.",
+    "Messages carry a copyable accepted reply.",
+    "The model can always find the way out."
+   ],
+   null
+  ],
+  [
+   "new",
+   "Tests: the approved design already exists",
+   "Another session on your other account designed modular tests, and you approved it on 2026-11-23.",
+   null,
+   "The design is docs/4-systems/modular-tests.md, tracked as issue 575 with children 576 to 582 (rule text, a refactor on and off switch, a write-time gate that refuses non-modular tests, a skill and audit, converting tools/verify_tools.py, one issue per offshoot suite, and docs). It is not built yet. I will extend it, not redo it. It already gives every module a name and a run-alone command, chaining through a --parts runner, and a conversion skill with a proof that old and new runs report the same checks. I measured the plugin's own core part at 68.9 seconds, already over the 60-second target, and one of its 267 checks fails (the injected rules are 9721 characters against a 9700 limit); that failure was there before this proposal and is a separate item.",
+   [
+    "Design approved, nothing built, issues 575 to 582 open.",
+    "Three additions to that design, below.",
+    "No duplicate design; one set of issues."
+   ],
+   null
+  ],
+  [
+   "new",
+   "Addition 1: a 60-second budget",
+   "Any module or run that needs over a minute is flagged and must be split.",
+   null,
+   "Your design does not set a time limit yet. This adds one line to the module header, a measured time recorded after each run, and a flag listing every module over 60 seconds with its name and time. The 60 comes from rules/waits.json, so it changes in one place. A step that truly cannot split, such as one engine build, passes with one line: Cannot split: followed by the reason. That line uses the shared cap from the judge fix, so it cannot loop. It lands in the gate (issue 578) and the audit (issue 579).",
+   [
+    "A 60-second foreground limit exists; no module time is recorded.",
+    "A measured flag with a named way out.",
+    "A slow module is found and split before it blocks a session."
+   ],
+   null
+  ],
+  [
+   "adapt",
+   "Addition 2: each module prints its own result, as it finishes",
+   "Results appear per module, in the order they finish.",
+   null,
+   "The approved header names a module and its run-alone command, but does not require the module to print its own PASS or FAIL and a RESULT line. This adds that requirement to the gate. It also changes verify.py, which today prints each part only when its turn in the fixed order comes, so a finished part waits behind a slower one. The change prints each part the moment it ends.",
+   [
+    "verify.py holds finished output until earlier parts end.",
+    "Each module prints when done.",
+    "You and the model see results sooner."
+   ],
+   null
+  ],
+  [
+   "new",
+   "Addition 3: proof that modules are independent",
+   "The conversion skill runs each module alone, then all in shuffled order.",
+   null,
+   "Your design proves that old and new runs report the same checks. That does not prove independence, because a fixed order can hide a module that needs another one's leftovers. This adds a second proof to /house-rules:modular-tests convert: run each module alone, then all modules in a shuffled order, and compare. A mismatch is reported as a hidden link and not auto-fixed.",
+   [
+    "The proof compares counts only.",
+    "Counts plus alone-and-shuffled runs.",
+    "A hidden dependency is caught during conversion."
+   ],
+   null
+  ],
+  [
+   "risk",
+   "Flaws I found in this design",
+   "Four known gaps, each with its answer.",
+   null,
+   "One: deleting the model judge means roadblock wording that the phrase list misses is no longer caught. I accept this, because the goal check still covers unattended runs. Two: a model could write fake methods, so the record is checked against real failed tool calls. Three: a shared cap of two with no reset would leave a long unattended run unchecked, so the cap resets after real tool work. Four: I have not confirmed whether Claude Code's own limit of 8 consecutive blocks applies to prompt hooks. Beyond the missing cap, the 12 is unexplained, so the build plan adds a replay of a real session to check.",
+   [
+    "None of these gaps is handled today.",
+    "Each gap has a test or a stated limit.",
+    "You see the limits before approving."
+   ],
+   null
+  ],
+  [
+   "risk",
+   "Flaws I found in the test design",
+   "Four known gaps, each with its answer.",
+   null,
+   "One: speed differs by machine, so the time is measured on the machine running it and recorded, not assumed. Two: a split can hide a real dependency; the shuffled run is the proof, and a failure is reported, not fixed silently. Three: one engine build may never fit in 60 seconds; the Cannot split line is the exit. Four: the 12-block loop came from a judge, so every new refusal here needs the shared cap and a copyable accepted reply, or it would repeat the same fault.",
+   [
+    "Nothing guards against these today.",
+    "Each gap has a test or a stated limit.",
+    "You see the limits before approving."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "What should happen to the model judge?",
+   [
+    [
+     "A",
+     "Delete it",
+     1,
+     "It cannot be capped and the scripted checks cover the same ground."
+    ],
+    [
+     "B",
+     "Keep it, run only when the scripted checks pass",
+     0,
+     "It would still be uncapped, and it would add a delay to every reply."
+    ],
+    [
+     "C",
+     "Replace it with a scripted call that is cap-aware",
+     0,
+     "This needs more code and gives the same result as deleting it."
+    ]
+   ],
+   "Deleting is the shortest change and removes the only uncapped block."
+  ],
+  [
+   "share",
+   "What should the shared cap be?",
+   [
+    [
+     "A",
+     "Two blocks, reset after real tool work",
+     1,
+     "Matches today's record check. The blocks are limited, but long unattended runs are still checked."
+    ],
+    [
+     "B",
+     "Two blocks per user message, no reset",
+     0,
+     "Simplest, but an unattended run is no longer checked after two blocks."
+    ],
+    [
+     "C",
+     "Three blocks",
+     0,
+     "One more block per reply, so the loop could run one step longer."
+    ]
+   ],
+   "A cap of two with a reset ends the loop and still checks long unattended runs."
+  ],
+  [
+   "flask",
+   "Where should the 60-second flag live?",
+   [
+    [
+     "A",
+     "Inside the approved gate and audit (issues 578 and 579)",
+     1,
+     "One refusal path, one way out, and no second checker to keep in step."
+    ],
+    [
+     "B",
+     "A separate checker, tests_budget.py",
+     0,
+     "Cleaner to test alone, but a second place that blocks."
+    ]
+   ],
+   "The approved design already has the gate and the audit, so the flag belongs there."
+  ]
+ ],
+ "wrapup": {
+  "summary": "A proposal with two linked parts: stop the end-of-reply judge looping, and force tests into independent modules that finish within a minute.",
+  "changing": "Nothing is built. It would edit hooks.json, scripts/house_rules/core.py, rules/detail/roadblocks.md and verify.py, and extend the approved modular-tests design (issues 575 to 582) with a time budget, per-module results and an independence proof.",
+  "blocking": "Your approval and your three choices: the model judge, the shared cap, and where the 60-second flag lives.",
+  "next": "After you approve, I record the decision, create one parent issue with a child issue per part, write a build plan, and start with the judge fix.",
+  "todo": [
+   "Pick an option under Your choices.",
+   "Tap <b>Copy my reply</b>.",
+   "Send it with \"Design approved: judge blocking fix and modular tests\", or tell me what to change."
+  ]
+ }
+}
