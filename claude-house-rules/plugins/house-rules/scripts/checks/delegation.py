@@ -2365,4 +2365,45 @@ finally:
     shutil.rmtree(_ac_tmp, ignore_errors=True)
 
 
+# --- selftest template and instructions (#597) ---
+import subprocess as _st_sp
+import tempfile as _st_tf
+_st_tpl = os.path.join(HERE, "..", "templates", "selftest", "selftest.py")
+_st_doc = read(os.path.join(HERE, "..", "rules", "detail", "selftest.md"))
+
+
+def _st_run(block):
+    """Copy the template to a temp dir with `block` as its check block; run it. Returns (code, out, result file)."""
+    src = open(_st_tpl, encoding="utf-8").read()
+    a, b = src.index("# ===== BUILDER"), src.index("# ===== END")
+    d = _st_tf.mkdtemp()
+    try:
+        p = os.path.join(d, "selftest.py")
+        open(p, "w", encoding="utf-8").write(src[:a] + block + "\n" + src[b:])
+        r = _st_sp.run([sys.executable, p], capture_output=True, text=True, stdin=_st_sp.DEVNULL, timeout=60)
+        rf = os.path.join(d, "selftest-result.txt")
+        return r.returncode, r.stdout, (open(rf, encoding="utf-8").read() if os.path.exists(rf) else None)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+_st_ok = "def a():\n    return True, 'fine'\ndef b():\n    return True, 'fine'\nCHECKS = [a, b]\n"
+_st_bad = "def a():\n    return True, 'fine'\ndef b():\n    return False, 'broken'\nCHECKS = [a, b]\n"
+_st_raise = "def a():\n    raise ValueError('boom')\nCHECKS = [a]\n"
+if os.path.exists(_st_tpl):
+    code, out, rf = _st_run(_st_ok)
+    commit_case("selftest: a passing set prints RESULT: PASS, exits 0 and writes selftest-result.txt",
+                code == 0 and out.rstrip().endswith("RESULT: PASS") and rf == out and "PASS a" in out, out)
+    code, out, rf = _st_run(_st_bad)
+    commit_case("selftest: one failing check prints RESULT: FAIL (1 failed) and exits 1",
+                code == 1 and out.rstrip().endswith("RESULT: FAIL (1 failed)") and "FAIL b: broken" in out, out)
+    code, out, rf = _st_run(_st_raise)
+    commit_case("selftest: a check that raises is a FAIL with its message, not a crash",
+                code == 1 and "FAIL a: raised ValueError: boom" in out and "Traceback" not in out, out)
+else:
+    commit_case("selftest: the template exists", False, _st_tpl)
+commit_case("selftest: the instruction file is under 40 lines and names UNTESTED: and needs your machine",
+            len(_st_doc.splitlines()) < 40 and "UNTESTED:" in _st_doc and "needs your machine" in _st_doc)
+
+
 finish()
