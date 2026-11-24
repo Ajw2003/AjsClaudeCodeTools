@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Step 6 of the design review loop (issue #598), second half: in Build, with someone present, a question that can be undone is denied and the agent is told to park it with `ledger_note.py park`; only a question marked [HARD STOP] still stops the work or holds code edits, and the `decided for you` row stays quiet when the reply names the ledger. The QA page parser now reads a `\|` in a ledger cell as a `|`. Other stages are unchanged.
+
 Step 6 of the design review loop (issue #598), first half: `scripts/ledger_note.py park` writes a parked-decision row into `docs/qa/<feature>/ledger.md`, the rule text and the helper start note tell the agent to park a reversible question in Build and keep a [HARD STOP] for what cannot be undone; the hooks that stop asking are being built. My own runs: `verify.py` 1544 of 1544 and a real `park` run in a temp repo.
 
 Step 4 of the design review loop (issue #596) is built: the QA page builder refuses without a current acceptance stamp, accepts an empty unverified list, opens with the deviations and parked decisions from `docs/qa/<feature>/ledger.md`, and shows a "Needs your machine" step with one command; multi-line details now keep their line breaks on every page. The stamp fingerprint also leaves out built pages, `docs/plans/*.page.json`, `docs/5-today/` and `CHANGELOG.md`, so writing the QA page after the run does not make the stamp stale (parked decisions P3 and P4). My own runs: `verify.py` 1538 of 1538, `tools/verify_tools.py` exit 0, and a real stamp-and-build of a QA page, looked at in light and dark at 375px.
