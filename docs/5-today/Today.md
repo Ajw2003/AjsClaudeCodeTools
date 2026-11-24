@@ -307,3 +307,5 @@ overrun that `verify.py` had never measured. See the dated entry in
 **Still 2026-11-22:** aj typed "skip design"; the two CI fixes are written (a make_page test skip, 33 characters off the injected rules) and being checked at a GitHub-like path.
 
 **Still 2026-11-22:** GitHub CI passed on the fix commit; PR 573 waits for aj to merge.
+
+Live roadblock sessions on the branch build 2.90.0 (2026-11-23): curly apostrophe, `git ls-files` only, three methods and unattended stall all behave correctly; the bypass question cannot be tested headless (question tool disabled in `claude -p`), fixture cases only. Next: QA page, pull request with `Refs #587`, issues #587 to #591 to `needs review`.
