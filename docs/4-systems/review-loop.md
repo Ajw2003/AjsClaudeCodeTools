@@ -17,7 +17,7 @@ Making a design and a build plan trustworthy before aj sees them, proving a fini
 | Self-judging test | #597 | The fallback when this machine genuinely cannot test something: one test that decides pass or fail itself, handed over as one command. |
 | Parked questions | #598 | Built. In Build with someone present, a plain question is refused and parked with `ledger_note.py park`; only a `[HARD STOP]` question is asked and held. See "Parked questions" below. |
 | Deviations ledger | #599 | Built. `ledger_note.py deviate` logs what the plan said, what was done, why and how to undo it; a change to what aj approved is parked instead. With nobody present (unattended or bypass mode), a reply that admits a departure with no `ledger_note.py` call that turn is sent back once by the `deviation` checkpoint in `design_loop.py` (`_check_deviation`). The phrase list is a heuristic; an unknown permission mode counts as attended. |
-| Combined approval | #600 | One approval line moves Design to Build when the reviewed plan is present. |
+| Combined approval | #600 | One message holding "Design approved" and "Build plan approved" moves Design to Build, but only when a `-plan.html` page naming the feature in `docs/plans/` carries a current review stamp (`_plan_unreviewed` in `design_loop.py`). Otherwise the design half applies, the plan half is refused with the reason, and the plan is approved in its own message. A plan approval on its own is not held to the stamp (speed switches 6A). |
 
 ## Invariants it must keep
 

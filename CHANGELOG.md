@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+The combined approval (#600) now refuses its plan half when the feature's `-plan.html` page has no current review stamp; the design half still applies, and a plan approval in its own message is unchanged. Chosen by aj as A2 after the acceptance run; `design_loop.py` `_plan_unreviewed`, four new test cases.
+
 Design review loop acceptance run (#592): six of nine criteria pass, three fail (reviewer modes have no saved findings, the self-judging test's card format is unchecked, the combined approval does not refuse with no plan issues); report and screenshots in `docs/qa/design-review-loop/`. The no-permission-mode message in `core.py` now says what happens in Build.
 
 Plugin 2.91.0: quieter hook messages (#583 to #586). The plugin's status messages (`trace()` and `trace_noop()`) now go to a log file you read with `/house-rules:hook-log` instead of repeating in chat, `HOUSE_RULES_TRACE=chat` brings them back, and overlapping autosaves no longer collide on one scratch file (`house-rules-autosave-<branch>.index.<pid>`); an autosave error prints one line once per session. Design approved as "Design approved: quieter hook messages 1* 2A", option A for choice 1. Detail: `docs/4-systems/hook-message-log.md`.
