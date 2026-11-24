@@ -33,3 +33,29 @@ in the reply or the user's request, and the reply names each method. With fewer 
 reply says why there is no other (the model judge of #591 checks that reason). A reply marking
 `NEEDS YOU` for a licence, login, purchase or destructive step is exempt. One failed attempt is
 blocked with how many more different methods are needed.
+
+## The judge's criteria (C1 to C5)
+
+The end-of-reply judge, the launch guard's refusal and every block message quote these five criteria.
+
+- **C1 trigger:** a claim that something is missing, unreachable or impossible and that stops the
+  task. A plain `Unverified:` note is not a trigger.
+- **C2 what passes:** three attempts this turn, each aimed at the claimed thing, each from a
+  different method class (existence check, disk search, package database, run it, ask the
+  environment, other source such as CI, git history or docs). One output read three ways is one method.
+- **C3 proof and the reason standard:** the attempts appear in the real tool calls. Every reason the
+  judge reads gives the check that was run, what it actually returned, and the logic from that
+  evidence to the claim.
+- **C4 ways out:** `No other method`, `NEEDS YOU`, `Unverified`, `Goal status`, or `Cannot split`,
+  each with a reason that meets C3.
+- **C5 Cannot split:** accepted only for a genuine impossibility to split the work, shown by the
+  C3 standard, with a progress signal for each minute. Slowness or habit is never a reason.
+
+### The six accepted reply forms
+
+- **Roadblock record:** `Roadblock record: tried 1) which unity, returned nothing; 2) dir of the Program Files folder, no Unity folder; 3) Unity -version, not recognised. Target: unity.`
+- **No other method:** `No other method: the tool is a licensed app; which, dir and a launch all failed, and nothing else can show it is installed.`
+- **NEEDS YOU:** `NEEDS YOU: the install asked for a licence key. I ran the installer and it stopped at the key prompt, so only aj can supply it.`
+- **Goal status:** `Goal status: blocked. I ran the build and it returned exit 1 on a missing key, so the goal cannot finish until the key exists.`
+- **Cannot split:** `Cannot split: one engine build. I ran the build and it returned one process with no resume point, so it cannot divide; it prints a progress line each minute.`
+- **Unverified:** `Unverified: the deploy. I could not run it because the host was offline (ping returned no reply), so the result is not checked.`
