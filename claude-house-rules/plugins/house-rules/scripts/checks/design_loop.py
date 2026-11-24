@@ -707,6 +707,8 @@ except Exception:
     pass
 _loop_cases.append(("a helper starts knowing the feature, its stage and issues, and that it only builds",
                     '"blockers"' in _so and "Build" in _so and "#102" in _so and "never design" in _so))
+_loop_cases.append(("a helper is told to park a reversible question with ledger_note.py park, and to report only a [HARD STOP] (#598)",
+                    "ledger_note.py park" in _so and "[HARD STOP]" in _so))
 _loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
                     and _loop_edit("app.py", session_id="other") == "allow"))
 _loop_log("build log for blockers")

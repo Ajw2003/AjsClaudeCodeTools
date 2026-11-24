@@ -327,6 +327,35 @@ _rc, _o = _mp("build", _mp_qa_content("qa7", _qa), "--project", _d)
 _mp_cases.append(("make_page (#596): a ledger with no D or P rows says None recorded, 0 and 0",
                   _rc == 0 and "None recorded" in _mp_text("qa7") and "0 deviation(s), 0 parked" in _mp_text("qa7")))
 os.remove(os.path.join(_qaf, "ledger.md"))
+
+
+def _park(*a):
+    r = subprocess.run([sys.executable, os.path.join(HERE, "ledger_note.py"), "park", "Demo Feature", "--step", "6", "--default", "d",
+                        "--affects", "x"] + list(a), cwd=_d, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+_rc1, _o1 = _park("--question", "First?")
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#598): park creates the file with both tables and P1, printing where",
+                  _rc1 == 0 and _o1.startswith("parked P1 in ") and "## Deviations" in _ledg and "## Parked decisions" in _ledg
+                  and "| # | Step | The plan said | What was done | Why | How to undo |" in _ledg
+                  and "| P1 | 6 | First? | d | x | Reply with the answer" in _ledg))
+_rc2, _o2 = _park("--question", "Use a|b?\nsecond line")
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#598): a second park is P2 after P1, and a | or newline in a cell is escaped",
+                  _rc2 == 0 and _o2.startswith("parked P2 in ") and _ledg.index("| P1 ") < _ledg.index("| P2 ")
+                  and "| P2 | 6 | Use a\\|b? second line | d | x |" in _ledg))
+_rc, _o = _mp("build", _mp_qa_content("qa8", _qa), "--project", _d)
+_mp_cases.append(("ledger_note (#598): the QA page lists the parked rows with 0 deviations, 2 parked",
+                  _rc == 0 and "0 deviation(s), 2 parked" in _mp_text("qa8") and "P1: First?" in _mp_text("qa8")))
+_rc, _o = _park()
+_mp_cases.append(("ledger_note (#598): a missing required option is refused, naming it",
+                  _rc == 2 and "--question" in _o))
+os.remove(os.path.join(_qaf, "ledger.md"))
+_mp_cases.append(("rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3231 chars",
+                  all(w in read(os.path.join(HERE, "..", "rules", "show-dont-tell.md")) for w in ("ledger_note.py park", "[HARD STOP]"))
+                  and len(read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))) <= 3231))
 # P3: the fingerprint ignores built pages but not plan markdown or source
 _t0 = _acc.tree(_d)
 os.makedirs(os.path.join(_d, "docs", "plans"), exist_ok=True)

@@ -48,6 +48,11 @@ STARTERS = os.path.join(PLUGIN, "templates", "starters")
 HEX = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 
 
+def qa_folder(feature):
+    """docs/qa/<folder> name for a feature (ledger_note.py uses it too)."""
+    return feature.lower().replace(" ", "-")
+
+
 def die(msg, code=2):
     print("make_page: " + msg, file=sys.stderr)
     sys.exit(code)
@@ -282,7 +287,7 @@ def apply_qa(page, project):
     if HERE not in sys.path:
         sys.path.insert(0, HERE)
     import acceptance
-    folder = qa.get("folder") or qa["feature"].lower().replace(" ", "-")
+    folder = qa.get("folder") or qa_folder(qa["feature"])
     fpath = os.path.join(project, "docs", "qa", folder)
     problem = acceptance.stamp_problem(fpath, project)
     if problem:

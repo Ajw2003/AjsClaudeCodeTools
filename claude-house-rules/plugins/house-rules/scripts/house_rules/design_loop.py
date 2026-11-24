@@ -1438,8 +1438,9 @@ def _loop_helper_note(payload):
     return (
         "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
         "build plan; you never design, change the plan, or approve anything - an approval only counts from "
-        "aj's own message. Anything unexpected is a question for aj: the main session puts it on a page and "
-        "does not answer it. Code edits are refused outside Build." % (
+        "aj's own message. Park a reversible question with `ledger_note.py park` and keep going; only a "
+        "[HARD STOP] (cannot be undone, or touches money, secrets or other people) is reported back as a "
+        "question. Code edits are refused outside Build." % (
             '"%s"' % state["feature"] if state.get("feature") else "not started",
             LOOP_STAGE_NAMES[state["stage"]],
             "; its issues are %s" % issues if issues else ""))
