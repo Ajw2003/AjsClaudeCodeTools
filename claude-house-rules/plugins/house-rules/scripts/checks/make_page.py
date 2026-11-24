@@ -609,6 +609,24 @@ with open(_bp, "w", encoding="utf-8") as _f:
 _rc, _o = _mp("build", _bp, "--project", _sp)
 _mp_cases.append(("starters (#544): build with an unknown pageType dies naming the five types",
                   _rc == 2 and "proposal, build-plan, qa, review, art" in _o))
+# ---- review stamp (#594) ----
+_rv_out = os.path.join(_sp, "docs", "plans", "rv.html")
+_rc0, _ = _mp("build", _c1, "--project", _sp, "--out", _rv_out)
+with open(_rv_out, encoding="utf-8", newline="") as _f:
+    _rv0 = _f.read()
+_rc1, _ = _mp("build", _c1, "--project", _sp, "--out", _rv_out, "--reviewed", "open-risks", "--rounds", "2")
+with open(_rv_out, encoding="utf-8", newline="") as _f:
+    _rv1 = _f.read()
+_rv_m = re.search(r'^<meta name="house-rules-reviewed" content="([0-9a-f]{64});open-risks;2">\n', _rv1, re.M)
+_mp_cases.append(("stamp (#594): build without --reviewed writes no stamp", _rc0 == 0 and "house-rules-reviewed" not in _rv0))
+_mp_cases.append(("stamp (#594): build with --reviewed writes a stamp whose hash is the sha256 of the page without that line",
+                  _rc1 == 0 and bool(_rv_m) and _rv_m.group(1) == __import__("hashlib").sha256(
+                      _rv1.replace(_rv_m.group(0), "", 1).encode("utf-8")).hexdigest()
+                  ))
+_mp_cases.append(("stamp (#594): the written stamp checks as current, an edit makes it stale",
+                  _pc.stamp_problem(_rv1) == "" and "stale" in _pc.stamp_problem(_rv1 + "<p>x</p>")))
+_rc2, _o2 = _mp("build", _c1, "--project", _sp, "--out", _rv_out, "--reviewed", "clean", "--rounds", "3")
+_mp_cases.append(("stamp (#594): --rounds 3 is refused", _rc2 == 2 and "cap is 2" in _o2))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
