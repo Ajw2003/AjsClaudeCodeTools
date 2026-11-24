@@ -2470,6 +2470,13 @@ if os.path.exists(_st_tpl):
                 code == 1 and "FAIL a: raised ValueError: boom" in out and "Traceback" not in out, out)
 else:
     commit_case("selftest: the template exists", False, _st_tpl)
+_st_card = read(os.path.join(HERE, "..", "templates", "selftest", "handover-card.md"))
+sys.path.insert(0, HERE)
+from house_rules import core as _st_core
+commit_case("selftest: the sample handover card is already in card shape, has a shell fence, UNTESTED: above it and the RESULT line",
+            _st_core._reply_is_already_a_card(_st_card) and bool(_st_core._SHELL_FENCE_RE.search(_st_card))
+            and _st_card.index("UNTESTED:") < _st_card.index("```bash") and "RESULT: PASS" in _st_card
+            and "Navigate to" in _st_card and "**bash**" in _st_card, "card shape")
 commit_case("selftest: the instruction file is under 40 lines and names UNTESTED: and needs your machine",
             len(_st_doc.splitlines()) < 40 and "UNTESTED:" in _st_doc and "needs your machine" in _st_doc, "")
 

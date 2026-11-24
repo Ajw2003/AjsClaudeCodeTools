@@ -13,7 +13,7 @@ Why: aj should run one command and read one word. aj never judges a screenshot o
 3. Run it here first against stand-ins. Paste its output into the QA page.
 4. Hand it over as ONE step card, in the format of `output-styles/handover-cards.md`: the absolute
    folder path, the shell, the exact command that runs from anywhere, and what aj will see
-   (`PASS name` lines, then `RESULT: PASS` or `RESULT: FAIL (n failed)`).
+   (`PASS name` lines, then `RESULT: PASS` or `RESULT: FAIL (n failed)`). A sample card: `templates/selftest/handover-card.md`.
 5. If it was not run on aj's machine, put `UNTESTED:` as the first line above the fence.
 
 ## What it does
