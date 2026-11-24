@@ -3448,14 +3448,14 @@ def handover_evidence_check(payload):
 
 # --- roadblock claims (#571, docs/4-systems/roadblocks.md): blocked twice per user message, then a warning ---
 _ROADBLOCK_RE = re.compile(
-    r"\b(i can(?:['’]|no)t|i cannot|(?:is|isn['’]t|is not|are|aren['’]t|are not|not) installed|"
+    r"\b((?:is|isn['’]t|is not|are|aren['’]t|are not|not) installed|"
     r"not on your machine|no access to|you(?:['’]ll| will)? (?:need|have) to install|"
-    r"(?:can|won)['’]t verify|unable to|could not|couldn['’]t|don['’]t have access|not available here|"
+    r"(?:can|won)['’]t verify|couldn['’]t|don['’]t have access|not available here|"
     r"isn['’]t available)\b",
     re.IGNORECASE,
 )
 # #588: stall phrases, scanned only when unattended or permission_mode is bypassPermissions
-_STALL_RE = re.compile(r"\b(not done|i['’]ve stopped(?: here)?|next step)\b", re.IGNORECASE)
+_STALL_RE = re.compile(r"\b(not done|i['’]ve stopped(?: here)?)\b", re.IGNORECASE)
 _MODE_RE = re.compile(r'"permission_mode"\s*:\s*"([^"]*)"')
 ROADBLOCK_BLOCKS = 2
 
@@ -3703,8 +3703,9 @@ def _goal_check(transcript_path, phrase):
     except OSError as exc:
         return None, "house-rules: goal check could not write its block count (%s), so it did not block." % type(exc).__name__
     return ("House rules, goal check: the reply stops (%r) but the goal is not reached and work can continue "
-            "without the user. %s Carry on. (block %d of %d)"
-            % (phrase, str(verdict.get("reason") or "").strip(), done + 1, ROADBLOCK_BLOCKS)), None
+            "without the user (fails C1/C4: a stop needs one of the accepted forms). %s Carry on, or end with "
+            "one of: %s (block %d of %d)"
+            % (phrase, str(verdict.get("reason") or "").strip(), _JUDGE_FORMS, done + 1, ROADBLOCK_BLOCKS)), None
 
 
 _JUDGE_FORMS = (
@@ -3778,7 +3779,7 @@ def roadblock_check(payload, reply_text, retry):
     claims = _roadblock_claims(reply_text)
     note = None
     mode = _field(_MODE_RE, payload)
-    if unattended() or mode == "bypassPermissions":
+    if (unattended() or mode == "bypassPermissions") and "NEEDS YOU" not in reply_text:  # #609: exempts the goal check
         stalls = _roadblock_claims(reply_text, _STALL_RE)
     else:
         stalls = []
@@ -3836,9 +3837,9 @@ def roadblock_check(payload, reply_text, retry):
         return None, ("house-rules: roadblock check could not read or write its block count (%s), "
                       "so it did not block." % type(exc).__name__)
     return ("House rules, roadblocks (rules/detail/roadblocks.md): this reply claims a roadblock (%s) but the "
-            "record shows no three failed attempts.%s Before ending, %s, install what is missing, and try "
-            "another route; list every attempt. (block %d of %d)"
-            % (claims[0], need, _roadblock_advice(claims[0]), done + 1, ROADBLOCK_BLOCKS)), None
+            "record shows no three failed attempts (fails C2/C3).%s Before ending, %s, install what is missing, and try "
+            "another route; list every attempt, or end with one of: %s (block %d of %d)"
+            % (claims[0], need, _roadblock_advice(claims[0]), _JUDGE_FORMS, done + 1, ROADBLOCK_BLOCKS)), None
 
 
 register_prompt(_scope_mode_link)

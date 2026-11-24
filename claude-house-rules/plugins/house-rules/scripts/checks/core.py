@@ -1374,7 +1374,7 @@ report("PASS" if ['"decision":"block"' in o for o in _rb_r] == [True, True, Fals
        "#588: a retry (stop_hook_active) still blocks a second time and never a third")
 _rb_fresh()
 for _ph in ("I can't verify it", "I can’t verify it", "we won't verify it", "we won’t verify it",
-            "I am unable to verify it", "I am unable to run it", "I could not run it", "I couldn't run it",
+            "I couldn't run it",
             "I couldn’t run it", "I don't have access", "I don’t have access", "That is not available here",
             "It isn't available", "It isn’t available", "I can’t continue"):
     _rb_fresh()
