@@ -4,6 +4,8 @@
 
 aj asked for the new judge changes to be live so the judge stops over-firing. I merged `main` and the #610 builder branch into `AjsAgent/judge-blocking-audit`, ran safe_git (282 of 282), delegation (204 of 204) and a full run (only the inject-size check fails), pushed it, and switched the installed plugin to that branch with `tools/use_branch.py` (commit ea6ea6a, version 2.92.0). It takes effect in a new session. Steps #610 and #613's docs/version are not finished; #611's 60-second flag is not built.
 
+Pull request 614 (design review loop, acceptance round 2, Windows fixes) is merged. I found one test fix, in `checks/delegation.py`, that was never committed and opened pull request 615 for it. The judge branch (`AjsAgent/judge-blocking-audit`) has #613 done except the 60-second flag in #611, which waits on #578 and #579 (both open, nothing built); its pull request into main is not open yet.
+
 aj failed QA with "fix all pre existing failures before we pr to main". All nine Windows failures are fixed (waitfor, guard, page and node checks) plus one in tools/verify_tools.py; a full verify.py passes here (1574 of 1581, 7 skipped). The acceptance run is being repeated because the fixes made its stamp stale; round 2 is not re-stamped yet.
 
 Acceptance round 2 now passes all nine criteria on aj's PC after the two Windows fixes; both rounds are recorded, the stamp is current, and the QA page is built and sent. Waiting on aj's QA reply.

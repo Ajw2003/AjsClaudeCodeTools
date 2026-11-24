@@ -4,13 +4,13 @@
 Finish the design review loop (parent issue #592) by recording acceptance round 2 from real output on aj's Windows PC, stamping it, and handing it over for QA.
 
 ## Where it stands
-aj failed QA: fix every pre-existing failure before the pull request to main. All are fixed on this branch: `waitfor.py` (runs checks under `sh`, `taskkill` on Windows), the guard (`core.py` path patterns, `safe_git.py` `posixpath` and `/tmp` mapping), `_extract_file_path` (JSON-unescaped), the fake `node` and `claude` stand-ins, and `tools/force_update.py` (runs the path `which` finds). A full `verify.py` passed 1574 of 1581 (7 skipped), `tools/verify_tools.py` 55 of 55, `docref.py check` OK, `docs_drift.py` 0. The source changed after round 2, so the acceptance stamp is stale; `run_acceptance.py` was started again in the background and writes `docs/qa/design-review-loop/round-2/`.
+Pull request 614 is merged: the design review loop, acceptance round 2 (all nine criteria pass on aj's PC), and the Windows fixes. One test fix was missed: `checks/delegation.py` builds the `waitfor` flag path with forward slashes; it was only in the working tree, so `main` still failed that check on a fresh Windows checkout. It is committed on this branch and open as pull request 615 (changelog line added). The judge work is on a separate branch, `AjsAgent/judge-blocking-audit`, with its own handoff note.
 
 ## The next step
-When the rerun ends, read `round-2/round-2-draft.md`. If STATUS is pass: copy it over `round-2.md`, run `scripts/acceptance.py stamp docs/qa/design-review-loop`, update the QA page content (`docs/plans/2026-11-24-design-review-loop-qa.page.json`: the unverified lines now say the suite is clean), rebuild it with `--reviewed clean --rounds 1`, commit, push, send the page. If a criterion fails, read its `cN-M.txt`.
+Merge pull request 615 into `main`, then merge `main` into `AjsAgent/judge-blocking-audit` again so it gets the `waitfor` test fix, rerun the full `verify.py` there and open that branch's pull request.
 
 ## What is unverified
-The rerun result. No plugin version bump was made for the hook fixes. Check 172 (prompttimer concurrency) failed once in one full run and passed in the next two; it may be timing-sensitive.
+Pull request 615 has had no CI result yet. A full run of `verify.py` on a clean checkout of `main` after 615 has not been done. One prompttimer concurrency check failed once in one full run and passed in later runs; it may be timing-sensitive.
 
 ## The issue numbers
 Parent #592; pull request #604 (`Refs #592`).
