@@ -4,8 +4,8 @@
  "pageType": "build-plan",
  "approval": "Build plan approved: judge blocking fix and one-minute segments",
  "short": {
-  "lead": "The build is eight steps, one issue each under #605 (Roadblock judge tuning and one-minute segments), starting with the written criteria. I need your approval to begin step 1 (#606, the written criteria).",
-  "hint": "Tap a step to see what it is done when.",
+  "lead": "The build is eight steps, one issue each under issue #605 (Roadblock judge tuning and one-minute segments), starting with the written criteria. I need your approval to begin step 1 (#606, the written criteria).",
+  "hint": "Tap a step to see how we will know it is done.",
   "key": [
    [
     "We work on it",
@@ -20,7 +20,7 @@
    [
     "list",
     "Step 1 (#606)",
-    "Write C1 to C5, the reason standard and the six reply forms into rules/detail/roadblocks.md",
+    "Write the five criteria (C1 to C5), the standard a reason must meet, and the six allowed reply forms into rules/detail/roadblocks.md",
     "",
     "Done when: `rules/detail/roadblocks.md` holds C1 to C5 and the six forms, `checks.json` maps the section, and the core part of `verify.py` shows no new failure.",
     "Nothing from you.",
@@ -35,7 +35,7 @@
     "Step 2 (#607)",
     "Move the judge into the scripted Stop hook",
     "",
-    "Done when: `hooks.json` has no prompt-type Stop entry; a stub-claude case shows a flagged reply gets a block naming a criterion, and a reply that meets C1 to C5 is left alone.",
+    "Done when: `hooks.json` has no prompt-type entry on the Stop hook; a test case that uses a stand-in for Claude shows a flagged reply gets a block naming a criterion, and a reply that meets C1 to C5 is left alone.",
     "Nothing from you."
    ],
    [
@@ -43,13 +43,13 @@
     "Step 3 (#608)",
     "One shared cap of two blocks with a reset",
     "",
-    "Done when: A case replays 12 identical flagged replies and sees at most 2 blocks then a warning; a case with a tool call between blocks sees the check run again.",
+    "Done when: a test case replays 12 identical flagged replies and sees at most 2 blocks, followed by a warning; a second case with a tool call between blocks sees the check run again.",
     "Nothing from you."
    ],
    [
     "hammer",
     "Step 4 (#609)",
-    "Narrow the phrase lists and write block messages that carry the passing reply",
+    "Narrow the phrase lists that cause false alarms, and write block messages that show what a passing reply looks like",
     "",
     "Done when: Cases show a reply ending in a next step passes, an Unverified line passes, and a block message names a criterion and shows the six forms.",
     "Nothing from you."
@@ -59,7 +59,7 @@
     "Step 5 (#610)",
     "The segment plan, 60-second deadlines and the launch guard",
     "",
-    "Done when: Guard cases: a 280-second launch is refused with the form to copy; the same launch with a valid Cannot split reason passes; a generic reason is refused; a known runner with no timeout counts as over 60 seconds.",
+    "Done when: guard test cases show that a 280-second launch is refused with a form to copy; the same launch with a valid `Cannot split:` reason passes; a generic reason is refused; and a known long-running tool launched with no timeout is treated as running over 60 seconds.",
     "Nothing from you."
    ],
    [
@@ -67,7 +67,7 @@
     "Step 6 (#611)",
     "verify.py prints each part as it finishes; the modular-tests gate and audit flag modules over 60 seconds",
     "",
-    "Done when: `verify.py` output shows a fast part before a slower earlier part; a flagged module appears in the audit output with its time.",
+    "Done when: `verify.py` output shows a fast part finishing before a slower part that started earlier; a flagged module appears in the audit output with its time.",
     "Nothing from you."
    ],
    [
@@ -75,7 +75,7 @@
     "Step 7 (#612)",
     "The page check reads picture markup correctly and the page build refuses a malformed picture",
     "",
-    "Done when: A case feeds a page with an inline picture and expects no findings from it; a case feeds a picture with a raw angle bracket and expects the build to refuse.",
+    "Done when: a test case feeds the check a page with an inline picture and expects no findings from it; another feeds a picture containing a raw angle bracket and expects the page build to refuse it.",
     "Nothing from you."
    ],
    [
@@ -83,7 +83,7 @@
     "Step 8 (#613)",
     "Docs, changelog, version, decisions entry and a replay of 12 blocked replies",
     "",
-    "Done when: The changelog line and version exist, the decisions entry is dated, `verify.py` exits 0 on a runner-like path, and the replay shows at most 2 blocks.",
+    "Done when: The changelog line and version exist, the decisions entry is dated, `verify.py` exits 0 from a checkout path like the CI runner's, and the replay of 12 blocked replies shows at most 2 blocks.",
     "Nothing from you."
    ]
   ]
@@ -103,7 +103,7 @@
    "The scripted judge",
    "Step 2 (#607)",
    "",
-   "Done when: `hooks.json` has no prompt-type Stop entry; a stub-claude case shows a flagged reply gets a block naming a criterion, and a reply that meets C1 to C5 is left alone.",
+   "Done when: `hooks.json` has no prompt-type entry on the Stop hook; a test case that uses a stand-in for Claude shows a flagged reply gets a block naming a criterion, and a reply that meets C1 to C5 is left alone.",
    null,
    null
   ],
@@ -112,7 +112,7 @@
    "The shared cap",
    "Step 3 (#608)",
    "",
-   "Done when: A case replays 12 identical flagged replies and sees at most 2 blocks then a warning; a case with a tool call between blocks sees the check run again.",
+   "Done when: a test case replays 12 identical flagged replies and sees at most 2 blocks, followed by a warning; a second case with a tool call between blocks sees the check run again.",
    null,
    null
   ],
@@ -130,7 +130,7 @@
    "Segments and the launch guard",
    "Step 5 (#610)",
    "",
-   "Done when: Guard cases: a 280-second launch is refused with the form to copy; the same launch with a valid Cannot split reason passes; a generic reason is refused; a known runner with no timeout counts as over 60 seconds.",
+   "Done when: guard test cases show that a 280-second launch is refused with a form to copy; the same launch with a valid `Cannot split:` reason passes; a generic reason is refused; and a known long-running tool launched with no timeout is treated as running over 60 seconds.",
    null,
    null
   ],
@@ -139,16 +139,16 @@
    "Tests print as they finish",
    "Step 6 (#611)",
    "",
-   "Done when: `verify.py` output shows a fast part before a slower earlier part; a flagged module appears in the audit output with its time.",
+   "Done when: `verify.py` output shows a fast part finishing before a slower part that started earlier; a flagged module appears in the audit output with its time.",
    null,
    null
   ],
   [
    "chg",
-   "The page check",
+   "The page check and picture build",
    "Step 7 (#612)",
    "",
-   "Done when: A case feeds a page with an inline picture and expects no findings from it; a case feeds a picture with a raw angle bracket and expects the build to refuse.",
+   "Done when: a test case feeds the check a page with an inline picture and expects no findings from it; another feeds a picture containing a raw angle bracket and expects the page build to refuse it.",
    null,
    null
   ],
@@ -157,7 +157,7 @@
    "Docs, version and replay",
    "Step 8 (#613)",
    "",
-   "Done when: The changelog line and version exist, the decisions entry is dated, `verify.py` exits 0 on a runner-like path, and the replay shows at most 2 blocks.",
+   "Done when: The changelog line and version exist, the decisions entry is dated, `verify.py` exits 0 from a checkout path like the CI runner's, and the replay of 12 blocked replies shows at most 2 blocks.",
    null,
    null
   ]
@@ -165,7 +165,7 @@
  "wrapup": {
   "summary": "This plan builds the judge tuning and the one-minute segment rule in eight steps, each tracked as its own issue under #605 (Roadblock judge tuning and one-minute segments).",
   "changing": "rules/detail/roadblocks.md, hooks/hooks.json, scripts/house_rules/core.py, rules/waits.json, rules/detail/waits.md, the launch guard, scripts/verify.py, scripts/clarity.py, scripts/make_page.py, the changelog and the plugin version.",
-  "blocking": "Your approval of this plan. The plugin's own verify.py fails here on this Windows machine in places that pass on main's Linux CI, so builders will compare against that baseline instead of expecting all green.",
+  "blocking": "Your approval of this plan. The plugin's own verify.py fails here on this Windows machine in places that pass on main's Linux CI, so builders will compare against the failures already present on this machine instead of expecting every check to pass.",
   "next": "After you approve, one builder starts step 1 (#606, the written criteria) on its own branch.",
   "todo": [
    "Read the steps in order.",
