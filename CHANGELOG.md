@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review command step 1 (#618): the reviewer agent gained four modes, `code`, `codebase`, `image` and `style` (`agents/reviewer.md`, `rules/detail/review-modes.md`); `show-dont-tell.md` now says style mode reads a stated style or a project UI guide, not `docs/page-style.json`.
+
 The review command plan passed two review rounds (15 and 13 findings, all applied) and is stamped open-risks; it now asks aj three questions (how a sweep handles the 60-second agent deadline, whether repo-root files are reviewed, where the mode lists live). The systems doc `docs/4-systems/review-command.md` now says the agent deadline is 60 seconds, not 900, and issue #622 records the same stale figure in `skills/visual-loop/SKILL.md`. Docs only; nothing is built.
 
 Planned, not built: a `/house-rules:review` command that sends the reviewer at code, an image, a screen's style or a whole repo, with four new reviewer modes (`code`, `codebase`, `image`, `style`). aj approved the design as "Design approved: review command 1A 2A 3*" (3*: the whole-repo sweep has no folder cap, and over 12 folders the command first states the folder count, estimated time and usage). Only docs changed so far: the design page `docs/plans/2026-11-24-review-command.html`, the build plan page `docs/plans/review-command-plan.html`, and `docs/4-systems/review-command.md` (issues #617 to #621).
