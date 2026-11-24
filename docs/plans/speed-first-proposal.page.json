@@ -1,0 +1,273 @@
+{
+ "title": "Speed first: make every hook call cheap",
+ "eyebrow": "Proposal \u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: speed first",
+ "short": {
+  "lead": "I propose five measured steps to cut the time every tool call spends in hooks; you pick how far to go and approve one option.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "file",
+    "Measure",
+    "Measure first",
+    "",
+    "A small timing script replays real Write and Bash hook calls and prints milliseconds per call. The baseline is saved.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/measure.svg",
+     "alt": "A Write call goes through the hooks and comes out as a millisecond number",
+     "caption": "Step 1: a number to beat."
+    }
+   ],
+   [
+    "bulb",
+    "Load less",
+    "Load only what an event needs",
+    "",
+    "Each hook stops importing all 7 parts before it looks at the event name. Measured today: 66 ms against 14 ms for bare Python.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/lazy.svg",
+     "alt": "Nine slow hook boxes become nine light ones",
+     "caption": "Step 2: less work per process."
+    }
+   ],
+   [
+    "file",
+    "Merge",
+    "One process per phase",
+    "",
+    "The checks before a Write run in one process, and the ones after in another. A Bash call goes from 6 processes to 2.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/merge.svg",
+     "alt": "Nine hook processes become two",
+     "caption": "Step 3: fewer processes."
+    }
+   ],
+   [
+    "file",
+    "Cache",
+    "Remember issue labels",
+    "",
+    "The commit gate stops making 5 network reads on every Write (748 ms measured).",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/cache.svg",
+     "alt": "Five network reads become one cache lookup",
+     "caption": "Step 4: no repeat network reads."
+    }
+   ],
+   [
+    "file",
+    "Log",
+    "Make the log append-only",
+    "",
+    "A correctness fix on the same path: parallel hooks currently lose log lines.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/log.svg",
+     "alt": "Whole-file rewrites become one-line appends",
+     "caption": "Step 5: no lost lines."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve",
+    "you",
+    "A line in the decisions log.",
+    "Pick an option for each question, then send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "Timing script",
+   "Measures hook cost per call.",
+   null,
+   "A script under tools/ runs the real hooks against a scratch repo and prints milliseconds per call, for a Write and for a Bash call.",
+   [
+    "Speed was measured by hand, once, by reviewers.",
+    "One command that repeats the measurement.",
+    "You see the before and after numbers."
+   ],
+   null,
+   {
+    "src": "speed-first-proposal-pics/measure.svg",
+    "alt": "Timing script flow",
+    "caption": "What it measures."
+   }
+  ],
+  [
+   "chg",
+   "hook.py imports",
+   "Load per event, not all at once.",
+   [
+    "All 7 parts every call",
+    "Only the parts the event needs"
+   ],
+   "hook.py maps each event to the module that handles it and imports only that one. Adding an event gets easier too: today it takes 6 edits.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/lazy.svg",
+    "alt": "Hook cost before and after",
+    "caption": "Per-process cost."
+   }
+  ],
+  [
+   "chg",
+   "hooks.json",
+   "Group checks per tool phase.",
+   [
+    "9 Write processes, 6 Bash",
+    "2 and 2"
+   ],
+   "The same handlers run in the same order inside one process per phase. Failure rules stay: guard still fails closed.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/merge.svg",
+    "alt": "Processes before and after",
+    "caption": "Process count."
+   }
+  ],
+  [
+   "chg",
+   "commit gate",
+   "Cache label reads.",
+   [
+    "5 serial network reads",
+    "0 on a hit"
+   ],
+   "Labels are remembered for 60 seconds and cleared when the hook records a label change itself.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/cache.svg",
+    "alt": "Label reads before and after",
+    "caption": "Network cost."
+   }
+  ],
+  [
+   "chg",
+   "Hook log",
+   "Append, don't rewrite.",
+   [
+    "Rewrites the whole file",
+    "Appends one line"
+   ],
+   "Trims only when the file grows past a limit.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/log.svg",
+    "alt": "Log before and after",
+    "caption": "Lost lines."
+   }
+  ],
+  [
+   "keep",
+   "Every check and rule",
+   "Nothing is dropped.",
+   null,
+   "No check is removed or weakened. verify.py must still pass in full. The guard holes stay for the later guard phase, as you asked.",
+   null,
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "scope",
+   "How far should the speed work go?",
+   [
+    [
+     "A",
+     "Steps 1 to 5: measure, load less, merge, cache labels, fix the log",
+     1,
+     "These are the measured costs, and the merge step builds on the load step."
+    ],
+    [
+     "B",
+     "Only steps 1, 2 and 4",
+     0,
+     "Smallest change. Leaves 9 processes per Write, so most of the saving stays."
+    ]
+   ],
+   "A reaches the biggest costs, and every step is measured before and after."
+  ],
+  [
+   "judge",
+   "The model call at the end of every reply: change it?",
+   [
+    [
+     "A",
+     "Run it only when a roadblock phrase is found",
+     1,
+     "Removes a paid call and up to 22 seconds from most replies. A reply with no phrase is no longer judged.",
+     {
+      "src": "speed-first-proposal-pics/judge.svg",
+      "alt": "Judge call every reply versus only on a phrase",
+      "caption": "Option A."
+     }
+    ],
+    [
+     "B",
+     "Leave it as it is",
+     0,
+     "No behaviour change, and the cost stays."
+    ],
+    [
+     "C",
+     "Make it opt-in, off by default",
+     0,
+     "Fastest, but the judge never runs unless you switch it on."
+    ]
+   ],
+   "A keeps the judge for the cases it was written for. It changes what is checked, which is why you choose."
+  ],
+  [
+   "tests",
+   "Speed up the test suite in this round too?",
+   [
+    [
+     "A",
+     "No, leave it for the code-quality phase",
+     1,
+     "You asked for hook speed first, then code quality. The suite fix is a per-case runner, which is a quality job."
+    ],
+    [
+     "B",
+     "Yes, include the lazy fixture setup (1.1 s per part) now",
+     0,
+     "Quick win, but it touches checks/common.py before the quality phase."
+    ]
+   ],
+   "A keeps this round to hook speed."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Five steps that make the hooks cheaper per call, each measured before and after, with every check kept.",
+  "changing": "hook.py, hooks.json, the commit gate's label reads, the hook log, and a new timing script under tools/. No check is removed.",
+  "blocking": "Your three choices under Your choices, and the approval line.",
+  "next": "After you approve, the work is planned in a build plan with one issue per step, then built on a branch and measured.",
+  "todo": [
+   "Read the suggestion.",
+   "Pick an option for each question under Your choices.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}
