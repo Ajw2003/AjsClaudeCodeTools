@@ -40,9 +40,20 @@ Designed in `docs/plans/qa-stage-design.html`, plan `docs/plans/qa-stage-plan.ht
 - **QA starts** when a pull request is opened for the feature (`gh pr create` or the GitHub tool's
   `create_pull_request`, seen by `autosave`, #267) or when every issue says `needs review`, whichever comes first.
   Code is closed from that moment.
-- **The QA page** is built by `make_page.py build` in QA mode (`qa` block: feature, base, unverified, files). It
-  counts each file's added and removed lines from `git diff --numstat <base>...HEAD`, refuses an empty
-  unverified list, fixes the reply to "QA passed: <feature>" and records the path as `qa_page` in the stage file (#268).
+- **The QA page** is built by `make_page.py build` in QA mode (`qa` block: feature, base, unverified, files, and
+  optional folder and needs_machine). It counts each file's added and removed lines from `git diff --numstat
+  <base>...HEAD`, fixes the reply to "QA passed: <feature>" and records the path as `qa_page` in the stage file (#268).
+  Since #596:
+  - **The gate**: it refuses (exit 2) unless `docs/qa/<folder>/` (folder = `qa.folder`, default the feature name
+    lower-cased with hyphens) holds a current `acceptance-stamp.json` (`acceptance.stamp_problem`). No bypass; a
+    docs-only feature needs an acceptance run too. The fingerprint leaves out `docs/qa/`, the loop file and built
+    `docs/plans/*.html`, so building the page twice works (P3).
+  - **The empty list**: `unverified` may be empty; the item then reads "Nothing is unverified: every acceptance item
+    passed the acceptance run", "0 things not yet proven". The old refusal of an empty list is gone.
+  - **Needs your machine**: optional `needs_machine` entries (title, absolute folder, shell, command, expect,
+    untested default true) become one item in handover step-card order, the command as plain text (D9).
+  - **Ledger first**: when `docs/qa/<folder>/ledger.md` exists, the first item is "Deviations and parked decisions"
+    from its D and P rows ("None recorded" when there are none) (D8).
 - **The checkpoint** is a sixth "reply ends" row, `qa page`: in QA a reply is sent back once until `qa_page` is
   set and the page is linked (#269).
 - **The stage survives a new session**: the stage file is committed with the branch (#265).
