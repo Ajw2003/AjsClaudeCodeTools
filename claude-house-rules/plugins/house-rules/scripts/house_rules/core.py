@@ -104,14 +104,12 @@ def _log_line(message):
     path = os.path.join(tempfile.gettempdir(), HOOK_LOG_NAME)
     line = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " " + " ".join(str(message).split())
     try:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                lines = f.read().splitlines()
-        except FileNotFoundError:
-            lines = []
-        lines = (lines + [line])[-HOOK_LOG_MAX_LINES:]
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+        # Append one line (the cheap common case); the file is trimmed to the newest 500 lines only
+        # once it passes HOOK_LOG_TRIM_BYTES, so most calls never read or rewrite it (#630).
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+        if os.path.getsize(path) > HOOK_LOG_TRIM_BYTES:
+            _trim_hook_log(path)
     except Exception as exc:
         if not _LOG_ERROR_SHOWN:
             _LOG_ERROR_SHOWN = True
