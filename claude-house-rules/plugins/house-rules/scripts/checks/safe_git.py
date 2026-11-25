@@ -2121,6 +2121,53 @@ report("PASS" if all("noask" in merged_wiring("Pre", t)[0] for t in ("AskUserQue
                      and "noask" not in merged_wiring("Pre", "Bash")[0] else "FAIL",
        "hooks.json registers noask on AskUserQuestion|ExitPlanMode")
 
+# --- #636: one test for who is present, at each old call site, one case per mode ---
+_np_off = dict(os.environ, HOUSE_RULES_UNATTENDED="off")
+_np_modes = [("unattended", "default", dict(_np_off, HOUSE_RULES_UNATTENDED="on"), True),
+             ("bypass", "bypassPermissions", _np_off, True), ("auto", "auto", _np_off, False),
+             ("normal", "default", _np_off, False), ("plan", "plan", _np_off, False),
+             ("unknown", "somethingNew", _np_off, False)]
+for _nm, _mode, _env, _gone in _np_modes:
+    _o = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "np", "tool_name": "AskUserQuestion",
+                                       "tool_input": {}, "permission_mode": _mode}), env=_env)[1]
+    report("PASS" if (_ua_dec(_o) == "deny") == _gone else "FAIL", "#636 noask, %s: question %s" % (_nm, "denied" if _gone else "left alone"))
+    _o = _ua_guard("np-ask-" + _nm, extra={"permission_mode": _mode}, env_extra={"HOUSE_RULES_UNATTENDED": _env["HOUSE_RULES_UNATTENDED"]})
+    report("PASS" if (_ua_dec(_o) == "deny") == _gone else "FAIL",
+           "#636 guard ask (safe_git), %s: %s" % (_nm, "refused, not asked" if _gone else "still an ask"))
+    _o = run_hook("guardwrite", json.dumps(dict(json.loads(guardwrite_payload(_gw_existing)), permission_mode=_mode)), env=_env)[1]
+    report("PASS" if ('"permissionDecision"' not in _o) == _gone else "FAIL",
+           "#636 whole-file Write (safe_git), %s: %s" % (_nm, "allowed with a note" if _gone else "refused"))
+_o = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "np", "tool_name": "ExitPlanMode",
+                                   "tool_input": {}, "permission_mode": "bypassPermissions"}), env=_np_off)[1]
+report("PASS" if _ua_dec(_o) == "allow" else "FAIL", "#636 ExitPlanMode is allowed when nobody is present (bypass)")
+_o = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "np", "tool_name": "mcp__goal__Pause_Goal",
+                                   "tool_input": {}, "permission_mode": "default"}), env=_np_off)[1]
+report("PASS" if _ua_dec(_o) == "deny" and "noask" in merged_wiring("Pre", "mcp__goal__pause_goal")[0] else "FAIL",
+       "#636 the pause-goal tool is denied, and hooks.json wires it to noask")
+_pt_pl = _pt_tool("Bash", {"command": "rm -rf /tmp/np-victim"})
+_t0 = time.time()
+_o = run_hook("prompttimer", _pt_pl, env=_pt_env(HOUSE_RULES_PROMPT_TIMEOUT="30", HOUSE_RULES_UNATTENDED="on"))[1]
+_o2 = run_hook("prompttimer", _pt_tool("ExitPlanMode", {}), env=_pt_env(HOUSE_RULES_PROMPT_TIMEOUT="30", HOUSE_RULES_UNATTENDED="on"))[1]
+report("PASS" if time.time() - _t0 < 10 and '"behavior":"deny"' in _o and "unattended run" in _o and '"behavior":"allow"' in _o2 else "FAIL",
+       "#636 prompttimer: a permission prompt is denied at once when nobody is present; a plan-exit prompt is allowed")
+_nf_d = tempfile.mkdtemp(prefix="np-switchfile-")
+
+
+def _nf(tool, **ti):
+    return _ua_dec(run_hook("commitgate", json.dumps({"session_id": "nf", "cwd": _nf_d, "tool_name": tool, "tool_input": ti}), env=_np_off)[1])
+
+
+_nf_mode = os.path.join(_nf_d, ".claude", "house-rules-mode.json")
+_nf_set = os.path.join(_nf_d, ".claude", "settings.json")
+report("PASS" if _nf("Write", file_path=_nf_mode, content="{}") == "deny" and _nf("Edit", file_path=_nf_mode, old_string="a", new_string="b") == "deny"
+       and _nf("Bash", command="echo '{\"unattended\":\"on\"}' > .claude/house-rules-mode.json") == "deny"
+       and _nf("Bash", command="cat .claude/house-rules-mode.json") != "deny" else "FAIL",
+       "#636 an agent write to the mode file is refused (Write, Edit, shell redirect); a read is not")
+report("PASS" if _nf("Write", file_path=_nf_set, content='{"env":{"HOUSE_RULES_UNATTENDED":"on"}}') == "deny"
+       and _nf("Bash", command="echo '{\"env\":{\"HOUSE_RULES_LOOP\":\"off\"}}' > .claude/settings.local.json") == "deny"
+       and _nf("Write", file_path=_nf_set, content='{"theme":"dark"}') != "deny" else "FAIL",
+       "#636 an agent write of a HOUSE_RULES_ key into .claude/settings.json is refused; other settings are not")
+
 # --- unattended relaxations (the user approved them 2026-11-22): allowed with a note, strict when attended ---
 _un_gw_on = run_hook("guardwrite", guardwrite_payload(_gw_existing), env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))[1]
 _un_gw_off = run_hook("guardwrite", guardwrite_payload(_gw_existing),
