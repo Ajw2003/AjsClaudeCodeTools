@@ -2785,6 +2785,42 @@ def unattended():
     return os.environ.get("HOUSE_RULES_UNATTENDED", "").strip().lower() == "on"
 
 
+_SWITCH_WRITE_RE = re.compile(r">|\btee\b|\bsed\b[^;|&]*\s-\w*i|\b(?:mv|cp|rm|truncate|dd|install|ln)\b"
+                              r"|\b(?:python3?|py|node|perl|ruby|sh|bash)\b", re.IGNORECASE)
+_SETTINGS_NAME_RE = re.compile(r"settings(?:\.local)?\.json")
+
+
+def switch_file_refusal(payload):
+    """#636: deny reason when an agent tool call writes the typed-switch file, or puts a HOUSE_RULES_ key into
+    .claude/settings(.local).json. aj's typed switch is written by the hook itself, never through a tool call."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        return None
+    ti = data.get("tool_input") if isinstance(data, dict) and isinstance(data.get("tool_input"), dict) else {}
+    tool = data.get("tool_name") if isinstance(data, dict) else None
+    if tool in ("Write", "Edit", "NotebookEdit"):
+        path = str(ti.get("file_path") or ti.get("notebook_path") or "")
+        text = " ".join(str(ti.get(k) or "") for k in ("content", "new_string", "new_source"))
+        base = os.path.basename(path.replace("\\", "/"))
+        mode_hit = base == MODE_FILE
+        settings_hit = bool(_SETTINGS_NAME_RE.fullmatch(base)) and "HOUSE_RULES_" in text
+    elif tool in ("Bash", "PowerShell") and isinstance(ti.get("command"), str):
+        cmd = ti["command"]
+        write = bool(_SWITCH_WRITE_RE.search(cmd))
+        mode_hit = MODE_FILE in cmd and write
+        settings_hit = bool(_SETTINGS_NAME_RE.search(cmd)) and "HOUSE_RULES_" in cmd and write
+    else:
+        return None
+    if mode_hit:
+        return ("House rules: %s holds aj's typed switches, so only aj's typed message changes it. An agent write "
+                "to it is refused." % MODE_FILE)
+    if settings_hit:
+        return ("House rules: a HOUSE_RULES_ key in .claude/settings.json or settings.local.json is a switch, and "
+                "only aj sets those. This write is refused.")
+    return None
+
+
 def nobody_present(payload=None):
     """#636: the one test for "nobody is here": the unattended switch, or permission_mode bypassPermissions.
     Auto, default, plan, acceptEdits and a missing or unknown mode stay attended."""

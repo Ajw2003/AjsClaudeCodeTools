@@ -308,7 +308,7 @@ PRE_CHECKS = [
     (_GH + "(create_pull_request|update_pull_request|issue_write|add_issue_comment|update_issue_comment|"
      "add_reply_to_pull_request_comment|add_comment_to_pending_review|pull_request_review_write|push_files|"
      "create_or_update_file|create_branch)", "guardgithub"),
-    ("AskUserQuestion|ExitPlanMode", "noask"),
+    ("AskUserQuestion|ExitPlanMode|.*[Pp]ause_goal.*", "noask"),
     ("Agent|Task", "agentcap"),
     ("Write|Edit|NotebookEdit|Bash|PowerShell", "commitgate"),
     ("Write|Artifact", "pagecheck"),
