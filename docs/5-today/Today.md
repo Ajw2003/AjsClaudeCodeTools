@@ -1,5 +1,7 @@
 # Today — 2026-11-25
 
+Quiet unattended mode, acceptance round 1 failed six criteria (C1, C2, C6, C8, C10, C12). Fixes and tests are written and the full suites are running; next are round 2 (`ledger.py new-round`), the stamp, the QA page, the issue label swap and the pull request.
+
 Plugin bumped to 2.94.7 for #633 (CI version-bump gate); verify_tools now passes in CI.
 Pull request #633 (speed first) is open; CI failed once on a stale time_hooks check in verify_tools.py, fixed (0a17a8ca), second run pending.
 Speed first, continued on ccr-3849bb3b-c267ho: step 3 merged in, Write hooks 649 to 145 ms and Bash 458 to 163 ms (median of 5, sandbox), step 5 hook log now appends (0.384 to 0.011 ms), step 4 needs no change. Steps 2 and 6 still open; results in docs/qa/speed-first/results.md.
