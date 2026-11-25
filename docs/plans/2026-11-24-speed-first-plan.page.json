@@ -52,7 +52,7 @@
     "Nothing from you.",
     {
      "src": "speed-first-proposal-pics/labels.svg",
-     "alt": "Diagram: five label reads in a row, then two faster options.",
+     "alt": "Diagram from the proposal: five label reads one after another (748 ms), then a faster option. The review found the reads already run in a pool, so this shows the proposal's assumption, not today's code.",
      "caption": "Network, log and test cost."
     }
    ],
@@ -111,7 +111,7 @@
   ],
   [
    "chg",
-   "Step 4: faster label reads (issue #629)",
+   "Step 4: label reads, profile then fix (issue #629)",
    "The 5 reads already run in a thread pool; this step profiles a real gate call, then fixes the cause.",
    null,
    "Finding: the 5 reads already run in a thread pool (design_loop.py:826), so the 748 ms came from reading them one at a time by hand. Done when: the timing script shows where a real gate call spends its time, and the fix brings the label reads to about one read (about 150 ms) with GitHub still read on every call (decision 2026-10-14, docs/6-decisions/Decisions.md); if the pool already gives that, the step closes with the measured number and no code change. Touches scripts/house_rules/design_loop.py, its tests and CHANGELOG.md. Depends on step 1.",
@@ -119,7 +119,7 @@
    null,
    {
     "src": "speed-first-proposal-pics/labels.svg",
-    "alt": "Diagram: five label reads in a row, then two faster options.",
+    "alt": "Diagram from the proposal: five label reads one after another (748 ms), then a faster option. The review found the reads already run in a pool, so this shows the proposal's assumption, not today's code.",
     "caption": "The commit gate's 5 reads run in a thread pool; GitHub is read every call."
    }
   ],
@@ -142,7 +142,7 @@
    "Step 6: easy test wins (issue #631)",
    "Quick, safe speedups to verify.py chosen from step 1's timings.",
    null,
-   "Done when: verify.py's total time falls against the baseline, the list of check names printed by verify.py is identical before and after, and what is left for the code-quality phase is listed in the issue. The last step also bumps the plugin version and sets hook-speed.md status to built. Touches scripts/checks/common.py, the parts the timings point to and CHANGELOG.md. Depends on step 1.",
+   "Done when: verify.py's total time falls against the baseline, the list of check names printed by verify.py is identical before and after, and what is left for the code-quality phase is listed in the issue. Step 6 also bumps the plugin version and sets hook-speed.md status to built, and it runs last. Touches scripts/checks/common.py, the parts the timings point to and CHANGELOG.md. Depends on step 1.",
    null,
    null
   ],
@@ -151,14 +151,14 @@
    "Acceptance tests (all steps)",
    "One test per design item, run by the reviewer in acceptance mode before QA.",
    null,
-   "Done when: each passes with its evidence saved under docs/qa/speed-first/: design item 1 (scope): the timing script shows lower numbers than the baseline for a Write call, a Bash call and the log; design item 2 (labels): the 5 reads run at the same time (already true) and GitHub is still read every call; design item 3 (judge): the judge's code is unchanged in the diff and the script prints its time; design item 4 (tests): verify.py total time is lower than the baseline with the same list of check names; design item 5 (docs): version, hook-speed.md status, CHANGELOG.md lines and a full verify.py pass. These are the design's five items, not the build steps.",
+   "Done when: each passes with its evidence saved under docs/qa/speed-first/: design item 1 (scope): the timing script shows lower numbers than the baseline for a Write call, a Bash call and the log; design item 2 (labels): the 5 reads run at the same time (already true) and GitHub is still read every call; design item 3 (judge): the judge's code is unchanged in the diff and the script prints its time; design item 4 (tests): verify.py total time is lower than the baseline with the same list of check names. Plus a closing check, not a design item: version, hook-speed.md status, CHANGELOG.md lines and a full verify.py pass. These are the design's four choices, not the build steps.",
    null,
    null
   ]
  ],
  "wrapup": {
   "summary": "A six-step build plan for the approved speed work, under parent issue #625.",
-  "changing": "A new timing script in tools/, then changes to hook.py, hooks.json, the commit gate, the hook log and the test helpers. No check is removed or weakened.",
+  "changing": "A new timing script in tools/, then changes to hook.py, hooks.json, the label reads in design_loop.py, the hook log and the test helpers. No check is removed or weakened.",
   "blocking": "Needs your build plan approval.",
   "next": "After approval I build step 1 on branch AjsAgent/speed-first with a builder, run verify.py, and save the baseline.",
   "todo": [
