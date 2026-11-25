@@ -488,6 +488,60 @@ def _loop_write(git_dir, state):
     _loop_note_seen(git_dir, state)
 
 
+def _steps_outside(git_dir, session_id):
+    cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(cfg, "house-rules-steps", "%s-%s.json" % (
+        hashlib.sha1(os.path.abspath(git_dir).encode("utf-8")).hexdigest(), safe))
+
+
+def _steps_hash(steps):
+    return hashlib.sha256(json.dumps(steps, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def record_steps(git_dir, feature, plan_json_path, session_id):
+    """#639: copy the build plan's Step rows and test_command into the stage file (state["steps"][session_id])
+    and an outside copy. Returns a note; a plan with no checks is exempt and writes nothing."""
+    try:
+        with open(plan_json_path, encoding="utf-8") as f:
+            plan = json.load(f)
+    except (OSError, ValueError) as exc:
+        return "steps not recorded: could not read %s (%s)" % (plan_json_path, exc)
+    rows = [c for c in plan.get("changes") or [] if isinstance(c, list) and len(c) > 7
+            and str(c[1]).startswith("Step ") and isinstance(c[7], str) and c[7].strip()]
+    if not rows:
+        return "this plan has no step checks, so the feature is exempt from the step list"
+    steps = [{"n": i + 1, "title": str(c[1]), "check": c[7], "state": "open"} for i, c in enumerate(rows)]
+    rec = {"feature": feature, "test_command": plan.get("test_command") or "", "steps": steps,
+           "sha256": _steps_hash(steps)}
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return "steps not recorded: " + problem
+    state.setdefault("steps", {})[session_id] = rec
+    _loop_write(git_dir, state)
+    out = _steps_outside(git_dir, session_id)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    _write_atomic(out, json.dumps(rec))
+    return "recorded %d step(s) with checks for this session" % len(steps)
+
+
+def steps_integrity(git_dir, feature, session_id):
+    """A problem string when the stage file's step hash differs from the outside copy (or that copy is gone), else ""."""
+    state, _ = _loop_read(git_dir)
+    rec = ((state or {}).get("steps") or {}).get(session_id)
+    if not rec:
+        return ""
+    out = _steps_outside(git_dir, session_id)
+    try:
+        with open(out, encoding="utf-8") as f:
+            outer = json.load(f)
+    except (OSError, ValueError):
+        return "the step list is in the stage file but its outside copy %s is missing or unreadable" % out
+    if outer.get("sha256") != rec.get("sha256") or _steps_hash(rec.get("steps")) != rec.get("sha256"):
+        return "the step list in the stage file differs from its outside copy (an older stage file was restored?)"
+    return ""
+
+
 SEEN_FILE = "house-rules-loop-seen.json"
 
 
@@ -1452,13 +1506,31 @@ def _loop_scope_note(payload):
                         "it is not clear which one, and nothing moved. Ask aj to type the line they mean."
                         % (len(offered), "; ".join(offered) or "none"))
             text = offered[0] + b.group(1)
+        was = state.get("stage")
         note = _loop_apply(state, text, top)
         if json.dumps(state, sort_keys=True) != before:
             _loop_write(git_dir, state)
+        if was != "build" and state.get("stage") == "build" and "Build plan approved" in note:
+            note += " Steps: " + _record_steps_for(top, git_dir, state.get("feature") or "", payload.get("session_id") or "") + "."
         return note
     except Exception as exc:
         return "house-rules: the design-loop check hit an error (%s: %s), so this message moved nothing." % (
             type(exc).__name__, exc)
+
+
+def _record_steps_for(top, git_dir, feature, session_id):
+    import glob
+    plans = []
+    for p in glob.glob(os.path.join(top, "docs", "plans", "*.page.json")):
+        try:
+            with open(p, encoding="utf-8") as f:
+                if json.load(f).get("pageType") == "build-plan":
+                    plans.append(p)
+        except (OSError, ValueError):
+            continue
+    if not plans:
+        return "no build plan .page.json found, so no step list was recorded"
+    return record_steps(git_dir, feature, max(plans, key=os.path.getmtime), session_id)
 
 
 def _loop_helper_note(payload):

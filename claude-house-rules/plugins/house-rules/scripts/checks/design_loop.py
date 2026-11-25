@@ -4028,6 +4028,45 @@ _sp_cases.append(("#559: HOUSE_RULES_PAGES=off turns the send check off",
                         env=dict(_sp_env, HOUSE_RULES_PAGES="off"))[1]))
 
 
+# --- #639: step list store, integrity, and ledger_note step deviations ---
+_st_snip = os.path.join(_FIXTURE_ROOT, "steps_snip.py")
+with open(_st_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile
+sys.path.insert(0, sys.argv[1])
+os.environ["CLAUDE_CONFIG_DIR"] = tempfile.mkdtemp()
+from house_rules import design_loop as dl
+d = tempfile.mkdtemp(); subprocess.run(["git", "init", "-q", d], check=True)
+g = os.path.join(d, ".git"); plan = os.path.join(d, "p.page.json")
+json.dump({"test_command": "t", "changes": [["chg", "Step 1: a", "", None, "", None, None, "echo 1"]]}, open(plan, "w"))
+dl.record_steps(g, "f", plan, "sess1")
+st, _ = dl._loop_read(g); rec = st["steps"]["sess1"]
+o = dl._steps_outside(g, "sess1")
+r = [os.path.isfile(o) and rec["sha256"] == json.load(open(o))["sha256"], dl.steps_integrity(g, "f", "sess1") == ""]
+rec["steps"][0]["check"] = "true"; dl._loop_write(g, st)
+r.append(bool(dl.steps_integrity(g, "f", "sess1")))
+print(r == [True, True, True])
+""")
+_r = subprocess.run([sys.executable, _st_snip, HERE], capture_output=True, text=True)
+_sp_cases.append(("#639: steps recorded under the session id with matching hashes; an altered inside copy is detected",
+                  _r.stdout.strip() == "True"))
+_LN = os.path.join(HERE, "ledger_note.py")
+def _ln(*a):
+    return subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Step 2", "--plan", "p", "--done", "d",
+                           "--why", "w", "--undo", "u"] + list(a), capture_output=True, text=True, cwd=_FIXTURE_ROOT)
+_sp_cases.append(("#639: deviate refuses deleting a step", _ln("--step-action", "delete").returncode == 2))
+_sp_cases.append(("#639: deviate replace needs a check and a step id", _ln("--step-action", "replace").returncode == 2))
+_ln_repo = os.path.join(_FIXTURE_ROOT, "ln-repo")
+os.makedirs(_ln_repo, exist_ok=True)
+subprocess.run(["git", "init", "-q"], cwd=_ln_repo, check=True)
+_r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Step 2", "--plan", "p", "--done", "d", "--why", "w",
+                     "--undo", "u", "--step-action", "replace", "--step-id", "2", "--check", "echo ok"],
+                    capture_output=True, text=True, cwd=_ln_repo)
+_sp_cases.append(("#639: deviate replace keeps the step id and logs the new check",
+                  _r.returncode == 0 and "step replace 2" in open(_r.stdout.split(" in ", 1)[1].strip(), encoding="utf-8").read()))
+_r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Finish: x", "--plan", "p", "--done", "d", "--why", "w",
+                     "--undo", "u", "--step-action", "add", "--check", "c"], capture_output=True, text=True, cwd=_ln_repo)
+_sp_cases.append(("#639: deviate refuses touching a Finish: step", _r.returncode == 2))
+
 for _t, _ok in _sp_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 

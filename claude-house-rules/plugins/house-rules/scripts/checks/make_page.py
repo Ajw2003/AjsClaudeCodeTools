@@ -867,6 +867,21 @@ _apj["changes"][-1][4] = "Run each design item and see it work."
 json.dump(_apj, open(_apc, "w", encoding="utf-8"))
 _rc, _o = _mp("build", _apc, "--project", _ap)
 _mp_cases.append(("acceptance (#595): a build plan with a filled Acceptance item builds", _rc == 0))
+# #639: step checks in a build plan
+_sj = json.load(open(_apc, encoding="utf-8"))
+_sj["changes"].append(["chg", "Step 1: do it", "x", None, "d", None, None, ""])
+_sj["step_checks_required"] = True
+json.dump(_sj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("step checks (#639): a Step row with no check is refused, naming the step", _rc == 2 and "Step 1: do it" in _o))
+_sj["changes"][-1][7] = "python3 -c pass"
+json.dump(_sj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("step checks (#639): checks without test_command are refused", _rc == 2 and "test_command" in _o))
+_sj["test_command"] = "python3 -c pass"
+json.dump(_sj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("step checks (#639): checks plus test_command build", _rc == 0))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)
