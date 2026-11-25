@@ -2088,6 +2088,8 @@ report("PASS" if _ua_dec(_un1) == "deny" and "Refused, not asked" in _un1 and "u
        and _ua_dec(_un2) == "deny" and _ua_dec(_un3) == "ask" else "FAIL",
        "unattended: a guard ask becomes a refusal naming the unattended run; not unattended it is still an ask")
 print("          on %s, ON %s, off %s" % (_ua_dec(_un1), _ua_dec(_un2), _ua_dec(_un3)))
+report("PASS" if "ledger_note.py decide" in _un1 and "Waiting on you" not in _un1 and "final report" not in _un1 else "FAIL",
+       "unattended: the guard refusal says to write it with ledger_note.py decide, not list it in the reply (#643)")
 
 _un4 = _ua_guard("verify-un4", env_extra=dict(_un_on, HOUSE_RULES_PROMPT_TIMEOUT="off"))
 _un5 = _ua_guard("verify-un5", env_extra={"HOUSE_RULES_PROMPT_TIMEOUT": "off"})

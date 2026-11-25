@@ -2487,8 +2487,8 @@ report("PASS" if rc == 0 and "UNATTENDED run: a house-rules update is available 
        and not vc_fake_calls("vc-un") else "FAIL",
        "unattended: versioncheck says one line, runs no update, writes no marker, never says wait or ask")
 rc, out, err = run_hook("inject", "{}", env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))
-report("PASS" if "OVERRIDDEN" in out and "never stop or wait for the user" in out and "Waiting-on-you list" in out else "FAIL",
-       "unattended: the session note overrides the hand-over-then-wait and ask-before rule text")
+report("PASS" if "OVERRIDDEN" in out and "never stop or wait for the user" in out and "ledger_note.py decide" in out and "Waiting on you" not in out and "final report" not in out else "FAIL",
+       "unattended: the session note overrides the hand-over-then-wait rule and names ledger_note.py decide, not the reply")
 # #403: in a synced copy (claude.ai cloud) the update commands cannot work, so one plain line.
 _sy_root = "/root/.claude/plugins/synced/org_id/house-rules~g2"
 rc, out, err = run_hook("versioncheck", vc_payload("vc-sync-old"),

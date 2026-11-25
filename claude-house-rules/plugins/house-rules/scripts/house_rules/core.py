@@ -2842,13 +2842,13 @@ def event_noask():
     if "pause_goal" in tool.lower():
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
               "permissionDecisionReason": "House rules: pausing the goal is refused. The run is never paused "
-              "for aj; carry on, and mark a part that truly needs aj NEEDS YOU in the final report."}})
+              "for aj; carry on, and mark a part that truly needs aj NEEDS YOU in your reply and park it with `ledger_note.py park` (--category, --tried)."}})
         return 0
     if tool == "ExitPlanMode" and nobody_present():  # #636: nobody to approve the plan: let it through
         emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
               "permissionDecisionReason": "Nobody is present to approve the plan, so leaving plan mode is allowed."}})
         return 0
-    park = "python3 %s park <feature> --step <n> --question ... --default ... --affects ..." % os.path.join(
+    park = "python3 %s decide <feature> --step <n> --choice ... --assumption ... --why ... --undo ..." % os.path.join(
         SCRIPTS_DIR, "ledger_note.py")
     if not nobody_present():
         if not mode:
@@ -2857,9 +2857,9 @@ def event_noask():
         return _noask_build(park)
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
           "permissionDecisionReason": "This is an unattended or bypass-permission run: nobody is there to "
-          "answer. Choose the most reasonable reversible option yourself, record the question and your choice "
-          "in the final report (park it with `%s`), and carry on. A licence, login, purchase or destructive "
-          "step blocks only its own part (mark it NEEDS YOU); the rest carries on." % park}})
+          "answer. Choose the most reasonable reversible option yourself, write the question and your choice "
+          "to the ledger with `%s`, and carry on with the next open step. A hard stop (licence, login, purchase, deletion, money, secrets, other people, outward posts) "
+          "blocks only its own part: mark it NEEDS YOU in the reply and park it with `ledger_note.py park` (--category, --tried); the rest carries on." % park}})
     return 0
 
 
@@ -3016,12 +3016,11 @@ def _mode_note(payload=None):
     if unattended():
         parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): the design loop stays ON and runs itself "
                      "(no approval wait, no question hold); nobody can approve or answer; guard prompts are "
-                     "refused instead of asked and listed under \"Waiting on you\"; decide and keep going. For this run these "
+                     "refused instead of asked; write each refusal or choice to the ledger with `ledger_note.py decide` and keep going. For this run these "
                      "instructions are OVERRIDDEN: never stop or wait for the user (\"hand it over, then wait\", "
-                     "\"stop and wait for the user's answer\"). For a command only the user can run, write it into the "
-                     "final report and the Waiting-on-you list and continue with other work. For ask-before items "
+                     "\"stop and wait for the user's answer\"). For a command only the user can run, park it with `ledger_note.py park` (--category, --tried) and continue with other work. For ask-before items "
                      "(new dependency, deleting files, refactors over 3 files, public API changes) take the most "
-                     "conservative reversible option and log the choice in the final report; the destructive-command "
+                     "conservative reversible option and write the choice to the ledger with `ledger_note.py decide`; the destructive-command "
                      "guard still applies to deletes. Use your own judgment instead of asking. Commit and push only "
                      "to your own AjsAgent/ branch, never to main or master (the main-branch guard refuses it); if "
                      "you are on main, branch off first with `git switch -c AjsAgent/<topic>`.")

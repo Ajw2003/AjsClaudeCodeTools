@@ -3329,9 +3329,9 @@ _na_cases.append(("attended Build question with [HARD STOP] is allowed", _na("bu
 for _s in ("design", "plan", "qa"):
     _na_cases.append(("attended %s question is allowed as before" % _s, _na(_s)[1] == ""))
 _na_cases.append(("attended Build ExitPlanMode is untouched", _na("build", tool="ExitPlanMode")[1] == ""))
-_na_cases.append(("unattended denies with the old text and names ledger_note.py park",
-                  all(t in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1] for t in ("nobody is there to answer", "ledger_note.py park"))))
-_na_cases.append(("bypassPermissions denies with the old text and names ledger_note.py park",
+_na_cases.append(("unattended denies with the old text and names ledger_note.py decide, no final report",
+                  all(t in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1] for t in ("nobody is there to answer", "ledger_note.py decide")) and "final report" not in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1] and "Waiting on you" not in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1]))
+_na_cases.append(("bypassPermissions denies with the old text and names ledger_note.py decide, no final report",
                   all(t in _na("design", mode="bypassPermissions")[1] for t in ("nobody is there to answer", "ledger_note.py park"))))
 _o = _na("design", mode=None)
 _na_cases.append(("missing permission_mode: allowed outside Build (said on stderr)", _o[1] == "" and "no permission_mode" in _o[2]))

@@ -1581,7 +1581,7 @@ def _prompt_refusal(minutes, path, summary):
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
         "it. Carry on with every part of the task that does not depend on this. Before you stop, "
-        "list each refused action under 'Waiting on you' in your reply." % (minutes, path, summary)
+        "write it to the ledger with `ledger_note.py decide` (or `ledger_note.py park` with --category and --tried only for a hard stop) and carry on with the next open step." % (minutes, path, summary)
     )
 
 
@@ -1617,7 +1617,7 @@ def _record_ask(session_id, key):
 UNATTENDED_REFUSAL = (
     "\n\nRefused, not asked: %s, so a prompt would only sit unanswered. Do not retry this action, "
     "or reach the same result another way. Carry on with everything that does not depend on it, "
-    "and list it under 'Waiting on you' before you stop."
+    "and write it to the ledger with `ledger_note.py decide` (or `ledger_note.py park` with --category and --tried only for a hard stop) and carry on with the next open step."
 )
 
 
@@ -1939,7 +1939,7 @@ def _attribution_guard(subject, payload):
         m = rx.search(text)
         if m:
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
-            if core.nobody_present(payload):  # allowed so the run does not stall; the credit line is fixed in the morning
+            if kind == "commit message" and core.nobody_present(payload):  # #643: PR/issue text is always denied; a commit is allowed so the run does not stall; the credit line is fixed in the morning
                 return ("note", "", "House rules, UNATTENDED run: the credit rule was relaxed for this %s (it carries \"%s\"). "
                         "Remove that line in the morning." % (kind, m.group(0).strip()[:60]))
             return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)
