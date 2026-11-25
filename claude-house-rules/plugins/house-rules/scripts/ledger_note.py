@@ -50,9 +50,105 @@ def cell(s):
     return " ".join(s.split()).replace("|", "\\|")
 
 
+def _cfg():
+    return os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude"),
+                        "house-rules-steps")
+
+
+def _step_check(a):
+    """(check command, run-file base) for the step, from the outside copy of the steps file; or (None, error)."""
+    import glob
+    import hashlib
+    import json
+    top = subprocess.run(["git", "rev-parse", "--git-dir"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         universal_newlines=True)
+    if top.returncode:
+        return None, "not inside a git project"
+    gd = os.path.abspath(top.stdout.strip())
+    cd = os.path.join(gd, "commondir")  # same folder rule as design_loop._loop_dir: the common git dir
+    if os.path.isfile(cd):
+        rel = open(cd, encoding="utf-8").read().strip()
+        gd = os.path.abspath(rel if os.path.isabs(rel) else os.path.join(gd, rel))
+    sid = os.environ.get("CLAUDE_SESSION_ID")
+    pre = os.path.join(_cfg(), hashlib.sha1(gd.encode("utf-8")).hexdigest() + "-")
+    if sid:
+        files = [pre + re.sub(r"[^0-9A-Za-z_-]", "_", sid)[:100] + ".json"]
+    else:
+        files = glob.glob(glob.escape(pre) + "*.json")
+    found = []
+    for p in files:
+        try:
+            rec = json.load(open(p, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if rec.get("feature") == a.feature:
+            found.append((p, rec))
+    if len(found) != 1:
+        return None, "need exactly one steps file for feature %r, found %d" % (a.feature, len(found))
+    p, rec = found[0]
+    for s in rec.get("steps") or []:
+        if s.get("n") == a.step:
+            return s["check"], os.path.join(_cfg(), "runs", os.path.basename(p)[:-5] + "-step%d" % a.step)
+    return None, "no step %d in the steps file" % a.step
+
+
+def _fingerprint():
+    """acceptance.py tree of the project root; 'slow' if it takes over 20 s (HOUSE_RULES_FP_TIMEOUT overrides, for tests)."""
+    root = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE, universal_newlines=True).stdout.strip()
+    try:
+        r = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "acceptance.py"),
+                            "tree", "--root", root], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           universal_newlines=True, timeout=float(os.environ.get("HOUSE_RULES_FP_TIMEOUT") or 20))
+    except subprocess.TimeoutExpired:
+        return "slow"
+    return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else "slow"
+
+
+def run_check(a):
+    import time
+    cmd, base = _step_check(a)
+    if cmd is None:
+        sys.stderr.write("ledger_note.py: check: %s\n" % base)
+        return 2
+    out, rc = base + ".out", base + ".rc"
+    if a.start:
+        os.makedirs(os.path.dirname(base), exist_ok=True)
+        if os.path.exists(rc):
+            os.remove(rc)
+        # the wrapper writes the exit code only when the check is done; it outlives this process
+        wrap = '( %s ) > "%s" 2>&1; echo $? > "%s.tmp"; mv "%s.tmp" "%s"' % (cmd, out, rc, rc, rc)
+        subprocess.Popen(["sh", "-c", wrap], start_new_session=True, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("STARTED step %d" % a.step)
+        return 0
+    end = time.time() + 50
+    while not os.path.isfile(rc) and time.time() < end:
+        time.sleep(0.5)
+    if not os.path.isfile(rc):
+        print("RUNNING step %d" % a.step)
+        return 0
+    code = open(rc, encoding="utf-8").read().strip()
+    fp = _fingerprint()
+    try:
+        tail = open(out, encoding="utf-8", errors="replace").read().splitlines()[-15:]
+    except OSError:
+        tail = []
+    print("RESULT: %s step %d fp=%s" % ("pass" if code == "0" else "fail", a.step, fp))
+    if fp == "slow":
+        print("fingerprint timed out, counted as stale")
+    print("\n".join(tail))
+    return 0
+
+
 def main(argv):
     ap = argparse.ArgumentParser(prog="ledger_note.py")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    c = sub.add_parser("check")
+    c.add_argument("feature")
+    c.add_argument("--step", type=int, required=True)
+    g = c.add_mutually_exclusive_group(required=True)
+    g.add_argument("--start", action="store_true")
+    g.add_argument("--poll", action="store_true")
     k = sub.add_parser("decide")
     k.add_argument("feature")
     for o in ("step", "choice", "assumption", "why", "undo"):
@@ -72,6 +168,8 @@ def main(argv):
     d.add_argument("--step-id")
     d.add_argument("--check")
     a = ap.parse_args(argv)
+    if a.cmd == "check":
+        return run_check(a)
     if a.cmd == "deviate" and a.step_action:
         err = None
         if a.step_action == "delete":
