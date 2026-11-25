@@ -10,7 +10,7 @@ Built and committed on this branch, cut from AjsAgent/speed-first at a2c38331. `
 Read the docs and delegation verify results, fix anything they show, then merge this branch into AjsAgent/speed-first (or open a pull request) once aj says which.
 
 ## What is unverified
-The docs and delegation verify parts had not finished when this note was written; an earlier delegation run failed one autosave concurrency check that passes on main. No live `/house-rules:review` run was made, so the two-reviewer merge step is untested. The benchmark is one run per mode; dollar cost was not measured.
+The docs and delegation verify parts pass (176 and 207 checks, RESULT: PASS - all 383 checks passed); core, safe_git, design_loop and make_page were not re-run on this branch. No live `/house-rules:review` run was made, so the two-reviewer merge step is untested. The benchmark is one run per mode; dollar cost was not measured.
 
 ## The issue numbers
 Refs #617 (the review command). Not part of the speed first plan, issue #625.
