@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Reply check proposal page (`docs/plans/2026-11-25-reply-check-proposal.html`): the Stop-time model judge costs 5,519 ms per reply against 63 ms with it off, the largest repeating hook cost; options A, B, C await aj's choice (no code changed).
+
 Plugin version 2.94.7: the speed-first change touches hook files, so CI requires a version bump; installed copies pick up the faster one-process-per-phase hooks on their next plugin update (#633).
 
 Fixed the `verify_tools.py` check for `time_hooks.py --quick`: after step 3 there are 4 timing lines (a pre and a post line for Write and Bash), not 6, so it now expects at least 4 (CI on #633 failed on this).

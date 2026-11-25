@@ -1,0 +1,96 @@
+{
+ "title": "Make the reply check cheaper",
+ "eyebrow": "Proposal \u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: reply check 1A",
+ "short": {
+  "lead": "The one cost that repeats most is a 5.5 second model call after every reply; pick how to cut it so I can build it.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "Idea",
+    "After every reply, a hook starts a second Claude (Haiku) to judge whether the reply claims something is impossible without proof. It runs even when no suspicious word is in the reply.",
+    "",
+    "Nothing is built yet; this page only chooses how to cut the cost.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
+     "alt": "Bar chart: the reply check takes 5,519 ms against 63 ms with the model call off",
+     "caption": "Reply check on, 5,519 ms. Off, 63 ms. Every other hook, about 70 ms."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve it",
+    "you",
+    "A line in the decisions log.",
+    "Pick an option, then send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "Reply check, cheaper",
+   "Same check, runs only when it can matter",
+   null,
+   "Measured here: with the model call 5,519 ms, with it off 63 ms. Every other hook costs about 70 ms. It is one call per reply, so it dominates a session.",
+   [
+    "Today: the judge runs after every reply that has a transcript and no flagged phrase (core.py _judge_check), a paid Haiku call.",
+    "Option A would run it only when a wider word list says a claim may be present.",
+    "You would wait about 5 seconds less after most replies and spend far fewer model calls."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "How should the reply check get cheaper?",
+   [
+    [
+     "A",
+     "Only run it when a wider word list flags the reply",
+     1,
+     "Most replies have no claim, so most skip the 5.5 s call; a claim phrased in a way the list misses would go unchecked."
+    ],
+    [
+     "B",
+     "Run it in the background and show the verdict next turn",
+     0,
+     "No waiting at all, but it can no longer block a bad reply, only warn after it."
+    ],
+    [
+     "C",
+     "Leave it as it is",
+     0,
+     "Keeps full coverage; the 5.5 s stays on every reply."
+    ]
+   ],
+   "A removes the wait on nearly every reply and keeps the blocking power for the replies that matter."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Cut the 5.5 second reply check that runs after every reply.",
+  "changing": "The reply judge in core.py, only after you pick an option; no code changed yet.",
+  "blocking": "Your choice of option A, B or C.",
+  "next": "After you approve, the work is planned in a build plan.",
+  "todo": [
+   "Read the suggestion.",
+   "Pick an option under Your choices.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}
