@@ -1511,7 +1511,11 @@ def _loop_scope_note(payload):
         if json.dumps(state, sort_keys=True) != before:
             _loop_write(git_dir, state)
         if was != "build" and state.get("stage") == "build" and "Build plan approved" in note:
-            note += " Steps: " + _record_steps_for(top, git_dir, state.get("feature") or "", payload.get("session_id") or "") + "."
+            try:
+                sid = str(json.loads(payload).get("session_id") or "")
+            except (ValueError, AttributeError):
+                sid = ""
+            note += " Steps: " + _record_steps_for(top, git_dir, state.get("feature") or "", sid) + "."
         return note
     except Exception as exc:
         return "house-rules: the design-loop check hit an error (%s: %s), so this message moved nothing." % (

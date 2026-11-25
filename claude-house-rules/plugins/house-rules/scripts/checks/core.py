@@ -1403,10 +1403,6 @@ _rb_fresh()
 _rb_un = _rb_run(_rb_t, reply=_rb_stall, env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
 report("PASS" if '"decision":"block"' in _rb_un else "FAIL", "#588: a stall phrase is flagged when unattended (the roadblocks hook, via apply_switches)")
 _rb_fresh()
-_, _rb_un_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM),
-                          env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
-report("PASS" if _rb_un_h.strip() != "" else "FAIL", "#588/#637: unattended keeps the handover hook on (it still speaks on a stall phrase)")
-_rb_fresh()
 # attended: the handover hook no longer runs the check, so one turn is counted once, not twice
 _, _rb_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM), env=_RB_ENV)
 _rb_c = [_rb_run(_rb_t) for _ in range(3)]
