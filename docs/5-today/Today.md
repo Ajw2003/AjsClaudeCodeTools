@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Speed first is designed and planned, not built: aj approved "Design approved: speed first 1A 2A 3A 4*" (tests: speed up the easy wins now, the rest in code quality). Branch `AjsAgent/speed-first` holds `docs/4-systems/hook-speed.md`, the proposal and build plan pages, a decision entry, parent issue #625 and step issues #626 to #631. Waiting on the build plan approval line.
+
 Taught the `verdict` hook about typed overrides and fixed reviewer findings 4 to 8 (plugin 2.94.4): a model typed with `--model` is now compared instead of the agent file's, the reviewer's tools and write folder match across docs, effort is pinned for all agents, and a Decisions entry records why the reviewer stays at `medium`. Finding 9 is left on purpose (see the changelog). 1,606 checks pass; not tried in a live session.
 
 `/house-rules:review` now takes `--model` and `--effort` (plugin 2.94.3): typed values go to the Agent tool, otherwise the reviewer's own `opus`/`medium` applies. The command also passes the real `review-modes.md` and `waitfor.py` paths to the reviewer, since an agent file may not expand `${CLAUDE_PLUGIN_ROOT}`. All seven verify parts pass (1,603 checks). Not tested live (sandbox has plugin 2.94.1 installed); the `verdict` hook will call an override a MISMATCH.
