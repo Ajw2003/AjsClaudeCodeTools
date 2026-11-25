@@ -3554,7 +3554,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             trace_lines.append("house-rules: the send-page checkpoint could not read the turn (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
         try:
-            ctx["hands_off"] = core.unattended() or core._field(core._MODE_RE, payload) == "bypassPermissions"
+            ctx["hands_off"] = core.nobody_present(payload)
             if ctx["hands_off"] and transcript_path:
                 recs, _d = core._records_since_last_user_message(transcript_path)
                 ctx["ledger_logged"] = any("ledger_note.py" in str((b.get("input") or {}).get("command", ""))

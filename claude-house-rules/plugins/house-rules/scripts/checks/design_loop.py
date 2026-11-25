@@ -3927,6 +3927,21 @@ report("PASS" if _ubf_off[0] == "deny" and "huge.bin" in _ubf_off[1] and _iss_de
        and "UNATTENDED run" in _ubf_on and "huge.bin" in _ubf_on else "FAIL",
        "unattended: a big-file commit is allowed with a note naming the file; attended it is still refused")
 
+# --- #636: big files and hands_off (the deviation check), one case per mode ---
+for _nm, _mode, _on, _gone in (("unattended", "default", True, True), ("bypass", "bypassPermissions", False, True),
+                               ("auto", "auto", False, False), ("normal", "default", False, False),
+                               ("plan", "plan", False, False), ("unknown", "somethingNew", False, False)):
+    _pl = _iss_payload("PreToolUse", "Bash", _ubf, command="git add -A && git commit -m x")
+    _pl["permission_mode"] = _mode
+    _o = _iss_call("guard", _pl, _ubf, HOUSE_RULES_UNATTENDED="on" if _on else "off")[1]
+    report("PASS" if (_iss_decision(_o) != "deny") == _gone else "FAIL",
+           "#636 big-file commit, %s: %s" % (_nm, "allowed with a note" if _gone else "refused"))
+    _, _o, _ = run_hook("handover", stop_payload(last_assistant_message=_dv_reply, cwd=_loop_dir, session_id="verify-636",
+                                                 permission_mode=_mode, transcript_path=_dv_unlogged),
+                        env=dict(_loop_env, HOUSE_RULES_UNATTENDED="on" if _on else "off"))
+    report("PASS" if ("deviation" in _o) == _gone else "FAIL",
+           "#636 hands_off (deviation check), %s: %s" % (_nm, "sent back" if _gone else "passes"))
+
 # -- #559: the send-page checkpoint (Stop) and sendcheck (PreToolUse on SendUserFile) -------------
 _sp_dir = tempfile.mkdtemp(prefix="sendpage-", dir=_FIXTURE_ROOT)
 _sp_page = os.path.join(_sp_dir, "docs", "plans", "p.html")

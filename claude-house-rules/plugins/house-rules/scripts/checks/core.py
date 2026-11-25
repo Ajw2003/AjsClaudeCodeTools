@@ -1430,6 +1430,15 @@ _rb_fresh()
 report("PASS" if "no permission_mode" in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
        "#588: a missing permission_mode is announced")
 _rb_fresh()
+# #636: the stall scan, one case per mode (unattended comes from the switch, the rest from permission_mode)
+for _nm, _mode, _on, _want in (("unattended", "default", True, True), ("bypass", "bypassPermissions", False, True),
+                               ("auto", "auto", False, False), ("normal", "default", False, False),
+                               ("plan", "plan", False, False), ("unknown", "somethingNew", False, False)):
+    _, _o, _ = run_hook("roadblocks", stop_payload(transcript_path=_rb_t, last_assistant_message=_rb_stall, permission_mode=_mode),
+                        env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on" if _on else "off"))
+    report("PASS" if ('"decision":"block"' in _o) == _want else "FAIL",
+           "#636 stall scan, %s: %s" % (_nm, "flagged" if _want else "not scanned"))
+    _rb_fresh()
 _rb_car = _hand_transcript("rb-carrier", [_rb_user("build it"), _rb_tool("pytest -q"), json.dumps(
     {"type": "user", "message": {"content": "<system-reminder>x</system-reminder>"}})])
 _rb_run(_rb_car)
