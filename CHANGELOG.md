@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Live run 6 proved the choices check (#644): with a neutral prompt, a sonnet run was sent back once at the end and logged its header colour and wording as K1 and K2; the seven verify parts and the tools suite pass on the new code. Round 3 of acceptance is open.
+
 Unattended and bypass runs now get one reminder to log their choices (#644): live run 5 showed a model picks a header colour and logs nothing, so a stop with every step closed and no logged choice is sent back once to run `ledger_note.py decide` or reply "No choices made.". Criterion C8 is back to its original wording and deviation D4 is reversed.
 
 Quiet unattended mode acceptance round 2 result (#644): 11 of 12 criteria pass; C8 (the agent decides and logs a look choice) failed because the earlier live run's prompt said to decide and log. A fifth live run with a neutral prompt (a header colour of the agent's choice, no mention of deciding or logging) is running to settle it; the reviewer's evidence is in `docs/qa/quiet-unattended-mode/evidence/round2-*`.
