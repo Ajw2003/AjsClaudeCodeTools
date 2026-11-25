@@ -331,19 +331,22 @@ def apply_qa(page, project):
             for ln in f.read().splitlines():
                 # split on an unescaped pipe only; ledger_note.py writes a pipe in a cell as \|
                 c = [x.strip().replace("\\|", "|") for x in re.split(r"(?<!\\)\|", ln)]
-                if ln.startswith("| K") and len(c) > 6:
+                if ln.startswith("| S") and len(c) > 6:  # #641: a hook's self-approval, shown first
+                    ledger.append(("S", "SELF-APPROVED %s: %s (verdict %s, %s; undo: %s)" % (c[2], c[3], c[4][:12], c[5], c[6])))
+                elif ln.startswith("| K") and len(c) > 6:
                     ledger.append(("K", "%s: %s (why: %s; undo: %s)" % (c[1], c[3], c[5], c[6])))
                 elif ln.startswith("| D") and len(c) > 4:
                     ledger.append(("D", "%s: %s" % (c[1], c[4])))
                 elif ln.startswith("| P") and len(c) > 3:
                     ledger.append(("P", "%s: %s" % (c[1], c[3])))
         short = lambda s: s if len(s) <= 160 else s[:157].rstrip() + "..."
-        ledger.sort(key=lambda kt: kt[0] != "K")  # choices first, then the file's order (sort is stable)
+        ledger.sort(key=lambda kt: "SK".find(kt[0]) if kt[0] in "SK" else 2)  # self-approvals, choices, then the file's order (stable)
         nd, nk = sum(1 for k, _ in ledger if k == "D"), sum(1 for k, _ in ledger if k == "K")
+        ns = sum(1 for k, _ in ledger if k == "S")
         page.setdefault("changes", []).insert(
-            0, ["chg", "Deviations and parked decisions", "%d deviation(s), %d parked" % (nd, len(ledger) - nd - nk)
-                + (", %d choice(s)" % nk if nk else ""), None,
-                "\n".join(t if k == "K" else short(t) for k, t in ledger) or "None recorded", None, None])
+            0, ["chg", "Deviations and parked decisions", "%d deviation(s), %d parked" % (nd, len(ledger) - nd - nk - ns)
+                + (", %d choice(s)" % nk if nk else "") + (", %d SELF-APPROVAL(s)" % ns if ns else ""), None,
+                "\n".join(t if k in "SK" else short(t) for k, t in ledger) or "None recorded", None, None])
     plan = qa.get("files") or {}
     base = qa["base"]
     rows, seen, tot_a, tot_r = [], set(), 0, 0

@@ -523,7 +523,7 @@ def record_steps(git_dir, feature, plan_json_path, session_id):
         steps.append({"n": len(steps) + 1, "title": "Finish: " + title, "state": "open",
                       "check": "python3 %s %s %s" % (shlex.quote(fc), which, shlex.quote(feature))})
     rec = {"feature": feature, "test_command": plan.get("test_command") or "", "steps": steps,
-           "sha256": _steps_hash(steps)}
+           "sha256": _steps_hash(steps), "at": time.time()}  # #641: a replace needs a verdict newer than this
     state, problem = _loop_read(git_dir)
     if problem:
         return "steps not recorded: " + problem
