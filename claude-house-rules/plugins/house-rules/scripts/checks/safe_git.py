@@ -2102,9 +2102,10 @@ def _un_noask(tool, on):
 
 
 _un_n = [_un_noask(t, on) for t in ("AskUserQuestion", "ExitPlanMode") for on in (True, False)]
-report("PASS" if all(_ua_dec(o[1]) == "deny" and "nobody is there to answer" in o[1] for o in _un_n[0::2])
-       and all(o[0] == 0 and o[1] == "" for o in _un_n[1::2]) else "FAIL",
-       "noask: AskUserQuestion and ExitPlanMode are denied when unattended; silent and exit 0 when not")
+report("PASS" if _ua_dec(_un_n[0][1]) == "deny" and "nobody is there to answer" in _un_n[0][1]
+       and _ua_dec(_un_n[2][1]) == "allow"  # #636: a plan-exit prompt is allowed when nobody is present
+       and all(o[0] == 0 and o[1] == "" for o in (_un_n[1], _un_n[3])) else "FAIL",
+       "noask: AskUserQuestion is denied and ExitPlanMode allowed when unattended; silent and exit 0 when not")
 
 _bp = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "bp", "tool_name": "AskUserQuestion",
                                     "tool_input": {}, "permission_mode": "bypassPermissions"}), env=dict(os.environ, HOUSE_RULES_UNATTENDED="off"))

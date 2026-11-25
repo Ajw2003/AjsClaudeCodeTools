@@ -1699,9 +1699,14 @@ def event_commitgate():
     moved), commit for the subagent instead and let the edit through. It also carries the issue
     gate (_issues_gate), which applies on any branch of the main session."""
     try:
+        payload = read_payload()
+        refusal = core.switch_file_refusal(payload) if payload else None  # #636: not behind any switch
+        if refusal:
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                         "permissionDecisionReason": refusal}})
+            return 0
         if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
             return 0
-        payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: commitgate got an empty payload and did not run for this call."})
             return 0
