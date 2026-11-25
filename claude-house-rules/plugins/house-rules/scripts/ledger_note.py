@@ -6,7 +6,7 @@
   ledger_note.py deviate FEATURE --step S --plan P --done D --why W --undo U   (#599)
 
 deviate also takes --step-action add|replace|delete [--step-id N] [--check CMD]: delete is always refused,
-replace keeps --step-id and needs a new --check, and a "Finish:" step is never touched
+replace keeps --step-id, needs a new --check and a clean reviewer verdict newer than the step list (#641), and a "Finish:" step is never touched
 (park refuses one too).
 
 Appends row K<n> to the Choices table (added to an older ledger without one), P<n> to the Parked
@@ -42,6 +42,70 @@ Every change from the approved build plan, and every question parked instead of 
 | # | Step | Question | Default taken for now | What it affects | How to answer |
 |---|---|---|---|---|---|
 """
+
+
+SELF_TBL = """## Self-approvals
+
+| # | Stage | Page | Verdict hash | When | How to undo |
+|---|---|---|---|---|---|
+
+"""
+
+
+def add_row(root, feature, L, head, vals):
+    """Append row <L><n> to the ledger table whose header holds `head` (#641: S rows too; the Choices and
+    Self-approvals tables are added to an older ledger). Returns (n, path); ValueError when the table is missing."""
+    path = os.path.join(root, "docs", "qa", qa_folder(feature), "ledger.md")
+    text = HEAD
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    n = max([int(x) for x in re.findall(r"^\| %s(\d+) " % L, text, re.M)] or [0]) + 1
+    row = "| %s%d | %s |\n" % (L, n, " | ".join(cell(x) for x in vals))
+    # Insert after the last row of this kind, else after its table's divider; a later section stays intact.
+    lines = text.splitlines(True)
+    if (L == "K" and "## Choices" not in text) or (L == "S" and "## Self-approvals" not in text):
+        # an older ledger: add the table above Deviations (K) or first of all (S)
+        tbl = (HEAD[HEAD.index("## Choices"):HEAD.index("## Deviations")] if L == "K" else SELF_TBL).splitlines(True)
+        i = next((j for j, ln in enumerate(lines) if ln.startswith("## ")), len(lines))
+        if i and not lines[i - 1].endswith("\n"):
+            lines[i - 1] += "\n"
+        lines[i:i] = tbl
+    at = None
+    for i, ln in enumerate(lines):
+        if ln.startswith("| %s" % L) or (at is None and ln.startswith("|---") and i and head in lines[i - 1]):
+            at = i + 1
+    if at is None:
+        raise ValueError("%s has no %s table; add one or move the file away" % (path, {"P": "Parked decisions", "D": "Deviations"}.get(L, L)))
+    if not lines[at - 1].endswith("\n"):
+        lines[at - 1] += "\n"
+    lines.insert(at, row)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    return n, path
+
+
+def _fresh_verdict(feature):
+    """"" when the stage file holds a reviewer verdict newer than the step list's recorded time; else why not (#641)."""
+    import json
+    p, rec = _find_rec(feature)
+    if p is None:
+        return rec
+    gd = os.path.abspath(subprocess.run(["git", "rev-parse", "--git-common-dir"], stdout=subprocess.PIPE,
+                                        universal_newlines=True).stdout.strip() or ".git")
+    sp = os.path.join(os.path.dirname(gd), ".claude", "house-rules-loop.json")
+    if not os.path.isfile(sp):
+        return "there is no stage file, so no reviewer verdict is stored"
+    try:
+        with open(sp, encoding="utf-8") as f:
+            verdicts = (json.load(f).get("verdicts") or {}).values()
+    except (OSError, ValueError, AttributeError) as exc:
+        return "the stage file could not be read (%s)" % exc
+    since = rec.get("at") or 0
+    if not any(isinstance(v, dict) and (v.get("at") or 0) > since for v in verdicts):
+        return "no clean reviewer verdict newer than the step list was stored; run the reviewer on the new plan first"
+    return ""
 
 
 CATEGORIES = ("licence", "login", "purchase", "deletion", "money", "secrets", "other-people", "outward-post")
@@ -198,6 +262,8 @@ def main(argv):
             err = "replacing a step needs --step-id N (the step keeps its id) and a new --check"
         elif a.step_action == "add" and not a.check:
             err = "adding a step needs a --check"
+        if not err and a.step_action == "replace":
+            err = _fresh_verdict(a.feature)
         if err:
             sys.stderr.write("ledger_note.py: refused: %s\n" % err)
             return 2
@@ -219,34 +285,11 @@ def main(argv):
     if r.returncode:
         sys.stderr.write("ledger_note.py: not inside a git project (%s)\n" % r.stderr.strip())
         return 2
-    path = os.path.join(r.stdout.strip(), "docs", "qa", qa_folder(a.feature), "ledger.md")
-    text = HEAD
-    if os.path.isfile(path):
-        with open(path, encoding="utf-8") as f:
-            text = f.read()
-    n = max([int(x) for x in re.findall(r"^\| %s(\d+) " % L, text, re.M)] or [0]) + 1
-    row = "| %s%d | %s |\n" % (L, n, " | ".join(cell(x) for x in vals))
-    # Insert after the last row of this kind, else after its table's divider; a later section stays intact.
-    lines = text.splitlines(True)
-    if L == "K" and "## Choices" not in text:  # an older ledger: add the table above Deviations, else at the end
-        tbl = HEAD[HEAD.index("## Choices"):HEAD.index("## Deviations")].splitlines(True)
-        i = next((j for j, ln in enumerate(lines) if ln.startswith("## ")), len(lines))
-        if i and not lines[i - 1].endswith("\n"):
-            lines[i - 1] += "\n"
-        lines[i:i] = tbl
-    at = None
-    for i, ln in enumerate(lines):
-        if ln.startswith("| %s" % L) or (at is None and ln.startswith("|---") and i and head in lines[i - 1]):
-            at = i + 1
-    if at is None:
-        sys.stderr.write("ledger_note.py: %s has no %s table; add one or move the file away\n" % (path, {"P": "Parked decisions", "D": "Deviations"}[L]))
+    try:
+        n, path = add_row(r.stdout.strip(), a.feature, L, head, vals)
+    except ValueError as exc:
+        sys.stderr.write("ledger_note.py: %s\n" % exc)
         return 2
-    if not lines[at - 1].endswith("\n"):
-        lines[at - 1] += "\n"
-    lines.insert(at, row)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.writelines(lines)
     print("%s %s%d in %s" % (verb, L, n, path))
     return 0
 
