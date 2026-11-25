@@ -280,7 +280,7 @@ def main(argv):
         err = None
         if a.step_action == "delete":
             err = "a step is never deleted; deviate by replacing it with a new check, or park a question"
-        elif a.step.strip().lower().startswith("finish:"):
+        elif _names_finish(a.feature, a.step) or (a.step_id and _names_finish(a.feature, a.step_id)):
             err = "a Finish: step cannot be changed by a deviation"
         elif a.step_action == "replace" and not (a.step_id and a.check):
             err = "replacing a step needs --step-id N (the step keeps its id) and a new --check"

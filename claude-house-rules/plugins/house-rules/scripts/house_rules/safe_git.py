@@ -1084,12 +1084,13 @@ def _event_guard_main():
         lines.append("  " + docs_note)
 
     lines.append("")
-    _tl = _prompt_timeout_line()
-    if _tl:
-        lines.append(_tl)
-    lines.append(
-        "Approve to let it run, or reject and Claude will explain what it was about to do."
-    )
+    if not core.nobody_present(payload):  # nobody present: no timeout line and no approve prompt, the ask becomes a refusal
+        _tl = _prompt_timeout_line()
+        if _tl:
+            lines.append(_tl)
+        lines.append(
+            "Approve to let it run, or reject and Claude will explain what it was about to do."
+        )
     reason_text = "\n".join(lines)
     rewrite = None
     all_hits = [r for rs in hits.values() for r in rs]
@@ -1653,9 +1654,10 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
         entry = {"session_id": session_id, "key": _waiting_key(tool, ti), "tool": tool,
                  "summary": _waiting_summary(tool, ti), "started": now, "status": "refused", "timed_out_at": now}
         try:
-            path, _ = _waiting_path(session_id)
-            _waiting_update(path, lambda es: [e for e in es if not (e.get("session_id") == session_id
-                                                                     and e.get("key") == entry["key"])] + [entry], "guard")
+            if not core.nobody_present(payload):  # nobody present: the refusal is logged by the agent with ledger_note.py, not queued for aj
+                path, _ = _waiting_path(session_id)
+                _waiting_update(path, lambda es: [e for e in es if not (e.get("session_id") == session_id
+                                                                         and e.get("key") == entry["key"])] + [entry], "guard")
         except Exception as exc:
             sys.stderr.write("house-rules guard: could not add the refused action to the waiting-on-you "
                              "list (%s: %s); it is still refused.\n" % (type(exc).__name__, exc))
@@ -1701,7 +1703,7 @@ def event_prompttimer():
             emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}})
         else:
             _prompt_deny("This is an unattended run (nobody is present to answer a permission prompt), so this "
-                         "was refused at once, never approved. Choose another way, or mark the part NEEDS YOU.")
+                         "was refused at once, never approved. Choose another way, or decide it yourself and log the choice with ledger_note.py decide.")
         return 0
     if secs is None:
         sys.stderr.write("house-rules prompttimer: off (HOUSE_RULES_PROMPT_TIMEOUT), no timer for this prompt.\n")
