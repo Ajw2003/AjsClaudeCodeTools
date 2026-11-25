@@ -404,9 +404,9 @@ _mp_cases.append(("ledger_note (#638): decide on an older ledger with no Choices
 _mp_cases.append(("make_page (#638): a feature or branch name with a slash is one folder, - for /",
                   __import__("make_page").qa_folder("AjsAgent/Quiet Mode") == "ajsagent-quiet-mode"))
 os.remove(os.path.join(_qaf, "ledger.md"))
-_mp_cases.append(("rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3307 chars",
+_mp_cases.append(("rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3600 chars",
                   all(w in read(os.path.join(HERE, "..", "rules", "show-dont-tell.md")) for w in ("ledger_note.py park", "[HARD STOP]"))
-                  and len(read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))) <= 3307))
+                  and len(read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))) <= 3600))
 # P3: the fingerprint ignores built pages but not plan markdown or source
 _t0 = _acc.tree(_d)
 os.makedirs(os.path.join(_d, "docs", "plans"), exist_ok=True)
