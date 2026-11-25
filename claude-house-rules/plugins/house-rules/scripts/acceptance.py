@@ -29,7 +29,7 @@ def tree(root):
     for p in sorted(set(x for x in r.stdout.decode("utf-8").split("\0") if x)):
         # built pages are left out too (P3): building the QA page must not make the stamp stale
         # P4: files written after the stamp (QA page content, changelog line, today notes) are left out too
-        if (p.startswith(("docs/qa/", "docs/5-today/")) or p in (".claude/house-rules-loop.json", "CHANGELOG.md")
+        if (p.startswith(("docs/qa/", "docs/5-today/")) or p in (".claude/house-rules-loop.json", "CHANGELOG.md", "docs/page-style.json")
                 or (p.startswith("docs/plans/") and p.endswith((".html", ".page.json")))):
             continue
         fp = os.path.join(root, p)

@@ -2495,8 +2495,8 @@ try:
     _tb = _ac("tree", "--root", _ar)[1]
     os.makedirs(os.path.join(_ar, "docs", "plans")); os.makedirs(os.path.join(_ar, "docs", "5-today")); os.makedirs(os.path.join(_ar, "docs", "4-systems"))
     _w("docs/plans/x.page.json", "{}"); _w("docs/5-today/note.md", "n"); _w("CHANGELOG.md", "c")
-    _w("docs/plans/x.page.json", "{1}"); _w("docs/5-today/note.md", "n2"); _w("CHANGELOG.md", "c2")
-    commit_case("acceptance: tree ignores docs/plans/x.page.json, docs/5-today/ and CHANGELOG.md (P4)", _ac("tree", "--root", _ar)[1] == _tb, "tree moved")
+    _w("docs/plans/x.page.json", "{1}"); _w("docs/5-today/note.md", "n2"); _w("CHANGELOG.md", "c2"); _w("docs/page-style.json", "{}")
+    commit_case("acceptance: tree ignores docs/plans/x.page.json, docs/5-today/, CHANGELOG.md and docs/page-style.json (P4; run 6 found the final pass writes page-style.json)", _ac("tree", "--root", _ar)[1] == _tb, "tree moved")
     for _rel in ("docs/4-systems/x.md", "docs/plans/x.md", "src.py"):
         _w(_rel, "new")
         commit_case("acceptance: tree changes when %s changes" % _rel, _ac("tree", "--root", _ar)[1] != _tb, "tree did not move")
