@@ -4115,7 +4115,7 @@ r.append([st(1), st(2)] == ["done", "open"])
 hook("RESULT: fail step 1 fp=abc\nboom", "PostToolUseFailure", 1); r.append(st(1) == "open")
 hook(p.stdout, "PostToolUseFailure", 1); r.append(st(1) == "done")
 hook("no result here", "PostToolUseFailure", 2); r.append(st(2) == "open")
-r.append(dl.steps_status(g, "f", "s1", fp) == {1: "done", 2: "open"})
+r.append({k: v for k, v in dl.steps_status(g, "f", "s1", fp).items() if k < 3} == {1: "done", 2: "open"})  # #647: Finish: steps follow
 open(os.path.join(d, "CHANGELOG.md"), "w").write("x\n"); os.makedirs(os.path.join(d, "docs", "qa"))
 open(os.path.join(d, "docs", "qa", "l.md"), "w").write("x\n"); git("add", "-A"); git("commit", "-qm", "wip: autosave")
 fp2 = ln(1, "--poll").stdout.split("fp=")[1].split()[0]
@@ -4132,6 +4132,78 @@ _r = subprocess.run([sys.executable, _pl_snip, HERE], capture_output=True, text=
 _sp_cases.append(("#646: step check start/poll gives RESULT pass/fail, the hook records done/open on both events, "
                   "an autosave commit keeps a step done, an edit or a slow fingerprint makes it stale",
                   _r.stdout.strip() == "True"))
+
+# --- #647: the four Finish: steps, park refusal, finish_checks, Build to QA by the step list, PR held while a step is open ---
+_fn_snip = os.path.join(_FIXTURE_ROOT, "finish_snip.py")
+with open(_fn_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile, time
+here = sys.argv[1]
+sys.path.insert(0, here)
+cfg = tempfile.mkdtemp(); os.environ["CLAUDE_CONFIG_DIR"] = cfg; os.environ["CLAUDE_SESSION_ID"] = "s1"
+os.environ.pop("HOUSE_RULES_UNATTENDED", None)
+from house_rules import design_loop as dl, core
+base = os.path.realpath(tempfile.mkdtemp())
+bare, d = os.path.join(base, "o.git"), os.path.join(base, "w")
+def git(*a): return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=d, check=True, capture_output=True)
+subprocess.run(["git", "init", "-q", "--bare", "-b", "main", bare], check=True)
+subprocess.run(["git", "clone", "-q", bare, d], check=True, capture_output=True)
+git("checkout", "-q", "-b", "main"); open(os.path.join(d, "a.py"), "w").write("x=1\n"); git("add", "-A"); git("commit", "-qm", "init"); git("push", "-q", "origin", "main")
+git("checkout", "-q", "-b", "feat")
+g = os.path.join(d, ".git"); plan = os.path.join(d, "p.page.json")
+def rec(tc):
+    json.dump({"test_command": tc, "changes": [["c", "Step 1: a", "", None, "", None, None, "echo 1"]]}, open(plan, "w"))
+    dl.record_steps(g, "f", plan, "s1")
+rec('python3 -c "raise SystemExit(0)"')
+st = dl._loop_read(g)[0]["steps"]["s1"]
+r = {}
+r["four"] = [s["title"] for s in st["steps"][1:]] == ["Finish: docs written", "Finish: before-and-after pictures", "Finish: tests pass", "Finish: QA page built and stamped"] and st["sha256"] == dl._steps_hash(st["steps"]) and dl.steps_integrity(g, "f", "s1") == ""
+LN = os.path.join(here, "ledger_note.py"); FC = os.path.join(here, "finish_checks.py")
+def park(step): return subprocess.run([sys.executable, LN, "park", "f", "--step", step, "--question", "q", "--default", "d", "--affects", "a", "--category", "other-people", "--tried", "x -> y"], cwd=d, capture_output=True, text=True)
+r["park"] = [park("Finish: tests pass").returncode, park("Step 3").returncode, park("Step 9: z").returncode] == [2, 2, 0]
+def fc(w): return subprocess.run([sys.executable, FC, w, "f"], cwd=d, capture_output=True, text=True).returncode
+r["docs_fail"] = fc("docs") == 1
+os.makedirs(os.path.join(d, "docs", "4-systems")); open(os.path.join(d, "docs", "4-systems", "x.md"), "w").write("x\n")
+r["docs_fail2"] = fc("docs") == 1
+open(os.path.join(d, "CHANGELOG.md"), "w").write("x\n"); r["docs_pass"] = fc("docs") == 0
+r["pic_fail_noledger"] = fc("pictures") == 1
+open(os.path.join(d, "s.css"), "w").write("a{}\n"); r["pic_fail_noshot"] = fc("pictures") == 1
+sh = os.path.join(d, "docs", "qa", "f", "shots"); os.makedirs(sh); time.sleep(0.05)
+open(os.path.join(sh, "a.png"), "wb").write(b"x"); r["pic_pass"] = fc("pictures") == 0
+r["tests_pass"] = fc("tests") == 0
+rec('python3 -c "raise SystemExit(3)"'); r["tests_fail"] = fc("tests") == 3
+r["qa_fail"] = fc("qa") == 1
+import acceptance
+os.makedirs(os.path.join(d, ".claude"), exist_ok=True); open(os.path.join(d, "page.html"), "w").write("<p>")
+state = dl._loop_read(g)[0]; state.update(feature="f", stage="build", qa_page="page.html"); dl._loop_write(g, state)
+json.dump({"tree": acceptance.tree(d)}, open(os.path.join(d, "docs", "qa", "f", "acceptance-stamp.json"), "w"))
+r["qa_pass"] = fc("qa") == 0
+payload = json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "s1", "cwd": d, "tool_input": {"file_path": os.path.join(d, "a.py")}})
+def stage(): return dl._loop_read(g)[0]["stage"]
+def gate(): return dl._loop_gate(payload)
+core._PAYLOAD_CACHE = payload
+st2 = dl._loop_read(g)[0]
+fp = subprocess.run([sys.executable, os.path.join(here, "acceptance.py"), "tree", "--root", d], capture_output=True, text=True).stdout.strip()
+for s in st2["steps"]["s1"]["steps"]:
+    s.update(state="done", fp=fp)
+dl._loop_write(g, st2)
+gate(); r["attended_stays"] = stage() == "build"
+os.environ["HOUSE_RULES_UNATTENDED"] = "on"
+st2["steps"]["s1"]["steps"][0]["fp"] = "old"; dl._loop_write(g, st2)
+r["open_unfinished"] = dl.steps_unfinished(g, payload) == ["Step 1: a"]
+gate(); r["open_stays"] = stage() == "build"
+why = dl._pr_open_steps_deny({}, payload); r["pr_denied"] = bool(why) and "Step 1: a" in why
+os.environ.pop("HOUSE_RULES_UNATTENDED"); r["pr_attended_ok"] = dl._pr_open_steps_deny({}, payload) is None
+os.environ["HOUSE_RULES_UNATTENDED"] = "on"
+open(os.path.join(d, "docs", "qa", "f", "ledger.md"), "w").write("## Parked decisions\n\n| # | Step | Q |\n|---|---|---|\n| P1 | Step 1: a | q |\n")
+r["parked_ok"] = dl.steps_unfinished(g, payload) == [] and dl._pr_open_steps_deny({}, payload) is None
+gate(); r["moves_to_qa"] = stage() == "qa"
+print(r, file=sys.stderr)
+print(all(r.values()))
+""")
+_r = subprocess.run([sys.executable, _fn_snip, HERE], capture_output=True, text=True, timeout=120)
+_sp_cases.append(("#647: four Finish: steps appended and in the sha; park refuses a Finish: step; finish_checks docs/pictures/tests/qa "
+                  "pass and fail on fixtures; Build moves to QA from the step list only when nobody is present; a pull request is "
+                  "denied while a step is open and nobody is present", _r.stdout.strip() == "True"))
 
 for _t, _ok in _sp_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)

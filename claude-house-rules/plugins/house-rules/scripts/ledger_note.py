@@ -6,7 +6,8 @@
   ledger_note.py deviate FEATURE --step S --plan P --done D --why W --undo U   (#599)
 
 deviate also takes --step-action add|replace|delete [--step-id N] [--check CMD]: delete is always refused,
-replace keeps --step-id and needs a new --check, and a "Finish:" step is never touched.
+replace keeps --step-id and needs a new --check, and a "Finish:" step is never touched
+(park refuses one too).
 
 Appends row K<n> to the Choices table (added to an older ledger without one), P<n> to the Parked
 decisions table (hard stops only), or D<n> to the Deviations table of
@@ -55,8 +56,8 @@ def _cfg():
                         "house-rules-steps")
 
 
-def _step_check(a):
-    """(check command, run-file base) for the step, from the outside copy of the steps file; or (None, error)."""
+def _find_rec(feature):
+    """(steps file path, record) for the feature from the outside copy of the steps file; or (None, error)."""
     import glob
     import hashlib
     import json
@@ -81,11 +82,28 @@ def _step_check(a):
             rec = json.load(open(p, encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        if rec.get("feature") == a.feature:
+        if rec.get("feature") == feature:
             found.append((p, rec))
     if len(found) != 1:
-        return None, "need exactly one steps file for feature %r, found %d" % (a.feature, len(found))
-    p, rec = found[0]
+        return None, "need exactly one steps file for feature %r, found %d" % (feature, len(found))
+    return found[0]
+
+
+def _names_finish(feature, step):
+    """True when `step` names a Finish: step by its title or by its id ("Step N" / "N")."""
+    if "finish:" in step.lower():
+        return True
+    p, rec = _find_rec(feature)
+    m = re.fullmatch(r"\s*(?:step\s*)?(\d+)\s*", step, re.I)
+    return bool(p and m and any(s.get("n") == int(m.group(1)) and str(s.get("title", "")).startswith("Finish:")
+                                for s in rec.get("steps") or []))
+
+
+def _step_check(a):
+    """(check command, run-file base) for the step, from the outside copy of the steps file; or (None, error)."""
+    p, rec = _find_rec(a.feature)
+    if p is None:
+        return None, rec
     for s in rec.get("steps") or []:
         if s.get("n") == a.step:
             return s["check"], os.path.join(_cfg(), "runs", os.path.basename(p)[:-5] + "-step%d" % a.step)
@@ -184,6 +202,9 @@ def main(argv):
             sys.stderr.write("ledger_note.py: refused: %s\n" % err)
             return 2
         a.done += " [step %s%s: check `%s`]" % (a.step_action, " " + a.step_id if a.step_id else "", a.check)
+    if a.cmd == "park" and _names_finish(a.feature, a.step):
+        sys.stderr.write("ledger_note.py: refused: a Finish: step cannot be parked\n")
+        return 2
     if a.cmd == "decide":
         L, head, vals, verb = "K", "Choice made", (a.step, a.choice, a.assumption, a.why, a.undo), "decided"
     elif a.cmd == "park":
