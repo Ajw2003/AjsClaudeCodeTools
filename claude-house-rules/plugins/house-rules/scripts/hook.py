@@ -45,42 +45,39 @@ import os
 import re
 import sys
 
-# The core and the parts (#357, #358, #359, steps 2a-2c of #340). The star imports bring every public name
-# back (EVENTS below needs the event_* handlers); the underscore names this file uses are listed.
-# The sys.path line makes `house_rules` and `clarity` importable when run.sh starts this file.
+# The core and the parts (#357, #358, #359, steps 2a-2c of #340). Each event imports only the part it
+# needs (EVENTS below); the old `hook.<name>` lookups still work through __getattr__.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from house_rules import core, docs, safe_git, design_loop, delegation, writing, bigfiles
-from house_rules.core import *  # noqa: F401,F403
-from house_rules.docs import *  # noqa: F401,F403
-from house_rules.safe_git import *  # noqa: F401,F403
-from house_rules.design_loop import *  # noqa: F401,F403
-from house_rules.delegation import *  # noqa: F401,F403
-from house_rules.writing import *  # noqa: F401,F403
-from house_rules.bigfiles import event_diskreport  # noqa: F401
-from house_rules.core import (  # noqa: F401
-    _PARITY_ACCOUNTED_RE,
-    _PARITY_RE,
-    _TOGGLE_OFF,
-    _TRANSCRIPT_RE,
-    _clear_writing_enabled,
-    _evidence_note,
-    _field,
-    _last_user_text,
-    _parity_enabled,
-    _parity_report_note,
-    _records_since_last_user_message,
-    _reply_needs_card_check,
-)
-from house_rules.safe_git import (  # noqa: F401
-    _commit_note,
-)
-from house_rules.writing import (  # noqa: F401
-    _plain_summary_enabled,
-    _plain_summary_note,
-    _visual_check_enabled,
-    _visual_note,
-    _writing_note,
-)
+import importlib
+
+from house_rules import core
+
+_PARTS = ("core", "docs", "safe_git", "design_loop", "delegation", "writing", "bigfiles")
+
+
+def __getattr__(name):
+    """Lazy `hook.<name>` for every name the parts define (public or underscore), as the star imports gave."""
+    if name in _PARTS:
+        return importlib.import_module("house_rules." + name)
+    if not name.startswith("__"):
+        for part in _PARTS:
+            mod = importlib.import_module("house_rules." + part)
+            if hasattr(mod, name):
+                return getattr(mod, name)
+    raise AttributeError("module 'hook' has no attribute %r" % name)
+
+
+def _load_all():
+    """handover, roadblocks and scope need every part (their globals, and the prompt links the parts register)."""
+    g = globals()
+    for part in _PARTS:
+        mod = importlib.import_module("house_rules." + part)
+        for k, v in vars(mod).items():
+            if not k.startswith("__"):
+                g.setdefault(k, v)
+    # The parity clause is the last prompt link, after the links the parts register when imported.
+    core.register_prompt(_scope_parity_link)
+
 
 # ---------------------------------------------------------------------------------------
 # handover - the end-of-reply dispatcher (Stop). It stays here (#359, step 2c): it calls each part's check in
@@ -289,60 +286,60 @@ def _scope_parity_link(payload, field):
     return "", ""
 
 
-# The parity clause is the last prompt link, after the waiting, loop and delegate links the parts register
-# when they are imported above, so scope still adds the clauses in the order it always did.
-core.register_prompt(_scope_parity_link)
-
-
-EVENTS = {
-    "inject": event_inject,
-    "showrule": event_showrule,
-    "issuelist": event_issuelist,
-    "profile": event_profile,
-    "standards": event_standards,
-    "docstiers": event_docstiers,
-    "diskreport": event_diskreport,
-    "versioncheck": event_versioncheck,
-    "scope": event_scope,
-    "noask": event_noask,
-    "guard": event_guard,
-    "guardwrite": event_guardwrite,
-    "guardgithub": event_guardgithub,
-    "artifact": event_artifact,
-    "branchnudge": event_branchnudge,
-    "creditcheck": event_creditcheck,
-    "runnable": event_runnable,
-    "delegate": event_delegate,
-    "announce": event_announce,
-    "subagentrules": event_subagentrules,
-    "verdict": event_verdict,
-    "subagentcommit": event_subagentcommit,
-    "autosave": event_autosave,
-    "autosavefinal": event_autosave_final,
-    "pickup": event_pickup,
-    "commitgate": event_commitgate,
-    "worktreesweep": event_worktreesweep,
-    "agentcap": event_agentcap,
-    "prompttimer": event_prompttimer,
-    "promptran": event_promptran,
-    "audit": event_audit,
-    "rclink": event_rclink,
-    "userpromptaudit": event_userpromptaudit,
-    "handover": event_handover,
-    "roadblocks": event_roadblocks,
-    "harvest": event_harvest,
-    "pagecheck": event_pagecheck,
-    "sendcheck": event_sendcheck,
-    "closablemerge": event_closablemerge,
+EVENTS = {  # event -> (module, handler); 'hook' = this file, which loads every part first
+    "inject": ("core", "event_inject"),
+    "showrule": ("core", "event_showrule"),
+    "issuelist": ("design_loop", "event_issuelist"),
+    "profile": ("core", "event_profile"),
+    "standards": ("core", "event_standards"),
+    "docstiers": ("docs", "event_docstiers"),
+    "diskreport": ("bigfiles", "event_diskreport"),
+    "versioncheck": ("core", "event_versioncheck"),
+    "scope": ("hook", "event_scope"),
+    "noask": ("core", "event_noask"),
+    "guard": ("safe_git", "event_guard"),
+    "guardwrite": ("safe_git", "event_guardwrite"),
+    "guardgithub": ("safe_git", "event_guardgithub"),
+    "artifact": ("core", "event_artifact"),
+    "branchnudge": ("safe_git", "event_branchnudge"),
+    "creditcheck": ("safe_git", "event_creditcheck"),
+    "runnable": ("core", "event_runnable"),
+    "delegate": ("delegation", "event_delegate"),
+    "announce": ("delegation", "event_announce"),
+    "subagentrules": ("delegation", "event_subagentrules"),
+    "verdict": ("delegation", "event_verdict"),
+    "subagentcommit": ("delegation", "event_subagentcommit"),
+    "autosave": ("delegation", "event_autosave"),
+    "autosavefinal": ("delegation", "event_autosave_final"),
+    "pickup": ("delegation", "event_pickup"),
+    "commitgate": ("delegation", "event_commitgate"),
+    "worktreesweep": ("delegation", "event_worktreesweep"),
+    "agentcap": ("delegation", "event_agentcap"),
+    "prompttimer": ("safe_git", "event_prompttimer"),
+    "promptran": ("core", "event_promptran"),
+    "audit": ("delegation", "event_audit"),
+    "rclink": ("delegation", "event_rclink"),
+    "userpromptaudit": ("delegation", "event_userpromptaudit"),
+    "handover": ("hook", "event_handover"),
+    "roadblocks": ("hook", "event_roadblocks"),
+    "harvest": ("docs", "event_harvest"),
+    "pagecheck": ("design_loop", "event_pagecheck"),
+    "sendcheck": ("design_loop", "event_sendcheck"),
+    "closablemerge": ("design_loop", "event_closablemerge"),
 }
 
 
 def main(argv):
     event = argv[1] if len(argv) > 1 else ""
-    handler = EVENTS.get(event)
-    if handler is None:
+    target = EVENTS.get(event)
+    if target is None:
         return 0
     try:
+        if target[0] == "hook":
+            _load_all()
+            handler = globals()[target[1]]
+        else:
+            handler = getattr(importlib.import_module("house_rules." + target[0]), target[1])
         core.keep_payload()  # the speed switches need the payload before some handlers read it
         core.apply_switches()  # typed feature switches set the HOUSE_RULES_ values every check reads
         return handler()
