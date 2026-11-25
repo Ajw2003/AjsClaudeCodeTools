@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Full verify after the review Sonnet default: the docs part (review command checks) passes 176 of 176; core, safe_git, delegation and design_loop fail 33 checks in total, none naming reviewer, model or tier, and not yet compared against main.
+
 Review command now defaults plan, code, codebase, image and style reviews to Sonnet (plugin 2.94.5); page and diff stay on Opus and a typed `--model` wins. Full verify result not yet seen.
 
 Speed step 1 (#626) is built and pushed: `tools/time_hooks.py` and a saved baseline (Write about 1,020 ms over 18 processes, Bash about 880 ms over 12, 7 label reads about 1,100 ms; five verify parts timed out at 55 seconds and have no number). Step 2 (#627, lazy hook loading) is with a builder. aj approved the speed first build plan (stage Build); step 1, the timing script (#626), is with a builder and nothing is merged yet. The speed first build plan went through two page reviews: step 4 now starts by profiling because the label reads already run in a thread pool (`design_loop.py:826`), and the page is stamped open-risks (the step 4 picture still shows the proposal's serial reads). Speed first is designed and planned, not built: aj approved "Design approved: speed first 1A 2A 3A 4*" (tests: speed up the easy wins now, the rest in code quality). Branch `AjsAgent/speed-first` holds `docs/4-systems/hook-speed.md`, the proposal and build plan pages, a decision entry, parent issue #625 and step issues #626 to #631. Waiting on the build plan approval line.

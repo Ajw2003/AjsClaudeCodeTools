@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Verify result recorded for the review Sonnet default: docs part green, 33 failures elsewhere not yet compared with main (no code change).
+
 Review override check updated: a code review now expects `model: sonnet` by default (verify.py docs part).
 
 Speed step 1, timing script (#626): `tools/time_hooks.py` replays the real Write and Bash hook calls in a throwaway repo and prints milliseconds per call (`--quick`, `--save`, `--compare`); the saved baseline in `docs/qa/speed-first/baseline.json` has a Write call at about 1,020 ms over 18 processes and a Bash call at about 880 ms over 12, and 7 label reads at about 1,100 ms. Five `verify.py` parts took over the 55 second limit and have no number yet. Check 56 in `tools/verify_tools.py` covers the script. Refs #625.
