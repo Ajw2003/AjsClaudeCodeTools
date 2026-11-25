@@ -738,6 +738,117 @@ def _record_step_result(data):
     return ""
 
 
+_VERDICT_RE = re.compile(r"^\W*VERDICT:\s*clean\b", re.I | re.M)
+_PAGE_PATH_RE = re.compile(r"docs/plans/[\w./-]+?\.(?:page\.json|html)")
+_STAMP_KEYS = ("reviewed", "reviewStamp", "review_stamp", "stamp")  # #641: make_page keeps the stamp in the html; any in the json is not part of the page
+
+
+def page_hash(path):
+    """#641: sha256 of a page's .page.json with any review-stamp key removed; raises OSError/ValueError."""
+    with open(path, encoding="utf-8") as f:
+        page = json.load(f)
+    for k in _STAMP_KEYS:
+        page.pop(k, None)
+    return hashlib.sha256(json.dumps(page, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _find_page(texts, roots):
+    """The newest-mentioned docs/plans page (as its .page.json) that exists under one of roots, else ""."""
+    for text in texts:
+        for rel in reversed(_PAGE_PATH_RE.findall(text or "")):
+            rel = re.sub(r"\.html$", ".page.json", rel)
+            for r in roots:
+                if os.path.isfile(os.path.join(r, rel)):
+                    return os.path.join(r, rel)
+    return ""
+
+
+def record_verdict(payload, agent_type, report, prompt_text, session_id):
+    """#641: a reviewer's final report with a `VERDICT: clean` line is stored as state["verdicts"][page_hash]
+    = {page, mode, at}; then, when nobody is present, the hook self-approves the stage (see _self_approve).
+    Runs even when helpers are off. Returns a note ("" when it is not a clean reviewer verdict); problems go to stderr."""
+    if (agent_type or "").split(":")[-1] != "reviewer" or not _VERDICT_RE.search(report or ""):
+        return ""
+    cwd = (core._field(re.compile(r'"cwd"\s*:\s*"((?:[^"\\]|\\.)*)"'), payload) or os.getcwd()).replace("\\\\", "\\")
+    gd = core._git_dir(cwd)
+    if not gd:
+        sys.stderr.write("house-rules: reviewer verdict not stored: no git directory found from %s.\n" % cwd)
+        return ""
+    roots = [cwd, os.path.dirname(_loop_dir(gd))]
+    page = _find_page([report, prompt_text], roots)
+    if not page:
+        sys.stderr.write("house-rules: reviewer verdict not stored: could not identify the page (no docs/plans path "
+                         "in its report or prompt that exists).\n")
+        return ""
+    try:
+        h = page_hash(page)
+        with open(page, encoding="utf-8") as f:
+            ptype = json.load(f).get("pageType")
+    except (OSError, ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: reviewer verdict not stored: could not read %s (%s).\n" % (page, exc))
+        return ""
+    mode = {"proposal": "page", "build-plan": "plan"}.get(ptype)
+    if not mode:
+        sys.stderr.write("house-rules: reviewer verdict not stored: %s is pageType %r, not a design or build-plan page.\n"
+                         % (page, ptype))
+        return ""
+    state, problem = _loop_read(gd)
+    if problem:
+        sys.stderr.write(problem + " The verdict was not stored.\n")
+        return ""
+    state.setdefault("verdicts", {})[h] = {"page": page, "mode": mode, "at": time.time()}
+    _loop_write(gd, state)
+    note = "verdict stored for %s (%s)" % (os.path.basename(page), h[:12])
+    if core.nobody_present(payload):
+        note += "; " + _self_approve(gd, state, page, h, ptype, session_id)
+    return note
+
+
+def _self_approve(gd, state, page, h, ptype, session_id):
+    """#641: nobody present + a stored clean verdict for this page's current hash: Design -> Plan on a design
+    page, Plan -> Build on a build-plan page. Recorded in state["auto_approvals"], never "approvals", so the
+    newest-approval marker is untouched. Never QA or Close. Returns a note."""
+    if state.get("verdicts", {}).get(h, {}).get("page") != page or page_hash(page) != h:
+        return "no self-approval: the stored verdict does not match this page"
+    stage = state.get("stage")
+    if (stage, ptype) == ("design", "proposal"):
+        new = "plan"
+    elif (stage, ptype) == ("plan", "build-plan"):
+        new = "build"
+    else:
+        return "no self-approval: stage %s does not take a %s page" % (stage, ptype)
+    with open(page, encoding="utf-8") as f:
+        title = str(json.load(f).get("title") or "")
+    feature = state.get("feature") or _loop_name(title.split(":")[0])
+    extra = ""
+    if new == "build":
+        steps = record_steps(gd, feature, page, session_id)
+        state, problem = _loop_read(gd)  # record_steps wrote the stage file; re-read it
+        if problem:
+            return "no self-approval: " + problem
+        extra = "; " + steps
+    state["feature"], state["stage"], state["skip"] = feature, new, False
+    if new == "plan":
+        state["redo"] = False
+    state.setdefault("auto_approvals", []).append(
+        {"stage": "Design approved" if new == "plan" else "Build plan approved", "page": page, "hash": h,
+         "at": int(time.time()), "by": "auto-unattended"})
+    _loop_write(gd, state)
+    top = os.path.dirname(_loop_dir(gd))
+    try:
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import ledger_note
+        undo = ("set \"stage\" in .claude/%s back to \"%s\" and delete this entry from auto_approvals"
+                % (LOOP_FILE, "design" if new == "plan" else "plan"))
+        ledger_note.add_row(top, feature, "S", "Verdict hash", (
+            LOOP_STAGE_NAMES[state["stage"]], os.path.relpath(page, top).replace(os.sep, "/"), h,
+            time.strftime("%Y-%m-%d %H:%M:%S"), undo))
+    except (OSError, ValueError, ImportError) as exc:
+        sys.stderr.write("house-rules: self-approval done but the ledger S row was not written (%s).\n" % exc)
+    return "self-approved: stage is now %s%s" % (LOOP_STAGE_NAMES[new], extra)
+
+
 SEEN_FILE = "house-rules-loop-seen.json"
 
 

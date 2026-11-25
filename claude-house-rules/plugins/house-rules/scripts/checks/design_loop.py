@@ -4071,10 +4071,26 @@ _sp_cases.append(("#639: deviate replace needs a check and a step id", _ln("--st
 _ln_repo = os.path.join(_FIXTURE_ROOT, "ln-repo")
 os.makedirs(_ln_repo, exist_ok=True)
 subprocess.run(["git", "init", "-q"], cwd=_ln_repo, check=True)
-_r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Step 2", "--plan", "p", "--done", "d", "--why", "w",
-                     "--undo", "u", "--step-action", "replace", "--step-id", "2", "--check", "echo ok"],
-                    capture_output=True, text=True, cwd=_ln_repo)
-_sp_cases.append(("#639: deviate replace keeps the step id and logs the new check",
+_ln_env = dict(os.environ, CLAUDE_CONFIG_DIR=os.path.join(_FIXTURE_ROOT, "ln-cfg"), CLAUDE_SESSION_ID="lns")
+_ln_rep = [sys.executable, _LN, "deviate", "feat", "--step", "Step 2", "--plan", "p", "--done", "d", "--why", "w",
+           "--undo", "u", "--step-action", "replace", "--step-id", "2", "--check", "echo ok"]
+_ln_gd = os.path.realpath(os.path.join(_ln_repo, ".git"))
+os.makedirs(_ln_env["CLAUDE_CONFIG_DIR"] + "/house-rules-steps", exist_ok=True)
+with open(os.path.join(_ln_env["CLAUDE_CONFIG_DIR"], "house-rules-steps", hashlib.sha1(_ln_gd.encode("utf-8")).hexdigest() + "-lns.json"), "w") as _f:
+    json.dump({"feature": "feat", "at": 1000}, _f)
+_r = subprocess.run(_ln_rep, capture_output=True, text=True, cwd=_ln_repo, env=_ln_env)
+_sp_cases.append(("#641: deviate replace is refused with no stored reviewer verdict, in plain words",
+                  _r.returncode == 2 and "no stage file" in _r.stderr))
+os.makedirs(os.path.join(_ln_repo, ".claude"), exist_ok=True)
+with open(os.path.join(_ln_repo, ".claude", "house-rules-loop.json"), "w") as _f:
+    json.dump({"stage": "build", "verdicts": {"old": {"at": 900}}}, _f)
+_r = subprocess.run(_ln_rep, capture_output=True, text=True, cwd=_ln_repo, env=_ln_env)
+_sp_cases.append(("#641: deviate replace is refused when the only verdict is older than the step list",
+                  _r.returncode == 2 and "newer than the step list" in _r.stderr))
+with open(os.path.join(_ln_repo, ".claude", "house-rules-loop.json"), "w") as _f:
+    json.dump({"stage": "build", "verdicts": {"new": {"at": 2000}}}, _f)
+_r = subprocess.run(_ln_rep, capture_output=True, text=True, cwd=_ln_repo, env=_ln_env)
+_sp_cases.append(("#639/#641: deviate replace keeps the step id and logs the new check once a newer clean verdict is stored",
                   _r.returncode == 0 and "step replace 2" in open(_r.stdout.split(" in ", 1)[1].strip(), encoding="utf-8").read()))
 _r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Finish: x", "--plan", "p", "--done", "d", "--why", "w",
                      "--undo", "u", "--step-action", "add", "--check", "c"], capture_output=True, text=True, cwd=_ln_repo)
@@ -4258,6 +4274,64 @@ _r = subprocess.run([sys.executable, _ss_snip, HERE], capture_output=True, text=
 _sp_cases.append(("#640: a stop is blocked while a step is open (normal, NEEDS YOU and empty replies), a step goes stuck after 3 no-progress "
                   "blocks and then the stop is allowed, a new user message resets the counters, the judge blocks once per step set, "
                   "a session with no step list keeps the old checks, QUESTION FOR YOU passes only when attended",
+                  _r.stdout.strip() == "True"))
+
+
+# --- #641: a stored reviewer verdict and the hook's self-approval when nobody is present ---
+_sa_snip = os.path.join(_FIXTURE_ROOT, "selfapprove_snip.py")
+with open(_sa_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile
+sys.path.insert(0, sys.argv[1])
+os.environ["CLAUDE_CONFIG_DIR"] = tempfile.mkdtemp(); os.environ.pop("HOUSE_RULES_UNATTENDED", None)
+from house_rules import design_loop as dl
+d = os.path.realpath(tempfile.mkdtemp()); subprocess.run(["git", "init", "-q", d], check=True); g = os.path.join(d, ".git")
+os.makedirs(os.path.join(d, "docs", "plans")); os.makedirs(os.path.join(d, ".claude"))
+des, pln = "docs/plans/f-design.page.json", "docs/plans/f-plan.page.json"
+json.dump({"title": "Feat X: why", "pageType": "proposal", "changes": []}, open(os.path.join(d, des), "w"))
+json.dump({"title": "Feat X plan", "pageType": "build-plan", "changes": [["c", "Step 1: a", "", None, "", None, None, "echo 1"]]}, open(os.path.join(d, pln), "w"))
+sf = os.path.join(d, ".claude", "house-rules-loop.json"); seen = os.path.join(g, "house-rules-loop-seen.json")
+def put(stage): json.dump({"feature": "Feat X", "stage": stage, "skip": False, "approvals": []}, open(sf, "w"))
+def st(): return json.load(open(sf))
+def pay(mode): return json.dumps({"cwd": d, "permission_mode": mode, "session_id": "sid"})
+def rv(page, mode, report="Looks fine.\nVERDICT: clean"): return dl.record_verdict(pay(mode), "house-rules:reviewer", report + "\n" + page, "", "sid")
+r = {}
+put("design"); rv(des, "bypassPermissions", "x\nVERDICT: 2 findings")
+r["findings_not_stored"] = "verdicts" not in st() and st()["stage"] == "design"
+r["builder_not_stored"] = dl.record_verdict(pay("bypassPermissions"), "house-rules:builder", "VERDICT: clean " + des, "", "sid") == "" and "verdicts" not in st()
+rv("no page named here", "bypassPermissions"); r["no_page_stores_nothing"] = "verdicts" not in st()
+for m in ("default", "auto", "acceptEdits"):
+    rv(des, m)
+r["attended_stores_but_never_approves"] = len(st()["verdicts"]) == 1 and st()["stage"] == "design" and "auto_approvals" not in st()
+h = dl.page_hash(os.path.join(d, des))
+r["keyed_by_hash"] = list(st()["verdicts"]) == [h] and st()["verdicts"][h]["mode"] == "page"
+json.dump({"at": 5, "branch": "", "feature": "x"}, open(seen, "w")); before = open(seen, "rb").read()
+note = rv(des, "bypassPermissions")
+s = st()
+r["design_to_plan"] = s["stage"] == "plan" and s["auto_approvals"][0]["by"] == "auto-unattended" and s["auto_approvals"][0]["hash"] == h and not s["approvals"]
+dl._loop_read(g); dl._loop_write(g, dl._loop_read(g)[0]); dl._loop_read(g)
+r["marker_unchanged"] = open(seen, "rb").read() == before
+led = open(os.path.join(d, "docs", "qa", "feat-x", "ledger.md")).read() if os.path.isdir(os.path.join(d, "docs", "qa", "feat-x")) else ""
+r["s_row"] = "## Self-approvals" in led and "| S1 | Plan | docs/plans/f-design.page.json | " + h in led
+rv(des, "bypassPermissions"); r["design_page_in_plan_does_nothing"] = st()["stage"] == "plan"
+rv(pln, "bypassPermissions")
+s = st(); r["plan_to_build"] = s["stage"] == "build" and len(s["auto_approvals"]) == 2 and "sid" in s["steps"] and s["steps"]["sid"]["at"] > 0
+r["build_never_moves_on"] = (rv(pln, "bypassPermissions"), st()["stage"])[1] == "build"
+put("qa"); rv(des, "bypassPermissions"); rv(pln, "bypassPermissions"); r["qa_never_approved"] = st()["stage"] == "qa" and "auto_approvals" not in st()
+put("done"); rv(pln, "bypassPermissions"); r["close_never_approved"] = st()["stage"] == "done"
+put("design"); s = st(); s["verdicts"] = {}; json.dump(s, open(sf, "w"))
+r["no_verdict_refused"] = dl._self_approve(g, st(), os.path.join(d, des), "0" * 64, "proposal", "sid").startswith("no self-approval") and st()["stage"] == "design"
+put("design"); rv(des, "default"); json.dump({"title": "Feat X: changed", "pageType": "proposal", "changes": []}, open(os.path.join(d, des), "w"))
+r["changed_page_refused"] = dl._self_approve(g, st(), os.path.join(d, des), h, "proposal", "sid").startswith("no self-approval") and st()["stage"] == "design"
+json.dump({"title": "Feat X: why", "pageType": "proposal", "changes": []}, open(os.path.join(d, des), "w")); put("design")
+os.environ["HOUSE_RULES_UNATTENDED"] = "on"; rv(des, "default")
+r["unattended_switch_approves"] = st()["stage"] == "plan"
+print(r, file=sys.stderr)
+print(all(r.values()))
+""")
+_r = subprocess.run([sys.executable, _sa_snip, HERE], capture_output=True, text=True, timeout=120)
+_sp_cases.append(("#641: a verdict is stored only for VERDICT: clean from a reviewer on an identifiable page, keyed by the page hash; "
+                  "a self-approval moves Design to Plan and Plan to Build only when nobody is present, with a matching verdict, "
+                  "never QA or Close, records under auto_approvals and an S row, and leaves the newest-approval marker byte for byte unchanged",
                   _r.stdout.strip() == "True"))
 
 for _t, _ok in _sp_cases:

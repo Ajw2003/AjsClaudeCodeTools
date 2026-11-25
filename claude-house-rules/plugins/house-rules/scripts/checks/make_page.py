@@ -322,6 +322,16 @@ _mp_cases.append(("make_page (#596): ledger rows come first with right counts",
                   _rc == 0 and "2 deviation(s), 1 parked" in _t6 and "D1: Did the thing.\\nD2: Did another.\\nP1: Which way?" in _t6
                   and _t6.index("Deviations and parked") < _t6.index("Files changed, counted")))
 with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
+    _f.write("| # | s | plan | done | why | undo |\n|---|---|---|---|---|---|\n| D1 | 1 | p | Did the thing. | w | u |\n\n"
+             "| # | Step | Choice | Assumption | Why | Undo |\n|---|---|---|---|---|---|\n| K1 | 2 | Went left | a | because | back |\n\n"
+             "| # | Stage | Page | Verdict hash | When | How to undo |\n|---|---|---|---|---|---|\n"
+             "| S1 | Plan | docs/plans/x.page.json | abcdef0123456789 | 2026-01-01 | set stage back |\n")
+_rc, _o = _mp("build", _mp_qa_content("qa6s", _qa), "--project", _d)
+_t6s = _mp_text("qa6s")
+_mp_cases.append(("make_page (#641): a self-approval S row shows first, before the K and D rows, and is counted",
+                  _rc == 0 and "1 SELF-APPROVAL(s)" in _t6s and "SELF-APPROVED Plan: docs/plans/x.page.json (verdict abcdef012345" in _t6s
+                  and _t6s.index("SELF-APPROVED") < _t6s.index("Went left") < _t6s.index("D1: Did the thing.")))
+with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
     _f.write("# empty\n")
 _rc, _o = _mp("build", _mp_qa_content("qa7", _qa), "--project", _d)
 _mp_cases.append(("make_page (#596): a ledger with no D or P rows says None recorded, 0 and 0",
