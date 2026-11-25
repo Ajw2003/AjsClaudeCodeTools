@@ -69,27 +69,27 @@
  "changes": [
   [
    "changed",
-   "Rule text tells me to ask, wait or stop",
-   "Ask only about look or function; never stop to ask",
+   "Rules tell me to ask, wait or stop",
+   "Ask only about look or function",
    null,
-   "Many lines tell me to ask, wait or hand over. After the change, only choices about how something looks or what it does come to you. A dependency, data format or API change counts as function.",
+   "Only choices about how something looks or what it does come to you. A new dependency, a data format or an API change counts as function. Everything else I decide and log.",
    [
-    "Where: rules/show-dont-tell.md:5, 11, 12; rules/house-rules.md:91; rules/detail/clear-writing.md:19, 61; rules/detail/handover-command.md:28, 51, 163; rules/detail/commit-branches.md:50; rules/standards/coding-philosophy.md:58; agents/builder.md:11, 18; core.py:1546, 1610.",
-    "Everything else I decide, log, and carry on.",
-    "Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people."
+    "Today: rules say to ask, wait or hand over (show-dont-tell.md:5, 11, 12; house-rules.md:91; clear-writing.md:59-62; handover-command.md:28, 51; commit-branches.md:50; coding-philosophy.md:58; builder.md:11; core.py:1546, 1610).",
+    "New: those lines are rewritten. Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people, outward posts.",
+    "For you: far fewer questions, in every mode."
    ],
    null
   ],
   [
    "new",
    "One test for nobody is there",
-   "Unattended, bypass, auto and dontAsk all count as nobody present",
+   "Unattended, bypass, auto and dontAsk count as nobody present",
    null,
-   "Today only unattended and bypass are recognised, so auto mode still asks and waits. One helper replaces every separate test.",
+   "dontAsk means prompts are refused automatically. Every gate uses the same test, approval included, so auto mode no longer waits.",
    [
-    "Where: core.py:2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150.",
-    "The prompt timer refuses any permission prompt after its timeout when nobody is present.",
-    "Auto mode has its own safety check I cannot rewrite, so overnight runs use bypass."
+    "Today: only unattended and bypass are recognised, in separate places (core.py:1487, 2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150; design_loop.py:3555).",
+    "New: one helper. A permission prompt is denied at once, and a plan-exit prompt is allowed. Pause-goal is denied. Agent writes to house-rules-mode.json and HOUSE_RULES_ keys in .claude/settings are refused.",
+    "For you: overnight runs use bypass, because auto mode has its own safety check I cannot rewrite."
    ],
    null
   ],
@@ -98,50 +98,50 @@
    "Unattended switches the design loop off",
    "Unattended keeps the design loop and runs it itself",
    null,
-   "The design loop stays on. I design, decide, have a helper review the plan, approve it, build the steps and hand over a QA page.",
+   "The loop stays on. I design, decide, have a helper review the plan, approve it, build the steps and hand over a QA page.",
    [
-    "Where: core.py:2723, 2737, 2850; design_loop.py:2952; hook.py:122.",
-    "Handover comes back on with these checks: evidence, commit, deviation, QA page, changelog, decision log.",
-    "Off: editor, page cap, plain summary, send page, builders, issues."
+    "Today: unattended turns the loop and the end-of-reply check off (core.py:2723, 2737, 2850; hook.py:122; design_loop.py:2952).",
+    "New: the end-of-reply check comes back for these items only: evidence, commit, deviation, QA page, changelog, decision log. The editor, page limit, plain summary, page send, helpers and issues stay off.",
+    "For you: the same loop you know, without you in it."
    ],
    null
   ],
   [
    "new",
-   "Self-approval a hook records",
-   "The hook approves, only when a real review exists",
+   "I can approve my own plan, but only a hook records it",
+   "A hook approves, and only when a real review exists",
    null,
-   "Today only your typed message moves the stage. A hook function, not a command I can run, records auto-approval. It needs: the launcher or your typed switch, a stored reviewer verdict for this page's hash, and a build plan with a done-when command per step.",
+   "The hook may move Design to Plan, and Plan to Build, with the issue-label read skipped. It needs the launcher or your typed switch, a stored reviewer verdict for this page's hash, and a build plan with a test command per step.",
    [
-    "Where: design_loop.py:621, 1157, 1418, 1476; make_page.py:609.",
-    "Agent writes to house-rules-mode.json are refused, so I cannot switch unattended on myself.",
-    "QA passed and Close approved stay yours only. Self-approval never updates the other-branch lock."
+    "Today: only your typed message moves the stage, and the stage file refuses agent writes (design_loop.py:429, 621, 1157, 1418). The review stamp is self-declared (make_page.py:609), and the verdict hook is off when helpers are off (delegation.py:740).",
+    "New: a verdict hook for reviewer helpers stays on, and writes the verdict and page hash to the stage file. QA passed and Close approved stay yours. The newest-approval marker (design_loop.py:525) is not touched, so your other branches stay open.",
+    "For you: every self-approval is the first row on the QA page."
    ],
    null
   ],
   [
    "new",
-   "A step list I cannot edit",
-   "Steps live in a guarded file; the hook runs each check",
+   "A step list I cannot shrink",
+   "Steps live in a guarded file, one per session",
    null,
-   "At approval the hook copies the steps from the reviewed build plan into the guarded stage file with a hash. A step is done only when its done-when command exits 0. I cannot mark it done or shrink the list.",
+   "A hook copies the steps from the reviewed build plan into the stage file, with a hash, under the launcher's session id. Only that session is blocked by them, and only for features approved after this change.",
    [
-    "Changes go only through ledger_note.py deviate, shown on the QA page.",
-    "A step is parked only with a hard-stop category, and still counts as not done on the QA page.",
-    "The open steps are re-injected at session start, resume and compaction, and in every stop block."
+    "Today: no step list exists. Parking has no category (ledger_note.py:43-46), and deviate only adds a ledger row.",
+    "New: a step passes when I run ledger_note.py check for it, through a normal Bash call, so every guard and timeout applies. A hook records the exit code and the commit; a moved commit makes it stale. The hash is also kept outside the repo.",
+    "For you: a step is parked only with a hard-stop category and the command that showed it. Deviate may add or replace a step, never delete one."
    ],
    null
   ],
   [
    "new",
    "A check on every stop",
-   "One deterministic check, one shared counter, no model needed",
+   "One fixed check reads the step list; no model decides",
    null,
-   "Today the check fires on two phrases and blocks twice. The new check reads the step file on every stop, even with no reply text. A missing step file while a goal is active counts as open.",
+   "The check runs on every stop, even with no reply text. A missing step file for an active session counts as open. The words NEEDS YOU no longer exempt anything; only a parked step does.",
    [
-    "Where: core.py:3516, 3518, 3684, 3731, 3835, 3840, 3869.",
-    "NEEDS YOU ends the stop only when every open step is marked needs-you.",
-    "overnight.sh sets CLAUDE_CODE_STOP_HOOK_BLOCK_CAP to 0 and the plugin keeps one counter. At most one model judge per stop, used only when the reply claims the last step is done; it can block but never end the run."
+    "Today: two phrases trigger it, and two blocks end it (core.py:3516, 3518, 3731, 3835, 3840, 3869). The 6 at core.py:3684 is unused and is deleted.",
+    "New: the existing shared counter (core.py:3655) is reused. After 3 blocks with no step closed and no commit, a step is marked stuck, shown on QA, and the check moves on. overnight.sh sets CLAUDE_CODE_STOP_HOOK_BLOCK_CAP to 0.",
+    "For you: the model judge blocks at most once per step set. Sessions with no step list keep the current goal check. The web app keeps Claude Code's cap of 8 blocks."
    ],
    null
   ],
@@ -150,24 +150,24 @@
    "Look or function choices with nobody there",
    "Take the safe default, park it, list it first on QA",
    null,
-   "A choice about look or function cannot wait for you, and I must not stop. I take the safest reversible default and log it as your call. Attended, a reply ending QUESTION FOR YOU: is allowed, and a new message from you clears any block.",
+   "I take the safest reversible default and log it as your call. Attended, a reply ending QUESTION FOR YOU: is allowed, and a new message from you clears any block. Auto mode counts as nobody present, so it parks too.",
    [
-    "The ledger gets a new row type, C for choice, via ledger_note.py decide.",
-    "QA lists your-call rows and auto-approvals first, with why and how to undo.",
-    "Outside the design loop the ledger is named after the branch, with / changed to -."
+    "Today: a plain question in Build parks, and a [HARD STOP] question holds edits (design_loop.py:1401, 1547).",
+    "New: ledger_note.py decide adds a C row (choice). The ledger is named after the branch, with / changed to - (make_page.py:53).",
+    "For you: QA lists your-call rows and auto-approvals first, with why and how to undo."
    ],
    null
   ],
   [
    "new",
    "A restart loop outside the session",
-   "overnight.sh becomes a headless loop that resumes the session",
+   "overnight.sh becomes a loop that runs Claude without a window",
    null,
-   "Today overnight.sh starts Claude once and sits idle after any stop. The new version starts with a fixed session id and resumes it by id after any stop, never by most recent session. The resume text is marked relayed, so it can never count as your approval.",
+   "It starts with --session-id, then resumes by id with --resume and -p after any stop, never by most recent session. The resume text is marked relayed (core.py:2040), so it never counts as your approval.",
    [
-    "Rate and usage limits: wait until the reset time, without using a restart.",
-    "Ends into QA when every step is done or parked; a last short run builds the QA page.",
-    "Limits: 24 hours and 5 restarts with no step closed. The web app has no loop; it relies on Claude Code's /goal and the step check, and is unverified."
+    "Today: overnight.sh runs Claude once and sits idle after any stop (tools/overnight.sh:12; test tools/verify_tools.py:813). Rate limits end the turn with no way to block it.",
+    "New: a stop-failure handler writes the error and reset time to a file. The loop waits for the reset, not counting it, and backs off after crashes. A last short run builds the QA page. overnight.sh --interactive keeps the old behaviour.",
+    "For you: limits are 24 hours of work and 5 restarts with no step closed. They end the run into QA with open steps listed first. This is the one exception to never stopping."
    ],
    null
   ],
@@ -176,11 +176,11 @@
    "Decisions shown too early",
    "Decisions appear only on the QA page",
    null,
-   "Guard refusals, denied questions and the unattended note all tell me to report in the reply or the final report. They change to: write it to the ledger, say nothing, continue with the next open step.",
+   "Guard refusals, denied questions and the unattended note all tell me to report in the reply. They change to: write it to the ledger and carry on with the next open step. The QA reply says how many were logged.",
    [
-    "Where: safe_git.py:1584, 1620; core.py:2800, 2958; tools/overnight.sh:4.",
-    "A hard stop marks its step needs-you and I continue with the others.",
-    "ExitPlanMode is allowed when nobody is present, and logged as a decision."
+    "Today: replies must list refusals under Waiting on you (safe_git.py:1584, 1620) and questions in the final report (core.py:2800, 2958; overnight.sh:4).",
+    "New: the ledger gets them. A hard stop parks its step and I continue with the others. A pull request to main may be opened by me, never merged.",
+    "For you: you see nothing about decisions until the QA page."
    ],
    null
   ],
@@ -189,11 +189,11 @@
    "Gates that freeze a run nobody can answer",
    "Skipped when nobody is present",
    null,
-   "With the loop on, a reply asking a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear any of these. A pull request opens only when every step is done or parked.",
+   "With the loop on, a reply that asks a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear these. In those modes the step list, not a pull request, moves Build to QA.",
    [
-    "Where: design_loop.py:1401, 1524, 1547, 1552, 1562, 860, 872.",
-    "The step list, not a pull request, moves Build to QA.",
-    "In-flight speed-first build: this plan waits for it to leave Build."
+    "Today: design_loop.py:860, 872, 1401, 1524, 1547, 1552, 1562.",
+    "New: when nobody is present, the holds and label checks are skipped, and a pull request opens only when every step is done, stuck or parked. Attended sessions do not change.",
+    "For you: the speed-first build already in Build is not affected; this plan waits for it to leave Build."
    ],
    null
   ],
@@ -204,9 +204,9 @@
    null,
    "Each gets a dated entry in docs/6-decisions/Decisions.md and a pointer left in the old one.",
    [
-    "Where: Decisions.md lines 22, 54, 87, 92, 101, 121, 126, 133, 141, 143, and #460.",
-    "Includes: approval only from your message, one cap of two blocks, unattended or bypass only, relaxed credit check.",
-    "Tests to change: checks/core.py, checks/design_loop.py, checks/safe_git.py; new ones for self-approval, the step file and the shared counter."
+    "Today: Decisions.md lines 22, 54, 87, 92, 101, 121, 126, 133, 141 and 143 stand, plus the rule that approval comes only from your message, and Nothing fails silently.",
+    "New: all twelve are reversed. The relaxed credit check stays relaxed, and a final check strips credit lines before a pull request opens.",
+    "For you: tests change in checks/core.py, checks/design_loop.py, checks/safe_git.py and tools/verify_tools.py, with new cases for self-approval, the step file, the counter and the loop."
    ],
    null
   ]
@@ -220,7 +220,7 @@
      "A",
      "Approve it as written",
      1,
-     "Closes all eleven holes together."
+     "Closes all eleven holes together, after three review rounds."
     ],
     [
      "B",
@@ -236,7 +236,7 @@
   "summary": "Eleven rule, hook and launcher problems (plus twelve reversals) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
   "changing": "Rules, hooks, guards, the step file, ledger_note.py, make_page.py, hooks.json, tools/overnight.sh, the tests, the docs and the changelog.",
   "blocking": "Your approval line; no code is touched until you send it.",
-  "next": "After you approve, I write a build plan page with a done-when command per step, then build. I test a real headless session before the QA page.",
+  "next": "Send \"Design approved: quiet unattended mode\". Then I write the build plan page for you to approve, then build and test a real headless run.",
   "todo": [
    "Read the eleven changes.",
    "Tap Copy my reply.",
