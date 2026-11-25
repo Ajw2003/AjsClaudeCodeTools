@@ -21,7 +21,7 @@ tell the user the plugin root did not resolve. Do not search `~/.claude/plugins`
 guess a path - the cache holds several versions. If the script prints `error:` (exit 2), report
 that line and stop.
 
-It prints `mode:`, `report:` (the folder for the saved report), `criteria:` (the text to pass on, or `none`), `model:` and `effort:` (an override the user typed, or `default`) and, in plan mode, `design:` (a path, `none`, or `ambiguous` followed by one `candidate:` line each: ask the user which one). Put criteria or style text that contains punctuation in quotes.
+It prints `mode:`, `report:` (the folder for the saved report), `criteria:` (the text to pass on, or `none`), `model:` and `effort:` (the model to run: `sonnet` for plan, code, codebase, image and style unless the user typed another, `default` for page and diff, which keep the reviewer's Opus; `effort` is what the user typed, or `default`) and, in plan mode, `design:` (a path, `none`, or `ambiguous` followed by one `candidate:` line each: ask the user which one). Put criteria or style text that contains punctuation in quotes.
 
 ## Every mode except a whole-repo sweep
 
