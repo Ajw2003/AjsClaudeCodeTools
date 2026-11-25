@@ -1,5 +1,7 @@
 # Today — 2026-11-25
 
+Quiet unattended mode: round 3 passed 12 of 12; the page-style.json fingerprint fix is in and the suites are re-running; next the stamp, the QA page, the label swap and the pull request.
+
 Quiet unattended mode: live run 6 logged K1 and K2 after the once-only choices check; all suites pass; acceptance round 3 is open with a reviewer.
 
 Quiet unattended mode: acceptance round 2 left C8; a once-only choices check was added to the stop hook, the full suites are re-running, then a live run and round 3.

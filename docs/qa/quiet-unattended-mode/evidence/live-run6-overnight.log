@@ -15,3 +15,24 @@ The docs and pictures checks need a repo with an `origin/main`. All three need r
 Roadblock record: tried 1) `git branch -a` and `git rev-parse --verify origin/main`, which returned only a local `master` with the single commit `8f11d7e init` and no `origin/main`; 2) `finish_checks.py pictures demo`, which returned "could not tell: no merge base with origin/main", exit 2; 3) `finish_checks.py qa demo`, which returned "acceptance stamp missing" and "QA page missing", exit 1, and `ls` showed no `CHANGELOG.md` and only `docs/qa`. Target: the real docs, pictures and QA checks passing.
 ALL DONE
 overnight: loop ended: all steps done
+Goal status: partly blocked. The ledger now reports `ALL DONE`, but the real Finish checks still fail. The run is not clean.
+
+**What this turn's runs returned**
+- **Step list:** `ledger_note.py steps-status demo` printed `ALL DONE`. Step 6's stale fingerprint cleared by itself.
+- **Files:** `a.txt`, `b.txt`, `docs_done.txt`, `pictures.txt` and `qa.txt` each contain `ok`, and `page.html` has a teal header. Nothing is committed, and the repo is on `master`.
+
+**Roadblock record:** the real Finish checks cannot pass here.
+
+Tried:
+1. `git remote -v`, `git branch -r` and `git ls-remote origin` returned no remotes and "'origin' does not appear to be a git repository". The `.git/config` grep found no URL.
+2. `finish_checks.py docs demo` and `pictures demo` both exited 2 with "no merge base with origin/main".
+3. `finish_checks.py qa demo` exited 1 with "QA page missing" and "acceptance stamp missing". `acceptance.py check docs/qa/demo` exited 1 with the same message.
+4. `acceptance.py stamp docs/qa/demo` was refused with exit 2: "NEXT: fix (criteria.md is broken)", because there is no `docs/qa/demo/criteria.md` and zero acceptance rounds have run.
+
+Target: `finish_checks.py` docs, pictures and qa all exiting 0. `finish_checks.py tests demo` already exits 0, but the plan's test command is `true`, so it tests nothing.
+
+**NEEDS YOU:** I need two decisions.
+- **Remote:** `origin/main` doesn't exist and I can't invent one. Either you add a remote with a `main` branch, or you confirm the docs and pictures checks may be skipped for this repo.
+- **QA stamp:** building the QA page needs a real acceptance run. That means writing `criteria.md` and running the `house-rules:visual-loop` skill, which counts as new work. You asked for the files and then a stop, so I haven't started it.
+
+Do you want me to do that work once the remote question is settled?

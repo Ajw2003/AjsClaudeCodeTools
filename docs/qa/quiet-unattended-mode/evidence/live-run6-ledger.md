@@ -8,6 +8,7 @@ Every change from the approved build plan, and every question parked instead of 
 |---|---|---|---|---|---|
 | K1 | 1 | page.html header colour is teal | any colour was acceptable because the request left it to me | teal is readable on white and a plain named CSS colour | change color: teal on the h1 in page.html |
 | K2 | 1 | page.html title and header text are 'Live Run Page' | no wording was specified | a neutral name matching the live-run fixture | edit the title and h1 text in page.html |
+| K3 | 6 | wrote docs/page-style.json with the template defaults | defaults are acceptable for a QA page | make_page.py build refuses without a style file | delete docs/page-style.json |
 
 ## Deviations
 

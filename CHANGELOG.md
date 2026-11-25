@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode passes acceptance round 3 with all twelve criteria (#644); the tree fingerprint now ignores `docs/page-style.json` (a live run showed the final pass reopening every step by writing it), with a delegation case, and the QA page content is drafted. The full suites are re-running on that last change before the stamp.
+
 Quiet unattended mode acceptance round 3 is running (#644): a reviewer is re-judging all twelve criteria after the choices check and live run 6; nothing in the plugin changed since the last entry.
 
 Live run 6 proved the choices check (#644): with a neutral prompt, a sonnet run was sent back once at the end and logged its header colour and wording as K1 and K2; the seven verify parts and the tools suite pass on the new code. Round 3 of acceptance is open.

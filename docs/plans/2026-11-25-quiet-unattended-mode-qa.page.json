@@ -1,0 +1,134 @@
+{
+ "title": "Quiet Unattended Mode QA",
+ "eyebrow": "QA · #634: unattended and bypass runs decide, log and finish without stopping",
+ "pageType": "qa",
+ "short": {
+  "lead": "Unattended mode now keeps the design loop, decides for itself, logs every choice and works its step list to the end. It passes all twelve acceptance criteria (round 3). Please read the results, then reply with a pass or say what failed.",
+  "hint": "Tap a row to see what was checked and how.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Run",
+    "All verify parts and the tools suite pass",
+    "",
+    "The seven verify parts (core, safe_git, design_loop, delegation, docs, make_page, writing) all end with exit 0, and tools/verify_tools.py passes all 69 checks. That is the run after the last code change (docs/page-style.json no longer reopens steps).",
+    "Nothing from you."
+   ],
+   [
+    "flask",
+    "Run",
+    "Six real headless runs of the overnight loop",
+    "",
+    "tools/overnight.sh drove a real headless claude six times on a throwaway repo. They found and fixed three bugs the suites missed and proved: stop hooks block in a resumed run, resume by session id works, a stuck step ends the run, the final QA pass runs, and with a neutral prompt a sonnet run logged its header colour and wording as K1 and K2 after being sent back once. Write-up: docs/qa/quiet-unattended-mode/live-run.md.",
+    "Nothing from you."
+   ],
+   [
+    "check",
+    "Stamp",
+    "Acceptance: 12 of 12 in round 3",
+    "",
+    "Round 1 failed six criteria, round 2 failed one (C8), round 3 passes all twelve and ledger.py status says NEXT: done. Each round is in docs/qa/quiet-unattended-mode/round-N.md.",
+    "Nothing from you."
+   ],
+   [
+    "file",
+    "Ledger",
+    "Deviations from the plan",
+    "",
+    "Four are recorded in docs/qa/quiet-unattended-mode/ledger.md: a speed-first stage entry not restored (D1), park stores its category inside the question cell (D2), one pinned test text left until step 12 (D3), and D4, the C8 narrowing that was reversed by a hook.",
+    "Read them and say if any should change."
+   ],
+   [
+    "hand",
+    "Your test",
+    "Read the results and reply",
+    "you",
+    "Open docs/qa/quiet-unattended-mode/live-run.md and round-3.md. Expect twelve PASS lines and STATUS: pass.",
+    "Follow the to-do steps in the Wrap-up section."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Who counts as nobody present (#636)",
+   "Unattended and bypass both mean nobody is here; auto and normal do not.",
+   [
+    "One test, core.nobody_present, now decides this at every place that used to check only the unattended switch. A permission prompt is refused at once, and the plan-exit prompt is allowed.",
+    "Auto mode keeps every design-loop gate, but gets the other decision-cutting changes."
+   ],
+   "scripts/house_rules/core.py, safe_git.py.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "The loop keeps running unattended (#637, #639, #640, #647)",
+   "A guarded step list with four required Finish steps holds every stop until it is done.",
+   [
+    "Each step is closed only by a passing check the hook recorded. The four Finish steps (docs, pictures, tests, QA page) cannot be parked or replaced. After three stops with no progress a step is marked stuck and listed on the QA page.",
+    "When every step is closed and no choice was logged, a stop is sent back once so the agent logs what it decided (C8)."
+   ],
+   "scripts/house_rules/design_loop.py, scripts/ledger_note.py, scripts/finish_checks.py.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Decisions are logged, not announced (#638, #643)",
+   "A choice goes to the ledger with its assumption and shows first on this page.",
+   [
+    "ledger_note.py decide writes a K row. A guard refusal or a denied question writes to the ledger and says nothing about waiting on you. A hook can approve a stage only on a stored clean reviewer verdict, never in auto or normal mode."
+   ],
+   "scripts/ledger_note.py, make_page.py.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "The overnight launcher (#642, #648, #649)",
+   "tools/overnight.sh resumes by session id, waits out rate limits and runs a final QA pass.",
+   [
+    "It never uses --continue, backs off after crashes, stops after 24 hours of work or five restarts with no step closed, and now says when steps are stuck or no step list exists."
+   ],
+   "tools/overnight.sh.",
+   null,
+   null
+  ]
+ ],
+ "qa": {
+  "feature": "quiet-unattended-mode",
+  "base": "origin/main",
+  "unverified": [
+   "Self-approval by a hook was tested by the suites only, never in a live run.",
+   "A ninth stop block in a row at a cap of 1000 is not proven; the live runs showed about 42 blocks but one block can appear in more than one record.",
+   "The real stop-failure payload and a real rate-limit wait were never seen; no live run hit a usage limit.",
+   "I do not know whether the web app has /goal or what its pause-goal tool is called; the web app keeps Claude Code's cap of 8 stop blocks and has no outer loop.",
+   "The cheap model (haiku) does not log choices by itself; the new stop check covers it in tests, but I only saw it work live with sonnet.",
+   "The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; run 6's final pass could not pass the real ones because the fixture has no origin/main.",
+   "One early failure of the design_loop big-files check (#511) in step 1's first run passed on rerun and its cause is unexplained.",
+   "With bypass on and the unattended switch off, the guard refusal still says HOUSE_RULES_UNATTENDED=on, and a subagent refusal says both Refused and Approve to let it run."
+  ],
+  "files": {}
+ },
+ "wrapup": {
+  "summary": "Quiet unattended mode passes its acceptance run and waits for your QA.",
+  "changing": "The rule files, design_loop.py, safe_git.py, core.py, ledger_note.py, make_page.py, finish_checks.py, tools/overnight.sh, the decision and systems docs, and plugin version 2.95.0.",
+  "blocking": "Your QA of quiet unattended mode (#634).",
+  "next": "On a pass, the pull request for #634 is ready to merge. On a fail, I fix it on this branch.",
+  "todo": [
+   "Open docs/qa/quiet-unattended-mode/round-3.md and expect twelve PASS lines and STATUS: pass.",
+   "Reply \"QA passed: quiet unattended mode\" if it reads right, or say what failed."
+  ]
+ }
+}

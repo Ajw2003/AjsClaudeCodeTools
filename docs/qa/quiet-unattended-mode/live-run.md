@@ -35,3 +35,8 @@ The prompt only said "a header in a colour of your choice", with no mention of d
 ## Run 6 (sonnet, neutral prompt, with the choices check)
 
 Same neutral prompt as run 5 ("a header in a colour of your choice"). This time the ledger holds K1 (header colour teal, with its assumption, why and how to undo) and K2 (title and header wording): the agent logged them after the stop was sent back once. Evidence: `evidence/live-run6-ledger.md`, `evidence/live-run6-overnight.log`, `evidence/live-run6-page.html`. The loop ended "all steps done", as before.
+
+Two things the round 3 reviewer found in run 6, both now stated here:
+
+1. **The run was started twice.** The first launch's `claude` was still running when the second `overnight.sh` started, so the second launch's `--session-id` call failed ("Session ID ... already in use"), and K1 and K2 were logged in the `--resume` leg. The choices check still fired once and the agent logged K1 and K2 after it.
+2. **The final pass reopened the steps.** The final pass wrote `docs/page-style.json` and logged a third choice (K3). That file was not in the tree fingerprint's ignore list, so all six steps went back to open and the step-list blocks held the pass for about five minutes. Fixed: `acceptance.py tree` now ignores `docs/page-style.json`, with a case in the delegation suite. The final pass also ended with a "NEEDS YOU" question, because the fixture repo has no `origin/main` so the real docs and pictures finish checks could not pass; that is a fixture limit, not a rule change. The evidence copies above are now the finished ones (the ledger holds K1 to K3).
