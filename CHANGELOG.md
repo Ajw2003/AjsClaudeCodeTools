@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Planned, not built: quiet unattended mode, where a run with nobody present decides for itself, logs every decision, works a guarded step list ending in tests, docs, pictures and a QA page, and cannot stop part-way. Added the systems doc `docs/4-systems/quiet-unattended-mode.md`, the approved design page, the build plan page `docs/plans/2026-11-25-quiet-unattended-mode-plan.html`, and issues #634 to #645.
+
 Plugin version 2.94.7: the speed-first change touches hook files, so CI requires a version bump; installed copies pick up the faster one-process-per-phase hooks on their next plugin update (#633).
 
 Fixed the `verify_tools.py` check for `time_hooks.py --quick`: after step 3 there are 4 timing lines (a pre and a post line for Write and Bash), not 6, so it now expects at least 4 (CI on #633 failed on this).

@@ -432,3 +432,5 @@ Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stal
 2026-11-25 (change from aj): bypass mode counts as unattended in full. Auto mode stays attended at the design loop's gates but gets every change that cuts aj's decisions (ask only about look or function, decide and log the rest, step check, QA-only reporting). Plan page updated; still Plan stage, nothing built.
 
 2026-11-25 (change from aj): the finish line is the same in every mode and required: four last steps (tests pass, docs written, before-and-after pictures saved or no visual change shown, QA page built and stamped) that cannot be parked, replaced or skipped. Plan page now has twelve changes; still Plan stage, nothing built.
+
+2026-11-25: aj approved the design ("Design approved: quiet unattended mode 1A"). Stage is Plan. Wrote the systems doc `docs/4-systems/quiet-unattended-mode.md`, parent issue #634 with eleven step issues #635 to #645, and the build plan page `docs/plans/2026-11-25-quiet-unattended-mode-plan.html`. A plan-mode review of that page is running; then it is sent for "Build plan approved: quiet unattended mode". No code changed.
