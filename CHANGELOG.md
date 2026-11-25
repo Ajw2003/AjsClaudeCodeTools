@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode step 2 (#636) merged: one `nobody_present` test (unattended or bypass) replaces the separate ones, permission prompts are denied at once when nobody is present, a plan-exit prompt is allowed, the pause-goal tool is denied, and agent writes to the typed-switch file or HOUSE_RULES_ settings keys are refused; bypass now relaxes the whole-file write, credit and big-file refusals like unattended.
+
 Quiet unattended mode step 1 (#638) merged: `ledger_note.py decide` records a choice, `park` now needs a hard-stop category and the command tried, choice rows come first on the QA page, and a branch name with a slash gives one ledger folder; its suites were still being run when this line was written.
 
 Started building quiet unattended mode (#634): aj approved the build plan, the Decisions.md entry is added, and builders began on steps #638 and #636; no step is merged yet.
