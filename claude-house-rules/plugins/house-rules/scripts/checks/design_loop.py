@@ -3267,6 +3267,44 @@ _dv_cases = [
 ]
 for _t, _ok in _dv_cases:
     report("PASS" if _ok else "FAIL", _t)
+# ---- #637: nobody present keeps the loop on, runs six checkpoints, and skips three GitHub/question refusals ----
+from house_rules import design_loop as _np_dl  # noqa: E402
+_np_saved = (_np_dl.CHECKPOINTS, _np_dl._loop_enabled)
+_np_dl.CHECKPOINTS = [(m, n, (lambda c: "fix"), mode) for m, n, _f, mode in _np_saved[0]]
+_np_dl._loop_enabled = lambda: True
+try:
+    _np_names = [n for n, _ in _np_dl._missed_checkpoints({"hands_off": True})]
+    _np_att = [n for n, _ in _np_dl._missed_checkpoints({"hands_off": False})]
+finally:
+    _np_dl.CHECKPOINTS, _np_dl._loop_enabled = _np_saved
+_np_six = {"evidence", "commit", "deviation", "qa page", "changelog", "decided for you"}
+_np_gate_saved = {k: getattr(_np_dl, k) for k in ("_gated_edit", "_loop_file_refusal", "_loop_read_merged", "_loop_stale_hold", "_loop_labels")}
+_np_dl._gated_edit = lambda payload, what: ("/g", None)
+_np_dl._loop_file_refusal = lambda payload: None
+_np_dl._loop_stale_hold = lambda gd, st: None
+
+
+def _np_gate(held, labels, src, mode):
+    _np_dl._loop_read_merged = lambda gd: ({"stage": "build", "held": held, "feature": "F"}, None)
+    _np_dl._loop_labels = lambda st, record=False: (labels, src)
+    return _np_dl._loop_gate('{"permission_mode": "%s", "cwd": "/g"}' % mode)[0]
+
+
+try:
+    _np_unlab = {"o/r#1": ["backlog"]}
+    _np_g = [(_np_gate(True, {"o/r#1": ["in progress"]}, "", m), _np_gate(False, {}, "gh down", m), _np_gate(False, _np_unlab, "", m))
+             for m in ("bypassPermissions", "default")]
+finally:
+    for _k, _v in _np_gate_saved.items():
+        setattr(_np_dl, _k, _v)
+_np_cases = [
+    ("#637: nobody present runs only the six named checkpoints", set(_np_names) == _np_six),
+    ("#637: attended runs every blocking checkpoint, including the page-side ones", {"editor", "plain summary", "handoff", "send page"} <= set(_np_att)),
+    ("#637: nobody present skips the question hold, the unreadable-GitHub refusal and the unlabelled refusal", _np_g[0] == (None, None, None)),
+    ("#637: attended still refuses all three", all(_np_g[1])),
+]
+for _t, _ok in _np_cases:
+    report("PASS" if _ok else "FAIL", _t)
 # ---- #598: noask in the Build stage, with someone present ----
 _na_root = tempfile.mkdtemp(prefix="noask-build-")
 _na_cases = []

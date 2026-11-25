@@ -2785,6 +2785,7 @@ def unattended():
     return os.environ.get("HOUSE_RULES_UNATTENDED", "").strip().lower() == "on"
 
 
+<<<<<<< HEAD
 _SWITCH_WRITE_RE = re.compile(r">|\btee\b|\bsed\b[^;|&]*\s-\w*i|\b(?:mv|cp|rm|truncate|dd|install|ln)\b"
                               r"|\b(?:python3?|py|node|perl|ruby|sh|bash)\b", re.IGNORECASE)
 _SETTINGS_NAME_RE = re.compile(r"settings(?:\.local)?\.json")
@@ -2828,6 +2829,12 @@ def nobody_present(payload=None):
     Auto, default, plan, acceptEdits and a missing or unknown mode stay attended."""
     raw = payload if payload is not None else (_PAYLOAD_CACHE or "")
     return unattended() or _field(_MODE_RE, raw) == "bypassPermissions"
+=======
+def nobody_present(payload=None):
+    """True when unattended is on or the payload says permission_mode bypassPermissions (#634 step 1 shape)."""
+    raw = payload if payload is not None else _PAYLOAD_CACHE
+    return unattended() or _field(_MODE_RE, raw or "") == "bypassPermissions"
+>>>>>>> worktree-agent-a5cfc669ddbf0f285
 
 
 def event_noask():
@@ -2906,9 +2913,9 @@ def apply_switches():
     typed = _mode_typed(_payload_cwd(raw)) if raw else {}
     if "unattended" in typed:  # a typed `unattended on|off` decides before the presets below
         os.environ["HOUSE_RULES_UNATTENDED"] = typed["unattended"]
-    if unattended():  # everything off but autosave; a typed switch below still wins
+    if unattended():  # everything off but autosave, the design loop and the handover hook; a typed switch below still wins
         for var in _MODE_GROUPS["house"]:
-            if var not in _MODE_GROUPS["autosave"]:
+            if var not in _MODE_GROUPS["autosave"] and var not in ("HOUSE_RULES_LOOP", "HOUSE_RULES_HANDOVER"):
                 os.environ[var] = "off"
     for group in sorted(typed, key=lambda g: g != "house"):
         if group == "unattended":
@@ -3014,7 +3021,8 @@ def _mode_note(payload=None):
             parts.append(text % ((("you typed \"%s off\"" % {"writing": "writing checks", "house": "house rules"}.get(g, g)) + _mode_where(g, raw))
                                  if g in typed else "%s=off in settings.json" % var))
     if unattended():
-        parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): nobody can approve or answer; guard prompts are "
+        parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): the design loop stays ON and runs itself "
+                     "(no approval wait, no question hold); nobody can approve or answer; guard prompts are "
                      "refused instead of asked and listed under \"Waiting on you\"; decide and keep going. For this run these "
                      "instructions are OVERRIDDEN: never stop or wait for the user (\"hand it over, then wait\", "
                      "\"stop and wait for the user's answer\"). For a command only the user can run, write it into the "

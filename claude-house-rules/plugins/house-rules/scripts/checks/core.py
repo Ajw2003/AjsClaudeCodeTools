@@ -1399,13 +1399,13 @@ _rb_stall = "I've stopped here; next step is yours."
 report("PASS" if '"decision":"block"' not in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
        "#588: a stall phrase is not scanned when attended")
 _rb_fresh()
-# the real path: HOUSE_RULES_UNATTENDED=on makes the hook's own apply_switches turn HANDOVER off; roadblocks must still run
+# the real path: HOUSE_RULES_UNATTENDED=on; roadblocks must still run (#637: handover stays on too)
 _rb_un = _rb_run(_rb_t, reply=_rb_stall, env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
 report("PASS" if '"decision":"block"' in _rb_un else "FAIL", "#588: a stall phrase is flagged when unattended (the roadblocks hook, via apply_switches)")
 _rb_fresh()
 _, _rb_un_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM),
                           env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
-report("PASS" if _rb_un_h.strip() == "" else "FAIL", "#588: unattended really turns the handover hook off (so only the roadblocks hook can catch it)")
+report("PASS" if _rb_un_h.strip() != "" else "FAIL", "#588/#637: unattended keeps the handover hook on (it still speaks on a stall phrase)")
 _rb_fresh()
 # attended: the handover hook no longer runs the check, so one turn is counted once, not twice
 _, _rb_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM), env=_RB_ENV)
@@ -3034,6 +3034,14 @@ try:
     _un_ok = _un_ok and _fs_env_seen(_un_d, "HOUSE_RULES_PAGES") == "on" and _fs_env_seen(_un_d, "HOUSE_RULES_VOICE") == "off"
 finally:
     del _fs_env["HOUSE_RULES_UNATTENDED"]
+_fs_env["HOUSE_RULES_UNATTENDED"] = "on"
+try:
+    _un_ok2 = (_fs_env_seen(_un_d, "HOUSE_RULES_LOOP") == "unset" and _fs_env_seen(_un_d, "HOUSE_RULES_HANDOVER") == "unset"
+               and _fs_env_seen(_un_d, "HOUSE_RULES_ISSUES") == "off" and _fs_env_seen(_un_d, "HOUSE_RULES_DELEGATION") == "off"
+               and _fs_env_seen(_un_d, "HOUSE_RULES_AGENTS") == "off")
+finally:
+    del _fs_env["HOUSE_RULES_UNATTENDED"]
+report("PASS" if _un_ok2 else "FAIL", "#637: unattended leaves the design loop and handover hook on; issues and builders stay off")
 report("PASS" if _un_ok else "FAIL",
        "unattended: apply_switches sets PAGES off, leaves AUTOSAVE alone (HANDOFF too), and a typed 'pages on' still wins")
 
