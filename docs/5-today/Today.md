@@ -1,4 +1,6 @@
-# Today — 2026-11-24
+# Today — 2026-11-25
+
+Full verify on `AjsAgent/review-models-per-mode` passes all seven parts (1,606 checks, exit 0). Still open and aj's call: merge it into `AjsAgent/speed-first` or open a pull request; no live `/house-rules:review` run has been made.
 
 Review models per mode built on branch AjsAgent/review-models-per-mode (plugin 2.94.6): plan back on Opus, code runs Opus then Sonnet and merges, codebase/image/style on Sonnet; benchmark numbers are in Decisions.md. Docs and delegation verify parts pass (383 checks).
 
