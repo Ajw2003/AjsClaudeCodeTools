@@ -1,0 +1,168 @@
+{
+ "title": "Quiet unattended mode: decide, log, keep going",
+ "eyebrow": "Proposal · nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: quiet unattended mode",
+ "short": {
+  "lead": "Unattended mode still stops. Five things in the rules and hooks make me ask or let me quit. This plan removes all five. I need one approval line from you.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "Idea",
+    "I decide, you design",
+    "",
+    "Only choices that change how something looks or what it does come to you. Every other choice I make myself, write down, and carry on.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%22300%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EA%20choice%20comes%20up%3C/text%3E%3Cpath%20d=%22M160%2055%20V70%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%2210%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%2218%22%20y=%2290%22%3EChanges%20the%20look%3C/text%3E%3Ctext%20x=%2218%22%20y=%22106%22%3Eor%20what%20it%20does%3C/text%3E%3Crect%20x=%22165%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22173%22%20y=%2290%22%3EAnything%20else%3C/text%3E%3Ctext%20x=%2214%22%20y=%22140%22%20fill=%22%23c33%22%3EAsk%20you,%20as%20a%20page%3C/text%3E%3Ctext%20x=%22169%22%20y=%22140%22%3EI%20decide%20and%20write%20it%20down%3C/text%3E%3Ctext%20x=%22169%22%20y=%22156%22%3Ethen%20carry%20on%3C/text%3E%3C/svg%3E",
+     "alt": "A choice about look or function goes to you; any other choice I decide and log",
+     "caption": "Who decides what"
+    }
+   ],
+   [
+    "bulb",
+    "Idea",
+    "Keep going until the goal is met",
+    "",
+    "The check at the end of a reply now runs on every reply, not only after two set phrases. A second loop outside the session restarts it if it quits.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2220%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2240%22%3EWork%3C/text%3E%3Crect%20x=%22120%22%20y=%2220%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22128%22%20y=%2240%22%3EGoal%20met%3F%3C/text%3E%3Cpath%20d=%22M100%2040%20H120%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Cpath%20d=%22M165%2060%20V100%20H55%20V60%22%20fill=%22none%22%20stroke=%22%23c33%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2262%22%20y=%2292%22%20fill=%22%23c33%22%3Eno:%20block%20the%20stop%3C/text%3E%3Cpath%20d=%22M210%2040%20H235%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%22235%22%20y=%2220%22%20width=%2275%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22243%22%20y=%2240%22%3EStop%3C/text%3E%3Ctext%20x=%22243%22%20y=%2256%22%3Eyes%20only%3C/text%3E%3Ctext%20x=%2210%22%20y=%22130%22%3EToday:%20two%20phrases,%20two%20blocks,%20then%20it%20quits.%3C/text%3E%3Ctext%20x=%2210%22%20y=%22150%22%3EPlan:%20every%20reply%20end,%20plus%20an%20outer%20loop.%3C/text%3E%3C/svg%3E",
+     "alt": "A goal check blocks the stop until the goal is met",
+     "caption": "Why it stops today and what changes"
+    }
+   ],
+   [
+    "bulb",
+    "Idea",
+    "Decisions arrive once, at QA",
+    "",
+    "Each decision goes into one file as I make it. You first see them on the QA page, once everything is built and tested.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EBuild%3C/text%3E%3Crect%20x=%22115%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22123%22%20y=%2235%22%3ETest%3C/text%3E%3Crect%20x=%22220%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22228%22%20y=%2235%22%3EQA%20page%3C/text%3E%3Cpath%20d=%22M100%2035%20H115%20M205%2035%20H220%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2210%22%20y=%2285%22%3EDecisions%20are%20written%20to%20a%20file%3C/text%3E%3Ctext%20x=%2210%22%20y=%22102%22%3Eall%20the%20way%20through.%20Nothing%20is%3C/text%3E%3Ctext%20x=%2210%22%20y=%22119%22%3Esaid%20about%20them%20until%20the%3C/text%3E%3Ctext%20x=%2210%22%20y=%22136%22%20fill=%22%23c33%22%3EQA%20page,%20after%20all%20tests%20pass.%3C/text%3E%3C/svg%3E",
+     "alt": "Decisions are written quietly during build and test, then shown on the QA page",
+     "caption": "When you see the decisions"
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve it",
+    "you",
+    "Your approval is recorded as one line in the decisions log.",
+    "Send the approval line below."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "changed",
+   "Rules tell me to hand routine choices to you",
+   "Rules say: decide unless it is look or function",
+   null,
+   "Three places tell me to ask you. show-dont-tell.md line 11: routine calls go to you. core.py line 1610: a reminder sent on every prompt, even unattended, says to ask when unclear. coding-philosophy.md line 58: ask before adding a new dependency (an outside library) or a large refactor (reorganising existing code).",
+   [
+    "Today the unattended note only overrides these in words.",
+    "I rewrite those three lines so nothing contradicts the unattended note.",
+    "You are asked about look and function only, plus hard stops: a licence, a login, a purchase, a deletion, money, secrets or other people."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "A check blocks me for deciding",
+   "\"I went with\" is logged, not blocked",
+   null,
+   "design_loop.py line 2831 holds back any reply that says \"I went with\". It tells me to give you the choice as options instead. You don't want that in unattended mode.",
+   [
+    "Today it blocks the reply once.",
+    "It becomes a reminder to log the choice with one command (ledger_note.py).",
+    "You stop being asked."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "Unattended switches the ledger off",
+   "Unattended keeps the ledger and the QA page",
+   null,
+   "Typing unattended on turns the design loop off (core.py lines 2723 and 2850). With the loop off, the ledger (the file of my logged decisions) and the QA checks do nothing (design_loop.py line 2952). Bypass mode on its own (permissions skipped) keeps the loop on, so source edits stay locked until you type approved.",
+   [
+    "Today each mode fails in its own way. Unattended loses the ledger. Bypass keeps the edit lock.",
+    "Both modes will have the edit lock off, the ledger on, and the QA page required at the end.",
+    "When a guard refuses an action, I write that to the ledger instead of telling you in the reply."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A stop that is held until the goal is met",
+   "Goal check on every reply, plus an outer loop",
+   null,
+   "Three limits. It fires only on the phrases not done and I've stopped (core.py line 3516). It blocks at most twice (line 3731), and Claude Code overrides any end-of-reply hook after 8 blocks. A reply ending on a question never triggers it. Also, the number 6 at line 3684 is never used.",
+   [
+    "Today, one polite closing line is enough to end the session.",
+    "I write a goal file. The check runs on every reply. tools/overnight.sh restarts the session until the goal file says done.",
+    "Where overnight.sh cannot launch the session (the web app), a scheduled task that resumes it is the fallback."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "Decisions shown too early",
+   "Decisions appear only on the QA page",
+   null,
+   "When a guard refuses an action, its message tells me to list it under Waiting on you in my reply (safe_git.py lines 1584 and 1620). Parked questions (reversible questions I set aside) go in the final report. Both reach you before the QA page.",
+   [
+    "Today they show up in my replies.",
+    "They go only into the ledger file, shown first on the QA page.",
+    "One exception: a hard stop is still reported to you straight away."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "Do you approve this plan as written?",
+   [
+    [
+     "A",
+     "Approve it as written",
+     1,
+     "Fixes all five causes together, in one change."
+    ],
+    [
+     "B",
+     "Change something first",
+     0,
+     "Tell me what, in your own words."
+    ]
+   ],
+   "I recommend A. Fixing only some of the five would still leave unattended mode stopping."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Five rule and hook problems make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
+  "changing": "Three rule sources (show-dont-tell.md, core.py, coding-philosophy.md), the I-went-with check, what unattended turns off, the goal check, the guard messages and tools/overnight.sh.",
+  "blocking": "Your approval line; no code is touched until you send it.",
+  "next": "After you approve, I build it in small steps. I run verify.py (the check that the hooks match the docs). Then I test a real unattended session before the QA page.",
+  "todo": [
+   "Read the five changes.",
+   "Tap Copy my reply.",
+   "Send it."
+  ]
+ }
+}
