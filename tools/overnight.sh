@@ -75,7 +75,7 @@ while :; do
     [ "$rc" = 0 ] || { echo "overnight: could not read the step list (exit $rc); stopping" >&2; break; }
     case "$out" in
       "NO STEP LIST") reason="no step list was recorded for this session" ;;
-      *STUCK*) reason="all steps closed, but some are stuck (${out#ALL DONE })" ;;
+      *STUCK*) x=${out#ALL DONE (}; reason="all steps closed, but some are stuck: ${x%)}" ;;
       *) reason="all steps done" ;;
     esac
     break

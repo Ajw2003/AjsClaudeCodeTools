@@ -876,7 +876,7 @@ fi
         sid = lines[0].split("|")[1] if lines else ""
         check(len(lines) == 3 and sid and lines[0] == "1000|%s|-p do the work --session-id %s --dangerously-skip-permissions" % (sid, sid)
               and lines[1] == "1000|%s|-p %s --resume %s --dangerously-skip-permissions" % (sid, resume, sid)
-              and lines[2].startswith("1000|%s|-p [Subagent hand-back] Final pass: the run is ending (all steps closed, but some are stuck (1 STUCK: Step 1))." % sid)
+              and lines[2].startswith("1000|%s|-p [Subagent hand-back] Final pass: the run is ending (all steps closed, but some are stuck: 1 STUCK: Step 1)." % sid)
               and not any("--continue" in l for l in lines),
               "overnight.sh loop: first call --session-id, one --resume with the same id and resume text, cap exported, no --continue",
               "got %r %r" % (lines, p.stderr))
@@ -942,7 +942,7 @@ fi
         os.remove(log)
         p = subprocess.run(["sh", script2, "x"], cwd=repo, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
         lines = open(log).read().splitlines()
-        check(len(lines) == 7 and "some are stuck (1 STUCK: Step 1)" in lines[-1] and "5 restarts" not in p.stdout,
+        check(len(lines) == 7 and "(all steps done)" in lines[-1] and "5 restarts" not in p.stdout,
               "overnight.sh: a resume that closes a step resets the no-progress count (cap 3 not hit)", "got %r %r" % (lines, p.stdout))
         # rate-limit waits are not work: 100000 s of waiting (> 24 h) does not trip the 24-hour limit
         p, lines = limits({"STEP": "0", "SF_KIND": "rate_limit", "SF_FIRST": "1", "HOUSE_RULES_OVERNIGHT_RATE_WAIT": "100000"}, cap="1")
