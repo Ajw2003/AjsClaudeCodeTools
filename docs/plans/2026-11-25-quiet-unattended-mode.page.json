@@ -82,14 +82,14 @@
   ],
   [
    "new",
-   "One test for nobody is there",
-   "Unattended, bypass, auto and dontAsk count as nobody present",
+   "One test for who is present",
+   "Only unattended counts as nobody present",
    null,
-   "dontAsk means prompts are refused automatically. Every gate uses the same test, approval included, so auto mode no longer waits.",
+   "Auto and bypass modes keep you present: the design loop still gates every step and waits for you. Only the unattended switch, from the launcher or your typed line, means nobody is here.",
    [
     "Today: only unattended and bypass are recognised, in separate places (core.py:1487, 2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150; design_loop.py:3555).",
-    "New: one helper. A permission prompt is denied at once, and a plan-exit prompt is allowed. Pause-goal is denied. Agent writes to house-rules-mode.json and HOUSE_RULES_ keys in .claude/settings are refused.",
-    "For you: overnight runs use bypass, because auto mode has its own safety check I cannot rewrite."
+    "New: one helper that all those places use. In unattended, a permission prompt is denied at once, a plan-exit prompt is allowed, and pause-goal is denied. Agent writes to house-rules-mode.json and HOUSE_RULES_ keys in .claude/settings are refused.",
+    "For you: auto and bypass behave as they do today. Overnight runs use the launcher, because auto mode has its own safety check I cannot rewrite."
    ],
    null
   ],
@@ -102,7 +102,7 @@
    [
     "Today: unattended turns the loop and the end-of-reply check off (core.py:2723, 2737, 2850; hook.py:122; design_loop.py:2952).",
     "New: the end-of-reply check comes back for these items only: evidence, commit, deviation, QA page, changelog, decision log. The editor, page limit, plain summary, page send, helpers and issues stay off.",
-    "For you: the same loop you know, without you in it."
+    "For you: the loop flows without you from goal to QA. Every step list ends with four fixed steps: tests pass (verify.py exits 0), docs written, before-and-after pictures saved, QA page built."
    ],
    null
   ],
@@ -147,10 +147,10 @@
   ],
   [
    "new",
-   "Look or function choices with nobody there",
+   "Look or function choices in unattended",
    "Decide with a stated assumption, list it first on QA",
    null,
-   "With nobody present I decide these myself. I record my assumption and why it is reasonable, then carry on. Attended, a reply ending QUESTION FOR YOU: is allowed. Auto mode counts as nobody present, so it decides too.",
+   "In unattended I decide these myself. I record my assumption and why it is reasonable, then carry on. When you are here, auto mode included, a reply ending QUESTION FOR YOU: is allowed.",
    [
     "Today: a plain question in Build parks, and a [HARD STOP] question holds edits (design_loop.py:1401, 1547).",
     "New: ledger_note.py decide adds a C row (choice) with an Assumption column, and a new message from you clears any block. The ledger is named after the branch, with / changed to - (make_page.py:53).",
@@ -189,7 +189,7 @@
    "Gates that freeze a run nobody can answer",
    "Skipped when nobody is present",
    null,
-   "With the loop on, a reply that asks a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear these. In those modes the step list, not a pull request, moves Build to QA.",
+   "With the loop on, a reply that asks a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear these. In unattended the step list, not a pull request, moves Build to QA.",
    [
     "Today: design_loop.py:860, 872, 1401, 1524, 1547, 1552, 1562.",
     "New: when nobody is present, the holds and label checks are skipped, and a pull request opens only when every step is done, stuck or parked. Attended sessions do not change.",
