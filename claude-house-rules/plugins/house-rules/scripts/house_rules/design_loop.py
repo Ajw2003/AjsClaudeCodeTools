@@ -607,7 +607,103 @@ def steps_unfinished(git_dir, payload):
         return ["the tree could not be fingerprinted"]  # could not tell: counts as unfinished
     status = steps_status(git_dir, rec.get("feature"), sid, fp)
     parked = _parked_steps(top, rec.get("feature") or "", rec["steps"])
-    return [s["title"] for s in rec["steps"] if status.get(s["n"]) != "done" and s["n"] not in parked]
+    return [s["title"] for s in rec["steps"] if status.get(s["n"]) != "done" and s["n"] not in parked
+            and not s.get("stuck")]  # #640: a stuck step no longer blocks (steps_stuck lists it for the QA page)
+
+
+def steps_stuck(git_dir, payload):
+    """#640: titles of the steps the stop check marked stuck for this session (not done); [] when none or no list."""
+    try:
+        sid = str(json.loads(payload).get("session_id") or "")
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: steps_stuck could not read the payload (%s), so it lists none.\n" % type(exc).__name__)
+        return []
+    rec = ((_loop_read(git_dir)[0] or {}).get("steps") or {}).get(sid) or {}
+    return [s["title"] for s in rec.get("steps") or [] if s.get("stuck") and s.get("state") != "done"]
+
+
+def _steps_rec(payload):
+    """(git_dir, state, rec, sid, data) for this session's step list, or None when it has none."""
+    try:
+        data = json.loads(payload)
+        sid = str(data.get("session_id") or "")
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: the step stop check could not read the payload (%s), so it did not run.\n"
+                         % type(exc).__name__)
+        return None
+    _, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return None
+    state, _ = _loop_read(git_dir)
+    rec = ((state or {}).get("steps") or {}).get(sid)
+    return (git_dir, state, rec, sid, data) if rec and rec.get("steps") else None
+
+
+def judge_blocked(payload, mark=False):
+    """#640: whether the model judge already blocked this step set; mark=True records its first block.
+    False (and no write) when the session has no step list."""
+    got = _steps_rec(payload)
+    if not got:
+        return False
+    git_dir, state, rec, _, _ = got
+    if mark and not rec.get("judge_blocked"):
+        rec["judge_blocked"] = True
+        _loop_write(git_dir, state)
+    return bool(rec.get("judge_blocked"))
+
+
+def step_stop_check(payload, reply_text):
+    """#640: (block reason or None, systemMessage or None). Runs on every stop: blocks while a step of this
+    session's list is open, even with no reply text. NEEDS YOU exempts nothing; only a parked step does.
+    A `QUESTION FOR YOU:` line passes when somebody is present. After 3 no-progress blocks for one step it
+    is marked stuck and stops blocking."""
+    got = _steps_rec(payload)
+    if not got:
+        return None, None
+    git_dir, state, rec, sid, data = got
+    open_steps = steps_unfinished(git_dir, payload)
+    if not open_steps:
+        return None, None
+    if re.search(r"^QUESTION FOR YOU:", reply_text or "", re.M) and not core.nobody_present(payload):
+        return None, None
+    msgs = None
+    tp = data.get("transcript_path")
+    if tp:
+        try:
+            msgs = core._user_message_count(tp)
+        except (OSError, ValueError) as exc:
+            sys.stderr.write("house-rules: the step stop check could not count aj's messages (%s), so its counters "
+                             "do not reset on a new message.\n" % type(exc).__name__)
+    nxt = next(s for s in rec["steps"] if s["title"] == open_steps[0])
+    n = str(nxt["n"])
+    head = subprocess.run(["git", "-C", data.get("cwd") or ".", "rev-parse", "HEAD"], stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, universal_newlines=True).stdout.strip()
+    done = sum(1 for s in rec["steps"] if s.get("state") == "done")
+    last = rec.get("last_block") or {}
+    blocks = rec.setdefault("blocks", {})
+    if last.get("msgs") != msgs or last.get("head") != head or last.get("done") != done:
+        blocks.clear()  # a new message from aj, a commit or a closed step is progress
+    if blocks.get(n, 0) >= 3:
+        nxt["stuck"] = True
+        blocks.pop(n, None)
+        rec["last_block"] = {"msgs": msgs, "head": head, "done": done}
+        _loop_write(git_dir, state)
+        open_steps = steps_unfinished(git_dir, payload)
+        if not open_steps:
+            return None, ("house-rules: step %s ('%s') had 3 blocks with no progress, so it is marked stuck and the "
+                          "stop is allowed; it counts as not done on the QA page." % (n, nxt["title"]))
+        nxt = next(s for s in rec["steps"] if s["title"] == open_steps[0])
+        n = str(nxt["n"])
+    blocks[n] = blocks.get(n, 0) + 1
+    rec["last_block"] = {"msgs": msgs, "head": head, "done": done}
+    _loop_write(git_dir, state)
+    fc = "python3 %s" % os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ledger_note.py")
+    feat = rec.get("feature") or "<feature>"
+    return ("House rules, step list: not finished. Next open step: %s. Run `%s check %s --step %s --start`, then "
+            "`%s check %s --step %s --poll`, until it passes. NEEDS YOU in a reply does not end the turn. A hard "
+            "stop must be parked with `%s park %s --step %s --category ... --tried ...`. Open: %s. (block %d of 3 "
+            "for this step before it counts as stuck)"
+            % (nxt["title"], fc, feat, n, fc, feat, n, fc, feat, n, "; ".join(open_steps), blocks[n])), None
 
 
 _STEP_RESULT_RE = re.compile(r"RESULT: (pass|fail) step (\d+) fp=(\S+)")
