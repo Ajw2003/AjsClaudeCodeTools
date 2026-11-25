@@ -3708,7 +3708,7 @@ _pf14_hooks = read(os.path.join(ROOT, "claude-house-rules", "plugins", "house-ru
 _pf14_arch = read(os.path.join(ROOT, "docs", "architecture.md"))
 _pf14_wt = read(os.path.join(ROOT, "docs", "4-systems", "work-tracking.md"))
 _pf14.append(("proof (#514) #399: rclink is in hooks.json and the hook table, and work-tracking.md says built",
-              'run.sh\\" rclink' in _pf14_hooks and "| `PostToolUse` | `rclink` |" in _pf14_arch
+              "rclink" in merged_wiring("Post", "mcp__hearthbot__start_remote_control")[0] and "| `PostToolUse` | `rclink` |" in _pf14_arch
               and "Status: **built**" in _pf14_wt))
 
 # #404: the gap fixes it documented: the credit guard refuses a session link, and the docs name the fixes.

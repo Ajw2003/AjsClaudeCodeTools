@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Speed step 3, one hook process per tool phase (#628): new `pretool` and `posttool` events in `hook.py` run the checks that fit the tool in one process each, and `hooks.json` calls them once per phase, so a Write starts 4 processes instead of 18 and a Bash call 4 instead of 12. Measured with `tools/time_hooks.py --quick` on this PC: Write about 420 ms against 930 ms, Bash about 160 ms against 540 ms. A crash in `guard` or `guardwrite` still blocks; a crash in any other check is reported and the rest run. All seven verify parts pass. Refs #625.
+
 Verify result recorded for the review Sonnet default: docs part green, 33 failures elsewhere not yet compared with main (no code change).
 
 Review override check updated: a code review now expects `model: sonnet` by default (verify.py docs part).

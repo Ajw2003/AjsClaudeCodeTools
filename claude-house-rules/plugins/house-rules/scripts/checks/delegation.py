@@ -28,7 +28,7 @@ if '"hookEventName":"PostToolUse"' in out and "@house-rules:builder" in out:
 else:
     report("FAIL", "delegate reminds Claude to hand the plan to the builder subagent")
     print(f"          got: {out}")
-if '"matcher": "ExitPlanMode"' in hooks_json_text and 'run.sh\\" delegate' in hooks_json_text:
+if "delegate" in merged_wiring("Post", "ExitPlanMode")[0] and "delegate" not in merged_wiring("Post", "Write")[0]:
     report("PASS", "delegate is registered on PostToolUse with matcher ExitPlanMode")
     print("          hooks.json wires ExitPlanMode to run.sh delegate")
 else:
@@ -435,14 +435,14 @@ print("          tree %r, out %r" % (_as_tree, _as_out[:200]))
 # matched, and every skip was silent. A PowerShell call now saves, and each save decision says what it did. ---
 with open(os.path.join(HERE, "..", "hooks", "hooks.json"), encoding="utf-8") as _f:
     _ps_hooks = json.load(_f)["hooks"]["PostToolUse"]
-_ps_matcher = [h["matcher"] for h in _ps_hooks if any("run.sh\" autosave" in x["command"] for x in h["hooks"])]
+_ps_matcher = merged_wiring("Post", "PowerShell")[0]  # #628: the merged posttool entry's checks for a PowerShell call
 _ps_d, _ps_bare = _as_repo("AjsAgent/ps")
 open(os.path.join(_ps_d, "shell.txt"), "w").write("made by PowerShell\n")
 _ps_env = _as_env(HOUSE_RULES_TRACE="on", HOUSE_RULES_HANDOFF="on")
 _ps_pl = {"hook_event_name": "PostToolUse", "tool_name": "PowerShell", "session_id": "ps", "cwd": _ps_d,
           "tool_input": {"command": "echo hi > shell.txt"}, "tool_response": {}}
 _, _ps_o0, _, _ps_out = run_hook_log("autosave", json.dumps(_ps_pl), env=_ps_env)  # #584: read the log
-_ps_ok = (len(_ps_matcher) == 1 and re.fullmatch(_ps_matcher[0], "PowerShell") and bool(_as_ref(_ps_d, "AjsAgent/ps"))
+_ps_ok = ("autosave" in _ps_matcher and bool(_as_ref(_ps_d, "AjsAgent/ps"))
           and "saved 1 changed file(s) on AjsAgent/ps (shell.txt) and pushed the save to GitHub" in _ps_out and not _ps_o0.strip()
           and _as_git(_ps_bare, "for-each-ref", "refs/house-rules/saves/").strip() != "")
 report("PASS" if _ps_ok else "FAIL",
@@ -655,7 +655,8 @@ commit_case(
 )
 commit_case(
     "autosave, commitgate and worktreesweep are wired in hooks.json",
-    all('run.sh\\" %s' % e in hooks_json_text for e in ("autosave", "commitgate", "worktreesweep")),
+    'run.sh\\" worktreesweep' in hooks_json_text and "autosave" in merged_wiring("Post", "Bash")[0]
+    and "commitgate" in merged_wiring("Pre", "Bash")[0],
     "hooks.json PostToolUse / PreToolUse / UserPromptSubmit entries",
 )
 
@@ -718,7 +719,7 @@ check_delegate("the delegation nudge still works with PATH empty (it depends on 
 
 # --- delegate is registered on ExitPlanMode, and nowhere else ---------------------------------
 deldrift = []
-if '"matcher": "ExitPlanMode"' not in hooks_json_text:
+if "delegate" not in merged_wiring("Post", "ExitPlanMode")[0]:
     deldrift.append("hooks.json has no ExitPlanMode matcher")
 if "@house-rules:builder" not in rules_text:
     deldrift.append("house-rules.md no longer states the delegation rule")
@@ -1827,11 +1828,8 @@ else:
 _hj3 = json.loads(read(HOOKS_JSON))["hooks"]
 audwire = []
 posts = _hj3.get("PostToolUse") or []
-audit_entries = [e for e in posts if any("audit" in h.get("command", "") and "\" audit" in h.get("command", "") for h in e.get("hooks", []))]
-if not any(e.get("matcher") == "Agent|Task" for e in posts):
-    audwire.append("hooks.json's PostToolUse has no Agent|Task matcher for audit")
-if not any("\" audit" in h.get("command", "") for e in posts for h in e.get("hooks", [])):
-    audwire.append("hooks.json's PostToolUse has no audit dispatch")
+if not all("audit" in merged_wiring("Post", t)[0] for t in ("Agent", "Task")):
+    audwire.append("hooks.json's posttool entry does not run audit on Agent|Task")
 if not audwire:
     report("PASS", "audit is its own PostToolUse entry matched on Agent|Task")
     print("          separate from artifact/runnable/harvest/delegate")

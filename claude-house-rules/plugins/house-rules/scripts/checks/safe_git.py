@@ -896,6 +896,47 @@ else:
     report("FAIL", "the commit rule draws the line at branch ownership and records both reversals")
     print(f"          missing from house-rules.md: {'; '.join(missing)}")
 
+# --- #628: the merged pretool gives what the old events gave, one by one --------------------------
+def _old_events(payload, names, env=None):
+    runs = [run_hook(n, payload, env=env) for n in names]
+    return runs, [json.loads(o) if o.strip() else {} for _, o, _ in runs]
+
+
+for _label, _path, _denied in (("normal call", _gw_new, False), ("call the guard denies", _gw_existing, True)):
+    _pl = guardwrite_payload(_path)
+    _runs, _objs = _old_events(_pl, ["guardwrite", "commitgate", "pagecheck"])
+    _mcode, _mout, _merr = run_hook("pretool", _pl)
+    _mobj = json.loads(_mout) if _mout.strip() else {}
+    _msgs = " ".join(o["systemMessage"] for o in _objs if o.get("systemMessage"))
+    _hso = _mobj.get("hookSpecificOutput", {})
+    _old_reason = " ".join(o.get("hookSpecificOutput", {}).get("permissionDecisionReason", "") for o in _objs)
+    _same = (_mcode == max(r[0] for r in _runs) and _mobj.get("systemMessage", "") == _msgs
+             and _hso.get("permissionDecisionReason", "") == _old_reason.strip()
+             and ("deny" if _denied else "") == _hso.get("permissionDecision", "")
+             and "".join(r[2] for r in _runs) == _merr)
+    report("PASS" if _same else "FAIL", "merged pretool for a Write matches guardwrite+commitgate+pagecheck run one by one: " + _label)
+    if not _same:
+        print(f"          merged: {_mcode} {_mout!r} {_merr!r}; old: {[(r[0], r[1][:200], r[2]) for r in _runs]}")
+
+# a crash: guardwrite (fail closed) blocks, commitgate (fail open) is reported and the run goes on
+_crash_tpl = (
+    "import sys, hook\n"
+    "def boom():\n"
+    "    raise OSError('simulated crash')\n"
+    "hook.EVENTS[%r] = boom\n"
+    "sys.exit(hook.main(['hook.py', 'pretool']))\n"
+)
+for _victim, _want_block in (("guardwrite", True), ("commitgate", False)):
+    _proc = subprocess.run([sys.executable, "-c", _crash_tpl % _victim], cwd=HERE, input=guardwrite_payload(_gw_new).encode(),
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _o, _e = _proc.stdout.decode("utf-8", "replace"), _proc.stderr.decode("utf-8", "replace")
+    _ok = (_proc.returncode == 2 and not _o.strip()) if _want_block else (_proc.returncode == 0 and _victim in _o)
+    _ok = _ok and _victim in _e and "simulated crash" in _e
+    report("PASS" if _ok else "FAIL", "merged pretool: a crashing %s check %s" % (
+        _victim, "blocks (exit 2, named on stderr)" if _want_block else "is reported on stderr and the run continues"))
+    if not _ok:
+        print(f"          exit {_proc.returncode}; stdout={_o!r} stderr={_e!r}")
+
 # --- the guard cites rules that actually exist in the rules document -------------------------
 # It cites a rule by its heading, and nothing checked that the heading was still there. Renaming
 # "Never commit without asking" to "Never commit to `main` without asking" would have left the
@@ -1068,8 +1109,8 @@ commit_case(
 )
 commit_case(
     "branchnudge is wired to PostToolUse Write|Edit in hooks.json",
-    bool(re.search(r'"matcher": "Write\|Edit",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" branchnudge"', hooks_json_text)),
-    "hooks.json PostToolUse entry",
+    all("branchnudge" in merged_wiring("Post", t)[0] for t in ("Write", "Edit")) and "branchnudge" not in merged_wiring("Post", "Bash")[0],
+    "hooks.json posttool entry and POST_CHECKS (#628)",
 )
 
 
@@ -1093,8 +1134,9 @@ out = _creditcheck(_cc_cmd, _cc_url + "\n", lambda p: ("", None), off=True)
 commit_case("creditcheck: HOUSE_RULES_ATTRIBUTION=off prints nothing", out.strip() == "", "stdout: %r" % out[:200])
 commit_case(
     "creditcheck is wired to PostToolUse Bash with a 15 second timeout in hooks.json",
-    bool(re.search(r'"matcher": "Bash",\s*"hooks": \[\s*\{\s*"type": "command",\s*"command": "sh \\"\$\{CLAUDE_PLUGIN_ROOT\}/scripts/run\.sh\\" creditcheck",\s*"timeout": 15', hooks_json_text)),
-    "hooks.json PostToolUse entry",
+    "creditcheck" in merged_wiring("Post", "Bash")[0] and merged_wiring("Post", "Bash")[1] == 15
+    and "creditcheck" not in merged_wiring("Post", "Write")[0],
+    "hooks.json posttool entry and POST_CHECKS (#628)",
 )
 
 # -- #176: cloud sessions move off claude/<name> onto AjsAgent/<name> ---------------------------------
@@ -1315,15 +1357,16 @@ commit_case(
     "pr %r | push %r | prose %r" % (_g405a[:80], _g405b[:160], _g405c[:80]),
 )
 _hj = json.load(open(os.path.join(HERE, "..", "hooks", "hooks.json"), encoding="utf-8"))
-_gm = [b["matcher"] for b in _hj["hooks"]["PreToolUse"]
-       if any(h["command"].endswith(" guardgithub") for h in b["hooks"])]
+_gm = [m for m, n in _merged_hook[0].PRE_CHECKS if n == "guardgithub"] if merged_wiring("Pre", "Bash") else []
 _names = ["create_pull_request", "update_pull_request", "issue_write", "add_issue_comment",
           "update_issue_comment", "add_reply_to_pull_request_comment", "add_comment_to_pending_review",
           "pull_request_review_write", "push_files", "create_or_update_file", "create_branch"]
 commit_case(
     "guardgithub: the hooks.json matcher fully matches every GitHub write tool under both prefixes, and not a read tool",
     len(_gm) == 1 and all(re.fullmatch(_gm[0], p + n) for p in ("mcp__github__", "mcp__GitHub__") for n in _names)
-    and not re.fullmatch(_gm[0], "mcp__github__issue_read") and not re.fullmatch(_gm[0], "mcp__GitHub__get_file_contents"),
+    and all("guardgithub" in merged_wiring("Pre", p + n)[0] for p in ("mcp__github__", "mcp__GitHub__") for n in _names)
+    and not re.fullmatch(_gm[0], "mcp__github__issue_read") and not re.fullmatch(_gm[0], "mcp__GitHub__get_file_contents")
+    and not merged_wiring("Pre", "mcp__github__issue_read")[0],
     "matchers %r" % (_gm,),
 )
 # -- #405: no claude.ai session, artifact or share link reaches git (links defined above) ----------------
@@ -2073,9 +2116,9 @@ report("PASS" if _ua_dec(_bp[1]) == "deny" and "Choose the most reasonable rever
 report("PASS" if _un_n[1][1] == "" and "no permission_mode" in _un_n[1][2] and _ua_dec(_un_n[0][1]) == "deny" else "FAIL",
        "noask: a payload with no permission_mode is announced on stderr and treated as attended; unattended still denies")
 
-_un_h = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]["PreToolUse"]
-report("PASS" if any(m["matcher"] == "AskUserQuestion|ExitPlanMode" and "run.sh\\\" noask" in json.dumps(m["hooks"])
-                     for m in _un_h) else "FAIL", "hooks.json registers noask on AskUserQuestion|ExitPlanMode")
+report("PASS" if all("noask" in merged_wiring("Pre", t)[0] for t in ("AskUserQuestion", "ExitPlanMode"))
+                     and "noask" not in merged_wiring("Pre", "Bash")[0] else "FAIL",
+       "hooks.json registers noask on AskUserQuestion|ExitPlanMode")
 
 # --- unattended relaxations (the user approved them 2026-11-22): allowed with a note, strict when attended ---
 _un_gw_on = run_hook("guardwrite", guardwrite_payload(_gw_existing), env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))[1]
