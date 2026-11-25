@@ -4291,6 +4291,20 @@ for i in range(5):
     open(os.path.join(d, "docs", "5-today", "n%d.md" % i), "w").write("x\n"); git("add", "-A"); git("commit", "-qm", "wip: autosave")
     chk("x", sid="s3")
 r["stuck_despite_autosave_commits"] = any(s.get("stuck") for s in dl._loop_read(g)[0]["steps"]["s3"]["steps"])
+# round-2 C8: with every step closed and nobody present, one block asks for the choices made unasked (none logged yet)
+def allstuck(sid):
+    dl.record_steps(g, "f", plan, sid)
+    st = dl._loop_read(g)[0]
+    for x in st["steps"][sid]["steps"]: x["stuck"] = True
+    dl._loop_write(g, st)
+allstuck("s4"); allstuck("s5")
+r["choices_attended_none"] = chk("x", sid="s4", mode="default")[0] is None
+_c1 = chk("x", sid="s1", mode="bypassPermissions")[0]
+r["choices_block"] = bool(_c1) and "ledger_note.py" in _c1 and " decide " in _c1 and "No choices made" in _c1
+r["choices_once"] = chk("x", sid="s1", mode="bypassPermissions")[0] is None
+os.makedirs(os.path.join(d, "docs", "qa", "f"), exist_ok=True)
+open(os.path.join(d, "docs", "qa", "f", "ledger.md"), "w").write("| K1 | s | c | a | w | u |\n")
+r["choices_skipped_when_logged"] = chk("x", sid="s5", mode="bypassPermissions")[0] is None
 print(r, file=sys.stderr)
 print(all(r.values()))
 """)

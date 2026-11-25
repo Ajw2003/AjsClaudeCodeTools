@@ -27,3 +27,7 @@ Stop hooks block in a resumed headless run; resume by session id works with hook
 - **Whether the web app has `/goal`**, and the pause-goal tool's real name.
 - **Haiku does not log choices.** The rule and the messages say so; compliance depends on the model.
 - **The finish steps were stand-ins**, not the real docs, pictures, tests and QA checks.
+
+## Run 5 (sonnet, neutral prompt) and the fix it forced
+
+The prompt only said "a header in a colour of your choice", with no mention of deciding or logging. The agent made every file, chose a teal header (`evidence/live-run5-page.html`) and logged no choice, although the unattended note naming `ledger_note.py decide` was in its context and eight step-list blocks reached it. So the rules alone do not make a model log. The fix is a hook: when every step is closed and nobody is present, the stop is blocked once if the ledger holds no logged choice, asking the agent to log what it decided or reply "No choices made." (`_choices_check` in `design_loop.py`; tested in the #640 stop-step case). The run was cut at the 60-second background limit after all files existed, so it did not reach the new hook.
