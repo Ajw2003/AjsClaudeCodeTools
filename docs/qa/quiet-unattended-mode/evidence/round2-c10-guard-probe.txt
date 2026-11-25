@@ -1,0 +1,14 @@
+# round 2 C10 probe: hook.py guard on a destructive Bash command citing no-safe-way (an ask), four modes, HEAD 660a6c4
+# waiting-dir = contents of <repo>/.git/house-rules/ after the call (the waiting-on-you list lives there)
+== on: decision="permissionDecision":"deny" waiting-dir=[]
+  approve: False | waiting on you: False | nobody answers: False | final report: False | ledger_note.py decide: True
+  tail: mpt, so a prompt would only sit unanswered. Do not retry this action, or reach the same result another way. Carry on with everything that does not depend on it, and write it to the ledger with `ledger_note.py decide` (or `ledger_note.py park` with --category and --tried only for a hard stop) and carry on with the next open step.
+== bypass: decision="permissionDecision":"deny" waiting-dir=[]
+  approve: False | waiting on you: False | nobody answers: False | final report: False | ledger_note.py decide: True
+  tail: mpt, so a prompt would only sit unanswered. Do not retry this action, or reach the same result another way. Carry on with everything that does not depend on it, and write it to the ledger with `ledger_note.py decide` (or `ledger_note.py park` with --category and --tried only for a hard stop) and carry on with the next open step.
+== subagent: decision="permissionDecision":"deny" waiting-dir=[waiting-on-you.json ]
+  approve: True | waiting on you: True | nobody answers: True | final report: False | ledger_note.py decide: True
+  tail: mpt, so a prompt would only sit unanswered. Do not retry this action, or reach the same result another way. Carry on with everything that does not depend on it, and write it to the ledger with `ledger_note.py decide` (or `ledger_note.py park` with --category and --tried only for a hard stop) and carry on with the next open step.
+== attended: decision="permissionDecision":"ask" waiting-dir=[]
+  approve: True | waiting on you: True | nobody answers: True | final report: False | ledger_note.py decide: False
+  tail: destructive action without checking first /     - deletes one or more files /  /   No safe way exists, the agent says, citing: the rm manual page /  / If nobody answers within 10 minutes, this is refused (never approved) and added to the waiting-on-you list. / Approve to let it run, or reject and Claude will explain what it was about to do.
