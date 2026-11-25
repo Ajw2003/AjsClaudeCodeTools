@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Unattended and bypass runs now get one reminder to log their choices (#644): live run 5 showed a model picks a header colour and logs nothing, so a stop with every step closed and no logged choice is sent back once to run `ledger_note.py decide` or reply "No choices made.". Criterion C8 is back to its original wording and deviation D4 is reversed.
+
 Quiet unattended mode acceptance round 2 result (#644): 11 of 12 criteria pass; C8 (the agent decides and logs a look choice) failed because the earlier live run's prompt said to decide and log. A fifth live run with a neutral prompt (a header colour of the agent's choice, no mention of deciding or logging) is running to settle it; the reviewer's evidence is in `docs/qa/quiet-unattended-mode/evidence/round2-*`.
 
 Quiet unattended mode acceptance round 2 is open (#644): the full suites pass on the round-1 fixes (seven parts exit 0, tools 69 of 69 after two tests were updated for the new stuck-step message in `steps-status` and `tools/overnight.sh`), and a reviewer is re-judging all twelve criteria into `docs/qa/quiet-unattended-mode/round-2.md`.
