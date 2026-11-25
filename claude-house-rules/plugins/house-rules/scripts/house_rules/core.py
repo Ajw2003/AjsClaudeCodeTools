@@ -2795,7 +2795,9 @@ def switch_file_refusal(payload):
     .claude/settings(.local).json. aj's typed switch is written by the hook itself, never through a tool call."""
     try:
         data = json.loads(payload)
-    except ValueError:
+    except ValueError as exc:
+        sys.stderr.write("house-rules: the switch-file guard could not read the tool payload (%s), so it allowed "
+                         "the call.\n" % type(exc).__name__)
         return None
     ti = data.get("tool_input") if isinstance(data, dict) and isinstance(data.get("tool_input"), dict) else {}
     tool = data.get("tool_name") if isinstance(data, dict) else None

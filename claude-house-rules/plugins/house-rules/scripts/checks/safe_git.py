@@ -1549,8 +1549,9 @@ commit_case(
 _pt_src = read(SAFE_GIT)  # prompttimer moved to the safe git part (#358); its block now ends at a marker line
 _pt_block = _pt_src[_pt_src.index("# prompttimer - PermissionRequest"):_pt_src.index("# End of the prompttimer block")]
 commit_case(
-    "prompttimer: the handler source has no route to an allow decision",
-    "allow" not in _pt_block.lower() and 'behavior": "deny"' in _pt_block,
+    "prompttimer: the handler source has one allow route, for ExitPlanMode when nobody is present (#636)",
+    _pt_block.count('"behavior": "allow"') == 1 and 'tool_name == "ExitPlanMode"' in _pt_block
+    and 'behavior": "deny"' in _pt_block,
     "%d characters of handler source scanned" % len(_pt_block),
 )
 _pt_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"].get("PermissionRequest", [])
