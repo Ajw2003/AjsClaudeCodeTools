@@ -4082,7 +4082,7 @@ plan = os.path.join(d, "p.page.json")
 json.dump({"test_command": "t", "changes": [["c", "Step 1: ok", "", None, "", None, None, "python3 -c \"print('ok')\""],
     ["c", "Step 2: bad", "", None, "", None, None, "python3 -c \"import sys; print('boom'); sys.exit(3)\""]]}, open(plan, "w"))
 dl.record_steps(g, "f", plan, "s1")
-LN = os.path.join(here, "..", "ledger_note.py")
+LN = os.path.join(here, "ledger_note.py")
 def ln(n, mode, env=None):
     return subprocess.run([sys.executable, LN, "check", "f", "--step", str(n), mode], cwd=d, capture_output=True, text=True, env=dict(os.environ, **(env or {})))
 r = []
@@ -4099,7 +4099,7 @@ def st(n): return dl._loop_read(g)[0]["steps"]["s1"]["steps"][n - 1]["state"]
 fp = p.stdout.split("fp=")[1].split()[0]
 hook(p.stdout, "PostToolUse", 1); hook(pf.stdout, "PostToolUse", 2)
 r.append([st(1), st(2)] == ["done", "open"])
-hook(pf.stdout, "PostToolUseFailure", 1); r.append(st(1) == "open")
+hook("RESULT: fail step 1 fp=abc\nboom", "PostToolUseFailure", 1); r.append(st(1) == "open")
 hook(p.stdout, "PostToolUseFailure", 1); r.append(st(1) == "done")
 hook("no result here", "PostToolUseFailure", 2); r.append(st(2) == "open")
 r.append(dl.steps_status(g, "f", "s1", fp) == {1: "done", 2: "open"})
