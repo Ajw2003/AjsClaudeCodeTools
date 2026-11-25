@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.94.7 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="e5333a1cf2c5de7952afcae0a36b333485cec557a955c0dd7a0b41e09557f80c;open-risks;2">
+<meta name="house-rules-reviewed" content="1a6d9b266092d4cf11d0348519588bda45be74565736e735602611e2648a8c16;open-risks;2">
 <meta name="house-rules-page" content="proposal">
 <title>Quiet unattended mode: decide, log, keep going</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -239,7 +239,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">Unattended mode still stops. This plan closes 11 ways it can ask or quit, after two independent reviews. I need one approval line from you.</p>
+      <p class="lead" id="lead" data-basic="summary">Unattended mode still stops. This plan closes 12 ways it can ask or quit, after two independent reviews. I need one approval line from you.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -259,7 +259,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the eleven changes.</label></li><li><label><input type="checkbox"> Tap Copy my reply.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: quiet unattended mode", or say what to change.</label></li></ol></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the twelve changes.</label></li><li><label><input type="checkbox"> Tap Copy my reply.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: quiet unattended mode", or say what to change.</label></li></ol></div></div></div>
     <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today: rules say to ask, wait or hand over (show-dont-tell.md:5, 11, 12; house-rules.md:91; clear-writing.md:59-62; handover-command.md:28, 51; commit-branches.md:50; coding-philosophy.md:58; builder.md:11; core.py:1546, 1610).</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Approve it as written</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
@@ -286,7 +286,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: quiet unattended mode",
   "short": {
-    "lead": "Unattended mode still stops. This plan closes 11 ways it can ask or quit, after two independent reviews. I need one approval line from you.",
+    "lead": "Unattended mode still stops. This plan closes 12 ways it can ask or quit, after two independent reviews. I need one approval line from you.",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -384,7 +384,7 @@ const PAGE = {
       [
         "Today: unattended turns the loop and the end-of-reply check off (core.py:2723, 2737, 2850; hook.py:122; design_loop.py:2952).",
         "New: the end-of-reply check comes back for these items only: evidence, commit, deviation, QA page, changelog, decision log. The editor, page limit, plain summary, page send, helpers and issues stay off.",
-        "For you: the loop flows without you from goal to QA. Every step list ends with four fixed steps: tests pass (verify.py exits 0), docs written, before-and-after pictures saved, QA page built."
+        "For you: the loop flows without you from goal to QA, ending on the finish line below."
       ],
       null
     ],
@@ -410,7 +410,20 @@ const PAGE = {
       [
         "Today: no step list exists. Parking has no category (ledger_note.py:43-46), and deviate only adds a ledger row.",
         "New: a step passes when I run ledger_note.py check for it, through a normal Bash call, so every guard and timeout applies. A hook records the exit code and the commit; a moved commit makes it stale. The hash is also kept outside the repo.",
-        "For you: a step is parked only with a hard-stop category and the command that showed it. Deviate may add or replace a step, never delete one."
+        "For you: a step is parked only with a hard-stop category and the command that showed it. Deviate may add or replace a step, never delete one, and never touch the four finish-line steps."
+      ],
+      null
+    ],
+    [
+      "new",
+      "A finish line, the same in every mode",
+      "Four required last steps on every step list",
+      null,
+      "Every step list, in every mode, ends with the same four steps. None can be parked, replaced, deleted or skipped, and QA cannot open until all four pass.",
+      [
+        "Today: QA starts when a pull request opens or every issue says needs review (design_loop.py:860, 872). Nothing checks tests, docs or pictures first.",
+        "New: 1 tests pass (verify.py exits 0). 2 docs written (the changed docs tier and CHANGELOG.md have new lines). 3 before-and-after pictures saved under docs/qa, or a check that no visual file changed. 4 QA page built and stamped.",
+        "For you: you reach QA only with tests green, docs written and pictures to look at."
       ],
       null
     ],
@@ -502,7 +515,7 @@ const PAGE = {
           "A",
           "Approve it as written",
           1,
-          "Closes all eleven holes together, after three review rounds."
+          "Closes all twelve holes together, after three review rounds."
         ],
         [
           "B",
@@ -515,12 +528,12 @@ const PAGE = {
     ]
   ],
   "wrapup": {
-    "summary": "Eleven rule, hook and launcher problems (plus twelve reversals) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
+    "summary": "Twelve rule, hook and launcher problems (plus twelve reversals) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
     "changing": "Rules, hooks, guards, the step file, ledger_note.py, make_page.py, hooks.json, tools/overnight.sh, the tests, the docs and the changelog.",
     "blocking": "Your approval line; no code is touched until you send it.",
     "next": "Send \"Design approved: quiet unattended mode\". Then I write the build plan page for you to approve, then build and test a real headless run.",
     "todo": [
-      "Read the eleven changes.",
+      "Read the twelve changes.",
       "Tap Copy my reply.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: quiet unattended mode\", or say what to change."
     ]

@@ -4,7 +4,7 @@
  "pageType": "proposal",
  "approval": "Design approved: quiet unattended mode",
  "short": {
-  "lead": "Unattended mode still stops. This plan closes 11 ways it can ask or quit, after two independent reviews. I need one approval line from you.",
+  "lead": "Unattended mode still stops. This plan closes 12 ways it can ask or quit, after two independent reviews. I need one approval line from you.",
   "hint": "Tap a step to see it.",
   "key": [
    [
@@ -102,7 +102,7 @@
    [
     "Today: unattended turns the loop and the end-of-reply check off (core.py:2723, 2737, 2850; hook.py:122; design_loop.py:2952).",
     "New: the end-of-reply check comes back for these items only: evidence, commit, deviation, QA page, changelog, decision log. The editor, page limit, plain summary, page send, helpers and issues stay off.",
-    "For you: the loop flows without you from goal to QA. Every step list ends with four fixed steps: tests pass (verify.py exits 0), docs written, before-and-after pictures saved, QA page built."
+    "For you: the loop flows without you from goal to QA, ending on the finish line below."
    ],
    null
   ],
@@ -128,7 +128,20 @@
    [
     "Today: no step list exists. Parking has no category (ledger_note.py:43-46), and deviate only adds a ledger row.",
     "New: a step passes when I run ledger_note.py check for it, through a normal Bash call, so every guard and timeout applies. A hook records the exit code and the commit; a moved commit makes it stale. The hash is also kept outside the repo.",
-    "For you: a step is parked only with a hard-stop category and the command that showed it. Deviate may add or replace a step, never delete one."
+    "For you: a step is parked only with a hard-stop category and the command that showed it. Deviate may add or replace a step, never delete one, and never touch the four finish-line steps."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A finish line, the same in every mode",
+   "Four required last steps on every step list",
+   null,
+   "Every step list, in every mode, ends with the same four steps. None can be parked, replaced, deleted or skipped, and QA cannot open until all four pass.",
+   [
+    "Today: QA starts when a pull request opens or every issue says needs review (design_loop.py:860, 872). Nothing checks tests, docs or pictures first.",
+    "New: 1 tests pass (verify.py exits 0). 2 docs written (the changed docs tier and CHANGELOG.md have new lines). 3 before-and-after pictures saved under docs/qa, or a check that no visual file changed. 4 QA page built and stamped.",
+    "For you: you reach QA only with tests green, docs written and pictures to look at."
    ],
    null
   ],
@@ -220,7 +233,7 @@
      "A",
      "Approve it as written",
      1,
-     "Closes all eleven holes together, after three review rounds."
+     "Closes all twelve holes together, after three review rounds."
     ],
     [
      "B",
@@ -233,12 +246,12 @@
   ]
  ],
  "wrapup": {
-  "summary": "Eleven rule, hook and launcher problems (plus twelve reversals) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
+  "summary": "Twelve rule, hook and launcher problems (plus twelve reversals) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
   "changing": "Rules, hooks, guards, the step file, ledger_note.py, make_page.py, hooks.json, tools/overnight.sh, the tests, the docs and the changelog.",
   "blocking": "Your approval line; no code is touched until you send it.",
   "next": "Send \"Design approved: quiet unattended mode\". Then I write the build plan page for you to approve, then build and test a real headless run.",
   "todo": [
-   "Read the eleven changes.",
+   "Read the twelve changes.",
    "Tap Copy my reply.",
    "Send it."
   ]
