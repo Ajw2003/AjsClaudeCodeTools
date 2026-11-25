@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode step 1 (#638) merged: `ledger_note.py decide` records a choice, `park` now needs a hard-stop category and the command tried, choice rows come first on the QA page, and a branch name with a slash gives one ledger folder; its suites were still being run when this line was written.
+
 Started building quiet unattended mode (#634): aj approved the build plan, the Decisions.md entry is added, and builders began on steps #638 and #636; no step is merged yet.
 
 Sent the stamped fifteen-step build plan page for quiet unattended mode to aj for approval (`docs/plans/2026-11-25-quiet-unattended-mode-plan.html`, issues #634 to #649); no code changed.
