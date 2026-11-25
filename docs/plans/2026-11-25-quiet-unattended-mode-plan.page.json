@@ -1,0 +1,244 @@
+{
+ "title": "Build plan: quiet unattended mode",
+ "eyebrow": "Build plan · nothing built yet",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: quiet unattended mode",
+ "short": {
+  "lead": "Eleven steps build the approved quiet unattended mode, each with its issue and its own test, and I need one approval line from you.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "list",
+    "Step 1",
+    "Rules text",
+    "",
+    "Rewrite the rule lines that ask, wait or hand over (#635 Rewrite the rule lines that tell me to ask, wait or hand over).",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%228%22%20y=%2210%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2214%22%20y=%2234%22%3E1%20Rules%3C/text%3E%3Crect%20x=%22114%22%20y=%2210%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22120%22%20y=%2234%22%3E2%20Presence%3C/text%3E%3Crect%20x=%22220%22%20y=%2210%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22226%22%20y=%2234%22%3E3%20Ledger%3C/text%3E%3Crect%20x=%228%22%20y=%2260%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2214%22%20y=%2284%22%3E4%20Loop%20on%3C/text%3E%3Crect%20x=%22114%22%20y=%2260%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22120%22%20y=%2284%22%3E5%20Steps%3C/text%3E%3Crect%20x=%22220%22%20y=%2260%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22226%22%20y=%2284%22%3E6%20Stop%20check%3C/text%3E%3Crect%20x=%228%22%20y=%22110%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2214%22%20y=%22134%22%3E7%20Approval%3C/text%3E%3Crect%20x=%22114%22%20y=%22110%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22120%22%20y=%22134%22%3E8%20Restart%3C/text%3E%3Crect%20x=%22220%22%20y=%22110%22%20width=%2292%22%20height=%2236%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22226%22%20y=%22134%22%3E9%20QA%20only%3C/text%3E%3Ctext%20x=%228%22%20y=%22168%22%3E10%20Tests%20and%20docs,%20then%2011%20live%20run%3C/text%3E%3C/svg%3E",
+     "alt": "The eleven build steps in order",
+     "caption": "The build order"
+    }
+   ],
+   [
+    "list",
+    "Step 2",
+    "One presence test",
+    "",
+    "One helper says who is present; guards use it (#636 One test for who is present, and the guards that use it).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 3",
+    "Ledger rows",
+    "",
+    "decide, park rules, deviate rules, check (#638 Ledger rows for decisions, and rules for parking and deviating).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 4",
+    "Loop stays on",
+    "",
+    "Unattended keeps the design loop on (#637 Keep the design loop on when nobody is present).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 5",
+    "Step list",
+    "",
+    "Guarded step list and four finish steps (#639 A guarded step list with four required finish-line steps).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 6",
+    "Stop check",
+    "",
+    "Block every stop while a step is open (#640 A stop check on every stop that blocks while a step is open).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 7",
+    "Self-approval",
+    "",
+    "A hook approves with a stored verdict (#641 Self-approval by a hook, backed by a stored reviewer verdict).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 8",
+    "Restart loop",
+    "",
+    "overnight.sh resumes by session id (#642 A restart loop in the overnight launcher).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 9",
+    "QA-only messages",
+    "",
+    "Decisions go to the ledger, not the reply (#643 Show decisions only on the QA page).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 10",
+    "Tests and docs",
+    "",
+    "Update pinned tests, reversals, docs, version (#645 Tests, docs, reversed decisions and version bump).",
+    "Nothing from you."
+   ],
+   [
+    "list",
+    "Step 11",
+    "Live run",
+    "",
+    "A real headless unattended run (#644 Live headless unattended run and acceptance).",
+    "Nothing from you."
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve the plan",
+    "you",
+    "The build starts.",
+    "Send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Step 1: Rules text",
+   "Rewrite the rule lines that ask, wait or hand over",
+   null,
+   "Done when: Rule lines no longer say ask or wait outside look-or-function and hard stops; the injected-rules size check passes.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 2: One presence test",
+   "One helper says who is present; guards use it",
+   null,
+   "Done when: Cases for unattended, bypass, auto, normal and unknown pass at every old call site; a prompt is denied at once; an agent write to the mode file is refused.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 3: Ledger rows",
+   "decide, park rules, deviate rules, check",
+   null,
+   "Done when: A C row shows first on a QA page; park is refused with no category; deviate is refused when it deletes a step.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 4: Loop stays on",
+   "Unattended keeps the design loop on",
+   null,
+   "Done when: The listed end-of-reply checks run when unattended; the three holds are skipped when nobody is present and unchanged when attended.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 5: Step list",
+   "Guarded step list and four finish steps",
+   null,
+   "Done when: The step file carries matching hashes; a step is done only after a passing check; the four finish steps cannot be parked, replaced or deleted.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 6: Stop check",
+   "Block every stop while a step is open",
+   null,
+   "Done when: A stop with an open step is blocked, even with no reply text; three no-progress blocks mark a step stuck; NEEDS YOU text exempts nothing.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 7: Self-approval",
+   "A hook approves with a stored verdict",
+   null,
+   "Done when: Approval is recorded only with a matching verdict; it is refused in auto and normal mode and for QA passed; the newest-approval marker is unchanged.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 8: Restart loop",
+   "overnight.sh resumes by session id",
+   null,
+   "Done when: tools/verify_tools.py cases show resume by id, a rate-limit wait that spends no restart, the two limits ending into a QA pass, and the interactive flag.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 9: QA-only messages",
+   "Decisions go to the ledger, not the reply",
+   null,
+   "Done when: A guard refusal and a denied question each write a ledger row and no Waiting-on-you or final-report instruction.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 10: Tests and docs",
+   "Update pinned tests, reversals, docs, version",
+   null,
+   "Done when: Both full test commands exit 0, docref.py check and docs_drift.py pass, and each of the twelve reversals has its dated Decisions.md entry.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Step 11: Live run",
+   "A real headless unattended run",
+   null,
+   "Done when: The transcript shows self-approval, a forced early stop resumed, a look-or-function assumption logged, the four finish steps done and a QA page with decisions first.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Acceptance tests (all steps)",
+   "One test per design item, run in step 11 and saved under docs/qa/quiet-unattended-mode/.",
+   null,
+   "Done when each passes with evidence saved: C1 rule lines; C2 presence by mode; C3 loop on; C4 self-approval; C5 step list; C6 finish line; C7 stop check; C8 look-or-function assumption; C9 restart loop; C10 QA-only reporting; C11 gates skipped; C12 reversals and docs.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "An eleven-step build plan for the approved quiet unattended mode, under parent issue #634 (Quiet unattended mode: decide, log, and run to QA without stopping).",
+  "changing": "The plugin's rules, hooks, ledger script, page builder, tests and docs, and tools/overnight.sh. The full test run means: python claude-house-rules/plugins/house-rules/scripts/verify.py and python tools/verify_tools.py, both exiting 0.",
+  "blocking": "Your line \"Build plan approved: quiet unattended mode\". The speed-first feature must also leave Build before this build starts.",
+  "next": "After you approve, I build step 1 and work the steps in order, running the full test run after each.",
+  "todo": [
+   "Read the steps in order.",
+   "Tap Copy my reply.",
+   "Send it."
+  ]
+ }
+}
