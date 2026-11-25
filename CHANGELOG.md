@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Speed first build plan fixed after page review round 1 (no code): step 4 now says the 5 label reads already run in a thread pool (`design_loop.py:826`) and starts by profiling, step 3 names its failure rules and 10 second limit, steps 5 and 6 gained timing and check-list done-tests, and issue #629 matches. Refs #625.
+
 Speed first design and build plan (no code yet): docs/4-systems/hook-speed.md, the proposal and build plan pages in docs/plans/, and issues #625 to #631 for six measured steps that cut hook time per tool call and speed up the test suite. Refs #625.
 
 Verdict hook knows about overrides, plus reviewer findings 4 to 8, plugin 2.94.4: the model typed with `--model` is now stored on the launch's record by `agentcap`, shown by `announce` ("override typed at spawn"), and compared by `verdict`, so Opus on a Sonnet agent reads MATCH when Opus was asked for and MISMATCH when it was not; with nothing typed the agent file is compared as before. A record that cannot be read is said in the report, not swallowed. Also: `hook-engine.md` and `review-loop.md` now agree with `reviewer.md` on its tools and write folder; page mode's output line fits design findings; `reviewer.md` says Write is for acceptance only; `verify.py` pins every agent's effort; and a Decisions entry records that the reviewer's `effort: medium` stays, as judgement, until measured. Finding 9 (trim the copied mode text) is left on purpose: those bullets are the reviewer's only mode text when no `review-modes.md` path reaches it. 1,606 checks pass across all 7 parts; not run in a live session.
