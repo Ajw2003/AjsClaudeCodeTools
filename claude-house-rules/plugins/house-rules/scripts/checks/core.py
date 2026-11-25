@@ -2659,24 +2659,24 @@ vc_banner_out = out
 banner_ok = (
     "UNTESTED" in vc_banner_out
     and "step-card" in vc_banner_out
-    and "stop and wait" in vc_banner_out
+    and "carry on" in vc_banner_out
     and "permission" in vc_banner_out
     and "run the command(s) below yourself" in vc_banner_out
     and "Do not ask in chat" in vc_banner_out
     and "could not finish" in vc_banner_out
 )
 if banner_ok:
-    report("PASS", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
-    print("          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
+    report("PASS", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then carry on")
+    print("          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the carry-on instruction")
 else:
-    report("FAIL", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
+    report("FAIL", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then carry on")
     print(f"          out={vc_banner_out[:400]!r}")
 
 # --- that same instruction has not drifted from the rules document, bidirectionally ----------
 # Same shape as the delegate/harvest drift checks: the phrase must appear in BOTH house-rules.md
 # and what versioncheck actually emits, or a reword on one side silently stops matching the other.
 drift = []
-for phrase in ("relayed", "step-card", "UNTESTED", "stop and wait", "permission"):
+for phrase in ("relayed", "step-card", "UNTESTED", "carry on", "permission"):
     if phrase.lower() not in rules_text.lower():
         drift.append(f"{phrase!r} missing from rules/house-rules.md")
     if phrase.lower() not in vc_banner_out.lower():

@@ -1543,7 +1543,7 @@ def event_versioncheck():
                 "If they decline that prompt, or this session has no shell tool to run them "
                 "with, relay the command(s) instead - through the step-card format, marked "
                 "`UNTESTED:` since this hook relayed them and they have not been run on this "
-                "machine - then stop and wait for the user's answer.",
+                "machine - then carry on with the rest of the work.",
                 "",
             ]
         )
@@ -1607,7 +1607,7 @@ SCOPE_REMINDER = (
 SCOPE_REMINDER_SHORT = (
     "House rules reminder: update the docs tier that changed; no success claim without a run "
     "you can quote; commit finished work on your own branch. Never hand over a command you "
-    "have not run. Build only what was asked - where it is ambiguous, ask instead of assuming."
+    "have not run. Build only what was asked - where it is ambiguous, decide and log it."
 )
 
 # Prompt text suggesting this turn will involve commands, files, or builds - the case the full
