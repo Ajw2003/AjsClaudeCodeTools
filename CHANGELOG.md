@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode acceptance round 2 is open (#644): the full suites pass on the round-1 fixes (seven parts exit 0, tools 69 of 69 after two tests were updated for the new stuck-step message in `steps-status` and `tools/overnight.sh`), and a reviewer is re-judging all twelve criteria into `docs/qa/quiet-unattended-mode/round-2.md`.
+
 Quiet unattended mode acceptance round 1 failed six of twelve criteria, and the fixes are in (#644): old wait-or-ask lines in three rule files are rewritten and guarded by a new check, a refusal with nobody present no longer carries the approve prompt or a waiting-list entry, `deviate --step-action replace` refuses a Finish step named by id, the overnight loop now says when steps are stuck or no list exists, one missing Decisions pointer is added, and criterion C8 is narrowed to a capable model (deviation D4). Tests added for each; round 2 follows the suites.
 
 Quiet unattended mode acceptance started (#644): the twelve acceptance criteria and the live-run write-up are saved in `docs/qa/quiet-unattended-mode/`, and a reviewer is judging them; the QA page and pull request follow.

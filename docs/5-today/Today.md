@@ -1,5 +1,7 @@
 # Today — 2026-11-25
 
+Quiet unattended mode, round 2 of acceptance is running after the round-1 fixes; all suites pass. Next: read `round-2.md`, then stamp, QA page, label swap, pull request.
+
 Quiet unattended mode, acceptance round 1 failed six criteria (C1, C2, C6, C8, C10, C12). Fixes and tests are written and the full suites are running; next are round 2 (`ledger.py new-round`), the stamp, the QA page, the issue label swap and the pull request.
 
 Plugin bumped to 2.94.7 for #633 (CI version-bump gate); verify_tools now passes in CI.
