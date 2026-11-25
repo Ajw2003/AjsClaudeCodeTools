@@ -94,24 +94,75 @@ def _trace_chat():
 
 HOOK_LOG_NAME = "house-rules-hook-log.txt"
 HOOK_LOG_MAX_LINES = 500
+HOOK_LOG_TRIM_BYTES = 100 * 1024  # the file is cut back to its newest 500 lines only once it passes this
 _LOG_ERROR_SHOWN = False
 
 
+def _log_trim(path):
+    """Cut the log back to its newest HOOK_LOG_MAX_LINES lines. Runs only when the file is over
+    HOOK_LOG_TRIM_BYTES, under a lock file so two hooks never trim at once, and replaces the file in one
+    step so a reader never sees half a log. If another hook still has the log open (Windows refuses the
+    replace) or holds the lock, the trim is skipped and retried by a later write.
+    shortcut: a line appended while the trim reads can be lost; the trim is rare (about every 500 lines)."""
+    lock = path + ".lock"
+    try:
+        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except OSError:
+        return "trim skipped: another hook holds the lock"  # or a crashed one left it; the next write retries
+    try:
+        os.close(fd)
+        with open(path, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()[-HOOK_LOG_MAX_LINES:]
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+        os.replace(tmp, path)
+    except OSError:
+        return "trim skipped: the log could not be replaced"  # the log is still complete, only longer
+    finally:
+        try:
+            os.remove(lock)
+        except OSError:
+            lock = ""  # a stale lock only delays the next trim
+
+
+def _log_append(path, text):
+    """Add one line to the end of the log without losing a line another hook writes at the same moment.
+    POSIX appends are atomic for a short write. On Windows an append is a seek then a write, so two hooks
+    can overwrite each other: a byte-range lock on the first byte of the file serialises them."""
+    data = text.encode("utf-8")
+    if os.name != "nt":
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT)
+        try:
+            os.write(fd, data)
+        finally:
+            os.close(fd)
+        return
+    import msvcrt
+    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_BINARY)
+    try:
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_LOCK, 1)  # waits up to 10 seconds, then raises OSError, which _log_line reports
+        try:
+            os.lseek(fd, 0, os.SEEK_END)
+            os.write(fd, data)
+        finally:
+            os.lseek(fd, 0, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+    finally:
+        os.close(fd)
+
+
 def _log_line(message):
-    """Append one line (UTC time, message) to the hook log, keeping the newest 500 lines. A
-    failure to write is one systemMessage per process, never silent."""
+    """Append one line (UTC time, message) to the hook log. The file is trimmed to its newest 500 lines
+    when it passes 100 KB. A failure to write is one systemMessage per process, never silent."""
     global _LOG_ERROR_SHOWN
     path = os.path.join(tempfile.gettempdir(), HOOK_LOG_NAME)
     line = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " " + " ".join(str(message).split())
     try:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                lines = f.read().splitlines()
-        except FileNotFoundError:
-            lines = []
-        lines = (lines + [line])[-HOOK_LOG_MAX_LINES:]
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+        _log_append(path, line + "\n")
+        if os.path.getsize(path) > HOOK_LOG_TRIM_BYTES:
+            _log_trim(path)
     except Exception as exc:
         if not _LOG_ERROR_SHOWN:
             _LOG_ERROR_SHOWN = True

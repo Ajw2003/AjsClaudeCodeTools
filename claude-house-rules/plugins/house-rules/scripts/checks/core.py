@@ -790,12 +790,30 @@ _n = [_hl_run(*_HL_NOOP, m) for m in (None, "verbose", "off")]
 report("PASS" if not _n[0][1].strip() and not _n[0][2] and "a.cs" in _n[1][2] and not _n[1][1].strip()
        and not _n[2][2] else "FAIL",
        "#584: trace_noop writes only under HOUSE_RULES_TRACE=verbose (default and off write nothing)")
-_c, _o, _l = _hl_run(*_HL_GUARD, None, seed="".join("old %d\n" % i for i in range(1, 601)))
+_c, _o, _l = _hl_run(*_HL_GUARD, None, seed="".join("old %d %s\n" % (i, "x" * 200) for i in range(1, 601)))
 _ls = _l.splitlines()
-report("PASS" if len(_ls) == 500 and _ls[0] == "old 102" and "guard: empty payload" in _ls[-1] else "FAIL",
-       "#584: the hook log is capped at its newest 500 lines")
+report("PASS" if len(_ls) == 500 and _ls[0].startswith("old 102 ") and "guard: empty payload" in _ls[-1] else "FAIL",
+       "#584: a hook log over 100 KB is cut back to its newest 500 lines")
 if len(_ls) != 500:
     print(f"          {len(_ls)} lines; first {_ls[:1]!r}")
+_c, _o, _l = _hl_run(*_HL_GUARD, None, seed="".join("old %d\n" % i for i in range(1, 601)))
+report("PASS" if len(_l.splitlines()) == 601 and _l.startswith("old 1\n") else "FAIL",
+       "#584: a hook log under 100 KB is only appended to, never rewritten")
+# step 5 (#630): parallel writers lose no line
+_pd = tempfile.mkdtemp(prefix="hook-log-par-")
+_pe = dict(os.environ, TMPDIR=_pd, TEMP=_pd, TMP=_pd)
+_pe.pop("HOUSE_RULES_TRACE", None)
+_pp = [subprocess.Popen([sys.executable, "-c",
+       "import sys;sys.path.insert(0,sys.argv[1]);from house_rules import core\n"
+       "for i in range(40): core._log_line('par %s %d' % (sys.argv[2], i))",
+       os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."), str(k)], env=_pe) for k in range(6)]
+for _q in _pp:
+    _q.wait()
+_pl = read(os.path.join(_pd, _HL_NAME)).splitlines()
+shutil.rmtree(_pd, ignore_errors=True)
+report("PASS" if len(_pl) == 240 else "FAIL", "#630: six parallel writers append 240 lines and lose none")
+if len(_pl) != 240:
+    print(f"          {len(_pl)} lines of 240")
 _c, _o, _l = _hl_run(*_HL_GUARD, None, seed_dir=True)
 report("PASS" if _c == 0 and _o.count("could not write the hook log (") == 1 and _o.count("\n") == 0
        and json.loads(_o)["systemMessage"].startswith("house-rules plugin: could not write the hook log (") else "FAIL",

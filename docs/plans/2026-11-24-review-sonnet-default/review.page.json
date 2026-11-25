@@ -1,0 +1,64 @@
+{
+ "title": "Review command Sonnet default",
+ "eyebrow": "Review · result and one check for you",
+ "pageType": "review",
+ "short": {
+  "lead": "The review command now runs plan, code, codebase, image and style reviews on Sonnet, and you check one live run.",
+  "hint": "Tap a step to see what to do.",
+  "key": [
+   [
+    "Checked by me",
+    ""
+   ],
+   [
+    "Your test",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "flask",
+    "Checked",
+    "Which model each review mode prints",
+    "",
+    "I ran review_plan.py by hand and the docs part of verify.py: 176 of 176 checks pass, including page and diff staying on the default and a typed --model winning. A clean copy of the branch passes core, safe_git, delegation and design_loop (1,284 of 1,289, 5 skipped).",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3Ctext x=%2220%22 y=%2290%22 font-size=%2218%22%3Ecode mode: model sonnet%3C/text%3E%3C/svg%3E",
+     "alt": "Text card reading: code mode, model sonnet",
+     "caption": "The script's output for a code review"
+    }
+   ],
+   [
+    "hand",
+    "Your test",
+    "Run one real review",
+    "you",
+    "1. Open Claude Code in C:\\Users\\aj\\Desktop\\ClaudeDev\\AjsClaudeCodeTools. 2. Type /house-rules:review claude-house-rules/plugins/house-rules/scripts/review_plan.py. Expect a short verdict and a saved report under docs/qa/. 3. Check the reviewer ran on Sonnet in the subagent notice; a page review (a .html page path) should show Opus.",
+    "Follow the steps in Wrap-up."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "review_plan.py",
+   "Prints model: sonnet for plan, code, codebase, image and style",
+   null,
+   "Page and diff print default, so the reviewer's own Opus applies. A typed --model always wins. The command text and the systems doc say the same.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "Five of the seven review modes now default to Sonnet; page and diff stay on Opus.",
+  "changing": "review_plan.py, commands/review.md, the review check in verify.py, the systems doc, plugin version 2.94.5.",
+  "blocking": "Your live run of /house-rules:review, and a decision on merging once the speed-first session finishes.",
+  "next": "On a pass, a pull request is opened.",
+  "todo": [
+   "Do step 1: open Claude Code in the repo folder. Expect a prompt.",
+   "Do step 2: run /house-rules:review on review_plan.py. Expect a short verdict and a saved report.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}
