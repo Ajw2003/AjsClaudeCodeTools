@@ -7,6 +7,30 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-24 - The roadblock judge is tuned, not removed, and every long wait becomes one-minute segments
+
+**Decision.** aj approved "Design approved: judge blocking fix and one-minute segments 1A 2A 3A" on the page `docs/plans/judge-blocking-fix.html`. The roadblock judge stays. It gets five written criteria (C1 to C5) and a reason standard (the check run, what it returned, the logic to the claim), it moves into the scripted Stop hook so it can read the real tool calls (1A), it shares one cap of two blocks with the record check and the goal check, reset only after real tool work (2A), and steps that pass data use named checkpoint files (3A). The launch guard refuses a foreground or background launch over 60 seconds unless it says `Cannot split:` with a reason that passes C5. Parent issue #605, steps #606 to #613.
+
+**Why.** A test session was blocked 12 times in a row even when three different methods had been tried: the model judge had a one-sentence rule, could not see the tool calls, and kept no count. aj also wants no wait over a minute, so failures are caught early. Systems doc: `docs/4-systems/roadblock-judge-and-segments.md`.
+
+**Rejected.** Deleting the model judge (aj: its intent is right, it needs tuning and a limit). Keeping it as a prompt hook with written criteria (it still cannot see the tool calls or count). Enforcing the 60-second rule by advice only. Forbidding any dependency between segments (some work cannot be done without one).
+
+**Status.** Active. Extends, and does not supersede, the modular-tests entry for #575 and the roadblock entries for #587.
+
+## 2026-11-24 - Review command: one front door for the reviewer, four new modes
+
+**Context.** The reviewer helper only ran when a skill or aj spawned it by hand, and judged pages, plans, acceptance runs and diffs. aj wanted it deployable anywhere at any time, to review parts of a codebase, images, visual style and whole codebases, and asked whether to extend the reviewer or make a new general critic agent.
+
+**Decision.** aj wrote "Design approved: review command 1A 2A 3*" and then "Build plan approved: review command 1A 2A 3A". Design 1A: a short verdict goes to chat and the main session saves the full report to `docs/qa/review-<target name>-<date>/`. Design 2A: a whole-codebase review goes folder by folder, one reviewer at a time, with a merged list ranked by severity and then file. Design 3*, aj's own answer: "A. but uncapped, if over 12 folders tell the user explicitly how many and approximate time to finish and usage". So the extra-input syntax is `/house-rules:review <path> [style] [criteria text]`, with no argument reviewing the uncommitted diff, and the sweep has no folder cap. Plan 1A: a folder is split into batches of files, one reviewer per batch, each sized to finish within the 60-second agent deadline. Plan 2A: files at the repo root are reviewed as one extra unit called root files. Plan 3A: mode lists are updated in `docs/4-systems/review-loop.md` and the command gets its own `docs/4-systems/review-command.md`.
+
+**Why.** The reviewer is already adversarial and read-only, and the design review loop already decided (4A, 2026-11-24, entry below) that the reviewer agent is extended, not duplicated, so a second critic agent was dropped. A reviewer has no Agent tool, so the sweep lives in the command, which the main session runs. The agent deadline is 60 seconds in `rules/waits.json`; the 900 seconds quoted on the design page and in `skills/visual-loop/SKILL.md` was stale (issue #622).
+
+**Rejected.** A new critic agent; chat-only reports; a single sampling pass for the whole repo; a folder cap.
+
+**Status.** Built in plugin 2.94.0 (parent issue #617, steps #618 to #621). Beyond the plan: `scripts/review_plan.py` was added (deviation D1 in `docs/qa/review-command/ledger.md`).
+
+---
+
 ## 2026-11-24 - Design review loop reversals (plugin 2.92.0)
 
 **Context.** The design review loop (#592) is built. Four earlier decisions it replaces are recorded here, each in its own paragraph, so the older entries are not left standing unchallenged.
@@ -3703,3 +3727,13 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 **Why.** aj's own QA is the sign-off the design loop requires.
 
 **Status.** Standing. Choice 1 as first written (expandable hook messages) was not possible in Claude Code, so option A (a log and a command) replaced it; see the 2026-11-23 entry above.
+
+## 2026-11-24 — Reviewer effort stays medium; effort is now pinned like the model
+
+**Context.** A review of `agents/reviewer.md` (`docs/qa/review-reviewer-2026-11-24/report.md`) found `effort: medium` with no recorded reason and no check, while every other agent is `low` and the model is pinned by `verify.py`. The git history shows it arrived inside an autosave commit (`1b8c776`), not a decision.
+
+**Decision.** `effort: medium` stays for the reviewer, and `verify.py` now pins the effort of all four agents (scout, builder, editor `low`; reviewer `medium`). aj can still override either per run with `/house-rules:review --model ... --effort ...`.
+
+**Why.** The reviewer is the one agent that reads cold and hunts for what is missing, so it keeps a step more effort than the executors. This is judgement: no run compared medium with low, so the entry is revisited when the Sonnet-variant measurement is done.
+
+**Status.** Standing, open to the measurement above.

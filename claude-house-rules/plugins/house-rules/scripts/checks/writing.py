@@ -120,5 +120,30 @@ pv_case("Stop: a turn that changed nothing is not a work report, so a technical 
 pv_case("Stop: HOUSE_RULES_PLAIN_SUMMARY=off switches it off",
         not _ps(_ps_wrote, _PS_TECH, HOUSE_RULES_PLAIN_SUMMARY="off"), "")
 
+import clarity as _cl
+_SVGU = "data:image/svg+xml,%3Csvg xmlns=%27x%27 width=%2710%27 height=%2710%27 fill=%27red%27 stroke=%27black%27%3E"
+_SVGP = ('<p>Hi there all</p><script>const PAGE = {\n pic: "%s",\n lead: "Plain words about the page here."\n};</script>'
+         '<svg width="9"><text>mangled wordy picture label</text></svg>' % _SVGU)
+_SVGT = _cl.page_text(_SVGP)
+pv_case("page text (#612): an inline picture whose data address has raw spaces, and an inline <svg>, give no findings or text",
+        "stroke" not in _SVGT and "mangled" not in _SVGT and "Plain words about the page here." in _SVGT
+        and not _cl.findings(_SVGT), _SVGT[:80])
+
+# --- verify.py prints parts as they finish (#611)
+import importlib.util as _iu
+import time as _time
+_vs = _iu.spec_from_file_location("verify_611", os.path.join(HERE, "verify.py"))
+_vm = _iu.module_from_spec(_vs)
+_vs.loader.exec_module(_vm)
+
+
+def _stub(p):  # "slow" starts first and takes longer; "fast" starts second
+    _time.sleep(0.6 if p == "slow" else 0.05)
+    return {"part": p, "out": "RESULT: PASS - all 1 checks passed.\n", "rc": 0, "note": "", "seconds": 0.0}
+
+
+_vo = [r["part"] for r in _vm.run_streaming(["slow", "fast"], _stub, 2)]
+report("PASS" if _vo == ["fast", "slow"] else "FAIL",
+       "verify.py (#611): a fast part prints before a slower part that started earlier: %s" % _vo)
 
 finish()

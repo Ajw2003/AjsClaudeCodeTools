@@ -2108,4 +2108,233 @@ _w_bad = [a for a in ("builder", "reviewer", "archivist")
           if "scripts/waitfor.py" not in read(os.path.join(_cj_root, "agents", a + ".md"))]
 report("PASS" if not _w_bad else "FAIL", "#563: builder, reviewer and archivist prompts carry the waitfor.py line" + (": missing in %s" % _w_bad if _w_bad else ""))
 
+# --- review command (#620): the eight modes, the command file and the sweep helper stay in step ----------
+# (No check here for an unbraced $CLAUDE_PLUGIN_ROOT in commands/review.md: the harvest-scan case above
+# already scans every commands/*.md for it. The braced form being used is checked below.)
+_rv_modes = ["page", "plan", "acceptance", "diff", "code", "codebase", "image", "style"]
+_rv_plug = os.path.abspath(_cj_root)
+_rv_agent = read(os.path.join(_rv_plug, "agents", "reviewer.md"))
+_rv_modefile = read(os.path.join(_rv_plug, "rules", "detail", "review-modes.md"))
+_rv_desc = next((l for l in _rv_agent.splitlines() if l.startswith("description:")), "")
+_rv_loopdoc = read(os.path.join(_rv_plug, "..", "..", "..", "docs", "4-systems", "review-loop.md"))
+_rv_miss = []
+for _m in _rv_modes:
+    if not re.search(r"\b%s\b" % _m, _rv_desc):
+        _rv_miss.append(f"reviewer.md description lacks {_m}")
+    if not re.search(r"^- %s\b" % _m, _rv_agent, re.M):
+        _rv_miss.append(f"reviewer.md has no '- {_m}:' bullet")
+    if not re.search(r"^## %s\b" % _m, _rv_modefile, re.M):
+        _rv_miss.append(f"review-modes.md has no '## {_m}' heading")
+    if not re.search(r"\b%s\b" % _m, _rv_loopdoc):
+        _rv_miss.append(f"docs/4-systems/review-loop.md does not name {_m}")
+report("PASS" if not _rv_miss else "FAIL", "review command: all eight modes are in reviewer.md (description and bullet) and review-modes.md (heading)")
+for _x in _rv_miss:
+    print(f"          {_x}")
+
+_rv_cmd_path = os.path.join(_rv_plug, "commands", "review.md")
+_rv_bad = []
+if not os.path.isfile(_rv_cmd_path):
+    _rv_bad.append("commands/review.md is missing")
+else:
+    _rv_cmd = read(_rv_cmd_path)
+    _rv_front = _rv_cmd.split("---")[1] if _rv_cmd.startswith("---") and _rv_cmd.count("---") >= 2 else ""
+    for _k in ("description:", "argument-hint:"):
+        if not re.search(r"^%s\s*\S" % _k, _rv_front, re.M):
+            _rv_bad.append(f"frontmatter lacks {_k}")
+    _rv_calls = [l for l in _rv_cmd.splitlines() if "review_plan.py" in l and ("python" in l)] + \
+                [l for l in _rv_cmd.splitlines() if "waitfor.py" in l and "python" in l]
+    if not _rv_calls:
+        _rv_bad.append("no script call found")
+    for _l in _rv_calls:
+        if '"${CLAUDE_PLUGIN_ROOT}/scripts/' not in _l:
+            _rv_bad.append(f"script call without braced plugin root: {_l.strip()}")
+    if not re.search(r"`notice:`\s+line,\s+show that line to the user BEFORE starting", _rv_cmd):
+        _rv_bad.append("does not say the notice: line is shown BEFORE the sweep starts")
+    if not re.search(r"ONE AT A TIME", _rv_cmd):
+        _rv_bad.append("does not say reviewers are spawned one at a time")
+report("PASS" if not _rv_bad else "FAIL", "review command: commands/review.md has its frontmatter, braced plugin root, notice-before-sweep and one-at-a-time rules")
+for _x in _rv_bad:
+    print(f"          {_x}")
+
+import datetime as _rv_dt  # noqa: E402
+_rv_py = os.path.join(_rv_plug, "scripts", "review_plan.py")
+_rv_tmp = tempfile.mkdtemp(prefix="rv-plan-")
+atexit.register(shutil.rmtree, _rv_tmp, ignore_errors=True)  # our own mkdtemp folder: cleaned even if a case raises
+
+
+def _rv_run(args, cwd):
+    r = subprocess.run([sys.executable, _rv_py] + args, cwd=cwd, capture_output=True, text=True, encoding="utf-8")
+    return r.returncode, r.stdout, r.stderr
+
+
+def _rv_git(cwd, *a):
+    return subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", *a], cwd=cwd,
+                          capture_output=True, text=True, encoding="utf-8")
+
+
+def _rv_repo(name, folders, extra=None):
+    d = os.path.join(_rv_tmp, name)
+    os.makedirs(d)
+    _rv_git(d, "init", "-q")
+    for f in folders:
+        os.makedirs(os.path.join(d, f))
+        open(os.path.join(d, f, "a.txt"), "w", encoding="utf-8").write("x\n")
+    open(os.path.join(d, "root.txt"), "w", encoding="utf-8").write("x\n")
+    for rel, n in (extra or {}).items():
+        os.makedirs(os.path.join(d, rel), exist_ok=True)
+        for i in range(n):
+            open(os.path.join(d, rel, f"f{i:02d}.txt"), "w", encoding="utf-8").write("x\n")
+    _rv_git(d, "add", "-A")
+    _rv_git(d, "commit", "-qm", "x")
+    return d
+
+
+_rv_have_git = shutil.which("git") is not None
+if not _rv_have_git:
+    for _t in ("mode picks", "report line has no extension or leading date", "units counts and notice",
+               "batches hold at most 8 files", "units prints a non-ASCII folder name without quotes"):
+        report("FAIL", f"review command: review_plan.py {_t}")
+        print("          git is not installed, so review_plan.py could not be tested")
+else:
+    _rv_work = os.path.join(_rv_tmp, "work")
+    os.makedirs(os.path.join(_rv_work, "sub"))
+    open(os.path.join(_rv_work, "sub", "a.py"), "w").write("x = 1\n")
+    open(os.path.join(_rv_work, "b.py"), "w").write("x = 1\n")
+    open(os.path.join(_rv_work, "pic.png"), "wb").write(b"\x89PNG")
+    _rv_dsg = "2026-01-02-demo.html"
+    _rv_pln = "2026-01-02-demo-plan.html"
+    for _n, _kind in ((_rv_dsg, "proposal"), (_rv_pln, "build-plan")):
+        open(os.path.join(_rv_work, _n), "w", encoding="utf-8").write(
+            f'<html><head><meta name="house-rules-page" content="{_kind}"></head><body>demo</body></html>\n')
+    _rv_exp = [
+        ([], "diff"), (["sub"], "code"), (["b.py"], "code"), (["pic.png"], "image"), (["."], "codebase"),
+        ([_rv_dsg], "page"), ([_rv_pln], "plan"), (["sub", "style"], "style"),
+    ]
+    _rv_f = []
+    for _a, _mode in _rv_exp:
+        _c, _o, _e = _rv_run(["mode"] + _a, _rv_work)
+        if _c != 0 or f"mode: {_mode}\n" not in _o:
+            _rv_f.append(f"args {_a}: wanted mode: {_mode}, got exit {_c}: {_o.strip()} {_e.strip()}")
+        if _mode == "plan" and not re.search(r"^design: .*2026-01-02-demo\.html$", _o, re.M):
+            _rv_f.append(f"plan did not name the design page: {_o.strip()}")
+    _c, _o, _e = _rv_run(["mode", "no-such-thing"], _rv_work)
+    if _c != 2 or not _o.startswith("error:"):
+        _rv_f.append(f"missing path: wanted exit 2 and error:, got exit {_c}: {_o.strip()}")
+    report("PASS" if not _rv_f else "FAIL",
+           "review command: review_plan.py mode picks diff, code, image, codebase, page, plan, style and exits 2 for a missing path")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
+    _c, _o, _e = _rv_run(["mode", _rv_dsg], _rv_work)
+    _c2, _o2, _e2 = _rv_run(["mode", "sub"], _rv_work)
+    _rv_f = []
+    _re_rep = r"^report: docs/qa/review-demo-\d{4}-\d{2}-\d{2}$"
+    if not re.search(_re_rep, _o, re.M):
+        _rv_f.append(f"dated html page: report line wrong: {_o.strip()}")
+    if not re.search(r"^report: docs/qa/review-sub-\d{4}-\d{2}-\d{2}$", _o2, re.M):
+        _rv_f.append(f"folder: report line wrong: {_o2.strip()}")
+    report("PASS" if not _rv_f else "FAIL", "review command: review_plan.py report line has no file extension and no leading date")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
+    _rv_f = []
+    _r14 = _rv_repo("r14", [f"d{i:02d}" for i in range(14)])
+    _c, _o, _e = _rv_run(["units"], _r14)
+    if "folders: 14\n" not in _o:
+        _rv_f.append(f"14 folders: no 'folders: 14': {_o.strip()}")
+    if not re.search(r"^notice: .*14 folders.*minimum", _o, re.M):
+        _rv_f.append(f"14 folders: notice line missing or lacks '14 folders'/'minimum': {_o.strip()}")
+    _r12 = _rv_repo("r12", [f"d{i:02d}" for i in range(12)])
+    _c, _o, _e = _rv_run(["units"], _r12)
+    if "folders: 12\n" not in _o or re.search(r"^notice:", _o, re.M):
+        _rv_f.append(f"12 folders: wanted 'folders: 12' and no notice: {_o.strip()}")
+    report("PASS" if not _rv_f else "FAIL", "review command: review_plan.py units counts folders and prints the notice only above 12")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
+    _rv_f = []
+    _r20 = _rv_repo("r20", [], {"big": 20})
+    _c, _o, _e = _rv_run(["batches"], _r20)
+    _rows = [l.split("\t") for l in _o.splitlines() if l.startswith("big\t")]
+    _sizes = [len(r[2].split(",")) for r in _rows]
+    if len(_rows) != 4 or max(_sizes or [0]) > 6 or sum(_sizes) != 20:
+        _rv_f.append(f"20 files in one unit: wanted 4 batches of at most 6, got sizes {_sizes}: {_o.strip()[:200]}")
+    report("PASS" if not _rv_f else "FAIL", "review command: review_plan.py batches never hold more than 6 files (20 files make 4 batches)")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
+    _rv_f = []
+    _ru = _rv_repo("ru", ["ünï"])
+    _c, _o, _e = _rv_run(["units"], _ru)
+    if "unit: ünï files: 1" not in _o:
+        _rv_f.append(f"non-ASCII folder not printed plainly: {_o.strip()!r}")
+    report("PASS" if not _rv_f else "FAIL", "review command: review_plan.py prints a non-ASCII folder name without quotes")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
+    # D3 fixes: design lookup, report name, codebase aliases, error exits, estimate (acceptance test 3 findings)
+    _rv_f = []
+    _p = os.path.join(_rv_work, "plans")
+    os.makedirs(os.path.join(_p, "2026-02-03-feat"))
+    _pg = '<html><head><meta name="house-rules-page" content="%s"></head><body>x</body></html>\n'
+    for _rel, _kind in (("2026-01-01-feat.html", "proposal"), ("2026-01-05-feat-build-plan.html", "build-plan"),
+                        ("old-feat.html", "proposal"), ("2026-02-03-feat/proposal.html", "proposal"),
+                        ("2026-02-03-feat/build-plan.html", "build-plan"), ("2026-03-01-two.html", "proposal"),
+                        ("2026-03-02-two.html", "proposal"), ("2026-03-03-two-plan.html", "build-plan")):
+        open(os.path.join(_p, _rel), "w", encoding="utf-8").write(_pg % _kind)
+    _c, _o, _e = _rv_run(["mode", "plans/2026-01-05-feat-build-plan.html"], _rv_work)
+    if not re.search(r"^design: .*2026-01-01-feat\.html$", _o, re.M):
+        _rv_f.append(f"-build-plan page, design with another date (old-feat.html must not match): {_o.strip()}")
+    _c, _o, _e = _rv_run(["mode", "plans/2026-02-03-feat/build-plan.html"], _rv_work)
+    if not re.search(r"^design: .*proposal\.html$", _o, re.M) or "report: docs/qa/review-feat-" not in _o:
+        _rv_f.append(f"folder-style plan: wanted its proposal.html and report named after the folder: {_o.strip()}")
+    _c, _o, _e = _rv_run(["mode", "plans/2026-03-03-two-plan.html"], _rv_work)
+    if "design: ambiguous" not in _o or _o.count("candidate: ") != 2:
+        _rv_f.append(f"two designs: wanted 'design: ambiguous' and two candidate: lines: {_o.strip()}")
+    for _t in ("./", _rv_work):
+        _c, _o, _e = _rv_run(["mode", _t], _rv_work)
+        if "mode: codebase\n" not in _o:
+            _rv_f.append(f"target {_t!r}: wanted mode: codebase, got {_o.strip()}")
+    _c, _o, _e = _rv_run(["mode", "sub", "--root", _rv_work], _rv_tmp)
+    if "mode: code\n" not in _o:
+        _rv_f.append(f"target is resolved against --root, not the cwd: {_o.strip()} {_e.strip()}")
+    for _a in (["units", "--root", os.path.join(_rv_tmp, "nope")], ["mode", "--root", os.path.join(_rv_tmp, "nope")]):
+        _c, _o, _e = _rv_run(_a, _rv_work)
+        if _c != 3 or not _o.startswith("error:") or "Traceback" in _e:
+            _rv_f.append(f"{_a[0]} with a missing --root: wanted exit 3 and error:, got exit {_c}: {_o.strip()} {_e.strip()[:80]}")
+    _c, _o, _e = _rv_run(["units"], _r14)  # 15 files in 15 batches: 15 x 10,000 + 15 x 3,400
+    _m = re.search(r"about ([\d,]+) tokens", _o)
+    if not _m or _m.group(1) != "201,000":
+        _rv_f.append(f"estimate: wanted 201,000 tokens (15 batches x 10,000 + 15 files x 3,400), got {_m and _m.group(1)}: {_o.strip()[:160]}")
+    report("PASS" if not _rv_f else "FAIL",
+           "review command: review_plan.py finds designs by exact name, names folder-style reports, treats ./ and the repo path as codebase, exits 3 on a bad --root, estimates tokens per batch plus per file")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
+    # --model / --effort overrides: read from anywhere in the text, `default` when absent, exit 2 when unknown
+    _rv_f = []
+    for _a, _want in (
+        (["b.py"], ("default", "default", "none")),
+        (["b.py", "check", "names", "--model", "sonnet", "--effort", "low"], ("sonnet", "low", "check names")),
+        (["--model=OPUS", "b.py", "--effort=max"], ("opus", "max", "none")),
+    ):
+        _c, _o, _e = _rv_run(["mode"] + _a, _rv_work)
+        _got = tuple((re.search(r"^%s: (.*)$" % _k, _o, re.M) or [None, "?"])[1] for _k in ("model", "effort", "criteria"))
+        if _c != 0 or _got != _want:
+            _rv_f.append(f"args {_a}: wanted {_want}, got exit {_c} {_got}: {_e.strip()[:80]}")
+    for _a in (["--model", "gpt"], ["--effort"], ["--effort", "extreme"]):
+        _c, _o, _e = _rv_run(["mode", "b.py"] + _a, _rv_work)
+        if _c != 2 or not _o.startswith("error:") or "Traceback" in _e:
+            _rv_f.append(f"{_a}: wanted exit 2 and error:, got exit {_c}: {_o.strip()} {_e.strip()[:80]}")
+    _rv_cmd_txt = read(os.path.join(_rv_plug, "commands", "review.md"))
+    if "--model" not in _rv_cmd_txt or "--effort" not in _rv_cmd_txt or "only when" not in _rv_cmd_txt:
+        _rv_f.append("commands/review.md does not document --model, --effort and the leave-default rule")
+    report("PASS" if not _rv_f else "FAIL",
+           "review command: --model and --effort are read from anywhere in the text, print default when absent, and an unknown value exits 2")
+    for _x in _rv_f:
+        print(f"          {_x}")
+
+
+shutil.rmtree(_rv_tmp, ignore_errors=True)  # our own mkdtemp folder; cases above only record FAILs, they do not raise
+
 finish()

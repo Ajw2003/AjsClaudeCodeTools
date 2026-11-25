@@ -69,6 +69,7 @@ chunk of work) and [reviewer](plugins/house-rules/agents/reviewer.md) (opus; adv
 finished diff). Each has a short tool allowlist so a spawn starts small, and none has `Agent`. The
 `agentcap` hook (PreToolUse on `Agent`) denies a third running subagent and any spawn made by a
 subagent; `HOUSE_RULES_AGENTS=off` disables it. the `delegate` handler (above) is what asks for that delegation.
+The reviewer is also reachable by hand through the `/house-rules:review` command (code, a whole repo, an image or a screen's style; see [docs/4-systems/review-command.md](../docs/4-systems/review-command.md)).
 
 **This, not the `opusplan` setting below, is what makes "Opus plans, Sonnet executes" actually
 happen.** Agent frontmatter ships with the plugin, so it works on every surface. The setting

@@ -29,12 +29,18 @@ for _event, _margin, _env in _size_cases[:4]:  # inject, showrule, standards, pr
     if _ctx is None:
         report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
         print(f"          could not read additionalContext: {_err.strip()}")
-    elif len(_ctx) <= _margin:
-        report("PASS", f"{_event} stays under the per-hook additionalContext limit")
-        print(f"          {len(_ctx)} chars <= {_margin} margin (hard limit 10,000)")
     else:
-        report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
-        print(f"          {len(_ctx)} chars > {_margin} margin - Claude Code will truncate this")
+        # The inject text names the plugin root once, so its length depends on where this checkout sits (a
+        # worktree 100 characters deep failed by 21 where the same commit at a short path passed). Measure the
+        # rules with that path set to a typical installed one, so the check tests the text and not the folder.
+        _root_m = re.search(r"plugin root: (\S+)", _ctx)
+        _len = len(_ctx) - (len(_root_m.group(1)) - 100) * _ctx.count(_root_m.group(1)) if _root_m else len(_ctx)
+        if _len <= _margin:
+            report("PASS", f"{_event} stays under the per-hook additionalContext limit")
+            print(f"          {_len} chars <= {_margin} margin (hard limit 10,000; {len(_ctx)} as measured here)")
+        else:
+            report("FAIL", f"{_event} stays under the per-hook additionalContext limit")
+            print(f"          {_len} chars > {_margin} margin - Claude Code will truncate this ({len(_ctx)} as measured here)")
 
 # --- the show-don't-tell rule reaches the session through its own slot (issue #224) ----------
 _code, _ctx, _err = _additional_context("showrule", "", env=env_in(ROOT))
@@ -1257,7 +1263,7 @@ print('{"ok": true}' if m == 'reached' else '{"ok": false, "reason": "continue b
 """
 with open(_GC_STUB, "w", encoding="utf-8") as _f:
     _f.write(_GC_SRC)
-_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE,
+_RB_ENV = dict(os.environ, HOUSE_RULES_LOOP="off", HOUSE_RULES_JUDGE="off", HOUSE_RULES_ROADBLOCKS_STATE=_RB_STATE,
                HOUSE_RULES_GOALCHECK_CMD=_GC_STUB)
 _RB_CLAIM = "I can't continue: the engine is not installed."
 
@@ -1286,7 +1292,7 @@ _rb_t = _hand_transcript("rb-none", [_rb_user("build it"), _rb_tool("pytest -q")
 _rb_fresh()
 _rb1, _rb2, _rb3 = _rb_run(_rb_t), _rb_run(_rb_t), _rb_run(_rb_t)
 for _n, _o in ((1, _rb1), (2, _rb2)):
-    report("PASS" if '"decision":"block"' in _o and "roadblocks.md" in _o and "which, ls or uname" in _o else "FAIL",
+    report("PASS" if '"decision":"block"' in _o and "roadblocks.md" in _o and "run the install command" in _o else "FAIL",
            "a roadblock claim with no probe is blocked (block %d of 2), naming the check and the rule file" % _n)
 report("PASS" if '"decision":"block"' not in _rb3 and "roadblock claim" in _rb3 and "unchecked" in _rb3 else "FAIL",
        "the third time the reply passes with a visible warning line")
@@ -1374,9 +1380,9 @@ report("PASS" if ['"decision":"block"' in o for o in _rb_r] == [True, True, Fals
        "#588: a retry (stop_hook_active) still blocks a second time and never a third")
 _rb_fresh()
 for _ph in ("I can't verify it", "I can’t verify it", "we won't verify it", "we won’t verify it",
-            "I am unable to verify it", "I am unable to run it", "I could not run it", "I couldn't run it",
+            "I couldn't run it",
             "I couldn’t run it", "I don't have access", "I don’t have access", "That is not available here",
-            "It isn't available", "It isn’t available", "I can’t continue"):
+            "It isn't available", "It isn’t available"):
     _rb_fresh()
     report("PASS" if '"decision":"block"' in _rb_run(_rb_t, reply=_ph) else "FAIL", "#588: %s is flagged" % ascii(_ph))
 _rb_fresh()
@@ -1443,11 +1449,11 @@ def _gc_reset():
 
 _gc_reset()
 _o = _gc_run("unreached")
-report("PASS" if '"decision":"block"' in _o and "continue building castles 2 to 12" in _o and "block 1 of 6" in _o else "FAIL",
+report("PASS" if '"decision":"block"' in _o and "continue building castles 2 to 12" in _o and "block 1 of 2" in _o else "FAIL",
        "#591: a goal-unreached verdict blocks with the judge's reason")
 _gc_reset()
 _gc_n = [('"decision":"block"' in _gc_run("unreached")) for _ in range(7)]
-report("PASS" if _gc_n == [True] * 6 + [False] else "FAIL", "#591: the goal check blocks 6 times in a row per user message, the 7th passes (%s)" % _gc_n)
+report("PASS" if _gc_n == [True] * 2 + [False] * 5 else "FAIL", "#591/#608: the goal check shares the cap, 2 blocks in a row then it passes (%s)" % _gc_n)
 _gc_reset()
 _o = _gc_run("reached")
 report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: a goal-reached verdict passes")
@@ -1475,8 +1481,45 @@ report("PASS" if '"decision":"block"' not in _o else "FAIL", "#591: HOUSE_RULES_
 _gc_reset()
 _gc_hooks = json.loads(hooks_json_text)["hooks"]["Stop"]
 _gc_judge = [h for e in _gc_hooks for h in e["hooks"] if h.get("type") == "prompt"]
-report("PASS" if len(_gc_judge) == 1 and "three different methods" in _gc_judge[0]["prompt"] and "$ARGUMENTS" in _gc_judge[0]["prompt"] else "FAIL",
-       "#591: hooks.json has the prompt-type judge on Stop and its prompt names the three-method rule")
+report("PASS" if not _gc_judge else "FAIL", "#607: hooks.json has no prompt-type judge on Stop (the scripted roadblocks hook runs it)")
+_JG_STUB = os.path.join(_HAND_ROOT, "judge_stub.py")
+with open(_JG_STUB, "w", encoding="utf-8") as _f:
+    _f.write("import os\nprint('{\"ok\": true}' if os.environ.get('JG_MODE') == 'pass' else "
+             "'{\"ok\": false, \"criterion\": \"C2\", \"reason\": \"one attempt only\"}')\n")
+_jg_env = dict(_RB_ENV, HOUSE_RULES_JUDGE="on", HOUSE_RULES_JUDGE_CMD=_JG_STUB)
+_jg_reply = "Done. The graphics engine is simply out of reach from here, so the render step is skipped."
+_rb_fresh()
+_o = _rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="flag"))
+report("PASS" if '"decision":"block"' in _o and "criterion C2" in _o and "Roadblock record:" in _o and "Cannot split:" in _o else "FAIL",
+       "#607: a reply the judge flags gets a block naming the criterion and showing the six reply forms")
+_rb_fresh()
+_o = _rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="pass"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#607: a reply the judge passes is left alone")
+_rb_fresh()
+_cap_o = [_rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="flag")) for _ in range(12)]
+_cap_b = ['"decision":"block"' in _o for _o in _cap_o]
+report("PASS" if _cap_b == [True] * 2 + [False] * 10 and "unverified" in _cap_o[2] else "FAIL",
+       "#608: 12 identical flagged replies give 2 blocks then a warning saying what was unverified (%s)" % _cap_b)
+with open(_gc_t, "a", encoding="utf-8") as _f:
+    _f.write(chr(10) + _rb_tool("ls") + chr(10))
+_o = _rb_run(_gc_t, reply=_jg_reply, env=dict(_jg_env, JG_MODE="flag"))
+report("PASS" if '"decision":"block"' in _o and "block 1 of 2" in _o else "FAIL",
+       "#608: a tool call between blocks resets the count, so the check runs again")
+_rb_fresh()
+_o = _rb_run(_rb_t, reply="I could not run it, I'm unable to, I can't. Next step: run pytest on the new case by 10:00.")
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#609: a reply ending in a next step, or with bare could-not/unable-to/I-can't, is not flagged")
+_rb_fresh()
+_o = _rb_run(_rb_t, reply="Unverified: the render, the engine could not be started; done-test is `pytest -q` passing, deadline 10:00.",
+             env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#609: an Unverified line with a done-test and deadline passes")
+_rb_fresh()
+_o = _rb_run(_rb_t, reply="Not done. NEEDS YOU: the licence key.", env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
+report("PASS" if '"decision":"block"' not in _o else "FAIL", "#609: a NEEDS YOU line exempts the goal check")
+_rb_fresh()
+_o = _rb_run(_rb_t)
+report("PASS" if '"decision":"block"' in _o and "(fails C2/C3)" in _o and "Roadblock record:" in _o and "Cannot split:" in _o else "FAIL",
+       "#609: the phrase-list block names a criterion and shows the six reply forms")
+_rb_fresh()
 _rb_off = _rb_run(_rb_t, env=dict(_RB_ENV, HOUSE_RULES_ROADBLOCKS="off"))
 report("PASS" if '"decision":"block"' not in _rb_off else "FAIL", "HOUSE_RULES_ROADBLOCKS=off turns the check off")
 _rb_fresh()
