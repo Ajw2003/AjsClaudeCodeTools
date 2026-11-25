@@ -7,6 +7,16 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-24 - Speed first: hook speed and easy test wins before code quality
+
+**Decision.** aj approved "Design approved: speed first 1A 2A 3A 4*" on `docs/plans/speed-first-proposal.html`: all five hook-speed steps, label reads run at the same time (GitHub still read every call), the reply judge left alone for now and timed, and, in aj's own answer, the test suite sped up now where easy wins are feasible with the rest left for the code-quality phase.
+
+**Why.** aj wants routine work fast, all of it. The review of 2026-11-24 measured 66 ms of import per hook call, 9 processes per Write and 748 ms of serial label reads.
+
+**Rejected.** A 60-second label cache (reverses the 2026-10-14 decision that labels are read from GitHub every time); making the judge opt-in (reverses the decision above that it is tuned, not removed); leaving the test suite entirely to the quality phase.
+
+**Status.** Active. Systems doc: `docs/4-systems/hook-speed.md`. Parent issue #625.
+
 ## 2026-11-24 - The roadblock judge is tuned, not removed, and every long wait becomes one-minute segments
 
 **Decision.** aj approved "Design approved: judge blocking fix and one-minute segments 1A 2A 3A" on the page `docs/plans/judge-blocking-fix.html`. The roadblock judge stays. It gets five written criteria (C1 to C5) and a reason standard (the check run, what it returned, the logic to the claim), it moves into the scripted Stop hook so it can read the real tool calls (1A), it shares one cap of two blocks with the record check and the goal check, reset only after real tool work (2A), and steps that pass data use named checkpoint files (3A). The launch guard refuses a foreground or background launch over 60 seconds unless it says `Cannot split:` with a reason that passes C5. Parent issue #605, steps #606 to #613.
@@ -3737,3 +3747,13 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 **Why.** The reviewer is the one agent that reads cold and hunts for what is missing, so it keeps a step more effort than the executors. This is judgement: no run compared medium with low, so the entry is revisited when the Sonnet-variant measurement is done.
 
 **Status.** Standing, open to the measurement above.
+
+## 2026-11-24 — Review models per mode
+
+**Context.** aj asked whether Opus is needed for every review. The 2026-11-24 reviewer model review (`docs/qa/review-reviewer-2026-11-24/report.md`) was judgement only, so each mode was run on both models and timed (one run each).
+
+**Decision.** `/house-rules:review` runs page, diff and plan on Opus, code on Opus then Sonnet with the findings merged, and codebase, image and style on Sonnet. A typed `--model` always wins and runs one reviewer. The `reviewer` agent file stays `opus`.
+
+**Why.** Code, planted-bug file: both models found 6 of 6; Sonnet took 10.4 s against 39.0 s. Code, real six-file batch: Opus 26 findings (43,196 tokens, 98.9 s), Sonnet 21 (35,815 tokens, 27.3 s); each found a real bug the other missed, Opus the cross-project transcript read in `session_ledger.py`, Sonnet the merge-base mismatch in `check_plugin_version_bump.py`. Page, the speed first plan: Opus 17 findings (81,316 tokens, 137.4 s), Sonnet 12 (77,323 tokens, 80.9 s); only Opus opened the saved baseline and found that step 2 cannot be built as written, so plan, which cross-checks a plan against code the same way, goes back to Opus. Diff of commit 09be0861: Opus 8 findings, Sonnet 7, close to parity. Dollar cost was not measured (the agent reports give one token total); image and style were not run.
+
+**Status.** Standing. Supersedes the plan and code on Sonnet default of plugin 2.94.5 and refines the reviewer on Opus tier line of the earlier tier entry. Open to a larger sample.

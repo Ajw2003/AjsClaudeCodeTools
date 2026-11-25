@@ -4,6 +4,24 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review models per mode: plan back on Opus, code now runs Opus then Sonnet and merges the findings, codebase, image and style stay on Sonnet; "override typed at spawn" now reads "model set at spawn"; Decisions entry and doc rows brought up to date (plugin 2.94.6).
+
+Verify result recorded for the review Sonnet default: docs part green, 33 failures elsewhere not yet compared with main (no code change).
+
+Review override check updated: a code review now expects `model: sonnet` by default (verify.py docs part).
+
+Speed step 1, timing script (#626): `tools/time_hooks.py` replays the real Write and Bash hook calls in a throwaway repo and prints milliseconds per call (`--quick`, `--save`, `--compare`); the saved baseline in `docs/qa/speed-first/baseline.json` has a Write call at about 1,020 ms over 18 processes and a Bash call at about 880 ms over 12, and 7 label reads at about 1,100 ms. Five `verify.py` parts took over the 55 second limit and have no number yet. Check 56 in `tools/verify_tools.py` covers the script. Refs #625.
+
+Handoff note for speed first updated with the review command Sonnet default (no code change).
+
+Review command now runs plan, code, codebase, image and style reviews on Sonnet by default (page and diff stay on Opus; a typed `--model` still wins), finishing the reviewer model review's recommendation without a second agent file; plugin 2.94.5.
+
+Speed first build plan, review round 2 (no code): five wording and picture fixes applied (step 4 titled profile-then-fix, step 6 runs last and bumps the version, acceptance counts four design choices); the page is stamped open-risks after two rounds. Refs #625.
+
+Speed first build plan fixed after page review round 1 (no code): step 4 now says the 5 label reads already run in a thread pool (`design_loop.py:826`) and starts by profiling, step 3 names its failure rules and 10 second limit, steps 5 and 6 gained timing and check-list done-tests, and issue #629 matches. Refs #625.
+
+Speed first design and build plan (no code yet): docs/4-systems/hook-speed.md, the proposal and build plan pages in docs/plans/, and issues #625 to #631 for six measured steps that cut hook time per tool call and speed up the test suite. Refs #625.
+
 Verdict hook knows about overrides, plus reviewer findings 4 to 8, plugin 2.94.4: the model typed with `--model` is now stored on the launch's record by `agentcap`, shown by `announce` ("override typed at spawn"), and compared by `verdict`, so Opus on a Sonnet agent reads MATCH when Opus was asked for and MISMATCH when it was not; with nothing typed the agent file is compared as before. A record that cannot be read is said in the report, not swallowed. Also: `hook-engine.md` and `review-loop.md` now agree with `reviewer.md` on its tools and write folder; page mode's output line fits design findings; `reviewer.md` says Write is for acceptance only; `verify.py` pins every agent's effort; and a Decisions entry records that the reviewer's `effort: medium` stays, as judgement, until measured. Finding 9 (trim the copied mode text) is left on purpose: those bullets are the reviewer's only mode text when no `review-modes.md` path reaches it. 1,606 checks pass across all 7 parts; not run in a live session.
 
 Review command model and effort override, plugin 2.94.3: `/house-rules:review` now accepts `--model opus|sonnet|haiku|fable` and `--effort low|medium|high|xhigh|max` anywhere in its text; with neither typed the reviewer keeps its own setting (`opus`, `medium`). `scripts/review_plan.py mode` reads them and prints `model:` and `effort:` (an unknown value exits 2), and the command passes them to the Agent tool only when set, for every reviewer in a sweep. The command also now hands the reviewer the real `review-modes.md` and `waitfor.py` paths, because the repo's own archivist text shows `${CLAUDE_PLUGIN_ROOT}` may stay unexpanded inside an agent file; this replaces the 2.94.2 approach. New verify check; all 7 parts pass (1,603 checks). Not run live: a real `/house-rules:review ... --model sonnet` spawn, because the sandbox has the older plugin installed; the `verdict` hook will report an override as a model MISMATCH (documented, not changed).

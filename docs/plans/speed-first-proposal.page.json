@@ -1,0 +1,303 @@
+{
+ "title": "Speed first: make every hook call cheap",
+ "eyebrow": "Proposal \u00b7 nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: speed first",
+ "short": {
+  "lead": "I propose five steps, each timed before and after, to cut the time every tool call spends in hooks; you answer four questions and send the approval line.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "search",
+    "Measure",
+    "Measure first",
+    "",
+    "A small timing script replays real Write and Bash hook calls and prints milliseconds per call. It also times the commit gate's label reads against this repo's real issues. The baseline is saved.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/measure.svg",
+     "alt": "A Write call goes through the hooks and comes out as a millisecond number",
+     "caption": "Step 1: a number to beat."
+    }
+   ],
+   [
+    "next",
+    "Load less",
+    "Load only what an event needs",
+    "",
+    "Today each hook loads all 7 parts before it reads the event name. After this, it loads only the part that event needs. Today a hook call takes 66 ms, and bare Python takes 14 ms.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/lazy.svg",
+     "alt": "Nine slow hook boxes become nine light ones",
+     "caption": "Step 2: less work per process."
+    }
+   ],
+   [
+    "swap",
+    "Merge",
+    "One process per phase",
+    "",
+    "The checks before a Write run in one process, and the ones after in another. A Bash call goes from 6 processes to 2.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/merge.svg",
+     "alt": "Nine hook processes become two",
+     "caption": "Step 3: fewer processes."
+    }
+   ],
+   [
+    "loop",
+    "Labels",
+    "Faster issue-label reads",
+    "",
+    "The commit gate makes 5 network reads one after another on every Write, Edit and Bash call. Those reads took 748 ms when measured. You choose how to speed them up in the second question.",
+    "You choose one option.",
+    {
+     "src": "speed-first-proposal-pics/labels.svg",
+     "alt": "Five label reads in a row, then two faster options",
+     "caption": "Step 4: your choice of fix."
+    }
+   ],
+   [
+    "list",
+    "Log",
+    "Make the log append-only",
+    "",
+    "This also fixes a bug on the same path: hooks that run in parallel currently lose log lines.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/log.svg",
+     "alt": "Whole-file rewrites become one-line appends",
+     "caption": "Step 5: no lost lines."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve",
+    "you",
+    "Your approval is recorded as one line in the decisions log.",
+    "Pick an option for each question, then send the approval line."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "new",
+   "Timing script",
+   "Measures hook cost per call.",
+   null,
+   "A script under tools/ runs the real hooks against a throwaway copy of the repo and prints milliseconds per call, for a Write and for a Bash call. It adds one timed run of the commit gate's label reads against this repo's real issues, because a throwaway copy has none.",
+   [
+    "Speed was measured by hand, once, by reviewers.",
+    "One command that repeats the measurement.",
+    "You see the before and after numbers."
+   ],
+   null,
+   {
+    "src": "speed-first-proposal-pics/measure.svg",
+    "alt": "Timing script flow",
+    "caption": "What it measures."
+   }
+  ],
+  [
+   "chg",
+   "hook.py imports",
+   "Load per event, not all at once.",
+   [
+    "All 7 parts every call",
+    "Only the parts the event needs"
+   ],
+   "hook.py maps each event to the module that handles it and imports only that one. Adding a new event also gets easier: today it takes 6 edits.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/lazy.svg",
+    "alt": "Hook cost before and after",
+    "caption": "Per-process cost."
+   }
+  ],
+  [
+   "chg",
+   "hooks.json",
+   "Group checks per tool phase.",
+   [
+    "9 processes per Write, 6 per Bash call",
+    "2 per Write, 2 per Bash call"
+   ],
+   "The same handlers run in the same order inside one process per phase. Each check keeps its own failure rule: a crash in a check that fails open is caught and reported, and a crash in guard or guardwrite still blocks. The shared process gets the largest timeout of the checks merged into it.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/merge.svg",
+    "alt": "Processes before and after",
+    "caption": "Process count."
+   }
+  ],
+  [
+   "chg",
+   "commit gate",
+   "Faster label reads.",
+   [
+    "5 reads, one after another",
+    "Your choice: 5 at once, or remembered"
+   ],
+   "Option A runs the 5 reads at the same time, so the time falls to about one read: 748 ms divided by 5 is about 150 ms, to be confirmed by the timing script. Option B keeps labels in a cache file under .claude/ for 60 seconds and clears the file when the hook itself records a label change.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/labels.svg",
+    "alt": "Label reads before and after",
+    "caption": "Network cost."
+   }
+  ],
+  [
+   "chg",
+   "Hook log",
+   "Append, don't rewrite.",
+   [
+    "Rewrites the whole file",
+    "Adds one line"
+   ],
+   "The log is trimmed under a file lock, or rotated to a new file, when it grows past its size limit, so a trim cannot drop lines that parallel hooks are writing.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/log.svg",
+    "alt": "Log before and after",
+    "caption": "Lost lines."
+   }
+  ],
+  [
+   "keep",
+   "Every check and rule",
+   "Nothing is dropped.",
+   null,
+   "No check is removed or weakened. verify.py must still pass in full. The known gaps in the guard are left for the later guard phase, as you asked.",
+   null,
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "scope",
+   "How far should the speed work go?",
+   [
+    [
+     "A",
+     "Steps 1 to 5: measure, load less, merge, faster labels, fix the log",
+     1,
+     "These are the measured costs, and the merge step builds on the load step."
+    ],
+    [
+     "B",
+     "Only steps 1, 2 and 4",
+     0,
+     "Smallest change. Leaves 9 processes per Write, so most of the cost stays."
+    ]
+   ],
+   "A reaches the biggest costs, and every step is measured before and after."
+  ],
+  [
+   "labels",
+   "How should the label reads be sped up?",
+   [
+    [
+     "A",
+     "Run the 5 reads at the same time, still reading GitHub every call",
+     1,
+     "Keeps your decision of 2026-10-14, \"Labels are read from GitHub every time\", and still cuts the wait to about one read.",
+     {
+      "src": "speed-first-proposal-pics/labels.svg",
+      "alt": "Label read options",
+      "caption": "Options A and B."
+     }
+    ],
+    [
+     "B",
+     "Remember labels for 60 seconds in a cache file",
+     0,
+     "Fastest, but it reverses the 2026-10-14 decision: for up to 60 seconds after you change a label on GitHub, the gate can act on the old label."
+    ],
+    [
+     "C",
+     "Leave it as it is",
+     0,
+     "No change, and the 748 ms stays."
+    ]
+   ],
+   "A is the same fix with no stale labels, so it needs no reversal."
+  ],
+  [
+   "judge",
+   "Should the model call that judges each reply when it ends be changed?",
+   [
+    [
+     "A",
+     "Leave it as it is for now; step 1 times it",
+     1,
+     "Today it runs on every reply that has no roadblock phrase (a phrase such as NEEDS YOU). You ruled on 2026-11-24 that it is tuned, not removed, so I suggest we time it first.",
+     {
+      "src": "speed-first-proposal-pics/judge.svg",
+      "alt": "Judge call today and option B",
+      "caption": "Today and option B."
+     }
+    ],
+    [
+     "B",
+     "Tune it: run it only when the reply claims it is done",
+     0,
+     "Words like done, fixed or passes. Keeps the judge for the cases it was written for. It changes what is checked."
+    ],
+    [
+     "C",
+     "Make it opt-in, off by default",
+     0,
+     "Fastest, but it reverses your 2026-11-24 decision that the judge stays."
+    ]
+   ],
+   "A follows your decision from today and gives a measured number for the next choice."
+  ],
+  [
+   "tests",
+   "Speed up the test suite in this round too?",
+   [
+    [
+     "A",
+     "No, leave it for the code-quality phase",
+     1,
+     "You asked for hook speed first, then code quality. The suite fix is a runner that runs each test case on its own, which counts as a code-quality job."
+    ],
+    [
+     "B",
+     "Yes, include the test setup that builds fixtures only when needed (1.1 s per part)",
+     0,
+     "Quick win, but it touches checks/common.py before the quality phase."
+    ]
+   ],
+   "A keeps this round to hook speed."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Five steps that make the hooks cheaper per call, each measured before and after, with every check kept.",
+  "changing": "hook.py, hooks.json, the commit gate's label reads, the hook log, and a new timing script under tools/. No check is removed.",
+  "blocking": "Your answers to the four questions under Your choices, and the approval line.",
+  "next": "After you approve, the work is planned in a build plan with one issue per step, then built on a branch and measured.",
+  "todo": [
+   "Read this proposal.",
+   "Pick an option for each question under Your choices.",
+   "Tap <b>Copy my reply</b> and send it."
+  ]
+ }
+}

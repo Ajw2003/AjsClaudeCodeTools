@@ -9,7 +9,7 @@ the implementation to a subagent with the decided steps written out, instead of 
 myself on the planning model. One subagent per issue, never per step. Three tiers, each with a
 short tool allowlist so a spawn starts small: `@house-rules:scout` (haiku; Read, Grep, Glob) for
 read-only lookups; `@house-rules:builder` (sonnet) for one issue's chunk of work, three steps or
-fewer; `@house-rules:reviewer` (opus) for a second opinion on a finished diff, only when asked or
+fewer; `@house-rules:reviewer` (opus; through /house-rules:review: Opus for page, diff and plan, Opus plus Sonnet for code, Sonnet for image, style and codebase) for a second opinion on a finished diff, only when asked or
 after a builder failed twice. The tier files set only model, tools and role; the job goes in the
 spawn prompt. One at a time, never more than two running (the `agentcap` hook denies a third,
 ignoring records older than 45 minutes; `HOUSE_RULES_AGENTS=off` disables it). Subagents do not

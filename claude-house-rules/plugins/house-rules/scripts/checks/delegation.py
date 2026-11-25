@@ -1381,10 +1381,10 @@ _ov_rec = json.load(open(_cap_state, encoding="utf-8"))["agents"]
 _ov_stop = _cap_stop("opus")
 commit_case(
     "verdict: a model typed at spawn is the declared model, so Opus on a Sonnet agent reads MATCH and names the override",
-    "override typed at spawn: model opus, effort low" in _ov_start[1]
+    "model set at spawn: model opus, effort low" in _ov_start[1]
     and _ov_rec and _ov_rec[0].get("req") == {"model": "opus", "effort": "low"}
     and "MATCH" in _ov_stop[1] and "MISMATCH" not in _ov_stop[1]
-    and "override typed at spawn; the agent file declares sonnet" in _ov_stop[1],
+    and "model set at spawn; the agent file declares sonnet" in _ov_stop[1],
     "start %r record %r stop %r" % (_ov_start[1][:160], _ov_rec, _ov_stop[1][:240]),
 )
 _cap_spawn_asking(model="sonnet")
@@ -1392,7 +1392,7 @@ _cap_start("opus")
 _ov_stop2 = _cap_stop("opus")
 commit_case(
     "verdict: asking for Sonnet but running on Opus is still a MISMATCH, and says an override was typed",
-    "MISMATCH" in _ov_stop2[1] and "override typed at spawn" in _ov_stop2[1],
+    "MISMATCH" in _ov_stop2[1] and "model set at spawn" in _ov_stop2[1],
     "stop %r" % _ov_stop2[1][:240],
 )
 _cap_spawn()

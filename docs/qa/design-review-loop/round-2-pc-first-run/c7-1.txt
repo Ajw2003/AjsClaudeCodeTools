@@ -1,0 +1,214 @@
+$ verify.py --only '#598'
+exit 1
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
+
+==============================================================================
+PART core - passed (43.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: core
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART safe_git - passed (80.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: safe_git
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART design_loop - exited 1 without its RESULT line (crashed?) (135.4 s)
+==============================================================================
+Traceback (most recent call last):
+
+  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
+
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+
+                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-c1vs8mdt\\tmptkhz_tnm\\git\\house-rules-issue-cache.json'
+
+
+
+house-rules hooks - verification (Python) - part: design_loop
+
+===========================================
+
+
+
+ 1. PASS  design loop: a helper is told to park a reversible question with ledger_note.py park, and to report only a [HARD STOP] (#598)
+
+ 2. PASS  noask in Build (#598): attended Build plain question is denied with the park text naming ledger_note.py
+
+ 3. PASS  noask in Build (#598): attended Build question with [HARD STOP] is allowed
+
+ 4. PASS  noask in Build (#598): attended design question is allowed as before
+
+ 5. PASS  noask in Build (#598): attended plan question is allowed as before
+
+ 6. PASS  noask in Build (#598): attended qa question is allowed as before
+
+ 7. PASS  noask in Build (#598): attended Build ExitPlanMode is untouched
+
+ 8. PASS  noask in Build (#598): unattended denies with the old text and names ledger_note.py park
+
+ 9. PASS  noask in Build (#598): bypassPermissions denies with the old text and names ledger_note.py park
+
+10. PASS  noask in Build (#598): missing permission_mode: allowed outside Build (said on stderr)
+
+11. PASS  noask in Build (#598): missing permission_mode: a plain question in Build is denied
+
+12. PASS  noask in Build (#598): loop off: nothing, said on stderr
+
+13. PASS  held question and decided-for-you (#459, #460): #598: a plain question in Build holds nothing, edits stay allowed, and the end-of-reply output carries the park note
+
+14. PASS  held question and decided-for-you (#459, #460): #598: a [HARD STOP] question in Build sets held and the next code edit is refused with the note
+
+15. PASS  held question and decided-for-you (#459, #460): #598: in Build, 'I went with' fires and says to park it in the ledger
+
+16. PASS  held question and decided-for-you (#459, #460): #598: in Build, a reply naming the ledger, ledger_note.py or P7 does not fire
+
+==============================================================================
+PART writing - passed (6.3 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: writing
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART delegation - passed (113.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: delegation
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART docs - passed (30.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: docs
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART make_page - passed (128.1 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: make_page
+
+===========================================
+
+
+
+ 1. PASS  ledger_note (#598): park creates the file with both tables and P1, printing where
+
+ 2. PASS  ledger_note (#598): a second park is P2 after P1, and a | or newline in a cell is escaped
+
+ 3. PASS  make_page (#598): an escaped pipe in a parked question is shown whole, as a |
+
+ 4. PASS  ledger_note (#598): the QA page lists the parked rows with 0 deviations, 2 parked
+
+ 5. PASS  ledger_note (#598): a missing required option is refused, naming it
+
+ 6. PASS  rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3307 chars
+
+
+
+--------------------------------
+
+RESULT: PASS - all 6 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    43.9 s  passed
+  safe_git        0 checks  PASS    80.9 s  passed
+  design_loop     0 checks  FAIL   135.4 s  exited 1 without its RESULT line (crashed?)
+  writing         0 checks  PASS     6.3 s  passed
+  delegation      0 checks  PASS   113.9 s  passed
+  docs            0 checks  PASS    30.9 s  passed
+  make_page       6 checks  PASS   128.1 s  passed
+  wall-clock 135.4 s
+
+--------------------------------
+RESULT: FAIL - 1 of 6 checks failed. Failing part(s): design_loop. See the FAIL lines above.
+        design_loop: exited 1 without its RESULT line (crashed?)
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only '#598' matched 6 check(s).
+
+--- stderr ---

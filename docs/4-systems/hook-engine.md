@@ -174,7 +174,7 @@ skipped the attribution check. `event_guardgithub` (own `PreToolUse` entry, matc
 and an internal error falls to `main()`'s "hook hit an internal error" message, exit 0.
 
 **Helper tiers and the spawn cap (2.50.0, issues #110-#112).** `agents/executor.md` is retired; `scout`
-(haiku; Read, Grep, Glob), `builder` (sonnet; Read, Edit, Write, Bash, Grep, Glob) and `reviewer` (opus;
+(haiku; Read, Grep, Glob), `builder` (sonnet; Read, Edit, Write, Bash, Grep, Glob) and `reviewer` (opus, or per mode through /house-rules:review: see review-command.md;
 Read, Grep, Glob, Bash, Write; Write was added later for acceptance mode) replace it, each a short role with a tool allowlist, and none can start a
 subagent. `agentcap` is a PreToolUse entry matched to `Agent`/`Task` (it runs only when a spawn is
 attempted, never on Write, Edit or Bash). It reads a JSON list in the common repository directory
