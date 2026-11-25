@@ -464,6 +464,7 @@ EVENTS = {
     "subagentcommit": event_subagentcommit,
     "autosave": event_autosave,
     "autosavefinal": event_autosave_final,
+    "stopfailure": event_stopfailure,
     "pickup": event_pickup,
     "commitgate": event_commitgate,
     "worktreesweep": event_worktreesweep,

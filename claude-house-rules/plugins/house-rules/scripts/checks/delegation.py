@@ -301,6 +301,39 @@ commit_case(
 )
 commit_case("autosavefinal (#529) is wired to Stop and StopFailure in hooks.json",
             hooks_json_text.count('run.sh\\" autosavefinal') == 2, "hooks.json entries")
+# --- #648: stopfailure leaves a file for tools/overnight.sh ---
+import time as _sf_time
+_sf_cfg = tempfile.mkdtemp(prefix="sf-cfg-")
+def _sf_run(payload, raw=False):
+    t0 = _sf_time.time()
+    code, _o, err = run_hook("stopfailure", payload if raw else json.dumps(payload), env=dict(os.environ, CLAUDE_CONFIG_DIR=_sf_cfg))
+    f = os.path.join(_sf_cfg, "house-rules-steps", "stopfailure-%s.json" % ("sf1" if not raw else "unknown"))
+    rec = json.load(open(f)) if os.path.isfile(f) else None
+    if os.path.isfile(f):
+        os.replace(f, f + ".seen")
+    return code, err, rec, _sf_time.time() - t0
+_c, _e, _r, _dt = _sf_run({"session_id": "sf1", "error": "rate_limit", "last_assistant_message": "Usage limit reached, resets 8:10pm (UTC)"})
+_sf_n = _sf_time.time()
+commit_case("stopfailure (#648): a rate-limit payload with 'resets 8:10pm (UTC)' gives kind rate_limit and a reset_at within a day",
+            _c == 0 and _r and _r["kind"] == "rate_limit" and _sf_n < _r["reset_at"] <= _sf_n + 86400
+            and _sf_time.gmtime(_r["reset_at"])[3:5] == (20, 10), "%r %r" % (_r, _e))
+_c, _e, _r, _dt = _sf_run({"session_id": "sf1", "error": "rate_limit", "error_details": "429 retry after 120 seconds"})
+commit_case("stopfailure (#648): 'retry after 120 seconds' gives reset_at about now + 120",
+            _c == 0 and _r and _r["kind"] == "rate_limit" and abs(_r["reset_at"] - _sf_time.time() - 120) < 5, "%r" % (_r,))
+_c, _e, _r, _dt = _sf_run({"session_id": "sf1", "error": "rate_limit", "error_details": "too many requests"})
+commit_case("stopfailure (#648): a rate-limit payload with no time gives reset_at null",
+            _c == 0 and _r and _r["kind"] == "rate_limit" and _r["reset_at"] is None, "%r" % (_r,))
+_c, _e, _r, _dt = _sf_run({"session_id": "sf1", "error": "server_error", "error_details": "internal error"})
+commit_case("stopfailure (#648): any other payload is kind crash with reset_at null",
+            _c == 0 and _r and _r["kind"] == "crash" and _r["reset_at"] is None, "%r" % (_r,))
+_c, _e, _r, _dt = _sf_run("{not json", raw=True)
+commit_case("stopfailure (#648): a malformed payload is announced on stderr, writes nothing, exits 0",
+            _c == 0 and _r is None and "stopfailure" in _e, "code %s err %r" % (_c, _e))
+commit_case("stopfailure (#648): the handler finishes well inside the 10 s hook timeout", _dt < 5, "%.2f s" % _dt)
+commit_case("stopfailure (#648) is listed in hooks.json with a 10 s timeout",
+            hooks_json_text.count('run.sh\\" stopfailure') == 1
+            and json.loads(hooks_json_text)["hooks"]["StopFailure"][0]["hooks"][1]["timeout"] == 10, "hooks.json entry")
+shutil.rmtree(_sf_cfg, ignore_errors=True)
 # --- #527: every branch is saved, one save per folder ---
 def _as_saves(d, branch):
     """(ref name, sha) pairs under refs/house-rules/saves/<branch>/ in repo or bare repo `d`."""

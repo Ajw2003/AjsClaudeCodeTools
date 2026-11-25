@@ -497,6 +497,52 @@ def _steps_outside(git_dir, session_id):
         hashlib.sha1(os.path.abspath(git_dir).encode("utf-8")).hexdigest(), safe))
 
 
+def _stopfailure_reset(text, now):
+    """Epoch seconds from "retry after 120 seconds" or "resets 8:10pm (UTC)"; None when no time is found.
+    shortcut: a clock time is read as UTC unless it names no zone (then local); other zone names are not understood."""
+    m = re.search(r"retry[- ]after\D{0,3}(\d+)\s*(second|sec|s\b|minute|min|m\b|hour|h\b)?", text, re.I)
+    if m:
+        unit = (m.group(2) or "s").lower()
+        return int(now + int(m.group(1)) * (3600 if unit.startswith("h") else 60 if unit.startswith("m") else 1))
+    m = re.search(r"resets?\s+(?:at\s+)?(\d{1,2})(?::(\d\d))?\s*([ap]m)?(?:\s*\((\w+)\))?", text, re.I)
+    if not m:
+        return None
+    hour, minute, ampm = int(m.group(1)), int(m.group(2) or 0), (m.group(3) or "").lower()
+    if ampm:
+        hour = hour % 12 + (12 if ampm == "pm" else 0)
+    if hour > 23 or minute > 59:
+        return None
+    utc = (m.group(4) or "").upper() in ("UTC", "GMT")
+    day = time.gmtime(now) if utc else time.localtime(now)
+    base = (now - day.tm_hour * 3600 - day.tm_min * 60 - day.tm_sec) + hour * 3600 + minute * 60
+    return int(base if base > now else base + 86400)
+
+
+def event_stopfailure():
+    """StopFailure (#648): leave <config>/house-rules-steps/stopfailure-<session>.json for tools/overnight.sh:
+    {error, kind: rate_limit|crash, reset_at: epoch or null, at}. Never raises; says so on stderr when it cannot."""
+    try:
+        raw = read_payload()
+        payload = json.loads(raw) if raw else None
+        if not isinstance(payload, dict):
+            sys.stderr.write("house-rules stopfailure: payload missing or not a JSON object; wrote no file.\n")
+            return 0
+        err = str(payload.get("error") or "")
+        text = " ".join(str(payload.get(k) or "") for k in ("error_details", "last_assistant_message"))
+        rate = re.search(r"rate[ _-]?limit|usage[ _-]?limit|\b429\b|resets", err + " " + text, re.I)
+        now = time.time()
+        rec = {"error": err, "kind": "rate_limit" if rate else "crash",
+               "reset_at": _stopfailure_reset(text, now) if rate else None, "at": int(now)}
+        cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+        safe = re.sub(r"[^0-9A-Za-z_-]", "_", str(payload.get("session_id") or "unknown"))[:100]
+        d = os.path.join(cfg, "house-rules-steps")
+        os.makedirs(d, exist_ok=True)
+        _write_atomic(os.path.join(d, "stopfailure-%s.json" % safe), json.dumps(rec))
+    except Exception as exc:
+        sys.stderr.write("house-rules stopfailure: could not record the failure: %s\n" % exc)
+    return 0
+
+
 def _steps_hash(steps):
     return hashlib.sha256(json.dumps(steps, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
