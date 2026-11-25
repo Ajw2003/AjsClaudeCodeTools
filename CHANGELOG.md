@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode steps 6 and 13 merged (#647, #635): every step list ends with four required `Finish:` steps (docs, pictures, tests, QA page) checked by `finish_checks.py`, Build moves to QA from the step list when nobody is present and a pull request is denied while a step is open; the rule files now say to decide and log with `ledger_note.py decide` and ask only about look or function. The cap on `rules/show-dont-tell.md` is raised from 3307 to 3600 characters for that policy.
+
 Quiet unattended mode build progress (#634): the QA decision count now says when it cannot read a ledger (fix after the suite caught a silent handler), and a suite re-run covering steps 3, 4, 5, 12 and 13 is in progress with step 6 (#647) still being built.
 
 Quiet unattended mode steps 3, 4, 5, 12 and 13 merged (#637, #639, #646, #643, #635): unattended keeps the design loop and handover on and skips the holds nobody can clear; a guarded step list with a check per build-plan step; `ledger_note.py check --start/--poll` with results recorded by a hook and staleness by fingerprint; decisions and guard refusals go to the ledger, the QA reply counts the decisions, and credit lines in pull requests are denied; the rule lines that told the agent to ask or wait are rewritten.
