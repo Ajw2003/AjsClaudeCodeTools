@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Plugin version 2.95.0, quiet unattended mode (#634) steps 8 to 11 and 14 merged: a hook can approve a stage when nobody is present, only on a stored clean reviewer verdict and recorded apart from aj's approvals (#641); `tools/overnight.sh` resumes by session id, waits out rate limits through a new `stopfailure` hook, backs off after crashes, stops at 24 hours of work or 5 restarts with no step closed and runs one final QA pass (#642, #648, #649); twelve earlier decisions are reversed with dated entries and the systems docs are updated (#645).
+
 Quiet unattended mode step 7 merged (#640): a stop check runs on every stop, even with no reply text, and blocks while a step in the guarded list is open, names the next step and its check commands, marks a step stuck after three blocks with no progress, lets a `QUESTION FOR YOU:` line through only when aj is present, and the judge blocks once per step set; NEEDS YOU text no longer exempts a session that has a step list.
 
 Quiet unattended mode build status (#634): nine of fifteen steps are merged and verified (#638, #636, #637, #639, #646, #647, #643, #635 and the fixes the suites caught); builders for the stop check (#640) and self-approval (#641) are running.
