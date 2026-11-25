@@ -3016,7 +3016,7 @@ def _mode_note(payload=None):
     if unattended():
         parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): the design loop stays ON and runs itself "
                      "(no approval wait, no question hold); nobody can approve or answer; guard prompts are "
-                     "refused instead of asked; write each refusal or choice to the ledger with `ledger_note.py decide` and keep going. For this run these "
+                     "refused instead of asked; write each refusal or choice to the ledger and keep going, with: python3 " + os.path.join(SCRIPTS_DIR, "ledger_note.py") + " decide <feature> --step <n> --choice ... --assumption ... --why ... --undo ... (a look or function choice too: decide it and state the assumption). For this run these "
                      "instructions are OVERRIDDEN: never stop or wait for the user (\"hand it over, then wait\", "
                      "\"stop and wait for the user's answer\"). For a command only the user can run, park it with `ledger_note.py park` (--category, --tried) and continue with other work. For ask-before items "
                      "(new dependency, deleting files, refactors over 3 files, public API changes) take the most "

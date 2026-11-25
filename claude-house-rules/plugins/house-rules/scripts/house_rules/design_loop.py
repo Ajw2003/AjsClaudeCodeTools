@@ -762,9 +762,10 @@ def step_stop_check(payload, reply_text):
     feat = rec.get("feature") or "<feature>"
     return ("House rules, step list: not finished. Next open step: %s. Run `%s check %s --step %s --start`, then "
             "`%s check %s --step %s --poll`, until it passes. NEEDS YOU in a reply does not end the turn. A hard "
-            "stop must be parked with `%s park %s --step %s --category ... --tried ...`. Open: %s. (block %d of 3 "
-            "for this step before it counts as stuck)"
-            % (nxt["title"], fc, feat, n, fc, feat, n, fc, feat, n, "; ".join(open_steps), blocks[n])), None
+            "stop must be parked with `%s park %s --step %s --category ... --tried ...`. Record every choice you make "
+            "(a look or function choice too: decide it, never ask) with `%s decide %s --step %s --choice ... "
+            "--assumption ... --why ... --undo ...`. Open: %s. (block %d of 3 for this step before it counts as stuck)"
+            % (nxt["title"], fc, feat, n, fc, feat, n, fc, feat, n, fc, feat, n, "; ".join(open_steps), blocks[n])), None
 
 
 _STEP_RESULT_RE = re.compile(r"RESULT: (pass|fail) step (\d+) fp=(\S+)")
