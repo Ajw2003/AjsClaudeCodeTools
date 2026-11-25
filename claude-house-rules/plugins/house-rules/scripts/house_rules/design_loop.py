@@ -2983,14 +2983,37 @@ def _check_decided(ctx):
     return ""
 
 
+def _qa_count_demand(ctx):
+    """#643: the QA page is linked and the feature's ledger has K rows: the reply must say how many decisions."""
+    reply, folder = ctx.get("reply") or "", ""
+    try:
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import make_page
+        folder = make_page.qa_folder(ctx.get("qa_feature") or "")
+        if not folder:
+            return ""
+        top = _repo_root_of(os.path.join(ctx.get("cwd") or "", "x"))
+        with open(os.path.join(top, "docs", "qa", folder, "ledger.md"), encoding="utf-8") as fh:
+            rows = [ln for ln in fh if re.match(r"\|\s*K\d+\s*\|", ln)]
+    except OSError:
+        return ""  # no ledger for this feature: nothing to count
+    if not rows or re.search(r"(?i)\bdecisions?\b.{0,20}\d|\d.{0,20}\bdecisions?\b", reply):
+        return ""
+    return ("the ledger has %d decision(s) for this feature: say in the reply how many decisions were logged "
+            "(for example \"%d decisions logged\")" % (len(rows), len(rows)))
+
+
 def _check_qa_page(ctx):
     """#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not
     skipped by "no page": a QA page is mandatory."""
-    if ctx.get("qa_stage") != "qa" or ctx.get("qa_linked"):
+    if ctx.get("qa_stage") != "qa":
         return ""
     page = ctx.get("qa_page") or ""
+    if ctx.get("qa_linked"):  # linked on an earlier reply: only the decision count below can still apply
+        return _qa_count_demand(ctx) if page and (page in (ctx.get("reply") or "") or os.path.basename(page) in (ctx.get("reply") or "")) else ""
     if _record_qa_link(ctx):
-        return ""
+        return _qa_count_demand(ctx)
     missing = "the QA page is built but not linked in the reply" if page else "no QA page is built yet"
     return ("%s: build it with `python3 %s build docs/plans/<name>-qa.page.json`, where the content file has a "
             "`qa` block (feature, base, unverified, files), then name the page's file in the reply, beside any link"
@@ -3669,7 +3692,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
                 if _pr:
                     raise OSError(_pr)
                 ctx.update(qa_stage=_st.get("stage"), qa_page=_st.get("qa_page"),
-                           qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd)
+                           qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd, qa_feature=_st.get("feature") or "")
         except Exception as exc:
             trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
