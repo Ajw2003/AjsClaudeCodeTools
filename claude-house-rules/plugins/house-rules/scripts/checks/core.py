@@ -1573,7 +1573,9 @@ _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
-    not any("issue" in c for c in _tool_cmds) and _count_entries == 12 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 2
+    and all(sum(1 for g in _hj.get(ph, []) if re.fullmatch(g["matcher"], t)) <= 1 for t in ("Write", "Edit", "Bash") for ph in ("PreToolUse", "PostToolUse"))
+    and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
     "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
 )
 
@@ -2416,11 +2418,13 @@ commit_case(
     "quiet %r bad %r" % (_quiet[1][:80], _bad[1][:80]),
 )
 _pr_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
-_pr_entries = [g for ev in ("PostToolUse", "PostToolUseFailure") for g in _pr_hj.get(ev, [])
+_pr_entries = [g for g in _pr_hj.get("PostToolUseFailure", [])
                if any(h["command"].endswith('run.sh" promptran') for h in g["hooks"])]
+_pr_post_ok = ("promptran" in merged_wiring("Post", "Bash")[0] and "promptran" in merged_wiring("Post", "mcp__x__y")[0]
+               and "promptran" not in merged_wiring("Post", "Read")[0])  # #628: PostToolUse runs it inside posttool
 commit_case(
     "promptran: wired on PostToolUse and PostToolUseFailure, matched to the tools that raise permission prompts",
-    len(_pr_entries) == 2 and all(len(g["hooks"]) == 1 and "Bash" in g.get("matcher", "")
+    _pr_post_ok and len(_pr_entries) == 1 and all(len(g["hooks"]) == 1 and "Bash" in g.get("matcher", "")
                                   and "Read" not in g.get("matcher", "") for g in _pr_entries),
     "entries %r" % (_pr_entries,),
 )

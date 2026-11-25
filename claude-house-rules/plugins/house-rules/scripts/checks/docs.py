@@ -518,7 +518,7 @@ else:
     print(f"          exit {proc.returncode}, got: {out[:200]!r}")
 
 # --- harvest is wired to Write|Edit, not just present in hook.py -------------------------------
-if 'run.sh\\" harvest' in hooks_json_text and hooks_json_text.count('"matcher": "Write|Edit"') >= 2:
+if all("harvest" in merged_wiring("Post", t)[0] for t in ("Write", "Edit")):
     report("PASS", "harvest is registered on PostToolUse with matcher Write|Edit")
     print("          hooks.json wires Write|Edit to run.sh harvest")
 else:
