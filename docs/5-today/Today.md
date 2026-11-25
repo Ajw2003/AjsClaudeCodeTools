@@ -1,5 +1,7 @@
 # Today — 2026-11-24
 
+Review models per mode built on branch AjsAgent/review-models-per-mode (plugin 2.94.6): plan back on Opus, code runs Opus then Sonnet and merges, codebase/image/style on Sonnet; benchmark numbers are in Decisions.md. Docs and delegation verify parts were still running when this was written.
+
 Reviewer Sonnet versus Opus benchmark started at aj's request (quality, time, cost): a planted-bug file with six known bugs is run on both models, results to follow; nothing in the repo changed for it yet.
 
 Full verify after the review Sonnet default: the docs part (review command checks) passes 176 of 176; core, safe_git, delegation and design_loop fail 33 checks in total, none naming reviewer, model or tier, and not yet compared against main.

@@ -387,7 +387,7 @@ def event_announce():
             bits.append("no declaration shipped by this plugin to compare against")
         if asked:
             bits.append(
-                "override typed at spawn: %s (the agent file declares %s)"
+                "model set at spawn: %s (the agent file declares %s)"
                 % (", ".join("%s %s" % (k, v) for k, v in asked.items()), model or "no model")
             )
         if effort:
@@ -728,10 +728,10 @@ def _write_subagent_ledger(transcript_path, payload):
 
 
 def _override_note(asked, file_declared):
-    """The " (override typed at spawn; ...)" tail when the parent asked for a model, else nothing."""
+    """The " (model set at spawn; ...)" tail when the parent asked for a model, else nothing."""
     if not asked.get("model"):
         return ""
-    return " (override typed at spawn; the agent file declares %s)" % (file_declared or "no model")
+    return " (model set at spawn; the agent file declares %s)" % (file_declared or "no model")
 
 
 def event_verdict():

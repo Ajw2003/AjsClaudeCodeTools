@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Review models per mode: plan back on Opus, code now runs Opus then Sonnet and merges the findings, codebase, image and style stay on Sonnet; "override typed at spawn" now reads "model set at spawn"; Decisions entry and doc rows brought up to date (plugin 2.94.6).
+
 Verify result recorded for the review Sonnet default: docs part green, 33 failures elsewhere not yet compared with main (no code change).
 
 Review override check updated: a code review now expects `model: sonnet` by default (verify.py docs part).

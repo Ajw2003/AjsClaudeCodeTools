@@ -21,11 +21,11 @@ tell the user the plugin root did not resolve. Do not search `~/.claude/plugins`
 guess a path - the cache holds several versions. If the script prints `error:` (exit 2), report
 that line and stop.
 
-It prints `mode:`, `report:` (the folder for the saved report), `criteria:` (the text to pass on, or `none`), `model:` and `effort:` (the model to run: `sonnet` for plan, code, codebase, image and style unless the user typed another, `default` for page and diff, which keep the reviewer's Opus; `effort` is what the user typed, or `default`) and, in plan mode, `design:` (a path, `none`, or `ambiguous` followed by one `candidate:` line each: ask the user which one). Put criteria or style text that contains punctuation in quotes.
+It prints `mode:`, `report:` (the folder for the saved report), `criteria:` (the text to pass on, or `none`), `model:` and `effort:` (the model to run: what the user typed, else `opus+sonnet` for code, `sonnet` for codebase, image and style, and `default` for page, diff and plan, which keep the reviewer's Opus; `effort` is what the user typed, or `default`) and, in plan mode, `design:` (a path, `none`, or `ambiguous` followed by one `candidate:` line each: ask the user which one). Put criteria or style text that contains punctuation in quotes.
 
 ## Every mode except a whole-repo sweep
 
-Spawn ONE `house-rules:reviewer` with the Agent tool. Set the Agent tool's `model` and `effort`
+Spawn ONE `house-rules:reviewer` with the Agent tool (but see `opus+sonnet` below). Set the Agent tool's `model` and `effort`
 parameters only when `model:` or `effort:` is not `default`; with `default`, leave the parameter out
 so the reviewer's own setting applies (it does the same for every reviewer in a sweep). Tell it the mode and the target, and give it
 these two absolute paths (an agent file does not expand `${CLAUDE_PLUGIN_ROOT}` itself):
@@ -33,6 +33,14 @@ these two absolute paths (an agent file does not expand `${CLAUDE_PLUGIN_ROOT}` 
 mode also give the design page from `design:` (or say there is none). For image and style modes
 give the text after the path as the criteria or the style. In style mode with no stated style
 and no project UI guide the reviewer stops and says so; pass that on, do not invent a style.
+
+## Code mode with `model: opus+sonnet`
+
+Run the reviewer TWICE on the same target, ONE AT A TIME (the agent cap is two and each waits on the one before): first with the
+Agent tool's `model` set to `opus`, then to `sonnet`, same prompt, same two absolute paths. Merge the two lists by `path:line`,
+drop exact duplicates, and tag each finding `[opus]`, `[sonnet]` or `[both]`. A finding only one model made is kept; on the
+2026-11-24 benchmark each model found real bugs the other missed. A typed `--model` prints that model, so only one reviewer runs.
+A whole-repo sweep (codebase mode) stays on one model.
 
 ## Codebase mode (target `.`)
 

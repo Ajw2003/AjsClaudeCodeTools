@@ -10,7 +10,7 @@ Files come from `git ls-files -co --exclude-standard`, so .git and ignored files
 A batch is at most 6 files of one unit: markdown ran at 7.1 s a file (8 x 7.1 = 57 s, right at the 60 s agent
 deadline), and code files run slower, so 6 files (43 s on markdown) leaves headroom.
 Sweep token estimate: 10,000 per batch plus 3,400 per file, fitted to the real 15-batch sweep (203,394 tokens).
---model and --effort may sit anywhere in the text; each prints its value, or `default` (the reviewer's own setting, Opus). Without --model, plan/code/codebase/image/style print `sonnet`.
+--model and --effort may sit anywhere in the text; each prints its value, or `default` (the reviewer's own setting, Opus). Without --model, code prints `opus+sonnet` (two reviewers) and codebase/image/style print `sonnet`.
 Exit 0 on success, 2 when the TARGET does not exist or --model/--effort is not a known value, 3 when --root or git cannot be used. STDLIB ONLY.
 """
 import argparse
@@ -27,8 +27,10 @@ SEC, TOK_BATCH, TOK_FILE = 7.1, 10000, 3400
 GENERIC = {"build-plan", "proposal", "design"}  # folder-style pages named by their folder, not by themselves
 MODELS = ("opus", "sonnet", "haiku", "fable")
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
-# docs/qa/review-reviewer-2026-11-24/report.md: Opus only where judgement is subtle (page, diff); these modes run on Sonnet
-SONNET_MODES = {"plan", "code", "codebase", "image", "style"}
+# Decisions.md 2026-11-24 "Review models per mode": Opus for page, diff and plan; code runs Opus then Sonnet (each found real
+# bugs the other missed); the rest run on Sonnet. Acceptance is absent: it is not reached through review_plan.py.
+SONNET_MODES = {"codebase", "image", "style"}
+DUAL_MODES = {"code"}
 META = re.compile(r'<meta\s+name=["\']house-rules-page["\']\s+content=["\']build-plan["\']', re.I)
 
 
@@ -86,7 +88,7 @@ def cmd_mode(a):
     print(f"mode: {mode}")
     print(f"report: docs/qa/review-{name}-{datetime.date.today().isoformat()}")
     print(f"criteria: {criteria}")
-    print(f"model: {a.overrides.get('model', 'sonnet' if mode in SONNET_MODES else 'default')}")
+    print(f"model: {a.overrides.get('model') or ('opus+sonnet' if mode in DUAL_MODES else 'sonnet' if mode in SONNET_MODES else 'default')}")
     print(f"effort: {a.overrides.get('effort', 'default')}")
     if mode == "plan":
         found = designs_of(tpath)

@@ -3747,3 +3747,13 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 **Why.** The reviewer is the one agent that reads cold and hunts for what is missing, so it keeps a step more effort than the executors. This is judgement: no run compared medium with low, so the entry is revisited when the Sonnet-variant measurement is done.
 
 **Status.** Standing, open to the measurement above.
+
+## 2026-11-24 — Review models per mode
+
+**Context.** aj asked whether Opus is needed for every review. The 2026-11-24 reviewer model review (`docs/qa/review-reviewer-2026-11-24/report.md`) was judgement only, so each mode was run on both models and timed (one run each).
+
+**Decision.** `/house-rules:review` runs page, diff and plan on Opus, code on Opus then Sonnet with the findings merged, and codebase, image and style on Sonnet. A typed `--model` always wins and runs one reviewer. The `reviewer` agent file stays `opus`.
+
+**Why.** Code, planted-bug file: both models found 6 of 6; Sonnet took 10.4 s against 39.0 s. Code, real six-file batch: Opus 26 findings (43,196 tokens, 98.9 s), Sonnet 21 (35,815 tokens, 27.3 s); each found a real bug the other missed, Opus the cross-project transcript read in `session_ledger.py`, Sonnet the merge-base mismatch in `check_plugin_version_bump.py`. Page, the speed first plan: Opus 17 findings (81,316 tokens, 137.4 s), Sonnet 12 (77,323 tokens, 80.9 s); only Opus opened the saved baseline and found that step 2 cannot be built as written, so plan, which cross-checks a plan against code the same way, goes back to Opus. Diff of commit 09be0861: Opus 8 findings, Sonnet 7, close to parity. Dollar cost was not measured (the agent reports give one token total); image and style were not run.
+
+**Status.** Standing. Supersedes the plan and code on Sonnet default of plugin 2.94.5 and refines the reviewer on Opus tier line of the earlier tier entry. Open to a larger sample.

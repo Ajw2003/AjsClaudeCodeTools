@@ -2217,12 +2217,15 @@ else:
             _rv_f.append(f"args {_a}: wanted mode: {_mode}, got exit {_c}: {_o.strip()} {_e.strip()}")
         if _mode == "plan" and not re.search(r"^design: .*2026-01-02-demo\.html$", _o, re.M):
             _rv_f.append(f"plan did not name the design page: {_o.strip()}")
-        _want_model = "default" if _mode in ("page", "diff") else "sonnet"
+        _want_model = {"code": "opus+sonnet", "codebase": "sonnet", "image": "sonnet", "style": "sonnet"}.get(_mode, "default")
         if f"model: {_want_model}\n" not in _o:
             _rv_f.append(f"mode {_mode}: wanted model: {_want_model}, got {_o.strip()}")
     _c, _o, _e = _rv_run(["mode", "sub", "--model", "haiku"], _rv_work)
     if "model: haiku\n" not in _o:
-        _rv_f.append(f"a typed --model must win over the Sonnet default: {_o.strip()}")
+        _rv_f.append(f"a typed --model must win over the per-mode default: {_o.strip()}")
+    _c, _o, _e = _rv_run(["mode", _rv_dsg, "--model", "sonnet"], _rv_work)
+    if "model: sonnet\n" not in _o:
+        _rv_f.append(f"a typed --model must win on a page target too: {_o.strip()}")
     _c, _o, _e = _rv_run(["mode", "no-such-thing"], _rv_work)
     if _c != 2 or not _o.startswith("error:"):
         _rv_f.append(f"missing path: wanted exit 2 and error:, got exit {_c}: {_o.strip()}")
@@ -2320,7 +2323,7 @@ else:
     # --model / --effort overrides: read from anywhere in the text, `default` when absent, exit 2 when unknown
     _rv_f = []
     for _a, _want in (
-        (["b.py"], ("sonnet", "default", "none")),  # code mode defaults to Sonnet (2.94.5)
+        (["b.py"], ("opus+sonnet", "default", "none")),  # code mode runs both models (2.94.6)
         (["b.py", "check", "names", "--model", "sonnet", "--effort", "low"], ("sonnet", "low", "check names")),
         (["--model=OPUS", "b.py", "--effort=max"], ("opus", "max", "none")),
     ):
