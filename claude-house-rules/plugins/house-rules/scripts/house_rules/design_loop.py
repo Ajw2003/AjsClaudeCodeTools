@@ -570,9 +570,14 @@ def steps_status(git_dir, feature, session_id, current_fp):
 
 def _parked_steps(top, feature, steps):
     """Step numbers named in a Parked-decisions row (P<n>) of the feature's ledger, by title or "step N"."""
+    ledger = os.path.join(top, "docs", "qa", feature.lower().replace(" ", "-").replace("/", "-"), "ledger.md")
+    if not os.path.isfile(ledger):
+        return set()  # no ledger yet: nothing is parked
     try:
-        text = _read_text(os.path.join(top, "docs", "qa", feature.lower().replace(" ", "-").replace("/", "-"), "ledger.md"))
-    except OSError:
+        text = _read_text(ledger)
+    except OSError as exc:
+        sys.stderr.write("house-rules: could not read the ledger to see parked steps (%s), so none count as parked.\n"
+                         % type(exc).__name__)
         return set()
     cells = [m.group(1).lower() for m in re.finditer(r"^\| P\d+ \| (.*?) \|", text, re.M)]
     return {s["n"] for s in steps if any(s["title"].lower() in c or re.search(r"\bstep %d\b" % s["n"], c) for c in cells)}
