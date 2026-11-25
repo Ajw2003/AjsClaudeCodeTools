@@ -1372,7 +1372,7 @@ def event_guardwrite():
         "Fix: edit it in place with the Edit tool, changing only the lines that need to change. A whole-file "
         "rewrite needs aj's approval by name first, with what it discards and why an in-place edit will not do."
     )
-    if core.unattended():  # nobody can approve a whole-file rewrite by name: allow it and say so for the morning
+    if core.nobody_present(payload):  # nobody can approve a whole-file rewrite by name: allow it and say so for the morning
         emit({"systemMessage": "House rules, UNATTENDED run (HOUSE_RULES_UNATTENDED=on): whole-file Write to `%s` "
                                "was allowed instead of refused. Review it in the morning." % file_path})
         return 0
@@ -1635,7 +1635,7 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
     session_id = str(data.get("session_id") or "")
     if secs is not None and data.get("agent_id"):
         why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
-    if core.unattended():
+    if core.nobody_present(payload):
         why = "this is an unattended run (HOUSE_RULES_UNATTENDED=on), so nobody can answer a prompt"
     if not why:
         _record_ask(session_id, _waiting_key(str(data.get("tool_name") or "?"), data.get("tool_input")))
@@ -1677,9 +1677,6 @@ def event_prompttimer():
     secs, problem = _prompt_timeout_seconds()
     if problem:
         sys.stderr.write("house-rules prompttimer: %s.\n" % problem)
-    if secs is None:
-        sys.stderr.write("house-rules prompttimer: off (HOUSE_RULES_PROMPT_TIMEOUT), no timer for this prompt.\n")
-        return 0
     try:
         payload = read_payload()
     except Exception as exc:
@@ -1698,6 +1695,16 @@ def event_prompttimer():
             "house-rules prompttimer: could not read the permission-request payload (%s: %s); "
             "no timer, the dialog decides.\n" % (type(exc).__name__, exc)
         )
+        return 0
+    if core.nobody_present(payload):  # #636: nobody can answer, so a prompt is settled at once
+        if tool_name == "ExitPlanMode":
+            emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}})
+        else:
+            _prompt_deny("This is an unattended run (nobody is present to answer a permission prompt), so this "
+                         "was refused at once, never approved. Choose another way, or mark the part NEEDS YOU.")
+        return 0
+    if secs is None:
+        sys.stderr.write("house-rules prompttimer: off (HOUSE_RULES_PROMPT_TIMEOUT), no timer for this prompt.\n")
         return 0
     if tool_name in PROMPT_TIMER_EXEMPT_TOOLS:
         sys.stderr.write("house-rules prompttimer: %s is a question for aj, not a permission prompt; "
@@ -1932,7 +1939,7 @@ def _attribution_guard(subject, payload):
         m = rx.search(text)
         if m:
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
-            if core.unattended():  # allowed so the run does not stall; the credit line is fixed in the morning
+            if core.nobody_present(payload):  # allowed so the run does not stall; the credit line is fixed in the morning
                 return ("note", "", "House rules, UNATTENDED run: the credit rule was relaxed for this %s (it carries \"%s\"). "
                         "Remove that line in the morning." % (kind, m.group(0).strip()[:60]))
             return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)

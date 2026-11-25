@@ -1484,7 +1484,7 @@ def event_versioncheck():
                 )
             return 0
 
-        if unattended():  # nobody to wait for: no update, no wait/ask banner, no first-command prompt marker
+        if nobody_present():  # nobody to wait for: no update, no wait/ask banner, no first-command prompt marker
             emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext":
                   "UNATTENDED run: a house-rules update is available and was not applied."}})
             return 0
@@ -2785,13 +2785,34 @@ def unattended():
     return os.environ.get("HOUSE_RULES_UNATTENDED", "").strip().lower() == "on"
 
 
+def nobody_present(payload=None):
+    """#636: the one test for "nobody is here": the unattended switch, or permission_mode bypassPermissions.
+    Auto, default, plan, acceptEdits and a missing or unknown mode stay attended."""
+    raw = payload if payload is not None else (_PAYLOAD_CACHE or "")
+    return unattended() or _field(_MODE_RE, raw) == "bypassPermissions"
+
+
 def event_noask():
-    """PreToolUse on AskUserQuestion|ExitPlanMode: unattended or bypassPermissions, deny so the agent chooses
-    itself and carries on (#590). A payload with no permission_mode is treated as attended, said on stderr."""
+    """PreToolUse on AskUserQuestion|ExitPlanMode|pause_goal: nobody present, deny so the agent chooses
+    itself and carries on (#590); ExitPlanMode is allowed then (#636). A payload with no permission_mode is
+    treated as attended, said on stderr."""
     mode = _field(_MODE_RE, _PAYLOAD_CACHE or "")
+    try:
+        tool = str(json.loads(_PAYLOAD_CACHE or "").get("tool_name") or "")
+    except (ValueError, AttributeError):
+        tool = ""
+    if "pause_goal" in tool.lower():
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+              "permissionDecisionReason": "House rules: pausing the goal is refused. The run is never paused "
+              "for aj; carry on, and mark a part that truly needs aj NEEDS YOU in the final report."}})
+        return 0
+    if tool == "ExitPlanMode" and nobody_present():  # #636: nobody to approve the plan: let it through
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+              "permissionDecisionReason": "Nobody is present to approve the plan, so leaving plan mode is allowed."}})
+        return 0
     park = "python3 %s park <feature> --step <n> --question ... --default ... --affects ..." % os.path.join(
         SCRIPTS_DIR, "ledger_note.py")
-    if not (unattended() or mode == "bypassPermissions"):
+    if not nobody_present():
         if not mode:
             sys.stderr.write("house-rules: the PreToolUse payload carried no permission_mode, so the question "
                              "was treated as attended (allowed, except in Build, where a plain question is refused).\n")
@@ -3837,7 +3858,7 @@ def roadblock_check(payload, reply_text, retry):
     claims = _roadblock_claims(reply_text)
     note = None
     mode = _field(_MODE_RE, payload)
-    if (unattended() or mode == "bypassPermissions") and "NEEDS YOU" not in reply_text:  # #609: exempts the goal check
+    if nobody_present(payload) and "NEEDS YOU" not in reply_text:  # #609: exempts the goal check
         stalls = _roadblock_claims(reply_text, _STALL_RE)
     else:
         stalls = []
