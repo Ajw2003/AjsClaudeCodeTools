@@ -2996,8 +2996,12 @@ def _qa_count_demand(ctx):
         top = _repo_root_of(os.path.join(ctx.get("cwd") or "", "x"))
         with open(os.path.join(top, "docs", "qa", folder, "ledger.md"), encoding="utf-8") as fh:
             rows = [ln for ln in fh if re.match(r"\|\s*K\d+\s*\|", ln)]
-    except OSError:
+    except FileNotFoundError:
         return ""  # no ledger for this feature: nothing to count
+    except OSError as exc:
+        sys.stderr.write("house-rules: the QA decision count could not read the ledger (%s), so it asked for no "
+                         "count.\n" % type(exc).__name__)
+        return ""
     if not rows or re.search(r"(?i)\bdecisions?\b.{0,20}\d|\d.{0,20}\bdecisions?\b", reply):
         return ""
     return ("the ledger has %d decision(s) for this feature: say in the reply how many decisions were logged "
