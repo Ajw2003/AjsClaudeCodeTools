@@ -18,7 +18,7 @@ def pl(sid, mode):
 def done_list(sid, feature="Quiet Mode"):
     dl.record_steps(g, feature, plan, sid)
     st = dl._loop_read(g)[0]
-    for x in st["steps"][sid]["steps"]: x["state"] = "done"
+    for x in st["steps"][sid]["steps"]: x["stuck"] = True  # a stuck step counts as closed; "done" needs a run file at the current tree
     dl._loop_write(g, st)
 def chk(sid, mode): return dl.step_stop_check(pl(sid, mode), "All done.")[0]
 r = {}

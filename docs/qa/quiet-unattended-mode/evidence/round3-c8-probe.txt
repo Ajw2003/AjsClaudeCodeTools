@@ -1,0 +1,20 @@
+{
+ "attended_default_no_block": true,
+ "attended_default_no_flag": true,
+ "attended_auto_no_block": true,
+ "attended_auto_no_flag": true,
+ "attended_acceptEdits_no_block": true,
+ "attended_acceptEdits_no_flag": true,
+ "attended_plan_no_block": true,
+ "attended_plan_no_flag": true,
+ "attended_None_no_block": true,
+ "attended_None_no_flag": true,
+ "attended_weird_no_block": true,
+ "attended_weird_no_flag": true,
+ "bypass_blocks_first_only": true,
+ "bypass_text": true,
+ "unattended_blocks_first_only": true,
+ "logged_no_block": true,
+ "open_step_gets_step_block": true
+}
+ALL PASS
