@@ -430,3 +430,5 @@ Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stal
 2026-11-25 (change from aj): auto mode is attended, so the design loop still gates every step and waits for aj; only unattended mode runs the loop to QA alone. Every unattended step list ends with four fixed steps: tests pass, docs written, before-and-after pictures saved, QA page built. Plan page updated; still Plan stage, nothing built.
 
 2026-11-25 (change from aj): bypass mode counts as unattended in full. Auto mode stays attended at the design loop's gates but gets every change that cuts aj's decisions (ask only about look or function, decide and log the rest, step check, QA-only reporting). Plan page updated; still Plan stage, nothing built.
+
+2026-11-25 (change from aj): the finish line is the same in every mode and required: four last steps (tests pass, docs written, before-and-after pictures saved or no visual change shown, QA page built and stamped) that cannot be parked, replaced or skipped. Plan page now has twelve changes; still Plan stage, nothing built.
