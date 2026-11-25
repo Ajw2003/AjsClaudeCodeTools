@@ -21,3 +21,6 @@ Commit 09be0861 made `/house-rules:review` default plan, code, codebase, image a
 Follow-up: the first full verify run after 09be0861 failed one check (the review override check expected `default` for code mode); fixed in the test, and a third full run was started and not yet seen to finish.
 
 Benchmark in progress (aj asked for quality, time, cost): a seeded file with six known bugs. Opus run done: all six found, 19,934 tokens, 39.0 s. Sonnet run started, result pending. Next: a real six-file batch on both, then report. Nothing in the repo changed for it.
+
+## Update 2026-11-25 (continued on branch ccr-3849bb3b-c267ho)
+Merged `AjsAgent/speed-first` into this branch (step 3 done). Old versus new re-measured in `docs/qa/speed-first/results.md`: Write hooks 649 to 145 ms, Bash 458 to 163 ms. Step 4 (#629) needs no change: the reads were already parallel and cost 591 ms for 7 issues here. Step 5 (#630) done: the hook log appends and trims at 128 KB (core.py `_log_line`), with two checks. The verify parts that finish fail identically on main and here. Still open: step 6 (#631), where make_page is the longest part at 100 s, and step 2 (#627), worth at most about 40 ms per process. Not run: full `verify.py` end to end.

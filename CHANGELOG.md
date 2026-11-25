@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Speed step 5, append-only hook log (#630): `_log_line` appends one line and trims to the newest 500 lines only once the log passes 128 KB, so a log line costs 0.011 ms instead of 0.384 ms; measured results for steps 3, 4 and 5 are in `docs/qa/speed-first/results.md` (Write hooks 649 to 145 ms, Bash 458 to 163 ms).
+
 Review models per mode: plan back on Opus, code now runs Opus then Sonnet and merges the findings, codebase, image and style stay on Sonnet; "override typed at spawn" now reads "model set at spawn"; Decisions entry and doc rows brought up to date (plugin 2.94.6).
 
 Speed step 3, one hook process per tool phase (#628): new `pretool` and `posttool` events in `hook.py` run the checks that fit the tool in one process each, and `hooks.json` calls them once per phase, so a Write starts 4 processes instead of 18 and a Bash call 4 instead of 12. Measured with `tools/time_hooks.py --quick` on this PC: Write about 420 ms against 930 ms, Bash about 160 ms against 540 ms. A crash in `guard` or `guardwrite` still blocks; a crash in any other check is reported and the rest run. All seven verify parts pass. Refs #625.
