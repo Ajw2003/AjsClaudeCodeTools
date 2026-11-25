@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Speed first build plan, review round 2 (no code): five wording and picture fixes applied (step 4 titled profile-then-fix, step 6 runs last and bumps the version, acceptance counts four design choices); the page is stamped open-risks after two rounds. Refs #625.
+
 Speed first build plan fixed after page review round 1 (no code): step 4 now says the 5 label reads already run in a thread pool (`design_loop.py:826`) and starts by profiling, step 3 names its failure rules and 10 second limit, steps 5 and 6 gained timing and check-list done-tests, and issue #629 matches. Refs #625.
 
 Speed first design and build plan (no code yet): docs/4-systems/hook-speed.md, the proposal and build plan pages in docs/plans/, and issues #625 to #631 for six measured steps that cut hook time per tool call and speed up the test suite. Refs #625.
