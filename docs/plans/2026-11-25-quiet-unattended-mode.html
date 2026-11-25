@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.94.7 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="120ec2d156c8d8b20d9c33bb0dcd662b68157821de3ebebe28570e0e4aa808a1;open-risks;2">
+<meta name="house-rules-reviewed" content="1503996ccb8abd3b94e53084b009ae2f36c9f0942a1235447db9a1660a4647e1;open-risks;2">
 <meta name="house-rules-page" content="proposal">
 <title>Quiet unattended mode: decide, log, keep going</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -448,7 +448,7 @@ const PAGE = {
       "It starts with --session-id, then resumes by id with --resume and -p after any stop, never by most recent session. The resume text is marked relayed (core.py:2040), so it never counts as your approval.",
       [
         "Today: overnight.sh runs Claude once and sits idle after any stop (tools/overnight.sh:12; test tools/verify_tools.py:813). Rate limits end the turn with no way to block it.",
-        "New: a stop-failure handler writes the error and reset time to a file. The loop waits for the reset, not counting it, and backs off after crashes. A last short run builds the QA page. overnight.sh --interactive keeps the old behaviour.",
+        "New: a small script that runs when a stop fails writes the error and reset time to a file. The loop waits for the reset, not counting it, and backs off after crashes. A last short run builds the QA page. overnight.sh --interactive keeps the old behaviour.",
         "For you: limits are 24 hours of work and 5 restarts with no step closed. They end the run into QA with open steps listed first. This is the one exception to never stopping."
       ],
       null

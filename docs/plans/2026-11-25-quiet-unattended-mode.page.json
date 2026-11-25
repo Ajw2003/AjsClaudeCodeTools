@@ -166,7 +166,7 @@
    "It starts with --session-id, then resumes by id with --resume and -p after any stop, never by most recent session. The resume text is marked relayed (core.py:2040), so it never counts as your approval.",
    [
     "Today: overnight.sh runs Claude once and sits idle after any stop (tools/overnight.sh:12; test tools/verify_tools.py:813). Rate limits end the turn with no way to block it.",
-    "New: a stop-failure handler writes the error and reset time to a file. The loop waits for the reset, not counting it, and backs off after crashes. A last short run builds the QA page. overnight.sh --interactive keeps the old behaviour.",
+    "New: a small script that runs when a stop fails writes the error and reset time to a file. The loop waits for the reset, not counting it, and backs off after crashes. A last short run builds the QA page. overnight.sh --interactive keeps the old behaviour.",
     "For you: limits are 24 hours of work and 5 restarts with no step closed. They end the run into QA with open steps listed first. This is the one exception to never stopping."
    ],
    null
