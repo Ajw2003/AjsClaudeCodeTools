@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.94.7 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="1503996ccb8abd3b94e53084b009ae2f36c9f0942a1235447db9a1660a4647e1;open-risks;2">
+<meta name="house-rules-reviewed" content="2ea34ca09376497d02d7292c00e9b8a02927067f19d19f3a6871d2455805617d;open-risks;2">
 <meta name="house-rules-page" content="proposal">
 <title>Quiet unattended mode: decide, log, keep going</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -304,10 +304,10 @@ const PAGE = {
         "Idea",
         "I decide, you design",
         "",
-        "Only choices that change how something looks or what it does come to you. Every other choice I make myself, write down, and carry on. Once a goal is set, I work its steps to the end.",
+        "When you are here, only choices about how something looks or what it does come to you. When nobody is here, I decide those too, state my assumption, and carry on. Once a goal is set, I work its steps to the end.",
         "Nothing from you.",
         {
-          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%22300%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EA%20choice%20comes%20up%3C/text%3E%3Cpath%20d=%22M160%2055%20V70%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%2210%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%2218%22%20y=%2290%22%3EChanges%20the%20look%3C/text%3E%3Ctext%20x=%2218%22%20y=%22106%22%3Eor%20what%20it%20does%3C/text%3E%3Crect%20x=%22165%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22173%22%20y=%2290%22%3EAnything%20else%3C/text%3E%3Ctext%20x=%2214%22%20y=%22140%22%20fill=%22%23c33%22%3EAsk%20you,%20as%20a%20page%3C/text%3E%3Ctext%20x=%22169%22%20y=%22140%22%3EI%20decide%20and%20write%20it%20down%3C/text%3E%3Ctext%20x=%22169%22%20y=%22156%22%3Ethen%20carry%20on%3C/text%3E%3C/svg%3E",
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%22300%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EA%20choice%20comes%20up%3C/text%3E%3Cpath%20d=%22M160%2055%20V70%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%2210%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%2218%22%20y=%2290%22%3EChanges%20the%20look%3C/text%3E%3Ctext%20x=%2218%22%20y=%22106%22%3Eor%20what%20it%20does%3C/text%3E%3Crect%20x=%22165%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22173%22%20y=%2290%22%3EAnything%20else%3C/text%3E%3Ctext%20x=%2214%22%20y=%22140%22%20fill=%22%23c33%22%3EAsk%20you,%20if%20you%20are%20here%3C/text%3E%3Ctext%20x=%22169%22%20y=%22140%22%3EI%20decide%20and%20write%20it%20down%3C/text%3E%3Ctext%20x=%22169%22%20y=%22156%22%3ENobody%20here:%20I%20decide%20both%3C/text%3E%3C/svg%3E",
           "alt": "A choice about look or function goes to you; any other choice I decide and log",
           "caption": "Who decides what"
         }
@@ -352,13 +352,13 @@ const PAGE = {
     [
       "changed",
       "Rules tell me to ask, wait or stop",
-      "Ask only about look or function",
+      "Ask about look or function only when you are here",
       null,
-      "Only choices about how something looks or what it does come to you. A new dependency, a data format or an API change counts as function. Everything else I decide and log.",
+      "When you are here, only choices about how something looks or what it does come to you. A new dependency, a data format or an API change counts as function. When nobody is here, I decide those too, and everything else I decide and log.",
       [
         "Today: rules say to ask, wait or hand over (show-dont-tell.md:5, 11, 12; house-rules.md:91; clear-writing.md:59-62; handover-command.md:28, 51; commit-branches.md:50; coding-philosophy.md:58; builder.md:11; core.py:1546, 1610).",
         "New: those lines are rewritten. Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people, outward posts.",
-        "For you: far fewer questions, in every mode."
+        "For you: far fewer questions when you are here, none when you are not."
       ],
       null
     ],
@@ -430,13 +430,13 @@ const PAGE = {
     [
       "new",
       "Look or function choices with nobody there",
-      "Take the safe default, park it, list it first on QA",
+      "Decide with a stated assumption, list it first on QA",
       null,
-      "I take the safest reversible default and log it as your call. Attended, a reply ending QUESTION FOR YOU: is allowed, and a new message from you clears any block. Auto mode counts as nobody present, so it parks too.",
+      "With nobody present I decide these myself. I record my assumption and why it is reasonable, then carry on. Attended, a reply ending QUESTION FOR YOU: is allowed. Auto mode counts as nobody present, so it decides too.",
       [
         "Today: a plain question in Build parks, and a [HARD STOP] question holds edits (design_loop.py:1401, 1547).",
-        "New: ledger_note.py decide adds a C row (choice). The ledger is named after the branch, with / changed to - (make_page.py:53).",
-        "For you: QA lists your-call rows and auto-approvals first, with why and how to undo."
+        "New: ledger_note.py decide adds a C row (choice) with an Assumption column, and a new message from you clears any block. The ledger is named after the branch, with / changed to - (make_page.py:53).",
+        "For you: QA lists these assumptions and auto-approvals first, with why and how to undo each."
       ],
       null
     ],
