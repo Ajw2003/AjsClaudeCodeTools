@@ -2320,7 +2320,7 @@ else:
     # --model / --effort overrides: read from anywhere in the text, `default` when absent, exit 2 when unknown
     _rv_f = []
     for _a, _want in (
-        (["b.py"], ("default", "default", "none")),
+        (["b.py"], ("sonnet", "default", "none")),  # code mode defaults to Sonnet (2.94.5)
         (["b.py", "check", "names", "--model", "sonnet", "--effort", "low"], ("sonnet", "low", "check names")),
         (["--model=OPUS", "b.py", "--effort=max"], ("opus", "max", "none")),
     ):
