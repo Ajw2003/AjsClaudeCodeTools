@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode acceptance started (#644): the twelve acceptance criteria and the live-run write-up are saved in `docs/qa/quiet-unattended-mode/`, and a reviewer is judging them; the QA page and pull request follow.
+
 Quiet unattended mode live runs (#644): four real headless runs of `tools/overnight.sh` found and fixed three bugs the suites had missed (step results not recorded when the check is called through a shell variable, the stuck rule defeated by the autosave commit, and the agent having no path to `ledger_note.py decide`); evidence is saved in `docs/qa/quiet-unattended-mode/`.
 
 Plugin version 2.95.0, quiet unattended mode (#634) steps 8 to 11 and 14 merged: a hook can approve a stage when nobody is present, only on a stored clean reviewer verdict and recorded apart from aj's approvals (#641); `tools/overnight.sh` resumes by session id, waits out rate limits through a new `stopfailure` hook, backs off after crashes, stops at 24 hours of work or 5 restarts with no step closed and runs one final QA pass (#642, #648, #649); twelve earlier decisions are reversed with dated entries and the systems docs are updated (#645).
