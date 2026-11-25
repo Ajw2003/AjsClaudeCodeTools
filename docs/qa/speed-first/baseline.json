@@ -1,0 +1,46 @@
+{
+  "n": 5,
+  "tool_calls": {
+    "Write": {
+      "total_ms": 1021.8,
+      "hooks": {
+        "Pre/guardwrite": 156.4,
+        "Pre/commitgate": 109.5,
+        "Pre/pagecheck": 111.9,
+        "Post/artifact": 121.8,
+        "Post/branchnudge": 96.4,
+        "Post/runnable": 97.3,
+        "Post/harvest": 112.1,
+        "Post/autosave": 99.5,
+        "Post/promptran": 118.7
+      },
+      "processes": 18
+    },
+    "Bash": {
+      "total_ms": 877.4,
+      "hooks": {
+        "Pre/guard": 177.2,
+        "Pre/commitgate": 222.9,
+        "Post/creditcheck": 153.1,
+        "Post/closablemerge": 141.4,
+        "Post/autosave": 148.9,
+        "Post/promptran": 160.8
+      },
+      "processes": 12
+    }
+  },
+  "label_reads": {
+    "ms": 1096.4,
+    "issues": 7
+  },
+  "stop_judge": "SKIPPED: paid model call, not timed",
+  "verify_parts_s": {
+    "core": "TIMEOUT",
+    "safe_git": "TIMEOUT",
+    "design_loop": "TIMEOUT",
+    "writing": 7.8,
+    "delegation": "TIMEOUT",
+    "docs": 53.2,
+    "make_page": "TIMEOUT"
+  }
+}

@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Speed step 1, timing script (#626): `tools/time_hooks.py` replays the real Write and Bash hook calls in a throwaway repo and prints milliseconds per call (`--quick`, `--save`, `--compare`); the saved baseline in `docs/qa/speed-first/baseline.json` has a Write call at about 1,020 ms over 18 processes and a Bash call at about 880 ms over 12, and 7 label reads at about 1,100 ms. Five `verify.py` parts took over the 55 second limit and have no number yet. Check 56 in `tools/verify_tools.py` covers the script. Refs #625.
+
 Handoff note for speed first updated with the review command Sonnet default (no code change).
 
 Review command now runs plan, code, codebase, image and style reviews on Sonnet by default (page and diff stay on Opus; a typed `--model` still wins), finishing the reviewer model review's recommendation without a second agent file; plugin 2.94.5.
