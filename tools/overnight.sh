@@ -8,7 +8,8 @@
 # --dangerously-skip-permissions means NOTHING asks before it runs. Use a throwaway branch or clone.
 #   overnight.sh --interactive [args]   one normal claude session (the old behaviour).
 #   overnight.sh "task text"            headless loop: runs claude -p, and while guarded steps stay open resumes the
-#                                       SAME session by id (never --continue). Safety cap: HOUSE_RULES_OVERNIGHT_MAX_RESUMES (5).
+#                                       SAME session by id (never --continue). Limits: HOUSE_RULES_OVERNIGHT_MAX_HOURS (24 h of work),
+#                                       HOUSE_RULES_OVERNIGHT_NO_PROGRESS (5 restarts with no step closed); then one final QA-page pass.
 set -eu
 HOUSE_RULES_UNATTENDED=on
 ART_PIPELINE=unattended
@@ -23,7 +24,7 @@ CLAUDE_SESSION_ID=$sid
 export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP CLAUDE_SESSION_ID
 here=$(dirname "$0")
 note="$here/../claude-house-rules/plugins/house-rules/scripts/ledger_note.py"
-max=${HOUSE_RULES_OVERNIGHT_MAX_RESUMES:-5}
+slept=0
 resume_text='[Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step.'
 sleeper=${HOUSE_RULES_OVERNIGHT_SLEEP:-sleep}
 sfdir=${CLAUDE_CONFIG_DIR:-$HOME/.claude}/house-rules-steps
@@ -43,12 +44,12 @@ after_run() {
       if [ -n "$reset_at" ]; then secs=$((reset_at + 30 - $(date +%s))); else secs=${HOUSE_RULES_OVERNIGHT_RATE_WAIT:-300}; fi
       [ "$secs" -gt 0 ] || secs=0
       echo "overnight: rate limit hit; waiting $secs s for it to reset (this resume is not counted)"
-      $sleeper "$secs"
+      slept=$((slept + secs)); $sleeper "$secs"
     else
       wait_kind=crash
       backoff=$((backoff == 0 ? 30 : backoff * 2)); [ "$backoff" -le 900 ] || backoff=900
       echo "overnight: claude crashed; backing off $backoff s before the next resume"
-      $sleeper "$backoff"
+      slept=$((slept + backoff)); $sleeper "$backoff"
     fi
   else
     backoff=0
@@ -57,18 +58,38 @@ after_run() {
 mkdir -p "$sfdir"; touch "$mark"
 claude -p "$*" --session-id "$sid" --dangerously-skip-permissions || echo "overnight: claude exited with an error; checking the step list" >&2
 after_run
-n=0
+# Two real limits: 24 h of work (wall clock minus waits) and 5 restarts with no step closed. Rate-limit waits never count.
+clock=${HOUSE_RULES_OVERNIGHT_NOW:-date +%s}
+max_secs=$((${HOUSE_RULES_OVERNIGHT_MAX_HOURS:-24} * 3600))
+max_np=${HOUSE_RULES_OVERNIGHT_NO_PROGRESS:-5}
+t0=$($clock)
+noprog=0
+prev=""
+reason=""
 while :; do
   # exit 1 = steps open; 0 = all done or no list; anything else (2 etc.) = could not tell, so stop and say so
   rc=0
-  python3 "$note" steps-status "feature" --session "$sid" || rc=$?
-  [ "$rc" = 1 ] || { [ "$rc" = 0 ] || echo "overnight: could not read the step list (exit $rc); stopping" >&2; break; }
-  if [ "$n" -ge "$max" ]; then
-    echo "overnight: stopped after $max resumes with steps still open (HOUSE_RULES_OVERNIGHT_MAX_RESUMES)"
-    break
+  out=$(python3 "$note" steps-status "feature" --session "$sid") || rc=$?
+  echo "$out"
+  if [ "$rc" != 1 ]; then
+    [ "$rc" = 0 ] || { echo "overnight: could not read the step list (exit $rc); stopping" >&2; break; }
+    reason="all steps done"; break
   fi
-  [ "$wait_kind" = rate_limit ] || n=$((n + 1))
+  open=${out#OPEN }
+  # a rate-limited run says nothing about progress, so it is not compared
+  if [ -n "$prev" ] && [ "$wait_kind" != rate_limit ]; then
+    if [ "$open" -lt "$prev" ]; then noprog=0; else noprog=$((noprog + 1)); fi
+  fi
+  prev=$open
+  if [ $(($($clock) - t0 - slept)) -ge "$max_secs" ]; then reason="24-hour limit"; break; fi
+  if [ "$noprog" -ge "$max_np" ]; then reason="5 restarts with no step closed"; break; fi
   touch "$mark"
   claude -p "$resume_text" --resume "$sid" --dangerously-skip-permissions || echo "overnight: claude exited with an error; checking the step list" >&2
   after_run
 done
+if [ -n "$reason" ]; then
+  echo "overnight: loop ended: $reason"
+  claude -p "[Subagent hand-back] Final pass: the run is ending ($reason). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work." --resume "$sid" --dangerously-skip-permissions || echo "overnight: final pass failed" >&2
+  rm -f "$sf"
+fi
+exit 0
