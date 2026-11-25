@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -850,6 +851,11 @@ rec = {"feature": "feature", "steps": [{"n": 1, "title": "Step 1", "check": "tru
 json.dump({"feature": "feature", "stage": "build", "skip": False, "approvals": [], "steps": {sid: rec}},
           open(repo + "/.claude/house-rules-loop.json", "w"))
 PY
+# #648: SF_KIND leaves a stopfailure file like the hook does (every call, or only the first when SF_FIRST is set)
+if [ -n "${SF_KIND:-}" ] && { [ -z "${SF_FIRST:-}" ] || [ "${*#*--resume}" = "$*" ]; }; then
+  mkdir -p "$CLAUDE_CONFIG_DIR/house-rules-steps"
+  printf '{"error":"x","kind":"%s","reset_at":%s,"at":1}' "$SF_KIND" "${SF_RESET:-null}" > "$CLAUDE_CONFIG_DIR/house-rules-steps/stopfailure-$CLAUDE_SESSION_ID.json"
+fi
 """)
         os.chmod(stub, 0o755)
         script = os.path.join(HERE, "overnight.sh")
@@ -877,6 +883,31 @@ PY
         p, lines = run({"NEVER_CLOSE": "1"}, cap="1")
         check(len(lines) == 2 and "stopped after 1 resumes" in p.stdout,
               "overnight.sh stops after HOUSE_RULES_OVERNIGHT_MAX_RESUMES resumes and says so", "got %r %r" % (lines, p.stdout))
+        # #648: waits go through HOUSE_RULES_OVERNIGHT_SLEEP (stubbed to log its argument)
+        slp = os.path.join(d, "bin", "fakesleep")
+        with open(slp, "w") as f:
+            f.write('#!/bin/sh\necho "$1" >> "$LOG.sleep"\n')
+        os.chmod(slp, 0o755)
+        def waits(extra, cap=None):
+            if os.path.exists(log + ".sleep"):
+                os.remove(log + ".sleep")
+            p, lines = run(dict(extra, HOUSE_RULES_OVERNIGHT_SLEEP=slp), cap=cap)
+            sl = open(log + ".sleep").read().split() if os.path.exists(log + ".sleep") else []
+            return p, lines, sl
+        p, lines, sl = waits({})
+        check(len(lines) == 2 and sl == [] and "waiting" not in p.stdout, "overnight.sh: no stopfailure file means no wait",
+              "got %r %r %r" % (lines, sl, p.stdout))
+        p, lines, sl = waits({"SF_KIND": "rate_limit", "SF_FIRST": "1", "NEVER_CLOSE": "1"}, cap="1")
+        check(len(lines) == 3 and sl == ["300"] and "rate limit" in p.stdout and "not counted" in p.stdout,
+              "overnight.sh: a rate_limit file with no reset time waits HOUSE_RULES_OVERNIGHT_RATE_WAIT (300) and spends no resume",
+              "got %r %r %r" % (lines, sl, p.stdout))
+        p, lines, sl = waits({"SF_KIND": "rate_limit", "SF_FIRST": "1", "SF_RESET": str(int(time.time()) + 1000), "NEVER_CLOSE": "1"}, cap="1")
+        check(len(sl) == 1 and 1000 <= int(sl[0]) <= 1031, "overnight.sh: a rate_limit file with reset_at waits until reset_at plus 30 s", "got %r" % (sl,))
+        p, lines, sl = waits({"SF_KIND": "crash", "NEVER_CLOSE": "1"}, cap="2")
+        left = [f for f in os.listdir(os.path.join(d, "cfg", "house-rules-steps")) if f.startswith("stopfailure")]
+        check(len(lines) == 3 and sl == ["30", "60", "120"] and not left,
+              "overnight.sh: crash files back off 30, 60, 120 s, each resume counts (cap 2 stops after 3 calls), file deleted",
+              "got %r %r %r %r" % (lines, sl, left, p.stdout))
         note = os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scripts", "ledger_note.py")
         loop = os.path.join(repo, ".claude", "house-rules-loop.json")
         def status(steps):
