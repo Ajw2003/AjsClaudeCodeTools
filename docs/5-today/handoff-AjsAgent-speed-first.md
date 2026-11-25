@@ -14,3 +14,6 @@ verify.py has not been run on this branch. The review's timing figures have not 
 
 ## The issue numbers
 Parent #625; steps #626 (timing script), #627 (load less), #628 (one process per phase), #629 (label reads), #630 (append-only log), #631 (easy test wins).
+
+## Update 2026-11-24 (side task)
+Commit 09be0861 made `/house-rules:review` default plan, code, codebase, image and style reviews to Sonnet (plugin 2.94.5); page and diff stay Opus, a typed `--model` wins. Unverified: the full `verify.py` run after this change was not seen to finish, and no live review run was made. Speed first is unchanged: the next step is still the build plan approval and step 1 (#626). Issue: the review command is Refs #617.

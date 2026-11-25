@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Handoff note for speed first updated with the review command Sonnet default (no code change).
+
 Review command now runs plan, code, codebase, image and style reviews on Sonnet by default (page and diff stay on Opus; a typed `--model` still wins), finishing the reviewer model review's recommendation without a second agent file; plugin 2.94.5.
 
 Speed first build plan, review round 2 (no code): five wording and picture fixes applied (step 4 titled profile-then-fix, step 6 runs last and bumps the version, acceptance counts four design choices); the page is stamped open-risks after two rounds. Refs #625.
