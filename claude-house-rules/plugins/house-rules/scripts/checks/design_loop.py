@@ -4205,6 +4205,61 @@ _sp_cases.append(("#647: four Finish: steps appended and in the sha; park refuse
                   "pass and fail on fixtures; Build moves to QA from the step list only when nobody is present; a pull request is "
                   "denied while a step is open and nobody is present", _r.stdout.strip() == "True"))
 
+# --- #640: a stop check on every stop that blocks while a step is open ---
+_ss_snip = os.path.join(_FIXTURE_ROOT, "stopstep_snip.py")
+with open(_ss_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile
+here = sys.argv[1]
+sys.path.insert(0, here)
+cfg = tempfile.mkdtemp(); os.environ["CLAUDE_CONFIG_DIR"] = cfg
+for k in ("HOUSE_RULES_UNATTENDED", "HOUSE_RULES_LOOP"): os.environ.pop(k, None)
+from house_rules import design_loop as dl, core
+d = os.path.realpath(tempfile.mkdtemp())
+def git(*a): return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=d, check=True, capture_output=True)
+git("init", "-q", "-b", "feat"); open(os.path.join(d, "a.py"), "w").write("x=1\n"); git("add", "-A"); git("commit", "-qm", "init")
+g = os.path.join(d, ".git"); plan = os.path.join(d, "p.page.json")
+json.dump({"test_command": "true", "changes": [["c", "Step 1: a", "", None, "", None, None, "echo 1"]]}, open(plan, "w"))
+dl.record_steps(g, "f", plan, "s1")
+tr = os.path.join(d, "t.jsonl")
+def user(): return json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}})
+open(tr, "w").write(user() + "\n")
+def pl(sid="s1", mode="default"): return json.dumps({"session_id": sid, "cwd": d, "transcript_path": tr, "permission_mode": mode})
+def chk(reply, sid="s1", mode="default"): return dl.step_stop_check(pl(sid, mode), reply)
+rec = lambda: dl._loop_read(g)[0]["steps"]["s1"]
+r = {}
+b = chk("All done, here is the summary.")[0]
+r["normal"] = bool(b) and "Step 1: a" in b and "--step 1 --start" in b and "--poll" in b and "park" in b and "--tried" in b
+r["needs_you"] = bool(chk("NEEDS YOU: the licence.")[0])
+r["empty"] = bool(chk("")[0])
+r["no_list"] = chk("x", sid="other") == (None, None)
+r["question_attended"] = chk("hmm\nQUESTION FOR YOU: which colour?")[0] is None
+r["question_nobody"] = bool(chk("QUESTION FOR YOU: which colour?", mode="bypassPermissions")[0])
+os.environ["HOUSE_RULES_UNATTENDED"] = "on"; r["question_unattended"] = bool(chk("QUESTION FOR YOU: x")[0]); os.environ.pop("HOUSE_RULES_UNATTENDED")
+r["stuck_after_3"] = any(s.get("stuck") for s in rec()["steps"])
+r["stuck_listed"] = bool(dl.steps_stuck(g, pl()))
+open(tr, "a").write(user() + "\n")
+chk("x"); open(tr, "a").write(user() + "\n")
+chk("x"); r["reset_on_message"] = sum(rec()["blocks"].values()) == 1
+for _ in range(20):
+    if chk("x")[0] is None: break
+r["allowed_when_all_stuck"] = chk("x")[0] is None and len(dl.steps_stuck(g, pl())) == len(rec()["steps"])
+stub = os.path.join(d, "judge.py"); open(stub, "w").write("print('{\"ok\": false, \"criterion\": \"C2\", \"reason\": \"x\"}')\n")
+os.environ.update(HOUSE_RULES_JUDGE="on", HOUSE_RULES_JUDGE_CMD=stub, HOUSE_RULES_ROADBLOCKS_STATE=os.path.join(d, "rb.json"))
+os.environ.pop("HOUSE_RULES_ROADBLOCKS", None)
+def jb(sid):
+    if os.path.exists(os.environ["HOUSE_RULES_ROADBLOCKS_STATE"]): os.remove(os.environ["HOUSE_RULES_ROADBLOCKS_STATE"])
+    return [bool(core.roadblock_check(pl(sid), "I finished the thing.", False)[0]) for _ in range(3)]
+r["judge_once_with_list"] = jb("s1") == [True, False, False]
+r["judge_old_without_list"] = jb("none") == [True, True, False]
+print(r, file=sys.stderr)
+print(all(r.values()))
+""")
+_r = subprocess.run([sys.executable, _ss_snip, HERE], capture_output=True, text=True, timeout=120)
+_sp_cases.append(("#640: a stop is blocked while a step is open (normal, NEEDS YOU and empty replies), a step goes stuck after 3 no-progress "
+                  "blocks and then the stop is allowed, a new user message resets the counters, the judge blocks once per step set, "
+                  "a session with no step list keeps the old checks, QUESTION FOR YOU passes only when attended",
+                  _r.stdout.strip() == "True"))
+
 for _t, _ok in _sp_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 
