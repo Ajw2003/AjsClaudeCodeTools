@@ -41,6 +41,7 @@ not it fires. That is on by default on purpose: a diagnostic that ships switched
 enabled until someone is already lost.
 """
 
+import json
 import os
 import re
 import sys
@@ -294,6 +295,145 @@ def _scope_parity_link(payload, field):
 core.register_prompt(_scope_parity_link)
 
 
+# ---------------------------------------------------------------------------------------
+# pretool / posttool (#628, step 3 of #625): one process per tool phase. Each runs, in hooks.json's old order,
+# the checks whose matcher fits the payload's tool_name, replaying the one stdin payload (core.keep_payload).
+# Claude Code ran same-phase hooks in parallel and never skipped one because another denied, so none is skipped
+# here either; a deny from any wins. sendcheck (timeout 300) keeps its own hooks.json entry.
+# ---------------------------------------------------------------------------------------
+_GH = "mcp__(github|GitHub)__"
+PRE_CHECKS = [
+    ("Bash|PowerShell", "guard"),
+    ("Write", "guardwrite"),
+    (_GH + "(create_pull_request|update_pull_request|issue_write|add_issue_comment|update_issue_comment|"
+     "add_reply_to_pull_request_comment|add_comment_to_pending_review|pull_request_review_write|push_files|"
+     "create_or_update_file|create_branch)", "guardgithub"),
+    ("AskUserQuestion|ExitPlanMode", "noask"),
+    ("Agent|Task", "agentcap"),
+    ("Write|Edit|NotebookEdit|Bash|PowerShell", "commitgate"),
+    ("Write|Artifact", "pagecheck"),
+]
+POST_CHECKS = [
+    ("Write|Edit", "artifact"),
+    ("Write|Edit", "branchnudge"),
+    ("Bash", "creditcheck"),
+    ("Bash|" + _GH + "(merge_pull_request|issue_write)", "closablemerge"),
+    ("Write", "runnable"),
+    ("Write|Edit", "harvest"),
+    ("ExitPlanMode", "delegate"),
+    ("Agent|Task", "audit"),
+    ("mcp__hearthbot__start_remote_control", "rclink"),
+    ("Write|Edit|NotebookEdit|Bash|PowerShell|" + _GH + "issue_write", "autosave"),
+    ("Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|mcp__.*", "promptran"),
+]
+FAIL_CLOSED = ("guard", "guardwrite")  # a crash in these blocks; main()'s net says the same for the single events
+_DECISION_RANK = {"deny": 3, "ask": 2, "allow": 1}
+
+
+def _run_captured(name):
+    """Run one handler with stdout/stderr captured; returns (rc, stdout, stderr, crash text or None)."""
+    import contextlib
+    import io
+    out, err = io.StringIO(), io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = EVENTS[name]()
+    except BaseException as exc:
+        return None, out.getvalue(), err.getvalue(), "%s: %s" % (type(exc).__name__, exc)
+    return (rc or 0), out.getvalue(), err.getvalue(), None
+
+
+def _merge_phase(results):
+    """Combine [(name, rc, out, err, crash)] into (stdout text, stderr text, exit code)."""
+    errs, objs, rc = [], [], 0
+    for name, c, out, err, crash in results:
+        if crash:
+            if name in FAIL_CLOSED:
+                errs.append("house-rules %s: internal error (%s), blocking rather than letting it through "
+                            "unchecked.\n" % (name, crash))
+                rc = 2
+                continue
+            errs.append("house-rules %s: internal error (%s); this check did not run, the others continue.\n"
+                        % (name, crash))
+            objs.append({"systemMessage": "house-rules plugin: the %s hook hit an internal error (%s) and did "
+                                          "not run for this call." % (name, crash)})
+        if err:
+            errs.append(err if err.endswith("\n") else err + "\n")
+        if c == 2:
+            rc = 2
+        if out.strip():
+            try:
+                obj = json.loads(out)
+            except ValueError:
+                obj = None
+            if isinstance(obj, dict):
+                objs.append(obj)
+            else:
+                errs.append("house-rules %s: printed non-JSON on stdout: %s\n" % (name, out.strip()))
+    merged, ctx, sysmsg, reasons, top_reasons, best = {}, [], [], [], [], ""
+    for o in objs:
+        h = o.get("hookSpecificOutput") or {}
+        if o.get("systemMessage"):
+            sysmsg.append(o["systemMessage"])
+        if h.get("additionalContext"):
+            ctx.append(h["additionalContext"])
+        d = h.get("permissionDecision", "")
+        if _DECISION_RANK.get(d, 0) > _DECISION_RANK.get(best, 0):
+            best, reasons = d, []
+        if d and d == best and h.get("permissionDecisionReason"):
+            reasons.append(h["permissionDecisionReason"])
+        if o.get("decision") == "block":
+            merged["decision"] = "block"
+            top_reasons.append(o.get("reason", ""))
+        for k, v in o.items():
+            if k not in ("systemMessage", "hookSpecificOutput", "decision", "reason"):
+                merged.setdefault(k, v)
+        for k, v in h.items():
+            if k not in ("additionalContext", "permissionDecision", "permissionDecisionReason", "hookEventName"):
+                merged.setdefault("hookSpecificOutput", {}).setdefault(k, v)
+    if rc == 2:  # exit 2 makes Claude Code ignore stdout, so every message goes to stderr
+        errs.extend(r + "\n" for r in reasons + top_reasons + ctx + sysmsg)
+        return "", "".join(errs), 2
+    if best or ctx or "hookSpecificOutput" in merged:
+        hso = merged.setdefault("hookSpecificOutput", {})
+        hso["hookEventName"] = next((o["hookSpecificOutput"]["hookEventName"] for o in objs
+                                     if (o.get("hookSpecificOutput") or {}).get("hookEventName")), "PreToolUse")
+        if best:
+            hso["permissionDecision"] = best
+            hso["permissionDecisionReason"] = "\n".join(reasons)
+        if ctx:
+            hso["additionalContext"] = "\n\n".join(ctx)
+    if sysmsg:
+        merged["systemMessage"] = " ".join(sysmsg)
+    if top_reasons:
+        merged["reason"] = "\n".join(top_reasons)
+    return (json.dumps(merged, separators=(",", ":")) if merged else ""), "".join(errs), 0
+
+
+def _run_phase(checks, phase):
+    try:
+        tool = json.loads(core.read_payload()).get("tool_name", "")
+    except Exception as exc:
+        # Cannot tell which checks apply: before a tool call that blocks (the guard is among them), after it says so.
+        sys.stderr.write("house-rules %s: could not read tool_name from the payload (%s: %s)%s.\n" % (
+            phase, type(exc).__name__, exc, "; blocking rather than letting the call through unchecked"
+            if phase == "pretool" else "; no checks ran for this call"))
+        return 2 if phase == "pretool" else 0
+    names = [n for m, n in checks if re.fullmatch(m, tool)]
+    out, err, rc = _merge_phase([(n,) + _run_captured(n) for n in names])
+    sys.stdout.write(out)
+    sys.stderr.write(err)
+    return rc
+
+
+def event_pretool():
+    return _run_phase(PRE_CHECKS, "pretool")
+
+
+def event_posttool():
+    return _run_phase(POST_CHECKS, "posttool")
+
+
 EVENTS = {
     "inject": event_inject,
     "showrule": event_showrule,
@@ -334,6 +474,8 @@ EVENTS = {
     "pagecheck": event_pagecheck,
     "sendcheck": event_sendcheck,
     "closablemerge": event_closablemerge,
+    "pretool": event_pretool,
+    "posttool": event_posttool,
 }
 
 
@@ -354,7 +496,7 @@ def main(argv):
         # except guard and inject, which made an internal crash in scope, artifact,
         # runnable, delegate or handover completely invisible.
         detail = "%s: %s" % (type(exc).__name__, exc)
-        if event == "guard":
+        if event in ("guard", "pretool"):
             sys.stderr.write(
                 "house-rules guard: internal error (%s), blocking rather than letting it "
                 "through unchecked.\n" % detail

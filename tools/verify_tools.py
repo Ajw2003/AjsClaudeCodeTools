@@ -831,9 +831,9 @@ def _time_hooks_case():
     p = subprocess.run([sys.executable, os.path.join(HERE, "time_hooks.py"), "--quick"],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
     ms = [l for l in p.stdout.splitlines() if l.startswith("    ") and l.rstrip().endswith(" ms")]
-    check(p.returncode == 0 and len(ms) >= 6 and all(l.split()[-2].replace(".", "", 1).isdigit() for l in ms)
+    check(p.returncode == 0 and len(ms) >= 4 and all(l.split()[-2].replace(".", "", 1).isdigit() for l in ms)
           and "Write call:" in p.stdout and "Bash call:" in p.stdout,
-          "time_hooks.py --quick prints a millisecond number for every Write and Bash hook",
+          "time_hooks.py --quick prints a millisecond number for every Write and Bash hook (a pre and a post line each since #628)",
           "got %r %r" % (p.stdout, p.stderr))
 _time_hooks_case()
 

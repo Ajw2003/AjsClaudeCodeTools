@@ -86,64 +86,13 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|PowerShell",
+        "matcher": "Bash|PowerShell|Write|mcp__(github|GitHub)__(create_pull_request|update_pull_request|issue_write|add_issue_comment|update_issue_comment|add_reply_to_pull_request_comment|add_comment_to_pending_review|pull_request_review_write|push_files|create_or_update_file|create_branch)|AskUserQuestion|ExitPlanMode|Agent|Task|Write|Edit|NotebookEdit|Bash|PowerShell|Write|Artifact",
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" guard",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" pretool",
             "timeout": 10,
             "statusMessage": "Checking house rules..."
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" guardwrite",
-            "timeout": 10,
-            "statusMessage": "Checking file-deletion safeguards..."
-          }
-        ]
-      },
-      {
-        "matcher": "mcp__(github|GitHub)__(create_pull_request|update_pull_request|issue_write|add_issue_comment|update_issue_comment|add_reply_to_pull_request_comment|add_comment_to_pending_review|pull_request_review_write|push_files|create_or_update_file|create_branch)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" guardgithub",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "AskUserQuestion|ExitPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" noask",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Agent|Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" agentcap",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit|NotebookEdit|Bash|PowerShell",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" commitgate",
-            "timeout": 10
           }
         ]
       },
@@ -154,16 +103,6 @@
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" sendcheck",
             "timeout": 300
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Artifact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" pagecheck",
-            "timeout": 10
           }
         ]
       }
@@ -210,112 +149,12 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit",
+        "matcher": "Write|Edit|Bash|Bash|mcp__(github|GitHub)__(merge_pull_request|issue_write)|Write|ExitPlanMode|Agent|Task|mcp__hearthbot__start_remote_control|Write|Edit|NotebookEdit|Bash|PowerShell|mcp__(github|GitHub)__issue_write|Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|mcp__.*",
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" artifact",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" branchnudge",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" creditcheck",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" posttool",
             "timeout": 15
-          }
-        ]
-      },
-      {
-        "matcher": "Bash|mcp__(github|GitHub)__(merge_pull_request|issue_write)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" closablemerge",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" runnable",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" harvest",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "ExitPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" delegate",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Agent|Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" audit",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "mcp__hearthbot__start_remote_control",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" rclink",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit|NotebookEdit|Bash|PowerShell|mcp__(github|GitHub)__issue_write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" autosave",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|WebFetch|WebSearch|mcp__.*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" promptran",
-            "timeout": 10
           }
         ]
       }

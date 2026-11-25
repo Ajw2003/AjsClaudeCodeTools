@@ -111,6 +111,16 @@ if [ -z "$PY" ]; then
       echo "Run /house-rules:doctor, or set HOUSE_RULES_PYTHON to a working interpreter." >&2
       exit 2
       ;;
+    pretool)  # merged PreToolUse: guard and guardwrite live in it, so it fails closed for every tool
+      echo "house-rules pretool: no working Python interpreter found on PATH." >&2
+      echo "Blocking this call rather than letting it through unchecked." >&2
+      echo "Run /house-rules:doctor, or set HOUSE_RULES_PYTHON to a working interpreter." >&2
+      exit 2
+      ;;
+    posttool)
+      printf '{"systemMessage":"house-rules plugin: no working Python interpreter found on PATH. The after-call checks did not run for this call. Run /house-rules:doctor."}'
+      exit 0
+      ;;
     guardwrite)
       echo "house-rules guardwrite: no working Python interpreter found on PATH." >&2
       echo "Blocking this write rather than letting an unchecked overwrite through." >&2

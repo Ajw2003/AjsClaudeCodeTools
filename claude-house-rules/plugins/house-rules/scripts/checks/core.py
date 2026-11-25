@@ -790,12 +790,18 @@ _n = [_hl_run(*_HL_NOOP, m) for m in (None, "verbose", "off")]
 report("PASS" if not _n[0][1].strip() and not _n[0][2] and "a.cs" in _n[1][2] and not _n[1][1].strip()
        and not _n[2][2] else "FAIL",
        "#584: trace_noop writes only under HOUSE_RULES_TRACE=verbose (default and off write nothing)")
-_c, _o, _l = _hl_run(*_HL_GUARD, None, seed="".join("old %d\n" % i for i in range(1, 601)))
+# #630: the log is append-only and is trimmed to its newest 500 lines once it passes 128 KB, so the
+# seed is 600 lines of about 250 bytes (150 KB) and the trim happens on this one hook call.
+_c, _o, _l = _hl_run(*_HL_GUARD, None, seed="".join("old %d %s\n" % (i, "x" * 240) for i in range(1, 601)))
 _ls = _l.splitlines()
-report("PASS" if len(_ls) == 500 and _ls[0] == "old 102" and "guard: empty payload" in _ls[-1] else "FAIL",
-       "#584: the hook log is capped at its newest 500 lines")
+report("PASS" if len(_ls) == 500 and _ls[0].startswith("old 102 ") and "guard: empty payload" in _ls[-1] else "FAIL",
+       "#584: the hook log is capped at its newest 500 lines once it passes 128 KB (#630)")
 if len(_ls) != 500:
     print(f"          {len(_ls)} lines; first {_ls[:1]!r}")
+_c, _o, _l = _hl_run(*_HL_GUARD, None, seed="old 1\nold 2\n")
+_ls = _l.splitlines()
+report("PASS" if len(_ls) == 3 and _ls[:2] == ["old 1", "old 2"] and "guard: empty payload" in _ls[-1] else "FAIL",
+       "#630: a small hook log is appended to, not rewritten: the old lines stay and one line is added")
 _c, _o, _l = _hl_run(*_HL_GUARD, None, seed_dir=True)
 report("PASS" if _c == 0 and _o.count("could not write the hook log (") == 1 and _o.count("\n") == 0
        and json.loads(_o)["systemMessage"].startswith("house-rules plugin: could not write the hook log (") else "FAIL",
@@ -1573,7 +1579,9 @@ _tool_cmds = [h["command"] for g in _non_agent for h in g["hooks"]]
 _count_entries = sum(len(g["hooks"]) for g in _non_agent)
 commit_case(
     "issues: no new hook process on Write/Edit/Bash - Pre/PostToolUse entries carry no issue-specific command",
-    not any("issue" in c for c in _tool_cmds) and _count_entries == 12 and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
+    not any("issue" in c for c in _tool_cmds) and _count_entries == 2
+    and all(sum(1 for g in _hj.get(ph, []) if re.fullmatch(g["matcher"], t)) <= 1 for t in ("Write", "Edit", "Bash") for ph in ("PreToolUse", "PostToolUse"))
+    and any('run.sh\\" issuelist' in json.dumps(g) for g in _hj["SessionStart"]),
     "%d Pre/PostToolUse entries; issuelist is on SessionStart" % _count_entries,
 )
 
@@ -2416,11 +2424,13 @@ commit_case(
     "quiet %r bad %r" % (_quiet[1][:80], _bad[1][:80]),
 )
 _pr_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"]
-_pr_entries = [g for ev in ("PostToolUse", "PostToolUseFailure") for g in _pr_hj.get(ev, [])
+_pr_entries = [g for g in _pr_hj.get("PostToolUseFailure", [])
                if any(h["command"].endswith('run.sh" promptran') for h in g["hooks"])]
+_pr_post_ok = ("promptran" in merged_wiring("Post", "Bash")[0] and "promptran" in merged_wiring("Post", "mcp__x__y")[0]
+               and "promptran" not in merged_wiring("Post", "Read")[0])  # #628: PostToolUse runs it inside posttool
 commit_case(
     "promptran: wired on PostToolUse and PostToolUseFailure, matched to the tools that raise permission prompts",
-    len(_pr_entries) == 2 and all(len(g["hooks"]) == 1 and "Bash" in g.get("matcher", "")
+    _pr_post_ok and len(_pr_entries) == 1 and all(len(g["hooks"]) == 1 and "Bash" in g.get("matcher", "")
                                   and "Read" not in g.get("matcher", "") for g in _pr_entries),
     "entries %r" % (_pr_entries,),
 )

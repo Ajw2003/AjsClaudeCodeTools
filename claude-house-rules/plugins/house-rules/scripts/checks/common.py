@@ -865,4 +865,23 @@ def finish():
 
 
 # Every name above, underscore names included, so `from common import *` hands a part file all of it.
+
+_merged_hook = []
+
+
+def merged_wiring(phase, tool):
+    """(check names, timeout) that hooks.json's merged pretool/posttool entry runs for this tool (#628)."""
+    import importlib.util
+    if not _merged_hook:
+        spec = importlib.util.spec_from_file_location("hook_for_wiring", HOOK)
+        _merged_hook.append(importlib.util.module_from_spec(spec))
+        spec.loader.exec_module(_merged_hook[0])
+    table = _merged_hook[0].PRE_CHECKS if phase == "Pre" else _merged_hook[0].POST_CHECKS
+    cmd = " " + phase.lower() + "tool"
+    for g in json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"][phase + "ToolUse"]:
+        for h in g["hooks"]:
+            if h["command"].endswith(cmd) and re.fullmatch(g["matcher"], tool):
+                return [n for m, n in table if re.fullmatch(m, tool)], h["timeout"]
+    return [], None
+
 __all__ = [_n for _n in dir() if not _n.startswith("__")]

@@ -94,7 +94,20 @@ def _trace_chat():
 
 HOOK_LOG_NAME = "house-rules-hook-log.txt"
 HOOK_LOG_MAX_LINES = 500
+HOOK_LOG_TRIM_BYTES = 128 * 1024  # roughly 500 lines of 250 bytes, plus room before the next trim
 _LOG_ERROR_SHOWN = False
+
+
+def _trim_hook_log(path):
+    """Keep the newest HOOK_LOG_MAX_LINES lines. Another hook process may append between the read
+    and the replace, so the replacement goes through a temp file and os.replace, and a lost line
+    is acceptable: the log is a diagnostic trail, not a record."""
+    with open(path, "r", encoding="utf-8") as f:
+        lines = f.read().splitlines()[-HOOK_LOG_MAX_LINES:]
+    tmp = "%s.%d.tmp" % (path, os.getpid())
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, path)
 
 
 def _log_line(message):
@@ -104,14 +117,12 @@ def _log_line(message):
     path = os.path.join(tempfile.gettempdir(), HOOK_LOG_NAME)
     line = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " " + " ".join(str(message).split())
     try:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                lines = f.read().splitlines()
-        except FileNotFoundError:
-            lines = []
-        lines = (lines + [line])[-HOOK_LOG_MAX_LINES:]
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+        # Append one line (the cheap common case); the file is trimmed to the newest 500 lines only
+        # once it passes HOOK_LOG_TRIM_BYTES, so most calls never read or rewrite it (#630).
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+        if os.path.getsize(path) > HOOK_LOG_TRIM_BYTES:
+            _trim_hook_log(path)
     except Exception as exc:
         if not _LOG_ERROR_SHOWN:
             _LOG_ERROR_SHOWN = True
