@@ -707,8 +707,8 @@ except Exception:
     pass
 _loop_cases.append(("a helper starts knowing the feature, its stage and issues, and that it only builds",
                     '"blockers"' in _so and "Build" in _so and "#102" in _so and "never design" in _so))
-_loop_cases.append(("a helper is told to park a reversible question with ledger_note.py park, and to report only a [HARD STOP] (#598)",
-                    "ledger_note.py park" in _so and "[HARD STOP]" in _so))
+_loop_cases.append(("a helper is told to record a reversible choice with ledger_note.py decide, and to report only a [HARD STOP] (#598)",
+                    "ledger_note.py decide" in _so and "needs --category and --tried" in _so and "[HARD STOP]" in _so))
 _loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
                     and _loop_edit("app.py", session_id="other") == "allow"))
 _loop_log("build log for blockers")
@@ -3195,7 +3195,7 @@ _hq_cases.append(("a Build reply with no question holds nothing", not _ma_stage(
 _, _hq_out, _ = run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
 _hq_cases.append(("#598: a plain question in Build holds nothing, edits stay allowed, and the end-of-reply output carries the park note",
                   not _ma_stage(_d).get("held") and _p5_edit(_d)[0] == "allow"
-                  and "Build stage: park a reversible question with ledger_note.py park" in _hq_out))
+                  and "Build stage: record a reversible choice with ledger_note.py decide" in _hq_out))
 run_hook("handover", stop_payload(last_assistant_message="Step done.\n\n[HARD STOP] Delete the user table?", cwd=_d), env=_loop_env)
 _dec, _why = _p5_edit(_d)
 _hq_cases.append(("#598: a [HARD STOP] question in Build sets held and the next code edit is refused with the note",

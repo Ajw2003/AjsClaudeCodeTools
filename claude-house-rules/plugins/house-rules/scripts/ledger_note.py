@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """ledger_note.py - park a question in a feature's QA ledger instead of stopping work (#598).
 
-  ledger_note.py park FEATURE --step S --question Q --default D --affects A [--answer HOW]
+  ledger_note.py decide FEATURE --step S --choice C --assumption A --why W --undo U   (#638)
+  ledger_note.py park FEATURE --step S --question Q --default D --affects A --category CAT --tried "CMD -> OUTPUT" [--answer HOW]
   ledger_note.py deviate FEATURE --step S --plan P --done D --why W --undo U   (#599)
 
-Appends row P<n> to the Parked decisions table (or D<n> to the Deviations table) of
+Appends row K<n> to the Choices table (added to an older ledger without one), P<n> to the Parked
+decisions table (hard stops only), or D<n> to the Deviations table of
 docs/qa/<folder>/ledger.md under the git project root (created with both tables if absent). Prints
 `parked P<n> in <path>` or `deviated D<n> in <path>`. STDLIB ONLY.
 """
@@ -21,6 +23,11 @@ HEAD = """# Design review loop: deviations and parked decisions
 
 Every change from the approved build plan, and every question parked instead of asked. Each row says what the plan said, what was done, why, and how to undo it. aj reviews this on the QA page.
 
+## Choices
+
+| # | Step | Choice made | Assumption | Why | How to undo |
+|---|---|---|---|---|---|
+
 ## Deviations
 
 | # | Step | The plan said | What was done | Why | How to undo |
@@ -33,6 +40,9 @@ Every change from the approved build plan, and every question parked instead of 
 """
 
 
+CATEGORIES = ("licence", "login", "purchase", "deletion", "money", "secrets", "other-people", "outward-post")
+
+
 def cell(s):
     return " ".join(s.split()).replace("|", "\\|")
 
@@ -40,18 +50,29 @@ def cell(s):
 def main(argv):
     ap = argparse.ArgumentParser(prog="ledger_note.py")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    k = sub.add_parser("decide")
+    k.add_argument("feature")
+    for o in ("step", "choice", "assumption", "why", "undo"):
+        k.add_argument("--" + o, required=True)
     p = sub.add_parser("park")
     p.add_argument("feature")
     for o in ("step", "question", "default", "affects"):
         p.add_argument("--" + o, required=True)
+    p.add_argument("--category", required=True, choices=CATEGORIES)
+    p.add_argument("--tried", required=True)
     p.add_argument("--answer", default="Reply with the answer to restore your choice; the default is easy to undo.")
     d = sub.add_parser("deviate")
     d.add_argument("feature")
     for o in ("step", "plan", "done", "why", "undo"):
         d.add_argument("--" + o, required=True)
     a = ap.parse_args(argv)
-    if a.cmd == "park":
-        L, head, vals, verb = "P", "Question", (a.step, a.question, a.default, a.affects, a.answer), "parked"
+    if a.cmd == "decide":
+        L, head, vals, verb = "K", "Choice made", (a.step, a.choice, a.assumption, a.why, a.undo), "decided"
+    elif a.cmd == "park":
+        if "->" not in a.tried:
+            sys.stderr.write('ledger_note.py: --tried must be "<command> -> <output>"\n')
+            return 2
+        L, head, vals, verb = "P", "Question", (a.step, "[%s] %s (tried: %s)" % (a.category, a.question, a.tried), a.default, a.affects, a.answer), "parked"
     else:
         L, head, vals, verb = "D", "The plan said", (a.step, a.plan, a.done, a.why, a.undo), "deviated"
     r = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -68,12 +89,18 @@ def main(argv):
     row = "| %s%d | %s |\n" % (L, n, " | ".join(cell(x) for x in vals))
     # Insert after the last row of this kind, else after its table's divider; a later section stays intact.
     lines = text.splitlines(True)
+    if L == "K" and "## Choices" not in text:  # an older ledger: add the table above Deviations, else at the end
+        tbl = HEAD[HEAD.index("## Choices"):HEAD.index("## Deviations")].splitlines(True)
+        i = next((j for j, ln in enumerate(lines) if ln.startswith("## ")), len(lines))
+        if i and not lines[i - 1].endswith("\n"):
+            lines[i - 1] += "\n"
+        lines[i:i] = tbl
     at = None
     for i, ln in enumerate(lines):
         if ln.startswith("| %s" % L) or (at is None and ln.startswith("|---") and i and head in lines[i - 1]):
             at = i + 1
     if at is None:
-        sys.stderr.write("ledger_note.py: %s has no %s table; add one or move the file away\n" % (path, "Parked decisions" if L == "P" else "Deviations"))
+        sys.stderr.write("ledger_note.py: %s has no %s table; add one or move the file away\n" % (path, {"P": "Parked decisions", "D": "Deviations"}[L]))
         return 2
     if not lines[at - 1].endswith("\n"):
         lines[at - 1] += "\n"
