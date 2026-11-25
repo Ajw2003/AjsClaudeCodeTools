@@ -7,6 +7,16 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-24 - Speed first: hook speed and easy test wins before code quality
+
+**Decision.** aj approved "Design approved: speed first 1A 2A 3A 4*" on `docs/plans/speed-first-proposal.html`: all five hook-speed steps, label reads run at the same time (GitHub still read every call), the reply judge left alone for now and timed, and, in aj's own answer, the test suite sped up now where easy wins are feasible with the rest left for the code-quality phase.
+
+**Why.** aj wants routine work fast, all of it. The review of 2026-11-24 measured 66 ms of import per hook call, 9 processes per Write and 748 ms of serial label reads.
+
+**Rejected.** A 60-second label cache (reverses the 2026-10-14 decision that labels are read from GitHub every time); making the judge opt-in (reverses the decision above that it is tuned, not removed); leaving the test suite entirely to the quality phase.
+
+**Status.** Active. Systems doc: `docs/4-systems/hook-speed.md`. Parent issue #625.
+
 ## 2026-11-24 - The roadblock judge is tuned, not removed, and every long wait becomes one-minute segments
 
 **Decision.** aj approved "Design approved: judge blocking fix and one-minute segments 1A 2A 3A" on the page `docs/plans/judge-blocking-fix.html`. The roadblock judge stays. It gets five written criteria (C1 to C5) and a reason standard (the check run, what it returned, the logic to the claim), it moves into the scripted Stop hook so it can read the real tool calls (1A), it shares one cap of two blocks with the record check and the goal check, reset only after real tool work (2A), and steps that pass data use named checkpoint files (3A). The launch guard refuses a foreground or background launch over 60 seconds unless it says `Cannot split:` with a reason that passes C5. Parent issue #605, steps #606 to #613.

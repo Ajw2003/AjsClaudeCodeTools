@@ -1,0 +1,168 @@
+{
+ "title": "Speed first build plan",
+ "eyebrow": "Build plan \u00b7 design approved 2026-11-24 \u00b7 nothing built yet",
+ "pageType": "build-plan",
+ "approval": "Build plan approved: speed first",
+ "short": {
+  "lead": "Six steps, issues #626 to #631 under parent issue #625, make every hook call and the test suite cheaper, each timed before and after. The build plan is the contract: I log any departure from it and report it at the end.",
+  "hint": "Tap a group to see its steps. The Changes section below gives each step's files and done-test.",
+  "key": [
+   [
+    "I build it",
+    ""
+   ],
+   [
+    "Waits on you",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "search",
+    "Step 1",
+    "Timing script first",
+    "",
+    "Issue #626. Every later step reports a before and after number from it.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/measure.svg",
+     "alt": "Step 1 gives the baseline.",
+     "caption": "Step 1 gives the baseline."
+    }
+   ],
+   [
+    "next",
+    "Steps 2 and 3",
+    "Load less, then one process per phase",
+    "",
+    "Issues #627 and #628, in that order.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/merge.svg",
+     "alt": "Fewer and lighter processes.",
+     "caption": "Fewer and lighter processes."
+    }
+   ],
+   [
+    "loop",
+    "Steps 4 to 6",
+    "Label reads, the log, easy test wins",
+    "",
+    "Issues #629, #630 and #631, each independent once step 1 is done.",
+    "Nothing from you.",
+    {
+     "src": "speed-first-proposal-pics/labels.svg",
+     "alt": "Network, log and test cost.",
+     "caption": "Network, log and test cost."
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve",
+    "you",
+    "Send the approval line below.",
+    "Send: Build plan approved: speed first"
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "chg",
+   "Step 1: timing script (issue #626)",
+   "A script that prints milliseconds per call and saves a baseline.",
+   null,
+   "Done when: one command times a Write and a Bash hook call, the 5 label reads, the Stop judge and each verify.py part, and saves the baseline; a check in tools/verify_tools.py runs it. Touches tools/time_hooks.py and tools/verify_tools.py. Depends on nothing; steps 2 to 6 depend on it.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/measure.svg",
+    "alt": "A script that prints milliseconds per call and saves a baseline.",
+    "caption": "A script that prints milliseconds per call and saves a baseline."
+   }
+  ],
+  [
+   "chg",
+   "Step 2: load only the needed part (issue #627)",
+   "hook.py imports one module per event instead of all seven.",
+   null,
+   "Done when: the timing script shows a lower per-call time than the baseline and verify.py passes in full. Touches scripts/hook.py. Depends on step 1.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/lazy.svg",
+    "alt": "hook.py imports one module per event instead of all seven.",
+    "caption": "hook.py imports one module per event instead of all seven."
+   }
+  ],
+  [
+   "chg",
+   "Step 3: one process per phase (issue #628)",
+   "Checks before a tool call share one process; checks after share another.",
+   null,
+   "Done when: a Write starts 2 processes instead of 9 and a Bash call 2 instead of 6, a crash in guard or guardwrite still blocks and any other crash fails open and reports, and verify.py passes in full. Touches hooks/hooks.json and scripts/hook.py. Depends on step 2.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/merge.svg",
+    "alt": "Checks before a tool call share one process; checks after share another.",
+    "caption": "Checks before a tool call share one process; checks after share another."
+   }
+  ],
+  [
+   "chg",
+   "Step 4: label reads at the same time (issue #629)",
+   "The commit gate's 5 reads run in a thread pool; GitHub is read every call.",
+   null,
+   "Done when: the timing script shows the label reads close to one read (about 150 ms against 748 ms), and the comment in design_loop.py about parallel reads is true. Touches scripts/house_rules/design_loop.py and its tests. Depends on step 1.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/labels.svg",
+    "alt": "The commit gate's 5 reads run in a thread pool; GitHub is read every call.",
+    "caption": "The commit gate's 5 reads run in a thread pool; GitHub is read every call."
+   }
+  ],
+  [
+   "chg",
+   "Step 5: append-only hook log (issue #630)",
+   "One line appended per write; trimmed under a lock.",
+   null,
+   "Done when: a test with parallel writers loses no line and verify.py passes in full. Touches the hook log code in scripts/house_rules/core.py and its tests. Depends on step 1.",
+   null,
+   null,
+   {
+    "src": "speed-first-proposal-pics/log.svg",
+    "alt": "One line appended per write; trimmed under a lock.",
+    "caption": "One line appended per write; trimmed under a lock."
+   }
+  ],
+  [
+   "chg",
+   "Step 6: easy test wins (issue #631)",
+   "Quick, safe speedups to verify.py chosen from step 1's timings.",
+   null,
+   "Done when: verify.py's total time falls against the baseline with every check still present, and what is left for the code-quality phase is listed in the issue. Touches scripts/checks/common.py and the parts the timings point to. Depends on step 1.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Acceptance tests (all steps)",
+   "One test per design item, run by the reviewer in acceptance mode before QA.",
+   null,
+   "Done when: each passes with its evidence saved under docs/qa/speed-first/: S1 scope, the timing script shows lower numbers than the baseline for a Write call, a Bash call and the log; S2 labels, the 5 reads run at the same time and GitHub is still read every call; S3 judge, left as it is and its time printed by the script; S4 tests, verify.py total time lower than the baseline with every check still present; S5 docs, version, changelog and the full verify.py run.",
+   null,
+   null
+  ]
+ ],
+ "wrapup": {
+  "summary": "A six-step build plan for the approved speed work, under parent issue #625.",
+  "changing": "A new timing script in tools/, then changes to hook.py, hooks.json, the commit gate, the hook log and the test helpers. No check is removed or weakened.",
+  "blocking": "Your build plan approval.",
+  "next": "After approval I build step 1 on branch AjsAgent/speed-first with a builder, run verify.py, and save the baseline.",
+  "todo": [
+   "Send the approval line: Build plan approved: speed first"
+  ]
+ }
+}

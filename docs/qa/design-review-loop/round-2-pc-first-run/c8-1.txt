@@ -1,0 +1,186 @@
+$ verify.py --only '#599'
+exit 1
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
+
+==============================================================================
+PART core - passed (44.7 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: core
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART safe_git - passed (82.8 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: safe_git
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART design_loop - exited 1 without its RESULT line (crashed?) (138.2 s)
+==============================================================================
+Traceback (most recent call last):
+
+  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
+
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+
+                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-pdw7rq2w\\tmpugmnofe1\\git\\house-rules-issue-cache.json'
+
+
+
+house-rules hooks - verification (Python) - part: design_loop
+
+===========================================
+
+
+
+ 1. PASS  #599: in bypass mode a reply that deviated from the plan, with no ledger entry, is sent back naming deviate and park
+
+ 2. PASS  #599: the same reply with a ledger_note.py call this turn passes
+
+ 3. PASS  #599: the same reply in default mode (someone present) passes
+
+ 4. PASS  #599: a payload with no permission_mode is treated as attended and passes
+
+ 5. PASS  #599: a bypass reply that does not mention a departure passes
+
+ 6. PASS  #599: the retry (stop_hook_active) passes
+
+==============================================================================
+PART writing - passed (6.0 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: writing
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART delegation - passed (115.3 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: delegation
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART docs - passed (30.3 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: docs
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART make_page - passed (129.0 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: make_page
+
+===========================================
+
+
+
+ 1. PASS  ledger_note (#599): deviate adds D1 to the Deviations table, above the parked rows, printing where
+
+ 2. PASS  ledger_note (#599): a second deviate is D2 and a | in a cell is escaped
+
+
+
+--------------------------------
+
+RESULT: PASS - all 2 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    44.7 s  passed
+  safe_git        0 checks  PASS    82.8 s  passed
+  design_loop     0 checks  FAIL   138.2 s  exited 1 without its RESULT line (crashed?)
+  writing         0 checks  PASS     6.0 s  passed
+  delegation      0 checks  PASS   115.3 s  passed
+  docs            0 checks  PASS    30.3 s  passed
+  make_page       2 checks  PASS   129.0 s  passed
+  wall-clock 138.2 s
+
+--------------------------------
+RESULT: FAIL - 1 of 2 checks failed. Failing part(s): design_loop. See the FAIL lines above.
+        design_loop: exited 1 without its RESULT line (crashed?)
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only '#599' matched 2 check(s).
+
+--- stderr ---

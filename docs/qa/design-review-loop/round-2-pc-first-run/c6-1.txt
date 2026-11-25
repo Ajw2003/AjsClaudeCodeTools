@@ -1,0 +1,198 @@
+$ verify.py --only '(#600'
+exit 1
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
+
+==============================================================================
+PART core - passed (45.3 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: core
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART safe_git - passed (84.2 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: safe_git
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART design_loop - exited 1 without its RESULT line (crashed?) (139.9 s)
+==============================================================================
+Traceback (most recent call last):
+
+  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
+
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+
+                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-pmgoq40c\\tmpszezvs12\\git\\house-rules-issue-cache.json'
+
+
+
+house-rules hooks - verification (Python) - part: design_loop
+
+===========================================
+
+
+
+ 1. FAIL  design loop (#600): a design line and a build-plan line in one message end in Build with both approvals and the plan's issues owed in the same turn
+
+          #600 state: stage 'plan', feature 'combo', approvals ['Design approved']
+
+          #600 note: House rules reminder: update the docs tier that changed; no success claim without a run you can quote; commit finished work on your own branch. Never hand over a command you have not run. Build only what was asked - where it is ambiguous, ask instead of assuming.
+
+
+
+Design loop: aj wrote "Design approved: combo". The stage is now Plan. Save it now, before anything else: `git add .claude/house-rules-loop.json && git commit -m "chore: record design approved" && git push`. Code edits stay closed. Planning owes: a systems doc in docs/4-systems/, a GitHub issue for the feature and a sub-issue per step, each naming dependencies, dependants and done-criteria, labelled `AjsAgent created this` and `in progress`. Design loop: aj wrote "Build plan approved" in the same message as another approval, but 2026-11-24-combo-plan.html has stamp is stale: the page changed after review, so the build plan approval was not applied. Run the reviewer on the plan page and rebuild it with --reviewed, or aj approves the plan in its own message.
+
+
+
+Issues OFF (HOUSE_RULES_ISSUES=off in settings.json): no issue-before-code gate. Autosave OFF (HOUSE_RULES_AUTOSAVE=off in settings.json): no autosave or handoff. Type "<group> on" (design loop, pages, builders, issues, writing checks, autosave, waits, house rules, unattended) to switch back; add "everywhere" for all folders.
+
+ 2. PASS  design loop (#600, A2): a combined approval with no plan page refuses the plan half and keeps the design half
+
+ 3. PASS  design loop (#600, A2): a combined approval with an unstamped plan page refuses the plan half and keeps the design half
+
+ 4. PASS  design loop (#600, A2): a combined approval with a stale stamp refuses the plan half and keeps the design half
+
+ 5. PASS  design loop (#600, A2): a plan approval on its own message is not held to the stamp (speed switches 6A)
+
+==============================================================================
+PART writing - passed (5.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: writing
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART delegation - passed (116.7 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: delegation
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART docs - passed (32.1 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: docs
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART make_page - passed (131.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: make_page
+
+===========================================
+
+
+
+ 1. PASS  make_page (#600): a two-line approval (design, then build plan) builds and the page holds both lines
+
+ 2. PASS  make_page (#600): a bad second approval line is refused and the message names it
+
+ 3. PASS  make_page (#600): the two lines in the wrong order are refused
+
+
+
+--------------------------------
+
+RESULT: PASS - all 3 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    45.3 s  passed
+  safe_git        0 checks  PASS    84.2 s  passed
+  design_loop     0 checks  FAIL   139.9 s  exited 1 without its RESULT line (crashed?)
+  writing         0 checks  PASS     5.9 s  passed
+  delegation      0 checks  PASS   116.7 s  passed
+  docs            0 checks  PASS    32.1 s  passed
+  make_page       3 checks  PASS   131.9 s  passed
+  wall-clock 139.9 s
+
+--------------------------------
+RESULT: FAIL - 1 of 3 checks failed. Failing part(s): design_loop. See the FAIL lines above.
+        design_loop: exited 1 without its RESULT line (crashed?)
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only '(#600' matched 3 check(s).
+
+--- stderr ---

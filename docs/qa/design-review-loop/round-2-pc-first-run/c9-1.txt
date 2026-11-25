@@ -1,0 +1,122 @@
+$ verify.py --only 'reversal'
+exit 0
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: /usr/local/bin/python
+hook.py:     /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/hook.py
+run.sh:      /home/user/AjsClaudeCodeTools/claude-house-rules/plugins/house-rules/scripts/run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (4 at once on 4 core(s))
+
+==============================================================================
+PART core - passed (36.1 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: core
+===========================================
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART safe_git - passed (51.3 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: safe_git
+===========================================
+
+ 1. PASS  the commit rule draws the line at branch ownership and records both reversals
+          my branches: commit freely; theirs: mutate nothing; both losses written down
+
+--------------------------------
+RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART design_loop - passed (69.8 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: design_loop
+===========================================
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART writing - passed (2.7 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: writing
+===========================================
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART delegation - passed (55.0 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: delegation
+===========================================
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART docs - passed (15.4 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: docs
+===========================================
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+PART make_page - passed (99.1 s)
+==============================================================================
+
+house-rules hooks - verification (Python) - part: make_page
+===========================================
+
+make_page build of the starter:
+make_page: note - approval '<topic> summary' is not a design-loop phrase, so sending it back moves no stage (the phrases are Design approved: <feature> or Build plan approved: <feature>).
+make_page: wrote /tmp/house-rules-verify-make_page-08k59bym/mp-o0quurs4/dsum/docs/plans/decision-summary.html (0 picture(s) embedded)
+make_page: /tmp/house-rules-verify-make_page-08k59bym/mp-o0quurs4/dsum/docs/plans/decision-summary.html is outside /home/user/AjsClaudeCodeTools; a link to it will not open in the app (#329). Copy it into /home/user/AjsClaudeCodeTools/docs/plans before linking.
+visual check light: page errors 0, overflow none
+visual check dark: page errors 0, overflow none
+visual check alone: broken pictures 0
+make_page: SEND THIS PAGE NOW: /tmp/house-rules-verify-make_page-08k59bym/mp-o0quurs4/dsum/docs/plans/decision-summary.html - send it to aj with the file-send tool (display render) as the last action of the turn.
+
+
+--------------------------------
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    36.1 s  passed
+  safe_git        1 checks  PASS    51.3 s  passed
+  design_loop     0 checks  PASS    69.8 s  passed
+  writing         0 checks  PASS     2.7 s  passed
+  delegation      0 checks  PASS    55.0 s  passed
+  docs            0 checks  PASS    15.4 s  passed
+  make_page       0 checks  PASS    99.1 s  passed
+  wall-clock 99.1 s
+
+--------------------------------
+RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only 'reversal' matched 1 check(s).
+
+--- stderr ---

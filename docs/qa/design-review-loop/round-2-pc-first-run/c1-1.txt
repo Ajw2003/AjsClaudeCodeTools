@@ -1,0 +1,174 @@
+$ verify.py --only 'agents exist, pinned'
+exit 1
+
+
+house-rules hooks - verification (Python)
+===========================================
+Interpreter: C:\Python313\python.exe
+hook.py:     C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\hook.py
+run.sh:      C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\run.sh
+no option given: every part (core, safe_git, design_loop, writing, delegation, docs, make_page).
+Ran: core, safe_git, design_loop, writing, delegation, docs, make_page (7 at once on 12 core(s))
+
+==============================================================================
+PART core - passed (44.9 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: core
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART safe_git - passed (83.2 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: safe_git
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART design_loop - exited 1 without its RESULT line (crashed?) (138.2 s)
+==============================================================================
+Traceback (most recent call last):
+
+  File "C:\Users\aj\Desktop\ClaudeDev\AjsClaudeCodeTools\claude-house-rules\plugins\house-rules\scripts\checks\design_loop.py", line 3884, in <module>
+
+    _cf_data = _cf_json.load(open(_cf_cache, encoding="utf-8"))
+
+                             ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\aj\\AppData\\Local\\Temp\\house-rules-verify-design_loop-139cgjqb\\tmppnscozxl\\git\\house-rules-issue-cache.json'
+
+
+
+house-rules hooks - verification (Python) - part: design_loop
+
+===========================================
+
+
+
+==============================================================================
+PART writing - passed (5.4 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: writing
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART delegation - passed (116.1 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: delegation
+
+===========================================
+
+
+
+ 1. PASS  the scout, builder, reviewer and editor agents exist, pinned to haiku, sonnet, opus and sonnet
+
+          short tool allowlists, no Agent tool, bodies of 15 lines or fewer, executor.md gone
+
+
+
+--------------------------------
+
+RESULT: PASS - all 1 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART docs - passed (34.2 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: docs
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+PART make_page - passed (132.5 s)
+==============================================================================
+
+
+house-rules hooks - verification (Python) - part: make_page
+
+===========================================
+
+
+
+
+
+--------------------------------
+
+RESULT: PASS - all 0 checks passed. The hooks are behaving as written.
+
+
+
+==============================================================================
+Parts:
+  core            0 checks  PASS    44.9 s  passed
+  safe_git        0 checks  PASS    83.2 s  passed
+  design_loop     0 checks  FAIL   138.2 s  exited 1 without its RESULT line (crashed?)
+  writing         0 checks  PASS     5.4 s  passed
+  delegation      1 checks  PASS   116.1 s  passed
+  docs            0 checks  PASS    34.2 s  passed
+  make_page       0 checks  PASS   132.5 s  passed
+  wall-clock 138.2 s
+
+--------------------------------
+RESULT: FAIL - 1 of 1 checks failed. Failing part(s): design_loop. See the FAIL lines above.
+        design_loop: exited 1 without its RESULT line (crashed?)
+
+Dependencies used by the hooks: run.sh (POSIX sh) + a probed Python interpreter.
+No node, no jq required by hook.py itself - stdlib only.
+Matching is textual, so a command that merely mentions a tripwire word will also
+prompt. That is deliberate - an extra keypress is cheaper than a missed commit.
+
+--only 'agents exist, pinned' matched 1 check(s).
+
+--- stderr ---
