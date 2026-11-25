@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.94.7 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="0e99500de8b1661f445757af7bdb1d57fc650e449193f78a5e8499779bc1e929;open-risks;2">
+<meta name="house-rules-reviewed" content="e5333a1cf2c5de7952afcae0a36b333485cec557a955c0dd7a0b41e09557f80c;open-risks;2">
 <meta name="house-rules-page" content="proposal">
 <title>Quiet unattended mode: decide, log, keep going</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -304,7 +304,7 @@ const PAGE = {
         "Idea",
         "I decide, you design",
         "",
-        "When you are here, only choices about how something looks or what it does come to you. When nobody is here, I decide those too, state my assumption, and carry on. Once a goal is set, I work its steps to the end.",
+        "In auto or normal mode, only choices about how something looks or what it does come to you. In unattended or bypass, I decide those too, state my assumption, and carry on. Once a goal is set, I work its steps to the end.",
         "Nothing from you.",
         {
           "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%22300%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EA%20choice%20comes%20up%3C/text%3E%3Cpath%20d=%22M160%2055%20V70%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%2210%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%2218%22%20y=%2290%22%3EChanges%20the%20look%3C/text%3E%3Ctext%20x=%2218%22%20y=%22106%22%3Eor%20what%20it%20does%3C/text%3E%3Crect%20x=%22165%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22173%22%20y=%2290%22%3EAnything%20else%3C/text%3E%3Ctext%20x=%2214%22%20y=%22140%22%20fill=%22%23c33%22%3EAsk%20you,%20if%20you%20are%20here%3C/text%3E%3Ctext%20x=%22169%22%20y=%22140%22%3EI%20decide%20and%20write%20it%20down%3C/text%3E%3Ctext%20x=%22169%22%20y=%22156%22%3ENobody%20here:%20I%20decide%20both%3C/text%3E%3C/svg%3E",
@@ -354,24 +354,24 @@ const PAGE = {
       "Rules tell me to ask, wait or stop",
       "Ask about look or function only when you are here",
       null,
-      "When you are here, only choices about how something looks or what it does come to you. A new dependency, a data format or an API change counts as function. When nobody is here, I decide those too, and everything else I decide and log.",
+      "In auto or normal mode, only choices about how something looks or what it does come to you. A new dependency, a data format or an API change counts as function. In unattended or bypass I decide those too. Everything else I decide and log, in every mode.",
       [
         "Today: rules say to ask, wait or hand over (show-dont-tell.md:5, 11, 12; house-rules.md:91; clear-writing.md:59-62; handover-command.md:28, 51; commit-branches.md:50; coding-philosophy.md:58; builder.md:11; core.py:1546, 1610).",
         "New: those lines are rewritten. Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people, outward posts.",
-        "For you: far fewer questions when you are here, none when you are not."
+        "For you: far fewer questions in every mode, and none in unattended or bypass."
       ],
       null
     ],
     [
       "new",
       "One test for who is present",
-      "Only unattended counts as nobody present",
+      "Unattended and bypass count as nobody present",
       null,
-      "Auto and bypass modes keep you present: the design loop still gates every step and waits for you. Only the unattended switch, from the launcher or your typed line, means nobody is here.",
+      "Unattended and bypass mean nobody is here, and the loop runs alone. Auto mode keeps you present: the design loop still gates every step. Auto still gets every change that cuts your decisions.",
       [
         "Today: only unattended and bypass are recognised, in separate places (core.py:1487, 2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150; design_loop.py:3555).",
-        "New: one helper that all those places use. In unattended, a permission prompt is denied at once, a plan-exit prompt is allowed, and pause-goal is denied. Agent writes to house-rules-mode.json and HOUSE_RULES_ keys in .claude/settings are refused.",
-        "For you: auto and bypass behave as they do today. Overnight runs use the launcher, because auto mode has its own safety check I cannot rewrite."
+        "New: one helper that all those places use. When nobody is here, a permission prompt is denied at once, a plan-exit prompt is allowed, and pause-goal is denied. Agent writes to house-rules-mode.json and HOUSE_RULES_ keys in .claude/settings are refused.",
+        "For you: auto keeps your gates but asks far less: rules, step check, ledger and QA-only reporting all apply. The launcher is still best overnight, because auto mode has its own safety check I cannot rewrite."
       ],
       null
     ],
@@ -393,7 +393,7 @@ const PAGE = {
       "I can approve my own plan, but only a hook records it",
       "A hook approves, and only when a real review exists",
       null,
-      "The hook may move Design to Plan, and Plan to Build, with the issue-label read skipped. It needs the launcher or your typed switch, a stored reviewer verdict for this page's hash, and a build plan with a test command per step.",
+      "The hook may move Design to Plan, and Plan to Build, with the issue-label read skipped. It needs the unattended switch or bypass mode, never auto, a stored reviewer verdict for this page's hash, and a build plan with a test command per step.",
       [
         "Today: only your typed message moves the stage, and the stage file refuses agent writes (design_loop.py:429, 621, 1157, 1418). The review stamp is self-declared (make_page.py:609), and the verdict hook is off when helpers are off (delegation.py:740).",
         "New: a verdict hook for reviewer helpers stays on, and writes the verdict and page hash to the stage file. QA passed and Close approved stay yours. The newest-approval marker (design_loop.py:525) is not touched, so your other branches stay open.",
@@ -429,10 +429,10 @@ const PAGE = {
     ],
     [
       "new",
-      "Look or function choices in unattended",
+      "Look or function choices when nobody is here",
       "Decide with a stated assumption, list it first on QA",
       null,
-      "In unattended I decide these myself. I record my assumption and why it is reasonable, then carry on. When you are here, auto mode included, a reply ending QUESTION FOR YOU: is allowed.",
+      "In unattended or bypass I decide these myself. I record my assumption and why it is reasonable, then carry on. In auto mode, a reply ending QUESTION FOR YOU: is allowed.",
       [
         "Today: a plain question in Build parks, and a [HARD STOP] question holds edits (design_loop.py:1401, 1547).",
         "New: ledger_note.py decide adds a C row (choice) with an Assumption column, and a new message from you clears any block. The ledger is named after the branch, with / changed to - (make_page.py:53).",
@@ -471,7 +471,7 @@ const PAGE = {
       "Gates that freeze a run nobody can answer",
       "Skipped when nobody is present",
       null,
-      "With the loop on, a reply that asks a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear these. In unattended the step list, not a pull request, moves Build to QA.",
+      "With the loop on, a reply that asks a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear these. In unattended and bypass the step list, not a pull request, moves Build to QA.",
       [
         "Today: design_loop.py:860, 872, 1401, 1524, 1547, 1552, 1562.",
         "New: when nobody is present, the holds and label checks are skipped, and a pull request opens only when every step is done, stuck or parked. Attended sessions do not change.",
