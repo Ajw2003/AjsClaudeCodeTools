@@ -224,7 +224,7 @@
    "Step 7: Stop check",
    "block every stop while a step is open (#640)",
    null,
-   "Done when: verify.py --parts core,design_loop passes with cases: a stop is blocked while a step is open, even with no reply text or with NEEDS YOU in it; a stuck step after 3 no-progress blocks; the judge blocking once; the old goal check with no step list; QUESTION FOR YOU allowed in auto mode; a new message from aj clearing a block.",
+   "Done when: verify.py --parts core,design_loop passes with cases: a stop is blocked while a step is open, even with NEEDS YOU or no reply text; a stuck step after 3 no-progress blocks; the judge blocking once; the old goal check with no step list; QUESTION FOR YOU allowed in auto mode; a new message from aj clearing a block.",
    [
     "Touches: core.py:3655, 3684, 3835, 3840, 3869."
    ],
@@ -320,7 +320,7 @@
   ],
   [
    "chg",
-   "Decisions I took while planning (1 of 3)",
+   "Decisions I took while planning (1 of 4)",
    "Chosen by me, listed for QA",
    null,
    "Verdict: only VERDICT: clean from a house-rules reviewer in page or plan mode counts, hashed from the .page.json without its stamp. Stale: a step goes stale when the acceptance tree fingerprint changes, not when HEAD moves. Session: the step list is filed under the payload session_id, in any mode.",
@@ -329,19 +329,28 @@
   ],
   [
    "chg",
-   "Decisions I took while planning (2 of 3)",
+   "Decisions I took while planning (2 of 4)",
    "Chosen by me, listed for QA",
    null,
-   "Checks: the 60-second wait guard refuses long commands, so a check runs as start and poll calls, and the hook reads the RESULT line. Letters: K is a choice row and S a self-approval row, so C stays for acceptance criteria. Speed first: step 1 restores its entry under features, so merging does not overwrite its Build state; this reverses the design page's wait.",
+   "Checks: the 60-second wait guard refuses long commands, so a check runs as start and poll calls, and the hook reads the RESULT line. Letters: K is a choice row and S a self-approval row, so C stays for acceptance criteria.",
    null,
    null
   ],
   [
    "chg",
-   "Decisions I took while planning (3 of 3)",
+   "Decisions I took while planning (3 of 4)",
    "Chosen by me, listed for QA",
    null,
-   "Block cap: set to 1000, not 0, and step 15 proves a ninth block holds; this changes one line of the design you approved. Finish order: docs, pictures, tests, then the QA page, so the fingerprint does not go stale. Plan test command: verify.py && tools/verify_tools.py, carried in the plan, with a refusal when it is missing.",
+   "Speed first: step 1 restores its entry under features, so merging does not overwrite its Build state; this reverses the design page's wait. Finish order: docs, pictures, tests, then the QA page, so the fingerprint does not go stale.",
+   null,
+   null
+  ],
+  [
+   "chg",
+   "Decisions I took while planning (4 of 4)",
+   "Chosen by me, listed for QA",
+   null,
+   "Block cap: set to 1000, not 0, and step 15 proves a ninth block holds; this changes one line of the design you approved. Plan test command: verify.py && tools/verify_tools.py, carried in the plan, with a refusal when it is missing.",
    null,
    null
   ],
@@ -350,7 +359,7 @@
    "Acceptance tests C1 to C3",
    "Each is a line in criteria.md",
    null,
-   "C1. grep -c finds none of the old ask and wait strings in the rule files | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C2. each mode treats a prompt as the table in the systems doc says | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C3. an unattended run keeps the six checks and skips the three refusals | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html",
+   "C1. no old ask or wait string remains in the rule files | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C2. each mode treats prompts as the systems doc table says | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C3. unattended keeps the six checks and skips the three refusals | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html",
    null,
    null
   ],
