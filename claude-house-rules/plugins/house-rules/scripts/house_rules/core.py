@@ -3740,7 +3740,6 @@ def _roadblock_advice(phrase):
 
 # #591: the goal check. A stall phrase at the end of an unattended or bypass turn: a nested headless claude call
 # decides whether the session genuinely cannot move forward or can carry on until its goal is reached.
-GOALCHECK_BLOCKS = 6  # below Claude Code's own limit of 8 consecutive Stop-hook blocks
 GOALCHECK_TIMEOUT = 22  # seconds; hooks.json gives the roadblocks hook 30
 _GOAL_PROMPT = (
     "You judge whether an unattended coding session may stop. The session's first user message (its goal) was:\n"
@@ -3914,8 +3913,12 @@ def roadblock_check(payload, reply_text, retry):
         if done >= ROADBLOCK_BLOCKS:
             return None, ("house-rules: the checks blocked %d times in a row and now let the reply go; unverified: "
                           "the roadblock judge did not rule on this reply (no tool call since the last block)." % done)
+        from house_rules import design_loop  # lazy: design_loop imports core
+        if design_loop.judge_blocked(payload):  # #640: once per step set
+            return None, note
         jblock, jmsg = _judge_check(transcript_path, reply_text)
         if jblock:
+            design_loop.judge_blocked(payload, mark=True)
             try:
                 write(done + 1)
             except OSError as exc:

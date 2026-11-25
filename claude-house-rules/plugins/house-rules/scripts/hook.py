@@ -108,7 +108,12 @@ def event_roadblocks():
         return 0
     retry = bool(re.search(r'"stop_hook_active"\s*:\s*true', payload))
     reply_text = handover_evidence_check(payload)[0]
-    block, msg = roadblock_check(payload, reply_text, retry)
+    block, msg = step_stop_check(payload, reply_text)  # #640: first, on every stop, even with no reply text
+    if block:
+        emit({"decision": "block", "reason": block})
+        return 0
+    block, msg2 = roadblock_check(payload, reply_text, retry)
+    msg = msg or msg2
     if block:
         emit({"decision": "block", "reason": block})
     elif msg:
