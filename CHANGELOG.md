@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Started building quiet unattended mode (#634): aj approved the build plan, the Decisions.md entry is added, and builders began on steps #638 and #636; no step is merged yet.
+
 Sent the stamped fifteen-step build plan page for quiet unattended mode to aj for approval (`docs/plans/2026-11-25-quiet-unattended-mode-plan.html`, issues #634 to #649); no code changed.
 
 Quiet unattended mode plan, second review round applied: checks run as start and poll calls so they obey the 60-second wait guard, the speed-first feature is kept under features, and the issues and build plan page were brought in line; no code changed (#634).
