@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode is in QA (#634): every issue from #634 to #649 is now `needs review` and pull request 650 is open with `Refs #634`; nothing in the plugin changed.
+
 Quiet unattended mode is ready for QA (#634): the acceptance run is stamped (12 of 12, round 3), all seven verify parts and the tools suite pass on the final code, and the QA page is `docs/plans/2026-11-25-quiet-unattended-mode-qa.html`.
 
 Quiet unattended mode: the final suite run is in progress on the last code change (#644); the live-run write-up now records the two things the round 3 reviewer found in run 6 (a double launch and the final pass reopening steps).
