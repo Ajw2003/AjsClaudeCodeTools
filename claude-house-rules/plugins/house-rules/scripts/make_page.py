@@ -52,7 +52,7 @@ HEX = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 
 def qa_folder(feature):
     """docs/qa/<folder> name for a feature (ledger_note.py uses it too)."""
-    return feature.lower().replace(" ", "-")
+    return feature.lower().replace(" ", "-").replace("/", "-")
 
 
 def die(msg, code=2):
@@ -326,15 +326,19 @@ def apply_qa(page, project):
             for ln in f.read().splitlines():
                 # split on an unescaped pipe only; ledger_note.py writes a pipe in a cell as \|
                 c = [x.strip().replace("\\|", "|") for x in re.split(r"(?<!\\)\|", ln)]
-                if ln.startswith("| D") and len(c) > 4:
+                if ln.startswith("| K") and len(c) > 6:
+                    ledger.append(("K", "%s: %s (why: %s; undo: %s)" % (c[1], c[3], c[5], c[6])))
+                elif ln.startswith("| D") and len(c) > 4:
                     ledger.append(("D", "%s: %s" % (c[1], c[4])))
                 elif ln.startswith("| P") and len(c) > 3:
                     ledger.append(("P", "%s: %s" % (c[1], c[3])))
         short = lambda s: s if len(s) <= 160 else s[:157].rstrip() + "..."
-        nd = sum(1 for k, _ in ledger if k == "D")
+        ledger.sort(key=lambda kt: kt[0] != "K")  # choices first, then the file's order (sort is stable)
+        nd, nk = sum(1 for k, _ in ledger if k == "D"), sum(1 for k, _ in ledger if k == "K")
         page.setdefault("changes", []).insert(
-            0, ["chg", "Deviations and parked decisions", "%d deviation(s), %d parked" % (nd, len(ledger) - nd), None,
-                "\n".join(short(t) for _, t in ledger) or "None recorded", None, None])
+            0, ["chg", "Deviations and parked decisions", "%d deviation(s), %d parked" % (nd, len(ledger) - nd - nk)
+                + (", %d choice(s)" % nk if nk else ""), None,
+                "\n".join(t if k == "K" else short(t) for k, t in ledger) or "None recorded", None, None])
     plan = qa.get("files") or {}
     base = qa["base"]
     rows, seen, tot_a, tot_r = [], set(), 0, 0

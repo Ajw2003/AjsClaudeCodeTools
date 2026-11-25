@@ -1405,8 +1405,9 @@ def handover_record_offers(payload, have_reply, reply_text, trace_lines):
                     _st["held"] = True
                     changed = True
             else:  # #598: a plain question in Build parks instead of holding
-                trace_lines.append("Build stage: park a reversible question with ledger_note.py park and end the "
-                                   "reply with the next step; use [HARD STOP] only for what cannot be undone.")
+                trace_lines.append("Build stage: record a reversible choice with ledger_note.py decide and end the "
+                                   "reply with the next step; park (needs --category and --tried) and [HARD STOP] "
+                                   "only for what cannot be undone.")
         if changed:
             _loop_write(_gd, _st)
     except Exception as exc:
@@ -1475,7 +1476,8 @@ def _loop_helper_note(payload):
     return (
         "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
         "build plan; you never design, change the plan, or approve anything - an approval only counts from "
-        "aj's own message. Park a reversible question with `ledger_note.py park` and keep going; only a "
+        "aj's own message. Record a reversible choice with `ledger_note.py decide` and keep going; `ledger_note.py park` (needs "
+        "--category and --tried) is only for a hard stop: a "
         "[HARD STOP] (cannot be undone, or touches money, secrets or other people) is reported back as a "
         "question. Code edits are refused outside Build." % (
             '"%s"' % state["feature"] if state.get("feature") else "not started",
