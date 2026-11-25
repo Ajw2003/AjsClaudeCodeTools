@@ -3977,7 +3977,7 @@ for _nm, _mode, _on, _gone in (("unattended", "default", True, True), ("bypass",
     _, _o, _ = run_hook("handover", stop_payload(last_assistant_message=_dv_reply, cwd=_loop_dir, session_id="verify-636",
                                                  permission_mode=_mode, transcript_path=_dv_unlogged),
                         env=dict(_loop_env, HOUSE_RULES_UNATTENDED="on" if _on else "off"))
-    _dv_gone = _gone and _nm != "unattended"  # unattended turns the handover hook off until step 3 (#637) puts it back
+    _dv_gone = _gone
     report("PASS" if ("deviation" in _o) == _dv_gone else "FAIL",
            "#636 hands_off (deviation check), %s: %s" % (_nm, "sent back" if _dv_gone else "passes"))
 

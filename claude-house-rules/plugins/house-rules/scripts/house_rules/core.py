@@ -2785,7 +2785,6 @@ def unattended():
     return os.environ.get("HOUSE_RULES_UNATTENDED", "").strip().lower() == "on"
 
 
-<<<<<<< HEAD
 _SWITCH_WRITE_RE = re.compile(r">|\btee\b|\bsed\b[^;|&]*\s-\w*i|\b(?:mv|cp|rm|truncate|dd|install|ln)\b"
                               r"|\b(?:python3?|py|node|perl|ruby|sh|bash)\b", re.IGNORECASE)
 _SETTINGS_NAME_RE = re.compile(r"settings(?:\.local)?\.json")
@@ -2829,12 +2828,6 @@ def nobody_present(payload=None):
     Auto, default, plan, acceptEdits and a missing or unknown mode stay attended."""
     raw = payload if payload is not None else (_PAYLOAD_CACHE or "")
     return unattended() or _field(_MODE_RE, raw) == "bypassPermissions"
-=======
-def nobody_present(payload=None):
-    """True when unattended is on or the payload says permission_mode bypassPermissions (#634 step 1 shape)."""
-    raw = payload if payload is not None else _PAYLOAD_CACHE
-    return unattended() or _field(_MODE_RE, raw or "") == "bypassPermissions"
->>>>>>> worktree-agent-a5cfc669ddbf0f285
 
 
 def event_noask():
