@@ -91,6 +91,8 @@ typing one line, in any folder, git repository or not. Page: `docs/plans/2026-11
 
 ## Unattended mode (2.84.0)
 
+> Changed in 2.95.0 (quiet unattended mode, #634): unattended and bypass both count as nobody present; the design loop and the handover hook stay on; decisions go to the ledger and show on the QA page; see [quiet-unattended-mode.md](quiet-unattended-mode.md) and the "Reversed:" entries in the decisions log. The bullets below describe 2.84.0 to 2.87.0 and are kept for history.
+
 For a run with nobody present. `HOUSE_RULES_UNATTENDED=on` (case-insensitive) turns it on; `core.unattended()` reads it.
 
 - **Turns off:** every group in `_MODE_GROUPS` except autosave (design loop, pages, builders, issues, writing checks, and the rest of "house rules"). `apply_switches()` does this first, so a typed switch such as `pages on` still wins.
