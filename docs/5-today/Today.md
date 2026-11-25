@@ -1,5 +1,6 @@
 # Today — 2026-11-25
 
+Reply check stays always-on (aj's call). Only possible saving measured: about 1 s by passing the transcript inline instead of a Read tool; not built, waiting on aj.
 Measured every hook event: the Stop-time reply judge (a Haiku call) costs 5,519 ms per reply, all other hooks about 70 ms (SessionStart profile 338 ms, once). Options on docs/plans/2026-11-25-reply-check-proposal.html; waiting on aj.
 Plugin bumped to 2.94.7 for #633 (CI version-bump gate); verify_tools now passes in CI.
 Pull request #633 (speed first) is open; CI failed once on a stale time_hooks check in verify_tools.py, fixed (0a17a8ca), second run pending.

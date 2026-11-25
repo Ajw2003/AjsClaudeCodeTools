@@ -8,7 +8,7 @@ That branch is merged in (step 3, one hook process per tool phase). Step 5 is do
 
 Pull request #633 is open into main. Its first CI run failed on one stale check (verify_tools.py expected 6 time_hooks lines, now 4); fixed in 0a17a8ca, and verify_tools passes 56 of 56 here. The second CI run passed verify_tools but failed the version-bump gate; plugin.json is now 2.94.7. The third run is not yet seen.
 
-Update: #633 is merged. Next target measured: the reply judge (core.py `_judge_check`) is 5,519 ms per reply; the proposal page has options A, B and C and waits on aj's choice.
+Update: #633 is merged. Next target measured: the reply judge (core.py `_judge_check`) is 5,519 ms per reply; aj decided the reply check stays always-on (Decisions.md 2026-11-25); the only measured saving is about 1 s from passing the transcript inline, not built.
 
 ## The next step
 Wait for CI on #633 and merge on aj's word (main takes pull requests only); then profile the make_page verify part (100 s, the longest) for step 6, then return to step 2 with a per-event module list. aj chooses the order.

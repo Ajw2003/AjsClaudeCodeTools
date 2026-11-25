@@ -7,6 +7,18 @@ pointer, when a later entry replaces it.
 
 ---
 
+## 2026-11-25 - The reply check keeps running on every reply
+
+**Decision.** aj said to skip changing the reply check for now: it runs after every reply because that is what makes it catch the most common mistakes. Options A (wider word list gate), B (background run) and D (skip when no tools ran) on `docs/plans/2026-11-25-reply-check-proposal.html` are not taken; this is option C, leave it as it is. A speed-up that keeps it always on was allowed.
+
+**Why.** Measured: the check costs about 5 seconds per reply (`docs/qa/reply-check/timing.md`), but aj's experience is that always-on coverage is what makes it effective, so coverage wins over time.
+
+**Measured speed-up.** Sandbox, three runs each: the call with the Read tool took 4.6, 4.0 and 4.3 s; with the transcript inline and no tool 4.5, 3.4 and 3.3 s. Dropping the tool saves about 1 s; the rest is the fixed cost of starting `claude -p`. Not built.
+
+**Supersedes.** Nothing; it confirms "the reply judge left alone for now" in the 2026-11-24 Speed first entry.
+
+---
+
 ## 2026-11-24 - Speed first: hook speed and easy test wins before code quality
 
 **Decision.** aj approved "Design approved: speed first 1A 2A 3A 4*" on `docs/plans/speed-first-proposal.html`: all five hook-speed steps, label reads run at the same time (GitHub still read every call), the reply judge left alone for now and timed, and, in aj's own answer, the test suite sped up now where easy wins are feasible with the rest left for the code-quality phase.

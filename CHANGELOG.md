@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Decision: the reply check stays on for every reply (aj, 2026-11-25); the proposal page options A, B and D are not taken. Measured that dropping its Read tool would save about 1 s of about 4 s (not built), recorded in Decisions.md.
+
 Reply check proposal page reviewed (round 1, open risks): fixed the trigger wording, added a real chart, option D and the timing note `docs/qa/reply-check/timing.md`; the reply judge's cost is now stated as about 5 seconds from four runs.
 
 Reply check proposal page (`docs/plans/2026-11-25-reply-check-proposal.html`): the Stop-time model judge costs 5,519 ms per reply against 63 ms with it off, the largest repeating hook cost; options A, B, C await aj's choice (no code changed).
