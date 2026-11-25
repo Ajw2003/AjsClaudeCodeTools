@@ -755,12 +755,27 @@ def step_stop_check(payload, reply_text):
 _STEP_RESULT_RE = re.compile(r"RESULT: (pass|fail) step (\d+) fp=(\S+)")
 
 
+def _step_run_passed(git_dir, sid, n):
+    """True when the run file ledger_note.py check left for step n holds exit code 0 (a typed RESULT line alone is not proof)."""
+    out = _steps_outside(git_dir, sid)
+    rc = os.path.join(os.path.dirname(out), "runs", os.path.basename(out)[:-5] + "-step%d.rc" % n)
+    if not os.path.isfile(rc):
+        return False
+    try:
+        return _read_text(rc).strip() == "0"
+    except OSError as exc:
+        sys.stderr.write("house-rules: could not read the step run file (%s).\n" % type(exc).__name__)
+        return False
+
+
 def _record_step_result(data):
     """#646, registered under promptran (runs on PostToolUse and PostToolUseFailure): a Bash call of
     `ledger_note.py check` whose output has a RESULT line marks that step done (pass) or open (fail)."""
     ti = data.get("tool_input")
     cmd = ti.get("command") if isinstance(ti, dict) else ""
-    if not isinstance(cmd, str) or "ledger_note.py check" not in cmd:
+    # the live run showed an agent calls it through a shell variable (python3 "$S" check ...), so match the words
+    # of the call, not the script name; a pass is then verified against the run file the poll leaves behind
+    if not isinstance(cmd, str) or "check" not in cmd or "--poll" not in cmd:
         return ""
     m = _STEP_RESULT_RE.search(json.dumps([data.get("tool_response"), data.get("error")]).replace("\\n", "\n"))
     if not m:
@@ -777,6 +792,10 @@ def _record_step_result(data):
         return ""
     for s in rec["steps"]:
         if s.get("n") == int(m.group(2)):
+            if m.group(1) == "pass" and not _step_run_passed(gd, sid, s["n"]):
+                sys.stderr.write("house-rules: step %s says pass but its run file does not hold exit code 0, so it "
+                                 "stays open.\n" % m.group(2))
+                return ""
             s.update(state="done" if m.group(1) == "pass" else "open", fp=m.group(3), at=int(time.time()))
             _loop_write(gd, state)
             return ""

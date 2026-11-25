@@ -4132,6 +4132,16 @@ hook("RESULT: fail step 1 fp=abc\nboom", "PostToolUseFailure", 1); r.append(st(1
 hook(p.stdout, "PostToolUseFailure", 1); r.append(st(1) == "done")
 hook("no result here", "PostToolUseFailure", 2); r.append(st(2) == "open")
 r.append({k: v for k, v in dl.steps_status(g, "f", "s1", fp).items() if k < 3} == {1: "done", 2: "open"})  # #647: Finish: steps follow
+# a variable-style call (found in the live run) records; a typed RESULT line with no passing run file does not
+hook("RESULT: fail step 1 fp=abc\nboom", "PostToolUse", 1); r.append(st(1) == "open")
+dl._record_step_result({"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "s1", "cwd": d,
+    "tool_input": {"command": 'S=/x/ledger_note.py; python3 "$S" check f --step 1 --poll 2>&1; echo "exit=$?"'},
+    "tool_response": {"stdout": p.stdout}, "error": None})
+r.append(st(1) == "done")
+dl._record_step_result({"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "s1", "cwd": d,
+    "tool_input": {"command": 'echo "check --poll"; echo "RESULT: pass step 2 fp=abc"'},
+    "tool_response": {"stdout": "RESULT: pass step 2 fp=abc\n"}, "error": None})
+r.append(st(2) == "open")
 open(os.path.join(d, "CHANGELOG.md"), "w").write("x\n"); os.makedirs(os.path.join(d, "docs", "qa"))
 open(os.path.join(d, "docs", "qa", "l.md"), "w").write("x\n"); git("add", "-A"); git("commit", "-qm", "wip: autosave")
 fp2 = ln(1, "--poll").stdout.split("fp=")[1].split()[0]
