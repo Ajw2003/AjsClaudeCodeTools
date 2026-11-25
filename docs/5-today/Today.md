@@ -424,3 +424,5 @@ Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stal
 2026-11-25 (later): aj added that unattended mode must keep the design loop on and run it itself, and that no mode may stop part-way once a goal is set; user-only items go to the QA page. The proposal page was updated to six changes, reviewed once (open risks, the new parts not re-reviewed) and sent. Still Plan stage, nothing built.
 
 2026-11-25 (review): two reviewers found 45 holes in the first plan (self-approval, step list, stop-hook caps, restart loop, auto mode) and a third round found 38 more. The proposal page now has eleven changes and a review stamp (open risks, round 2). Still Plan stage, nothing built. Waiting on aj's line "Design approved: quiet unattended mode", then a build plan page.
+
+2026-11-25 (change from aj): with nobody present, unattended mode also decides look and function choices itself, states its assumption, and lists it first on the QA page. Attended sessions still ask about those. The proposal page, idea card and two change cards were updated. Still Plan stage, nothing built.
