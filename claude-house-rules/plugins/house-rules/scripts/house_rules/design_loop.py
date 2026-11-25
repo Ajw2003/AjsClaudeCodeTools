@@ -714,6 +714,31 @@ def _tree_fp(cwd):
     return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else "slow"
 
 
+def _choices_check(git_dir, state, rec, data, payload):
+    """Round-2 C8: when every step is closed and nobody is present, block once if the feature's ledger holds no K row,
+    asking the agent to log the choices it made unasked (live run 5: sonnet picked a colour and logged nothing).
+    Never blocks twice for one step list, so it cannot loop; None when it does not apply."""
+    if not core.nobody_present(payload) or rec.get("choices_asked"):
+        return None
+    try:
+        top = subprocess.run(["git", "-C", data.get("cwd") or ".", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True, check=True).stdout.strip()
+        ledger = os.path.join(top, "docs", "qa", (rec.get("feature") or "").lower().replace(" ", "-").replace("/", "-"), "ledger.md")
+        if os.path.isfile(ledger) and re.search(r"^\| K\d+ \|", _read_text(ledger), re.M):
+            return None
+    except (OSError, subprocess.SubprocessError) as exc:
+        sys.stderr.write("house-rules: the choices check could not read the ledger (%s), so it did not run.\n" % type(exc).__name__)
+        return None
+    rec["choices_asked"] = True
+    _loop_write(git_dir, state)
+    fc = "python3 %s" % os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ledger_note.py")
+    feat = rec.get("feature") or "<feature>"
+    return ("House rules, before you finish: the ledger holds no logged choice. If you decided anything aj did not "
+            "specify (a colour, a wording, a layout, a default, a name), log each one now with `%s decide %s --step <n> "
+            "--choice ... --assumption ... --why ... --undo ...`. If you truly made none, reply exactly: No choices made."
+            % (fc, feat))
+
+
 def step_stop_check(payload, reply_text):
     """#640: (block reason or None, systemMessage or None). Runs on every stop: blocks while a step of this
     session's list is open, even with no reply text. NEEDS YOU exempts nothing; only a parked step does.
@@ -725,7 +750,7 @@ def step_stop_check(payload, reply_text):
     git_dir, state, rec, sid, data = got
     open_steps = steps_unfinished(git_dir, payload)
     if not open_steps:
-        return None, None
+        return _choices_check(git_dir, state, rec, data, payload), None
     if re.search(r"^QUESTION FOR YOU:", reply_text or "", re.M) and not core.nobody_present(payload):
         return None, None
     msgs = None
