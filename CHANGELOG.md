@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Fixed the `verify_tools.py` check for `time_hooks.py --quick`: after step 3 there are 4 timing lines (a pre and a post line for Write and Bash), not 6, so it now expects at least 4 (CI on #633 failed on this).
+
 Speed first continued: merged the speed-first branch (step 3) into ccr-3849bb3b-c267ho, re-measured old against new in `docs/qa/speed-first/results.md`, and added the handoff note `docs/5-today/handoff-ccr-3849bb3b-c267ho.md`; steps 2 (#627) and 6 (#631) remain.
 
 Speed step 5, append-only hook log (#630): `_log_line` appends one line and trims to the newest 500 lines only once the log passes 128 KB, so a log line costs 0.011 ms instead of 0.384 ms; measured results for steps 3, 4 and 5 are in `docs/qa/speed-first/results.md` (Write hooks 649 to 145 ms, Bash 458 to 163 ms).
