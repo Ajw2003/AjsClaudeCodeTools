@@ -418,3 +418,5 @@ Pull request #602 (roadblock detection fix, Refs #587) is open; QA page `docs/pl
 Pull request #602 has Auto-fix on (aj said yes). The live status page was edited by the editor and marked superseded by the QA page.
 
 Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stale 9:20pm wording now reads as past.
+
+2026-11-25: aj asked for unattended mode to decide for itself, keep working until its goal is met, and show decisions only on the QA page. I traced five causes in the code and wrote the proposal page `docs/plans/2026-11-25-quiet-unattended-mode.html` (stage: Plan, nothing built). Waiting on aj's approval line "Design approved: quiet unattended mode".
