@@ -4067,6 +4067,59 @@ _r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Finish: 
                      "--undo", "u", "--step-action", "add", "--check", "c"], capture_output=True, text=True, cwd=_ln_repo)
 _sp_cases.append(("#639: deviate refuses touching a Finish: step", _r.returncode == 2))
 
+# --- #646: start/poll a step check, record its result by hook, mark steps stale by the tree fingerprint ---
+_pl_snip = os.path.join(_FIXTURE_ROOT, "poll_snip.py")
+with open(_pl_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile, time
+here = sys.argv[1]
+sys.path.insert(0, here)
+cfg = tempfile.mkdtemp(); os.environ["CLAUDE_CONFIG_DIR"] = cfg; os.environ["CLAUDE_SESSION_ID"] = "s1"
+from house_rules import design_loop as dl
+d = os.path.realpath(tempfile.mkdtemp()); g = os.path.join(d, ".git")
+def git(*a): subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=d, check=True, capture_output=True)
+git("init", "-q"); open(os.path.join(d, "a.py"), "w").write("x=1\n"); git("add", "-A"); git("commit", "-qm", "init")
+plan = os.path.join(d, "p.page.json")
+json.dump({"test_command": "t", "changes": [["c", "Step 1: ok", "", None, "", None, None, "python3 -c \"print('ok')\""],
+    ["c", "Step 2: bad", "", None, "", None, None, "python3 -c \"import sys; print('boom'); sys.exit(3)\""]]}, open(plan, "w"))
+dl.record_steps(g, "f", plan, "s1")
+LN = os.path.join(here, "..", "ledger_note.py")
+def ln(n, mode, env=None):
+    return subprocess.run([sys.executable, LN, "check", "f", "--step", str(n), mode], cwd=d, capture_output=True, text=True, env=dict(os.environ, **(env or {})))
+r = []
+t0 = time.time()
+s = ln(1, "--start"); p = ln(1, "--poll")
+r.append(s.stdout.strip() == "STARTED step 1" and p.returncode == 0 and p.stdout.startswith("RESULT: pass step 1 fp=") and time.time() - t0 < 55)
+ln(2, "--start"); pf = ln(2, "--poll")
+r.append(pf.returncode == 0 and pf.stdout.startswith("RESULT: fail step 2 fp=") and "boom" in pf.stdout)
+def hook(out, ev, n=1):
+    dl._record_step_result({"hook_event_name": ev, "tool_name": "Bash", "session_id": "s1", "cwd": d,
+        "tool_input": {"command": "python3 ledger_note.py check f --step %d --poll" % n},
+        "tool_response": {"stdout": out} if ev == "PostToolUse" else None, "error": out if ev != "PostToolUse" else None})
+def st(n): return dl._loop_read(g)[0]["steps"]["s1"]["steps"][n - 1]["state"]
+fp = p.stdout.split("fp=")[1].split()[0]
+hook(p.stdout, "PostToolUse", 1); hook(pf.stdout, "PostToolUse", 2)
+r.append([st(1), st(2)] == ["done", "open"])
+hook(pf.stdout, "PostToolUseFailure", 1); r.append(st(1) == "open")
+hook(p.stdout, "PostToolUseFailure", 1); r.append(st(1) == "done")
+hook("no result here", "PostToolUseFailure", 2); r.append(st(2) == "open")
+r.append(dl.steps_status(g, "f", "s1", fp) == {1: "done", 2: "open"})
+open(os.path.join(d, "CHANGELOG.md"), "w").write("x\n"); os.makedirs(os.path.join(d, "docs", "qa"))
+open(os.path.join(d, "docs", "qa", "l.md"), "w").write("x\n"); git("add", "-A"); git("commit", "-qm", "wip: autosave")
+fp2 = ln(1, "--poll").stdout.split("fp=")[1].split()[0]
+r.append(fp2 == fp and dl.steps_status(g, "f", "s1", fp2)[1] == "done")
+open(os.path.join(d, "a.py"), "w").write("x=2\n")
+fp3 = ln(1, "--poll").stdout.split("fp=")[1].split()[0]
+r.append(fp3 != fp and dl.steps_status(g, "f", "s1", fp3)[1] == "stale")
+slow = ln(1, "--poll", {"HOUSE_RULES_FP_TIMEOUT": "0.001"}).stdout
+r.append("fp=slow" in slow and "fingerprint timed out, counted as stale" in slow and dl.steps_status(g, "f", "s1", "slow")[1] == "stale")
+print(r, file=sys.stderr)
+print(all(r))
+""")
+_r = subprocess.run([sys.executable, _pl_snip, HERE], capture_output=True, text=True, timeout=120)
+_sp_cases.append(("#646: step check start/poll gives RESULT pass/fail, the hook records done/open on both events, "
+                  "an autosave commit keeps a step done, an edit or a slow fingerprint makes it stale",
+                  _r.stdout.strip() == "True"))
+
 for _t, _ok in _sp_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)
 

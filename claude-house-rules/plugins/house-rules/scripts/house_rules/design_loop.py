@@ -542,6 +542,54 @@ def steps_integrity(git_dir, feature, session_id):
     return ""
 
 
+def steps_status(git_dir, feature, session_id, current_fp):
+    """#646: {n: "done"|"open"|"stale"}. done only when the step is done AND its stored fp equals current_fp;
+    stale = was done but the tree changed (or current_fp is "slow"); open = never passed or last run failed."""
+    state, _ = _loop_read(git_dir)
+    rec = ((state or {}).get("steps") or {}).get(session_id) or {}
+    if rec.get("feature") not in (None, feature):
+        return {}
+    out = {}
+    for s in rec.get("steps") or []:
+        if s.get("state") != "done":
+            out[s["n"]] = "open"
+        else:
+            out[s["n"]] = "done" if current_fp != "slow" and s.get("fp") == current_fp else "stale"
+    return out
+
+
+_STEP_RESULT_RE = re.compile(r"RESULT: (pass|fail) step (\d+) fp=(\S+)")
+
+
+def _record_step_result(data):
+    """#646, registered under promptran (runs on PostToolUse and PostToolUseFailure): a Bash call of
+    `ledger_note.py check` whose output has a RESULT line marks that step done (pass) or open (fail)."""
+    ti = data.get("tool_input")
+    cmd = ti.get("command") if isinstance(ti, dict) else ""
+    if not isinstance(cmd, str) or "ledger_note.py check" not in cmd:
+        return ""
+    m = _STEP_RESULT_RE.search(json.dumps([data.get("tool_response"), data.get("error")]).replace("\\n", "\n"))
+    if not m:
+        sys.stderr.write("house-rules: no RESULT line in the step check output, so the step stays open.\n")
+        return ""
+    gd = core._git_dir(data.get("cwd") or os.getcwd())
+    sid = str(data.get("session_id") or "")
+    if not gd:
+        return ""
+    state, problem = _loop_read(gd)
+    rec = ((state or {}).get("steps") or {}).get(sid)
+    if problem or not rec:
+        sys.stderr.write("house-rules: step result not recorded (%s).\n" % (problem or "no step list for this session"))
+        return ""
+    for s in rec["steps"]:
+        if s.get("n") == int(m.group(2)):
+            s.update(state="done" if m.group(1) == "pass" else "open", fp=m.group(3), at=int(time.time()))
+            _loop_write(gd, state)
+            return ""
+    sys.stderr.write("house-rules: step %s is not in the step list.\n" % m.group(2))
+    return ""
+
+
 SEEN_FILE = "house-rules-loop-seen.json"
 
 
@@ -3688,4 +3736,5 @@ core.register_prompt(_scope_loop_link)
 core.register_delegate_note(_issues_plan_note)
 core.register_subagent_note(_loop_helper_note)
 core.register_tool_record(_post_tool_records)
+core.register_post_tool("promptran", _record_step_result)
 core.register_edit_gate(_edit_gates)
