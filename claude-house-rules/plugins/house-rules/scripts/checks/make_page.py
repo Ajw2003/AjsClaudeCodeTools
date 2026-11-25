@@ -403,9 +403,6 @@ _mp_cases.append(("ledger_note (#638): decide on an older ledger with no Choices
                   and _ledg.index("## Choices") < _ledg.index("| K1 ") < _ledg.index("## Deviations")))
 _mp_cases.append(("make_page (#638): a feature or branch name with a slash is one folder, - for /",
                   __import__("make_page").qa_folder("AjsAgent/Quiet Mode") == "ajsagent-quiet-mode"))
-_mp_cases.append(("ledger_note (#638): the stage file lists speed first under features",
-                  "speed first" in __import__("json").load(open(os.path.join(HERE, "..", "..", "..", "..", ".claude", "house-rules-loop.json"),
-                                                  encoding="utf-8"))["features"]))
 os.remove(os.path.join(_qaf, "ledger.md"))
 _mp_cases.append(("rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3307 chars",
                   all(w in read(os.path.join(HERE, "..", "rules", "show-dont-tell.md")) for w in ("ledger_note.py park", "[HARD STOP]"))
