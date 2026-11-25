@@ -9,7 +9,9 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -499,6 +501,10 @@ def _steps_hash(steps):
     return hashlib.sha256(json.dumps(steps, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
+_FINISH_STEPS = (("docs", "docs written"), ("pictures", "before-and-after pictures"), ("tests", "tests pass"),
+                 ("qa", "QA page built and stamped"))
+
+
 def record_steps(git_dir, feature, plan_json_path, session_id):
     """#639: copy the build plan's Step rows and test_command into the stage file (state["steps"][session_id])
     and an outside copy. Returns a note; a plan with no checks is exempt and writes nothing."""
@@ -512,6 +518,10 @@ def record_steps(git_dir, feature, plan_json_path, session_id):
     if not rows:
         return "this plan has no step checks, so the feature is exempt from the step list"
     steps = [{"n": i + 1, "title": str(c[1]), "check": c[7], "state": "open"} for i, c in enumerate(rows)]
+    fc = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "finish_checks.py")
+    for which, title in _FINISH_STEPS:  # #647: four required finish-line steps, in the sha, never parked or replaced
+        steps.append({"n": len(steps) + 1, "title": "Finish: " + title, "state": "open",
+                      "check": "python3 %s %s %s" % (shlex.quote(fc), which, shlex.quote(feature))})
     rec = {"feature": feature, "test_command": plan.get("test_command") or "", "steps": steps,
            "sha256": _steps_hash(steps)}
     state, problem = _loop_read(git_dir)
@@ -556,6 +566,41 @@ def steps_status(git_dir, feature, session_id, current_fp):
         else:
             out[s["n"]] = "done" if current_fp != "slow" and s.get("fp") == current_fp else "stale"
     return out
+
+
+def _parked_steps(top, feature, steps):
+    """Step numbers named in a Parked-decisions row (P<n>) of the feature's ledger, by title or "step N"."""
+    try:
+        text = _read_text(os.path.join(top, "docs", "qa", feature.lower().replace(" ", "-").replace("/", "-"), "ledger.md"))
+    except OSError:
+        return set()
+    cells = [m.group(1).lower() for m in re.finditer(r"^\| P\d+ \| (.*?) \|", text, re.M)]
+    return {s["n"] for s in steps if any(s["title"].lower() in c or re.search(r"\bstep %d\b" % s["n"], c) for c in cells)}
+
+
+def steps_unfinished(git_dir, payload):
+    """#647: titles of the steps still open (not done at the current tree, not parked) for this session;
+    None when there is no step list, so the step rule does not apply."""
+    try:
+        data = json.loads(payload)
+        sid = str(data.get("session_id") or "")
+    except (ValueError, AttributeError):
+        return None
+    state, _ = _loop_read(git_dir)
+    rec = ((state or {}).get("steps") or {}).get(sid)
+    if not rec or not rec.get("steps"):
+        return None
+    try:
+        top = subprocess.run(["git", "-C", data.get("cwd") or ".", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True, check=True).stdout.strip()
+        r = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "acceptance.py"),
+                            "tree", "--root", top], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=20)
+        fp = r.stdout.strip() if r.returncode == 0 else "slow"
+    except (OSError, subprocess.SubprocessError):
+        return ["the tree could not be fingerprinted"]  # could not tell: counts as unfinished
+    status = steps_status(git_dir, rec.get("feature"), sid, fp)
+    parked = _parked_steps(top, rec.get("feature") or "", rec["steps"])
+    return [s["title"] for s in rec["steps"] if status.get(s["n"]) != "done" and s["n"] not in parked]
 
 
 _STEP_RESULT_RE = re.compile(r"RESULT: (pass|fail) step (\d+) fp=(\S+)")
@@ -950,7 +995,12 @@ def _loop_wrong(labels, want):
     return wrong
 
 
-def _loop_to_qa(state, labels):
+def _steps_to_qa(git_dir, payload):
+    """#647: True when nobody is present and the step list has no unfinished step (done at this tree, or parked)."""
+    return core.nobody_present(payload) and steps_unfinished(git_dir, payload) == []
+
+
+def _loop_to_qa(state, labels, steps_done=False):
     """Build becomes QA once every issue says needs review and none says in progress. True if it moved.
 
     #504: after "QA failed" the stage is Build while every issue still says needs review. That is not a
@@ -959,7 +1009,8 @@ def _loop_to_qa(state, labels):
         if state["stage"] != "build" or any(LOOP_WORKING in (l or []) for l in labels.values()):
             state["reopened"] = False
         return False
-    if state["stage"] == "build" and labels and not _loop_wrong(labels, LOOP_REVIEW):
+    # #647: nobody present and every step done or parked moves Build to QA without labels or a pull request
+    if state["stage"] == "build" and (steps_done or (labels and not _loop_wrong(labels, LOOP_REVIEW))):
         state["stage"] = "qa"
         return True
     return False
@@ -1625,7 +1676,7 @@ def _loop_stop_line(payload):
         return None, None
     labels, src = _loop_labels(state)
     reopened = state.get("reopened")
-    if _loop_to_qa(state, labels):
+    if _loop_to_qa(state, labels, _steps_to_qa(git_dir, payload)):
         _loop_write(git_dir, state)
         return "House rules, design loop:" + _LOOP_QA_NOTE, src or None
     if state.get("reopened") != reopened:  # #504: the issues are back at in progress
@@ -1681,7 +1732,7 @@ def _loop_gate(payload):
                     "this hook could not read GitHub (%s), so the edit is refused. It will work once gh can read the issues."
                     % (state.get("feature") or "", LOOP_WORKING, src)), None
         reopened = state.get("reopened")
-        if _loop_to_qa(state, labels):
+        if _loop_to_qa(state, labels, _steps_to_qa(git_dir, payload)):
             _loop_write(git_dir, state)
             return "House rules, design loop:" + _LOOP_QA_NOTE, None
         if state.get("reopened") != reopened:  # #504: the issues are back at in progress
@@ -2115,11 +2166,30 @@ def _author_guard(subject, payload):
             % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
 
 
+def _pr_open_steps_deny(payload, raw):
+    """#647: a plain deny reason while nobody is present and a step is still open (not done, not parked); else None."""
+    if not core.nobody_present(raw):
+        return None
+    _, git_dir = _issues_locate(_payload_cwd(raw))
+    open_steps = steps_unfinished(git_dir, raw) if git_dir else None
+    if not open_steps:
+        return None
+    return ("House rules: no pull request yet. These steps of the build plan are not finished: %s. Run their checks "
+            "(ledger_note.py check <feature> --step N --start, then --poll) until each passes, or park a real "
+            "question with ledger_note.py park; then open the pull request." % "; ".join(open_steps))
+
+
 def _guardgithub_issue_checks(payload, raw):
     """The two checks event_guardgithub used to run first (the safe git part now loops over this
     through core.GITHUB_WRITE_HOOKS): True when the call was handled and answered."""
     # #248: an issue made with the GitHub tool needs its three sections, like one made with gh.
     ti = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    if re.match(r"^mcp__(github|GitHub)__(create|update)_pull_request$", str(payload.get("tool_name") or "")):
+        why = _pr_open_steps_deny(payload, raw)
+        if why:
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                         "permissionDecisionReason": why}})
+            return True
     if (_GITHUB_ISSUE_WRITE_RE.match(str(payload.get("tool_name") or ""))
             and str(ti.get("method", "")).lower() == "create" and _issues_enabled() and _clear_writing_enabled()):
         if clarity is None:
@@ -2435,6 +2505,9 @@ def _issues_guard(subject, payload):
         return None
     cmd = _decoded_command(subject)
     if _GH_PR_CREATE_RE.search(cmd):
+        why = _pr_open_steps_deny(None, payload if isinstance(payload, str) else json.dumps(payload))
+        if why:
+            return ("deny", why, None)
         body = cmd
         fm = _PR_BODY_FILE_RE.search(cmd)
         if fm:
