@@ -1,5 +1,6 @@
 # Today — 2026-11-25
 
+Pull request #633 (speed first) is open; CI failed once on a stale time_hooks check in verify_tools.py, fixed (0a17a8ca), second run pending.
 Speed first, continued on ccr-3849bb3b-c267ho: step 3 merged in, Write hooks 649 to 145 ms and Bash 458 to 163 ms (median of 5, sandbox), step 5 hook log now appends (0.384 to 0.011 ms), step 4 needs no change. Steps 2 and 6 still open; results in docs/qa/speed-first/results.md.
 Full verify on `AjsAgent/review-models-per-mode` passes all seven parts (1,606 checks, exit 0). Still open and aj's call: merge it into `AjsAgent/speed-first` or open a pull request; no live `/house-rules:review` run has been made.
 
