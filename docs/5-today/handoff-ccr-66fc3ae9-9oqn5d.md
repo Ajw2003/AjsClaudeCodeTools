@@ -1,7 +1,7 @@
 # Handoff: quiet unattended mode
 
 ## What the work is for
-aj wants unattended mode to keep the design loop on and run it without them: decide, log decisions, work numbered steps to the end, and never stop part-way in any mode. Anything that truly needs aj is left for the QA page. aj is asked about look or function choices only when present; with nobody present those are decided too, with a stated assumption shown on the QA page.
+aj wants unattended mode to keep the design loop on and run it without them: decide, log decisions, work numbered steps to the end, and never stop part-way in any mode. Anything that truly needs aj is left for the QA page. aj is asked about look or function choices only when present; in unattended those are decided too, with a stated assumption shown on the QA page. Auto and bypass modes stay attended: the loop still gates every step. Unattended step lists end with four fixed steps (tests, docs, before-and-after pictures, QA page).
 
 ## Where it stands
 Plan stage, nothing built. The proposal page `docs/plans/2026-11-25-quiet-unattended-mode.html` (content file beside it) has eleven changes and twelve reversed decisions. It has had three review rounds (45 holes, then 38 more); every finding is applied or decided on the page. Review stamp: open risks, round 2.
