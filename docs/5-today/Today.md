@@ -420,3 +420,5 @@ Pull request #602 has Auto-fix on (aj said yes). The live status page was edited
 Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stale 9:20pm wording now reads as past.
 
 2026-11-25: aj asked for unattended mode to decide for itself, keep working until its goal is met, and show decisions only on the QA page. I traced five causes in the code and wrote the proposal page `docs/plans/2026-11-25-quiet-unattended-mode.html` (stage: Plan, nothing built). Waiting on aj's approval line "Design approved: quiet unattended mode".
+
+2026-11-25 (later): aj added that unattended mode must keep the design loop on and run it itself, and that no mode may stop part-way once a goal is set; user-only items go to the QA page. The proposal page was updated to six changes, reviewed once (open risks, the new parts not re-reviewed) and sent. Still Plan stage, nothing built.
