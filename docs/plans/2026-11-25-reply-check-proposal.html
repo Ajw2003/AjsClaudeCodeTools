@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.94.6 -->
 <meta charset="utf-8">
+<meta name="house-rules-reviewed" content="3fcbc9f60ecc2269481ac743e1c4090c59ecbe2501c06f93b1f9627ce329aad4;open-risks;1">
 <meta name="house-rules-page" content="proposal">
 <title>Make the reply check cheaper</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -238,7 +239,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="short" aria-labelledby="h-short">
     <h2 id="h-short" tabindex="-1">In short</h2>
     <div class="card">
-      <p class="lead" id="lead" data-basic="summary">The one cost that repeats most is a 5.5 second model call after every reply; pick how to cut it so I can build it.</p>
+      <p class="lead" id="lead" data-basic="summary">The biggest repeated cost is a 5.5 second model call after nearly every reply; pick how to cut it so I can build it.</p>
       <div class="key" id="key"></div>
       <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
       <p class="muted" style="font-size:.85rem" id="hint"></p>
@@ -259,7 +260,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the suggestion.</label></li><li><label><input type="checkbox"> Pick an option under Your choices.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: reply check 1A", or say what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today: the judge runs after every reply that has a transcript and no flagged phrase (core.py _judge_check), a paid Haiku call.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Only run it when a wider word list flags the reply</p></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today: after a reply the word list (core.py _ROADBLOCK_RE and _STALL_RE) scans first; only when it finds nothing does _judge_check run a Haiku call that uses your usage allowance. The judge was added in #607 to catch what the list misses.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Only run it when a wider word list flags the reply</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -271,7 +272,7 @@ dialog.lightbox button{margin-top:10px}
     <button class="secondary" id="prev" type="button">‹ Back</button>
     <button class="primary" id="next" type="button">Next ›</button>
   </div>
-  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">After you approve, the work is planned in a build plan.</span></aside>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">Pick A, B, D or C under Your choices and send the approval line; I then write the build plan.</span></aside>
 </div>
 
 <script>
@@ -285,7 +286,7 @@ const PAGE = {
   "pageType": "proposal",
   "approval": "Design approved: reply check 1A",
   "short": {
-    "lead": "The one cost that repeats most is a 5.5 second model call after every reply; pick how to cut it so I can build it.",
+    "lead": "The biggest repeated cost is a 5.5 second model call after nearly every reply; pick how to cut it so I can build it.",
     "hint": "Tap a step to see it.",
     "key": [
       [
@@ -301,14 +302,14 @@ const PAGE = {
       [
         "bulb",
         "Idea",
-        "After every reply, a hook starts a second Claude (Haiku) to judge whether the reply claims something is impossible without proof. It runs even when no suspicious word is in the reply.",
+        "After nearly every reply, a hook starts a second, smaller Claude model (Haiku) to check whether the reply claims something is impossible without proof. It runs only when the word list found no suspicious phrase, as a backstop for claims the list misses.",
         "",
         "Nothing is built yet; this page only chooses how to cut the cost.",
         "Nothing from you.",
         {
-          "src": "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22%3E%3Crect width=%22320%22 height=%22180%22 fill=%22%23e3eafc%22/%3E%3C/svg%3E",
-          "alt": "Bar chart: the reply check takes 5,519 ms against 63 ms with the model call off",
-          "caption": "Reply check on, 5,519 ms. Off, 63 ms. Every other hook, about 70 ms."
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22320%22%20height%3D%22180%22%20font-family%3D%22sans-serif%22%20font-size%3D%2212%22%3E%3Ctext%20x%3D%228%22%20y%3D%2220%22%20fill%3D%22%23888%22%3EHook%20time%20per%20call%20%28ms%29%3C/text%3E%3Crect%20x%3D%228%22%20y%3D%2234%22%20width%3D%22300%22%20height%3D%2224%22%20fill%3D%22%23d9534f%22/%3E%3Ctext%20x%3D%2212%22%20y%3D%2251%22%20fill%3D%22%23fff%22%3EReply%20check%20on%3A%205%2C519%3C/text%3E%3Crect%20x%3D%228%22%20y%3D%2270%22%20width%3D%224%22%20height%3D%2224%22%20fill%3D%22%234f7cff%22/%3E%3Ctext%20x%3D%2218%22%20y%3D%2287%22%20fill%3D%22%23888%22%3EReply%20check%20off%3A%2063%3C/text%3E%3Crect%20x%3D%228%22%20y%3D%22106%22%20width%3D%225%22%20height%3D%2224%22%20fill%3D%22%234f7cff%22/%3E%3Ctext%20x%3D%2219%22%20y%3D%22123%22%20fill%3D%22%23888%22%3EAny%20other%20hook%3A%20about%2070%3C/text%3E%3Ctext%20x%3D%228%22%20y%3D%22160%22%20fill%3D%22%23888%22%3EOne%20run%20each%3B%20see%20docs/qa/reply-check/timing.md%3C/text%3E%3C/svg%3E",
+          "alt": "Bars: reply check on 5,519 ms, off 63 ms, any other hook about 70 ms",
+          "caption": "The reply check costs about 80 times any other hook."
         }
       ],
       [
@@ -327,11 +328,11 @@ const PAGE = {
       "Reply check, cheaper",
       "Same check, runs only when it can matter",
       null,
-      "Measured here: with the model call 5,519 ms, with it off 63 ms. Every other hook costs about 70 ms. It is one call per reply, so it dominates a session.",
+      "Measured with four runs, the median of three at 5,188 ms and one at 5,519 ms, against 63 ms with the call off (method and numbers: docs/qa/reply-check/timing.md). Every other hook costs about 70 ms.",
       [
-        "Today: the judge runs after every reply that has a transcript and no flagged phrase (core.py _judge_check), a paid Haiku call.",
-        "Option A would run it only when a wider word list says a claim may be present.",
-        "You would wait about 5 seconds less after most replies and spend far fewer model calls."
+        "Today: after a reply the word list (core.py _ROADBLOCK_RE and _STALL_RE) scans first; only when it finds nothing does _judge_check run a Haiku call that uses your usage allowance. The judge was added in #607 to catch what the list misses.",
+        "Option A runs the judge only when a wider word list matches. That narrows #607, and the 2026-11-24 Speed first decision rejected making the judge opt-in, so approving A would need a new decisions entry.",
+        "You would wait about 5 seconds less after replies the wider list skips. How many replies that is has not been counted: unverified."
       ],
       null
     ]
@@ -345,29 +346,35 @@ const PAGE = {
           "A",
           "Only run it when a wider word list flags the reply",
           1,
-          "Most replies have no claim, so most skip the 5.5 s call; a claim phrased in a way the list misses would go unchecked."
+          "Skips the 5 s call on replies the wider list passes. The wider list would add phrases such as 'could not' and 'unable to', which an earlier change removed to cut false alarms. A claim the list misses goes unchecked."
         ],
         [
           "B",
-          "Run it in the background and show the verdict next turn",
+          "Run it in the background and show the verdict on the next turn",
           0,
-          "No waiting at all, but it can no longer block a bad reply, only warn after it."
+          "No waiting, but a background process must outlive the hook and a later hook must read its result. With no next turn, as in an unattended run, the warning is lost."
+        ],
+        [
+          "D",
+          "Skip it when the turn ran no tools and the reply has no negation",
+          0,
+          "Cheap to test from the transcript the hook already reads; not yet tried, so its saving is unknown."
         ],
         [
           "C",
           "Leave it as it is",
           0,
-          "Keeps full coverage; the 5.5 s stays on every reply."
+          "Keeps full coverage; the 5 s stays on nearly every reply."
         ]
       ],
-      "A removes the wait on nearly every reply and keeps the blocking power for the replies that matter."
+      "A removes the wait on replies the wider list passes; it can still block a reply that list matches, but not a claim the list misses."
     ]
   ],
   "wrapup": {
-    "summary": "Cut the 5.5 second reply check that runs after every reply.",
+    "summary": "Cut the 5 second reply check that runs after nearly every reply.",
     "changing": "The reply judge in core.py, only after you pick an option; no code changed yet.",
     "blocking": "Your choice of option A, B or C.",
-    "next": "After you approve, the work is planned in a build plan.",
+    "next": "Pick A, B, D or C under Your choices and send the approval line; I then write the build plan.",
     "todo": [
       "Read the suggestion.",
       "Pick an option under Your choices.",
