@@ -4,6 +4,9 @@
   ledger_note.py park FEATURE --step S --question Q --default D --affects A [--answer HOW]
   ledger_note.py deviate FEATURE --step S --plan P --done D --why W --undo U   (#599)
 
+deviate also takes --step-action add|replace|delete [--step-id N] [--check CMD]: delete is always refused,
+replace keeps --step-id and needs a new --check, and a "Finish:" step is never touched.
+
 Appends row P<n> to the Parked decisions table (or D<n> to the Deviations table) of
 docs/qa/<folder>/ledger.md under the git project root (created with both tables if absent). Prints
 `parked P<n> in <path>` or `deviated D<n> in <path>`. STDLIB ONLY.
@@ -49,7 +52,24 @@ def main(argv):
     d.add_argument("feature")
     for o in ("step", "plan", "done", "why", "undo"):
         d.add_argument("--" + o, required=True)
+    d.add_argument("--step-action", choices=("add", "replace", "delete"))
+    d.add_argument("--step-id")
+    d.add_argument("--check")
     a = ap.parse_args(argv)
+    if a.cmd == "deviate" and a.step_action:
+        err = None
+        if a.step_action == "delete":
+            err = "a step is never deleted; deviate by replacing it with a new check, or park a question"
+        elif a.step.strip().lower().startswith("finish:"):
+            err = "a Finish: step cannot be changed by a deviation"
+        elif a.step_action == "replace" and not (a.step_id and a.check):
+            err = "replacing a step needs --step-id N (the step keeps its id) and a new --check"
+        elif a.step_action == "add" and not a.check:
+            err = "adding a step needs a --check"
+        if err:
+            sys.stderr.write("ledger_note.py: refused: %s\n" % err)
+            return 2
+        a.done += " [step %s%s: check `%s`]" % (a.step_action, " " + a.step_id if a.step_id else "", a.check)
     if a.cmd == "park":
         L, head, vals, verb = "P", "Question", (a.step, a.question, a.default, a.affects, a.answer), "parked"
     else:
