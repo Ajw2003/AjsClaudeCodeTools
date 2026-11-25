@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode steps 3, 4, 5, 12 and 13 merged (#637, #639, #646, #643, #635): unattended keeps the design loop and handover on and skips the holds nobody can clear; a guarded step list with a check per build-plan step; `ledger_note.py check --start/--poll` with results recorded by a hook and staleness by fingerprint; decisions and guard refusals go to the ledger, the QA reply counts the decisions, and credit lines in pull requests are denied; the rule lines that told the agent to ask or wait are rewritten.
+
 Quiet unattended mode step 2 (#636) merged: one `nobody_present` test (unattended or bypass) replaces the separate ones, permission prompts are denied at once when nobody is present, a plan-exit prompt is allowed, the pause-goal tool is denied, and agent writes to the typed-switch file or HOUSE_RULES_ settings keys are refused; bypass now relaxes the whole-file write, credit and big-file refusals like unattended.
 
 Quiet unattended mode step 1 (#638) merged: `ledger_note.py decide` records a choice, `park` now needs a hard-stop category and the command tried, choice rows come first on the QA page, and a branch name with a slash gives one ledger folder; its suites were still being run when this line was written.
