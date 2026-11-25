@@ -122,8 +122,8 @@ entries the checker reports as `STALE`.
    `docs/4-systems/README.md` left-out-list edit it caused) with a message like
    `docs: add plain copy of <source>` (`refresh` in place of `add` for a stale one), before
    starting the next doc. Commit only when on a branch this session owns, per the house rules
-   ("Commit constantly on my own branches, never on theirs"); on any other branch, stop and ask
-   instead of committing.
+   ("Commit constantly on my own branches, never on theirs"); on any other branch, skip the commit and
+   log it with `ledger_note.py decide`.
 3. **Skip `CURRENT` entries.** Never touch `DEFERRED` or `EXCLUDED` ones; `all` does not mean
    "everything in docs/", it means everything the queue lists.
 4. **A doc that still fails after three honest rewrite attempts** is left uncommitted, not written

@@ -2088,8 +2088,10 @@ report("PASS" if _ua_dec(_un1) == "deny" and "Refused, not asked" in _un1 and "u
        and _ua_dec(_un2) == "deny" and _ua_dec(_un3) == "ask" else "FAIL",
        "unattended: a guard ask becomes a refusal naming the unattended run; not unattended it is still an ask")
 print("          on %s, ON %s, off %s" % (_ua_dec(_un1), _ua_dec(_un2), _ua_dec(_un3)))
-report("PASS" if "ledger_note.py decide" in _un1 and "Waiting on you" not in _un1 and "final report" not in _un1 else "FAIL",
-       "unattended: the guard refusal says to write it with ledger_note.py decide, not list it in the reply (#643)")
+_un1l = _un1.lower().replace("-", " ")
+report("PASS" if "ledger_note.py decide" in _un1 and "waiting on you" not in _un1l and "final report" not in _un1l
+       and "approve to let it run" not in _un1l and "nobody answers" not in _un1l else "FAIL",
+       "unattended: the guard refusal says to write it with ledger_note.py decide, never mentions the waiting list, a timeout or approving (#643, C10)")
 
 _un4 = _ua_guard("verify-un4", env_extra=dict(_un_on, HOUSE_RULES_PROMPT_TIMEOUT="off"))
 _un5 = _ua_guard("verify-un5", env_extra={"HOUSE_RULES_PROMPT_TIMEOUT": "off"})
@@ -2187,6 +2189,15 @@ report("PASS" if '"permissionDecision":"deny"' not in _un_cr_on and "credit rule
        and '"permissionDecision":"deny"' in _un_cr_off and "Remove every `Co-Authored-By:`" in _un_cr_off else "FAIL",
        "unattended: a Claude credit line is allowed with a note; attended the commit is still refused")
 print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
+# round-1 C2: the credit-line commit rule across every mode (permission_mode in the payload, no switch)
+_cr_res = {}
+for _m in ("bypassPermissions", "auto", "default", "acceptEdits", "plan", ""):
+    _pl = json.dumps(dict(json.loads(_un_cr_pl), **({"permission_mode": _m} if _m else {})))
+    _cr_res[_m] = run_hook("guard", _pl, env=dict(_project_env(_u7), HOUSE_RULES_UNATTENDED="off"))[1]
+report("PASS" if "credit rule was relaxed" in _cr_res["bypassPermissions"] and '"permissionDecision":"deny"' not in _cr_res["bypassPermissions"]
+       and all('"permissionDecision":"deny"' in _cr_res[k] and "credit rule was relaxed" not in _cr_res[k]
+               for k in ("auto", "default", "acceptEdits", "plan", "")) else "FAIL",
+       "C2: the credit-line commit is relaxed only in bypass; auto, default, acceptEdits, plan and no mode still deny it")
 # #643: a pull request body with a credit line is denied even with nobody present
 _un_pr_cmd = "gh pr " + 'create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"'
 _un_pr_pl = json.dumps({"session_id": "verify", "cwd": _u7, "tool_name": "Bash", "tool_input": {"command": _un_pr_cmd}})

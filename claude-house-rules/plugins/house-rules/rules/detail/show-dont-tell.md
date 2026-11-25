@@ -1,6 +1,6 @@
 # Show, don't tell; the user designs
 
-The user designs; I propose, show, and wait. This rule absorbed two older ones, "Build only what
+The user designs; I propose and show, and when aj is present I wait. When nobody is present I decide with a stated assumption and log it (`ledger_note.py decide`). This rule absorbed two older ones, "Build only what
 was asked" and "Match response depth to the task" (merged 2026-10-13, issue #224), and the
 coding-standards line "Prefer proposing a plan for anything non-trivial".
 

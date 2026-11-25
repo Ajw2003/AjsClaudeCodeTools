@@ -2482,6 +2482,27 @@ report("PASS" if rc == 0 and "UNATTENDED run: a house-rules update is available 
        and "wait for the user" not in out and "OUT OF DATE" not in out and not os.path.isfile(vc_marker_path("vc-un"))
        and not vc_fake_calls("vc-un") else "FAIL",
        "unattended: versioncheck says one line, runs no update, writes no marker, never says wait or ask")
+# round-1 C2: versioncheck across every permission_mode (no switch): only bypass counts as nobody present
+_vc_modes = {}
+for _m in ("bypassPermissions", "auto", "default", "acceptEdits", "plan", ""):
+    vc_clear("vc-m")
+    _pl = json.dumps(dict(json.loads(vc_payload("vc-m")), **({"permission_mode": _m} if _m else {})))
+    _vc_modes[_m] = run_hook("versioncheck", _pl, vc_env("vc-m", HOUSE_RULES_UNATTENDED="off", HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"))[1]
+report("PASS" if "UNATTENDED run: a house-rules update is available" in _vc_modes["bypassPermissions"]
+       and all("UNATTENDED run" not in _vc_modes[k] for k in ("auto", "default", "acceptEdits", "plan", "")) else "FAIL",
+       "C2: versioncheck treats only bypassPermissions (not auto, default, acceptEdits, plan or no mode) as nobody present")
+# round-1 C1: no rule, skill or agent file may still tell the agent to wait or ask where nobody can answer
+_old_asks = ("I propose, show, and wait", "and stop for their answer", "I ask\nfor permission to run it myself", "stop and ask")
+_hits = []
+for _dp in ("rules", "skills", "agents"):
+    for _root, _ds, _fs in os.walk(os.path.join(os.path.dirname(HERE), _dp)):
+        for _fn in _fs:
+            if _fn.endswith(".md"):
+                _t = open(os.path.join(_root, _fn), encoding="utf-8").read()
+                _hits += ["%s: %s" % (_fn, o) for o in _old_asks if o in _t]
+report("PASS" if not _hits else "FAIL", "C1: no rule, skill or agent file still carries an old wait-or-ask line")
+if _hits:
+    print("          " + "; ".join(_hits))
 rc, out, err = run_hook("inject", "{}", env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))
 report("PASS" if "OVERRIDDEN" in out and "never stop or wait for the user" in out and "ledger_note.py decide" in out and "Waiting on you" not in out and "final report" not in out else "FAIL",
        "unattended: the session note overrides the hand-over-then-wait rule and names ledger_note.py decide, not the reply")

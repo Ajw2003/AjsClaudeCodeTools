@@ -4095,6 +4095,13 @@ _sp_cases.append(("#639/#641: deviate replace keeps the step id and logs the new
 _r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Finish: x", "--plan", "p", "--done", "d", "--why", "w",
                      "--undo", "u", "--step-action", "add", "--check", "c"], capture_output=True, text=True, cwd=_ln_repo)
 _sp_cases.append(("#639: deviate refuses touching a Finish: step", _r.returncode == 2))
+# round-1 C6: replace aimed at a Finish step by its id, with a plain --step title, is refused too
+with open(os.path.join(_ln_env["CLAUDE_CONFIG_DIR"], "house-rules-steps", hashlib.sha1(_ln_gd.encode("utf-8")).hexdigest() + "-lns.json"), "w") as _f:
+    json.dump({"feature": "feat", "at": 1000, "steps": [{"n": 2, "title": "Step 2: x"}, {"n": 3, "title": "Finish: tests pass"}]}, _f)
+_r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Step 3", "--plan", "p", "--done", "d", "--why", "w", "--undo", "u",
+                     "--step-action", "replace", "--step-id", "3", "--check", "true"], capture_output=True, text=True, cwd=_ln_repo, env=_ln_env)
+_sp_cases.append(("C6: deviate replace by the id of a Finish step is refused even when --step is a plain title",
+                  _r.returncode == 2 and "Finish" in _r.stderr))
 
 # --- #646: start/poll a step check, record its result by hook, mark steps stale by the tree fingerprint ---
 _pl_snip = os.path.join(_FIXTURE_ROOT, "poll_snip.py")

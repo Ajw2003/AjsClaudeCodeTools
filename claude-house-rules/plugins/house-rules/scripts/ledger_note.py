@@ -237,8 +237,12 @@ def steps_status_cmd(a):
     if left is None:
         print("NO STEP LIST")
         return 0
-    print("OPEN %d" % len(left) if left else "ALL DONE")
-    return 1 if left else 0
+    if left:
+        print("OPEN %d" % len(left))
+        return 1
+    stuck = design_loop.steps_stuck(os.path.abspath(top.stdout.strip()), json.dumps({"session_id": a.session}))
+    print("ALL DONE" + (" (%d STUCK: %s)" % (len(stuck), "; ".join(stuck)) if stuck else ""))
+    return 0
 
 
 def main(argv):

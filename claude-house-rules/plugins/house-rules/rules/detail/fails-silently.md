@@ -18,3 +18,5 @@ could not tell* says so out loud, naming what it could not do and why.
 **Why:** whoever debugs this next — a person or an agent — has only the output to go on. A path
 that produces nothing is indistinguishable from a path that was never reached, and telling those
 two apart is the difference between a five-minute fix and an afternoon.
+
+Choices an unattended run makes are not announced mid-run: they go to the ledger (`ledger_note.py decide`) and show first on the QA page. Failures are still announced.

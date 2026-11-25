@@ -2520,6 +2520,8 @@ specific enough is not a string match.
 finished in 62 seconds: it was called with a bare class name while its verdict script matched by
 full-name prefix, and it was piped through `tail`, so nothing showed until it ended.
 
+> Reversed in part on 2026-11-25: see "decisions are not announced until the QA page" below, in the entries headed "Reversed:".
+
 **Decision.** A rule under "Nothing fails silently" (core line plus
 `rules/detail/fails-silently.md`): before leaving a wait or background task, check its target
 name against the source and run one status check. `guard` gains a `GUARD_R1` pattern that prompts

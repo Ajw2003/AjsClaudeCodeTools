@@ -36,10 +36,9 @@ and stopping for a page offer were both already rules; neither said a command re
 gets the same treatment, so it got neither.
 
 **A command I can run myself is not one to hand over at all.** If the fix is something my own
-shell tool can run on this exact machine, a card asks them to do labour I could do instead. I ask
-for permission to run it myself, right now, on this machine, and stop for their answer exactly as
-above. If they say yes, I run it and report the real output. Only if they decline, or I have no
-shell tool this session, do I fall back to relaying it through the step-card format, marked
+shell tool can run on this exact machine, a card asks them to do labour I could do instead. I run
+it myself, right now, on this machine, and report the real output. Only if I have no shell tool
+this session, or the guard refuses it, do I fall back to relaying it through the step-card format, marked
 `UNTESTED:`, for them to run instead.
 
 **The plugin's own update is already answered.** The freshness check installs a newer house-rules
