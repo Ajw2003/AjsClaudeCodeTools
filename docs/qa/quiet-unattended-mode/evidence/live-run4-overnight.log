@@ -1,0 +1,14 @@
+Step 6, "Finish: QA page built and stamped", passes its check. I ran `check demo --step 6 --start` and then `--poll`, and the result was `RESULT: pass`.
+
+The state file shows steps 1 to 5 as `done` and step 6 as `open`. The hook has marked each earlier step done only after the following stop, so I expect it to close step 6 next. I haven't edited the state file.
+
+All the files you asked for are in the repo root and hold `ok`, and `page.html` has its blue header. The header colour is logged as decision K1. Nothing is committed. I'm stopping here as you asked.
+ALL DONE
+overnight: loop ended: all steps done
+I built the QA page at `docs/qa/demo/qa.html`, in the repo. I haven't opened it in a browser.
+
+- **Open or stuck steps:** none. The state file `.claude/house-rules-loop.json` now shows all six steps as `done`. That includes step 6, which was still open when I last reported.
+- **Choices:** the only ledger entry is K1, the blue header colour `#1f6feb` in `page.html`. The ledger has no deviations and no parked decisions.
+
+I started no new work. Nothing is committed.
+overnight exit 0
