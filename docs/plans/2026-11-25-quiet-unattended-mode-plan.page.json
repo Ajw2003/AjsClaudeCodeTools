@@ -22,7 +22,7 @@
     "Step 1",
     "Ledger commands",
     "",
-    "decide, stricter park and deviate, C rows on the QA page (#638)",
+    "decide, stricter park, choice rows on the QA page (#638)",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2211%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%228%22%20y=%226%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2213%22%20y=%2227%22%3E1%20Ledger%3C/text%3E%3Crect%20x=%22114%22%20y=%226%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22119%22%20y=%2227%22%3E2%20Presence%3C/text%3E%3Crect%20x=%22220%22%20y=%226%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22225%22%20y=%2227%22%3E3%20Loop%20on%3C/text%3E%3Crect%20x=%228%22%20y=%2240%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2213%22%20y=%2261%22%3E4%20Step%20file%3C/text%3E%3Crect%20x=%22114%22%20y=%2240%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22119%22%20y=%2261%22%3E5%20Checks%3C/text%3E%3Crect%20x=%22220%22%20y=%2240%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22225%22%20y=%2261%22%3E6%20Finish%3C/text%3E%3Crect%20x=%228%22%20y=%2274%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2213%22%20y=%2295%22%3E7%20Stop%20check%3C/text%3E%3Crect%20x=%22114%22%20y=%2274%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22119%22%20y=%2295%22%3E8%20Approval%3C/text%3E%3Crect%20x=%22220%22%20y=%2274%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22225%22%20y=%2295%22%3E9%20Resume%3C/text%3E%3Crect%20x=%228%22%20y=%22108%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2213%22%20y=%22129%22%3E10%20Wait%3C/text%3E%3Crect%20x=%22114%22%20y=%22108%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22119%22%20y=%22129%22%3E11%20Limits%3C/text%3E%3Crect%20x=%22220%22%20y=%22108%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22225%22%20y=%22129%22%3E12%20QA%20only%3C/text%3E%3Crect%20x=%228%22%20y=%22142%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2213%22%20y=%22163%22%3E13%20Rules%3C/text%3E%3Crect%20x=%22114%22%20y=%22142%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22119%22%20y=%22163%22%3E14%20Docs%3C/text%3E%3Crect%20x=%22220%22%20y=%22142%22%20width=%2298%22%20height=%2228%22%20rx=%225%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22225%22%20y=%22163%22%3E15%20Live%20run%3C/text%3E%3C/svg%3E",
@@ -59,7 +59,7 @@
     "Step 5",
     "Step checks",
     "",
-    "record each check and mark staleness by the tree fingerprint (#646)",
+    "start and poll a check, mark staleness by fingerprint (#646)",
     "Nothing from you."
    ],
    [
@@ -67,7 +67,7 @@
     "Step 6",
     "Finish line",
     "",
-    "four required steps and Build to QA from the step list (#647)",
+    "four required steps, run in the order docs, pictures, tests, QA page (#647)",
     "Nothing from you."
    ],
    [
@@ -91,7 +91,7 @@
     "Step 9",
     "Resume loop",
     "",
-    "overnight.sh resumes by session id, with an interactive flag (#642)",
+    "overnight.sh resumes by session id and sets the block cap (#642)",
     "Nothing from you."
    ],
    [
@@ -156,10 +156,12 @@
   [
    "chg",
    "Step 1: Ledger commands",
-   "decide, stricter park and deviate, C rows on the QA page (#638)",
+   "decide, stricter park, choice rows on the QA page (#638)",
    null,
-   "Done when: verify.py --parts make_page,design_loop passes with cases: a C row first on a QA page, park refused without a category, deviate refused when it deletes a step, a branch with a slash gives a valid folder. Touches ledger_note.py:43-51, make_page.py:53-55, 322-337.",
-   null,
+   "Done when: verify.py --parts make_page,design_loop passes with cases: a choice row (K) written and shown first on a QA page; a K row added to an older ledger with no choices table; park refused without a hard-stop category; the park text now says decide. A check shows the stage file lists speed first under features.",
+   [
+    "Touches: ledger_note.py:43-51, 72-74; make_page.py:53-55, 322-337; design_loop.py:1408, 1478; checks/design_loop.py:3295; .claude/house-rules-loop.json."
+   ],
    null
   ],
   [
@@ -167,8 +169,10 @@
    "Step 2: One presence test",
    "one helper replaces every unattended or bypass test (#636)",
    null,
-   "Done when: verify.py --parts core,safe_git,design_loop passes with a case per mode (unattended, bypass, auto, normal, unknown) at each old call site, a prompt denied at once, an agent write to the mode file refused. Touches core.py:1487, 2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150.",
-   null,
+   "Done when: verify.py --parts core,safe_git,design_loop passes with a case per mode (unattended, bypass, auto, normal, unknown) at each old call site; a prompt denied at once; plan-exit allowed; pause-goal denied; an agent write to the mode file or to HOUSE_RULES_ keys in .claude/settings refused.",
+   [
+    "Touches: core.py:1487, 2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150; design_loop.py:3555."
+   ],
    null
   ],
   [
@@ -176,8 +180,10 @@
    "Step 3: Loop stays on",
    "the design loop is not turned off when nobody is present (#637)",
    null,
-   "Done when: verify.py --parts core,design_loop passes with cases: the evidence, commit, deviation, QA page, changelog and decision-log checks run when unattended; the question hold, the GitHub-unreadable refusal and the unlabelled-issue refusal are skipped. Touches core.py:2723, 2850; design_loop.py:1401, 1524-1567.",
-   null,
+   "Done when: verify.py --parts core,design_loop passes with cases: the evidence, commit, deviation, QA page, changelog and decision-log checks run when unattended; the question hold, the GitHub-unreadable refusal and the unlabelled-issue refusal are skipped when nobody is present and unchanged when attended.",
+   [
+    "Touches: core.py:2723, 2850; design_loop.py:1401, 1524-1567."
+   ],
    null
   ],
   [
@@ -185,26 +191,32 @@
    "Step 4: Step file",
    "a guarded step list and a check field in build plans (#639)",
    null,
-   "Done when: verify.py --parts design_loop,make_page passes with cases: the file written under the payload session_id with matching inside and outside hashes, a build plan without a check refused, a restored older stage file detected. Touches design_loop.py:429, 621, 1157; make_page.py:609.",
-   null,
+   "Done when: verify.py --parts design_loop,make_page passes with cases: the file written under the payload session_id with matching inside and outside hashes; a build plan without a check command or a test command refused; a restored older stage file detected; deviate refused when it deletes a step; a replace keeps the step id.",
+   [
+    "Touches: design_loop.py:429, 621, 1157; make_page.py:609; ledger_note.py:48-51."
+   ],
    null
   ],
   [
    "chg",
    "Step 5: Step checks",
-   "record each check and mark staleness by the tree fingerprint (#646)",
+   "start and poll a check, mark staleness by fingerprint (#646)",
    null,
-   "Done when: verify.py --parts design_loop,make_page passes with cases: a passing check recorded, a failing one left open, an autosave commit leaving a step done, a source edit making it stale. Touches acceptance.py:23-40; ledger_note.py (new check command); a PostToolUse hook.",
-   null,
+   "Done when: verify.py --parts design_loop,make_page passes with cases: a check started and polled in calls under 60 seconds; a RESULT: pass line recorded by the hook; a failed call left open (PostToolUse and PostToolUseFailure both handled); an autosave commit leaving a step done; a source edit making it stale; a slow fingerprint counted as stale, with a message.",
+   [
+    "Touches: acceptance.py:23-40; ledger_note.py (check --start, --poll); hooks/hooks.json PostToolUse and PostToolUseFailure."
+   ],
    null
   ],
   [
    "chg",
    "Step 6: Finish line",
-   "four required steps and Build to QA from the step list (#647)",
+   "four required steps, run in the order docs, pictures, tests, QA page (#647)",
    null,
-   "Done when: verify.py --parts design_loop,make_page passes with cases: the four steps appended and refused for park, deviate and delete; the no-visual branch reaching a stamped QA page; Build moving to QA only when nobody is present. Touches design_loop.py:860, 872; acceptance.py:80-83; make_page.py:304-307.",
-   null,
+   "Done when: verify.py --parts design_loop,make_page passes with cases: the four steps appended and refused for park, deviate and delete; the no-visual check using git merge-base with origin/main and ignoring docs/plans pages; its pass round written by a reviewer from acceptance.py run; Build moving to QA from the step list only when nobody is present.",
+   [
+    "Touches: design_loop.py:860, 872; acceptance.py:32-33, 80-83; make_page.py:304-307."
+   ],
    null
   ],
   [
@@ -212,8 +224,10 @@
    "Step 7: Stop check",
    "block every stop while a step is open (#640)",
    null,
-   "Done when: verify.py --parts core,design_loop passes with cases: a stop blocked with an open step, with no reply text, with NEEDS YOU text; a stuck step after 3 no-progress blocks; the judge blocking once; the old goal check with no step list. Touches core.py:3655, 3684, 3835, 3840, 3869.",
-   null,
+   "Done when: verify.py --parts core,design_loop passes with cases: a stop is blocked while a step is open, even with no reply text or with NEEDS YOU in it; a stuck step after 3 no-progress blocks; the judge blocking once; the old goal check with no step list; QUESTION FOR YOU allowed in auto mode; a new message from aj clearing a block.",
+   [
+    "Touches: core.py:3655, 3684, 3835, 3840, 3869."
+   ],
    null
   ],
   [
@@ -221,17 +235,21 @@
    "Step 8: Self-approval",
    "a hook approves with a stored clean verdict (#641)",
    null,
-   "Done when: verify.py --parts design_loop,delegation,make_page passes with cases: approval only with VERDICT: clean for the page hash, refused in auto and normal mode and for QA passed, and .git/house-rules-loop-seen.json byte-for-byte unchanged. Touches design_loop.py:482-509, 526-536; delegation.py:739-740.",
-   null,
+   "Done when: verify.py --parts design_loop,delegation,make_page passes with cases: approval only with VERDICT: clean for the hash of the .page.json without its stamp; refused in auto and normal mode and for QA passed; a replace refused without a verdict; a self-approval row (S) shown first on QA; .git/house-rules-loop-seen.json unchanged.",
+   [
+    "Touches: design_loop.py:482-509, 526-536; delegation.py:739-740."
+   ],
    null
   ],
   [
    "chg",
    "Step 9: Resume loop",
-   "overnight.sh resumes by session id, with an interactive flag (#642)",
+   "overnight.sh resumes by session id and sets the block cap (#642)",
    null,
-   "Done when: python tools/verify_tools.py passes with the case at verify_tools.py:813-824 updated and new cases: resume by id, the relayed marker on the resume text, --interactive keeping the old command. Touches tools/overnight.sh:12; core.py:2040.",
-   null,
+   "Done when: python tools/verify_tools.py passes with the case at verify_tools.py:813-824 updated and new cases: resume by id, the relayed marker on the resume text, --interactive keeping the old command, and CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=1000 exported.",
+   [
+    "Touches: tools/overnight.sh:12; core.py:2040."
+   ],
    null
   ],
   [
@@ -239,8 +257,10 @@
    "Step 10: Wait and back off",
    "wait out rate limits, back off after crashes (#648)",
    null,
-   "Done when: python tools/verify_tools.py passes with cases: a rate-limit file makes the loop wait without spending a restart, a crash backs off, the stop-failure script finishes inside 10 seconds. Touches hooks/hooks.json:137-147; tools/overnight.sh.",
-   null,
+   "Done when: python tools/verify_tools.py passes with cases: a rate-limit error read from error_details making the loop wait without spending a restart, a fixed wait when no reset time is found, a crash backing off, the stop-failure script finishing inside 10 seconds.",
+   [
+    "Touches: hooks/hooks.json:137-147; tools/overnight.sh."
+   ],
    null
   ],
   [
@@ -248,8 +268,10 @@
    "Step 11: Limits",
    "24 hours, 5 restarts, and a final QA pass (#649)",
    null,
-   "Done when: python tools/verify_tools.py passes with cases: the 24-hour limit, the 5-restart limit and all-steps-done each ending in one last claude -p pass that builds the QA page with open steps first. Touches tools/overnight.sh.",
-   null,
+   "Done when: python tools/verify_tools.py passes with cases: the 24-hour limit, the 5-restart limit and all-steps-done each ending in one last claude -p pass that builds the QA page with open steps first.",
+   [
+    "Touches: tools/overnight.sh."
+   ],
    null
   ],
   [
@@ -257,8 +279,10 @@
    "Step 12: QA-only messages",
    "decisions go to the ledger, not the reply (#643)",
    null,
-   "Done when: verify.py --parts core,safe_git,design_loop passes with cases: a guard refusal and a denied question each write a ledger row and neither message says Waiting on you; a credit line is stripped before a pull request opens. Touches safe_git.py:1584, 1620; core.py:2800, 2958; checks/design_loop.py:3295.",
-   null,
+   "Done when: verify.py --parts core,safe_git,design_loop passes with cases: a guard refusal and a denied question each write a ledger row and neither message says Waiting on you; a credit line is stripped before a pull request opens; the QA reply counts the decisions logged.",
+   [
+    "Touches: safe_git.py:1584, 1620; core.py:2800, 2958."
+   ],
    null
   ],
   [
@@ -266,8 +290,10 @@
    "Step 13: Rules rewrite",
    "rewrite every line that asks, waits or hands over (#635)",
    null,
-   "Done when: verify.py --parts core,docs passes including the injected-rules size check (9647 of 9700 today; house-rules.md may not grow) and the grep for the old wording finds nothing outside look-or-function and hard stops. Touches show-dont-tell.md:5, 11, 12; coding-philosophy.md:58; core.py:1610; checks/core.py:47.",
-   null,
+   "Done when: verify.py --parts core,docs passes including the injected-rules size check (9647 of 9700 today; house-rules.md may not grow), and grep -c for each old string in the listed files returns 0: hand it over, then wait; the user picks; stop and ask; Ask before; stop and wait; I stop and say so; ask instead of assuming.",
+   [
+    "Touches: show-dont-tell.md:5, 11, 12; house-rules.md:91; clear-writing.md:59-62; handover-command.md:28, 51; commit-branches.md:50; coding-philosophy.md:58; builder.md:11; core.py:1546, 1610; checks/core.py:47."
+   ],
    null
   ],
   [
@@ -275,8 +301,10 @@
    "Step 14: Docs and reversals",
    "twelve dated reversals, systems docs, version bump (#645)",
    null,
-   "Done when: verify.py and tools/verify_tools.py both exit 0, run in the background with a 10-minute timeout; docref.py check and docs_drift.py pass; each of the twelve reversals has its dated Decisions.md entry. Citations are re-checked after merging main.",
-   null,
+   "Done when: grep -c \"^## 2026-11-25 - Reversed\" docs/6-decisions/Decisions.md prints 12; docref.py check and docs_drift.py pass; verify.py and tools/verify_tools.py both exit 0, each run as segments under 60 seconds with waitfor.py. Citations are re-checked after merging main.",
+   [
+    "Touches: docs/6-decisions/Decisions.md; docs/4-systems/quiet-unattended-mode.md, speed-switches.md, roadblocks.md."
+   ],
    null
   ],
   [
@@ -284,68 +312,79 @@
    "Step 15: Live run",
    "a real headless unattended run and the acceptance run (#644)",
    null,
-   "Done when: The transcript under docs/qa/quiet-unattended-mode/ shows self-approval, a forced early stop resumed, an assumption logged, the four finish steps done; acceptance.py check docs/qa/quiet-unattended-mode exits 0; the QA page is built.",
+   "Done when: The transcript under docs/qa/quiet-unattended-mode/ shows self-approval, a forced early stop resumed, an assumption logged, a ninth consecutive stop block holding with the cap at 1000, and the four finish steps done; acceptance.py check docs/qa/quiet-unattended-mode exits 0; the QA page is built.",
+   [
+    "Touches: docs/qa/quiet-unattended-mode/."
+   ],
+   null
+  ],
+  [
+   "chg",
+   "Decisions I took while planning (1 of 3)",
+   "Chosen by me, listed for QA",
+   null,
+   "Verdict: only VERDICT: clean from a house-rules reviewer in page or plan mode counts, hashed from the .page.json without its stamp. Stale: a step goes stale when the acceptance tree fingerprint changes, not when HEAD moves. Session: the step list is filed under the payload session_id, in any mode.",
    null,
    null
   ],
   [
    "chg",
-   "Decisions I took while planning (1 of 2)",
+   "Decisions I took while planning (2 of 3)",
    "Chosen by me, listed for QA",
    null,
-   "Verdict: only VERDICT: clean from a house-rules reviewer in page or plan mode for the page hash counts. Stale: a step goes stale when the acceptance tree fingerprint changes, not when HEAD moves. Session: the step list is filed under the payload session_id, in any mode.",
+   "Checks: the 60-second wait guard refuses long commands, so a check runs as start and poll calls, and the hook reads the RESULT line. Letters: K is a choice row and S a self-approval row, so C stays for acceptance criteria. Speed first: step 1 restores its entry under features, so merging does not overwrite its Build state; this reverses the design page's wait.",
    null,
    null
   ],
   [
    "chg",
-   "Decisions I took while planning (2 of 2)",
+   "Decisions I took while planning (3 of 3)",
    "Chosen by me, listed for QA",
    null,
-   "Ledger: keyed by feature, with / turned into -. Block cap: set to 1000, not 0, because what 0 means is unverified; this changes one line of the approved design. Speed first: not a blocker, since the stage file keeps both features; this branch merges main first.",
+   "Block cap: set to 1000, not 0, and step 15 proves a ninth block holds; this changes one line of the design you approved. Finish order: docs, pictures, tests, then the QA page, so the fingerprint does not go stale. Plan test command: verify.py && tools/verify_tools.py, carried in the plan, with a refusal when it is missing.",
    null,
    null
   ],
   [
    "chg",
    "Acceptance tests C1 to C3",
-   "Run in step 15, saved under docs/qa/quiet-unattended-mode/",
+   "Each is a line in criteria.md",
    null,
-   "C1 rule lines: grep finds no ask or wait line outside look-or-function and hard stops. C2 presence: each mode behaves as the table says. C3 loop on: an unattended run keeps the six checks.",
+   "C1. grep -c finds none of the old ask and wait strings in the rule files | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C2. each mode treats a prompt as the table in the systems doc says | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C3. an unattended run keeps the six checks and skips the three refusals | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html",
    null,
    null
   ],
   [
    "chg",
    "Acceptance tests C4 to C6",
-   "Each is a line in criteria.md with proof: run",
+   "Each is a line in criteria.md",
    null,
-   "C4 approval: self-approval is refused in auto and normal mode. C5 step list: a step cannot be marked done by hand. C6 finish line: the four steps cannot be parked, replaced or deleted.",
+   "C4. self-approval is recorded with a clean verdict and refused without one, and in auto and normal mode | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C5. a step cannot be marked done by hand | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C6. the four finish steps cannot be parked, replaced or deleted | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html",
    null,
    null
   ],
   [
    "chg",
    "Acceptance tests C7 to C9",
-   "Each is a line in criteria.md with proof: run",
+   "Each is a line in criteria.md",
    null,
-   "C7 stop check: a stop with a step open is blocked, even with no reply text. C8 assumption: a look-or-function choice is decided and listed first on QA. C9 restart: a forced stop is resumed by session id.",
+   "C7. a stop with an open step is blocked, even with no reply text | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C8. a look-or-function choice is decided and listed first on QA | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C9. a forced stop is resumed by session id | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html",
    null,
    null
   ],
   [
    "chg",
    "Acceptance tests C10 to C12",
-   "Each is a line in criteria.md with proof: run",
+   "Each is a line in criteria.md",
    null,
-   "C10 QA-only: no decision is reported before the QA page. C11 gates: a run nobody can answer is not frozen by a hold. C12 reversals: each reversed decision has its dated entry.",
+   "C10. no decision is reported before the QA page | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C11. a run nobody can answer is not frozen by a hold | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html. C12. each reversed decision has its dated entry | proof: run | page: docs/plans/2026-11-25-quiet-unattended-mode.html",
    null,
    null
   ]
  ],
  "wrapup": {
   "summary": "A fifteen-step build plan for the approved quiet unattended mode, under parent issue #634 (Quiet unattended mode: decide, log, and run to QA without stopping).",
-  "changing": "The plugin's rules, hooks, ledger script, page builder, tests and docs, and tools/overnight.sh. Here verify.py means python claude-house-rules/plugins/house-rules/scripts/verify.py; each step also updates the tests it breaks and adds its CHANGELOG.md line. This build plan's test command is verify.py.",
+  "changing": "The plugin's rules, hooks, ledger script, page builder, tests and docs, and tools/overnight.sh. Here verify.py means python claude-house-rules/plugins/house-rules/scripts/verify.py. The plan's test command is verify.py && python tools/verify_tools.py. Each step also updates the tests it breaks and adds its CHANGELOG.md line.",
   "blocking": "Your line \"Build plan approved: quiet unattended mode\". Nothing else waits on you.",
   "next": "After you approve, I merge main, re-check the line numbers, build step 1 and work the steps in order.",
   "todo": [
