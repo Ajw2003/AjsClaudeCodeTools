@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode is ready for QA (#634): the acceptance run is stamped (12 of 12, round 3), all seven verify parts and the tools suite pass on the final code, and the QA page is `docs/plans/2026-11-25-quiet-unattended-mode-qa.html`.
+
 Quiet unattended mode: the final suite run is in progress on the last code change (#644); the live-run write-up now records the two things the round 3 reviewer found in run 6 (a double launch and the final pass reopening steps).
 
 Quiet unattended mode passes acceptance round 3 with all twelve criteria (#644); the tree fingerprint now ignores `docs/page-style.json` (a live run showed the final pass reopening every step by writing it), with a delegation case, and the QA page content is drafted. The full suites are re-running on that last change before the stamp.
