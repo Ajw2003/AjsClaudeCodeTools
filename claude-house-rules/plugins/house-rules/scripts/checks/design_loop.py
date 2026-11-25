@@ -4277,6 +4277,13 @@ def jb(sid):
     return [bool(core.roadblock_check(pl(sid), "I finished the thing.", False)[0]) for _ in range(3)]
 r["judge_once_with_list"] = jb("s1") == [True, False, False]
 r["judge_old_without_list"] = jb("none") == [True, True, False]
+# live run: an autosave commit at every stop must not count as progress, or a looping agent is never marked stuck
+dl.record_steps(g, "f", plan, "s3")
+os.makedirs(os.path.join(d, "docs", "5-today"), exist_ok=True)
+for i in range(5):
+    open(os.path.join(d, "docs", "5-today", "n%d.md" % i), "w").write("x\n"); git("add", "-A"); git("commit", "-qm", "wip: autosave")
+    chk("x", sid="s3")
+r["stuck_despite_autosave_commits"] = any(s.get("stuck") for s in dl._loop_read(g)[0]["steps"]["s3"]["steps"])
 print(r, file=sys.stderr)
 print(all(r.values()))
 """)

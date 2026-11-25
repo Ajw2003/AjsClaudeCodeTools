@@ -698,6 +698,22 @@ def judge_blocked(payload, mark=False):
     return bool(rec.get("judge_blocked"))
 
 
+def _tree_fp(cwd):
+    """acceptance.py tree fingerprint of the project at cwd ("slow" when it cannot be computed in 20 s). It ignores
+    docs/qa, docs/5-today, CHANGELOG.md and the stage file, so an autosave commit does not change it."""
+    try:
+        top = subprocess.run(["git", "-C", cwd or ".", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True, check=True).stdout.strip()
+        r = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "acceptance.py"), "tree", "--root", top], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           universal_newlines=True, timeout=20)
+    except (OSError, subprocess.SubprocessError) as exc:
+        sys.stderr.write("house-rules: the step stop check could not fingerprint the tree (%s), so it counts as "
+                         "unchanged.\n" % type(exc).__name__)
+        return "slow"
+    return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else "slow"
+
+
 def step_stop_check(payload, reply_text):
     """#640: (block reason or None, systemMessage or None). Runs on every stop: blocks while a step of this
     session's list is open, even with no reply text. NEEDS YOU exempts nothing; only a parked step does.
@@ -722,8 +738,7 @@ def step_stop_check(payload, reply_text):
                              "do not reset on a new message.\n" % type(exc).__name__)
     nxt = next(s for s in rec["steps"] if s["title"] == open_steps[0])
     n = str(nxt["n"])
-    head = subprocess.run(["git", "-C", data.get("cwd") or ".", "rev-parse", "HEAD"], stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE, universal_newlines=True).stdout.strip()
+    head = _tree_fp(data.get("cwd"))  # not HEAD: the autosave commit at every stop would count as progress (live run)
     done = sum(1 for s in rec["steps"] if s.get("state") == "done")
     last = rec.get("last_block") or {}
     blocks = rec.setdefault("blocks", {})
