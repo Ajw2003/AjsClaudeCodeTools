@@ -817,15 +817,81 @@ def _overnight_case():
             f.write('#!/bin/sh\necho "$HOUSE_RULES_UNATTENDED $ART_PIPELINE $*"\n')
         os.chmod(os.path.join(d, "claude"), 0o755)
         env = dict(os.environ, PATH=d + os.pathsep + os.environ["PATH"])
-        p = subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "-p", "hi"], env=env,
+        p = subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "--interactive", "-p", "hi"], env=env,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         check(p.returncode == 0 and p.stdout.strip() == "on unattended --dangerously-skip-permissions -p hi"
               and os.access(os.path.join(HERE, "overnight.sh"), os.X_OK),
-              "overnight.sh exports both variables and runs claude with the permission flag and its arguments",
+              "overnight.sh --interactive exports both variables and runs claude once with the permission flag and its arguments",
               "got %r %r" % (p.stdout, p.stderr))
     finally:
         shutil.rmtree(d, True)
 _overnight_case()
+
+def _overnight_loop_case():
+    sys.path.insert(0, os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scripts"))
+    from house_rules import core
+    d = tempfile.mkdtemp()
+    try:
+        repo = os.path.join(d, "repo")
+        os.makedirs(os.path.join(repo, ".claude"))
+        subprocess.run(["git", "init", "-q", repo], check=True)
+        log = os.path.join(d, "log")
+        stub = os.path.join(d, "bin", "claude")
+        os.makedirs(os.path.dirname(stub))
+        # every call rewrites the stage file: one step for the session id, stuck only on a --resume call unless NEVER_CLOSE is set
+        with open(stub, "w") as f:
+            f.write("""#!/bin/sh
+echo "$CLAUDE_CODE_STOP_HOOK_BLOCK_CAP|$CLAUDE_SESSION_ID|$*" >> "$LOG"
+python3 - "$REPO" "$CLAUDE_SESSION_ID" "${NEVER_CLOSE:-}" "$*" <<'PY'
+import json, sys
+repo, sid, never, argv = sys.argv[1:5]
+stuck = "--resume" in argv and not never
+rec = {"feature": "feature", "steps": [{"n": 1, "title": "Step 1", "check": "true", "state": "open", "stuck": stuck}]}
+json.dump({"feature": "feature", "stage": "build", "skip": False, "approvals": [], "steps": {sid: rec}},
+          open(repo + "/.claude/house-rules-loop.json", "w"))
+PY
+""")
+        os.chmod(stub, 0o755)
+        script = os.path.join(HERE, "overnight.sh")
+        def run(extra=None, cap=None):
+            env = dict(os.environ, PATH=os.path.dirname(stub) + os.pathsep + os.environ["PATH"], LOG=log, REPO=repo,
+                       CLAUDE_CONFIG_DIR=os.path.join(d, "cfg"))
+            env.pop("CLAUDE_SESSION_ID", None)
+            if cap:
+                env["HOUSE_RULES_OVERNIGHT_MAX_RESUMES"] = cap
+            env.update(extra or {})
+            if os.path.exists(log):
+                os.remove(log)
+            p = subprocess.run(["sh", script, "do", "the", "work"], cwd=repo, env=env, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, text=True, timeout=40)
+            return p, open(log).read().splitlines()
+        resume = "[Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step."
+        p, lines = run()
+        sid = lines[0].split("|")[1] if lines else ""
+        check(len(lines) == 2 and sid and lines[0] == "1000|%s|-p do the work --session-id %s --dangerously-skip-permissions" % (sid, sid)
+              and lines[1] == "1000|%s|-p %s --resume %s --dangerously-skip-permissions" % (sid, resume, sid)
+              and not any("--continue" in l for l in lines),
+              "overnight.sh loop: first call --session-id, one --resume with the same id and resume text, cap exported, no --continue",
+              "got %r %r" % (lines, p.stderr))
+        check(bool(core._RELAYED_PROMPT_RE.search(resume)), "overnight.sh resume text matches core._RELAYED_PROMPT_RE", resume)
+        p, lines = run({"NEVER_CLOSE": "1"}, cap="1")
+        check(len(lines) == 2 and "stopped after 1 resumes" in p.stdout,
+              "overnight.sh stops after HOUSE_RULES_OVERNIGHT_MAX_RESUMES resumes and says so", "got %r %r" % (lines, p.stdout))
+        note = os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scripts", "ledger_note.py")
+        loop = os.path.join(repo, ".claude", "house-rules-loop.json")
+        def status(steps):
+            json.dump({"feature": "feature", "stage": "build", "skip": False, "approvals": [],
+                       "steps": {"S1": {"feature": "feature", "steps": steps}} if steps else {}}, open(loop, "w"))
+            r = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+            return r.returncode, r.stdout.strip()
+        st = {"n": 1, "title": "Step 1", "check": "true", "state": "open"}
+        got = (status(None), status([st]), status([dict(st, stuck=True)]))
+        check(got == ((0, "NO STEP LIST"), (1, "OPEN 1"), (0, "ALL DONE")),
+              "ledger_note.py steps-status prints NO STEP LIST, OPEN n, ALL DONE with the right exit codes", "got %r" % (got,))
+    finally:
+        shutil.rmtree(d, True)
+_overnight_loop_case()
 
 def _time_hooks_case():
     p = subprocess.run([sys.executable, os.path.join(HERE, "time_hooks.py"), "--quick"],

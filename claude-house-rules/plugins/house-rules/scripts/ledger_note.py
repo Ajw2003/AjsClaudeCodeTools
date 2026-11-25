@@ -158,6 +158,25 @@ def run_check(a):
     return 0
 
 
+def steps_status_cmd(a):
+    """ALL DONE (0) / OPEN n (1) / NO STEP LIST (0) for the session's step list; stuck and parked steps do not count.
+    Reads the stage file through design_loop.steps_unfinished (the outside copy never records done)."""
+    import json
+    from house_rules import design_loop
+    top = subprocess.run(["git", "rev-parse", "--git-dir"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         universal_newlines=True)
+    if top.returncode:
+        sys.stderr.write("ledger_note.py: steps-status: not inside a git project\n")
+        return 2
+    left = design_loop.steps_unfinished(os.path.abspath(top.stdout.strip()),
+                                        json.dumps({"session_id": a.session, "cwd": os.getcwd()}))
+    if left is None:
+        print("NO STEP LIST")
+        return 0
+    print("OPEN %d" % len(left) if left else "ALL DONE")
+    return 1 if left else 0
+
+
 def main(argv):
     ap = argparse.ArgumentParser(prog="ledger_note.py")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -167,6 +186,9 @@ def main(argv):
     g = c.add_mutually_exclusive_group(required=True)
     g.add_argument("--start", action="store_true")
     g.add_argument("--poll", action="store_true")
+    t = sub.add_parser("steps-status")
+    t.add_argument("feature")
+    t.add_argument("--session", required=True)
     k = sub.add_parser("decide")
     k.add_argument("feature")
     for o in ("step", "choice", "assumption", "why", "undo"):
@@ -188,6 +210,8 @@ def main(argv):
     a = ap.parse_args(argv)
     if a.cmd == "check":
         return run_check(a)
+    if a.cmd == "steps-status":
+        return steps_status_cmd(a)
     if a.cmd == "deviate" and a.step_action:
         err = None
         if a.step_action == "delete":
