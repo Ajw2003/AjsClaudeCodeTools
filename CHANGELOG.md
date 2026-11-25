@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Speed first continued: merged the speed-first branch (step 3) into ccr-3849bb3b-c267ho, re-measured old against new in `docs/qa/speed-first/results.md`, and added the handoff note `docs/5-today/handoff-ccr-3849bb3b-c267ho.md`; steps 2 (#627) and 6 (#631) remain.
+
 Speed step 5, append-only hook log (#630): `_log_line` appends one line and trims to the newest 500 lines only once the log passes 128 KB, so a log line costs 0.011 ms instead of 0.384 ms; measured results for steps 3, 4 and 5 are in `docs/qa/speed-first/results.md` (Write hooks 649 to 145 ms, Bash 458 to 163 ms).
 
 Review models per mode: plan back on Opus, code now runs Opus then Sonnet and merges the findings, codebase, image and style stay on Sonnet; "override typed at spawn" now reads "model set at spawn"; Decisions entry and doc rows brought up to date (plugin 2.94.6).

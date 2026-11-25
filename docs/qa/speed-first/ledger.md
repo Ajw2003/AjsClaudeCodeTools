@@ -12,3 +12,4 @@ Every change from the approved build plan, and every question parked instead of 
 
 | # | Step | Question | Default taken for now | What it affects | How to answer |
 |---|---|---|---|---|---|
+| P1 | Step 5 (#630) | How often should the hook log be trimmed: every write (old), or only once it passes 128 KB? | Append every line; trim to the newest 500 lines only past 128 KB, so the log can hold more than 500 lines between trims | The hook log length (up to about 128 KB) and the existing 500-line cap check, which now seeds 150 KB | Reply with the answer to restore your choice; the default is easy to undo. |

@@ -1,0 +1,16 @@
+# Handoff: ccr-3849bb3b-c267ho (2026-11-25)
+
+## What the work is for
+Finish the speed-first work that branch AjsAgent/speed-first started: less hook time on every tool call, and a measured before and after.
+
+## Where it stands
+That branch is merged in (step 3, one hook process per tool phase). Step 5 is done: the hook log in core.py `_log_line` appends and trims only past 128 KB, with two checks. Step 4 needs no change, since the label reads already run at the same time. Measured results, old main against this branch, are in docs/qa/speed-first/results.md: Write hooks 649 to 145 ms, Bash 458 to 163 ms. The failing verify checks are the same on main and here.
+
+## The next step
+Profile the make_page verify part (100 s, the longest) for step 6, then return to step 2 with a per-event module list. aj chooses the order.
+
+## What is unverified
+The full verify.py was not run end to end, only the seven parts separately. Timings come from a cloud sandbox, not aj's PC. The 128 KB trim threshold is parked in the ledger for aj to confirm.
+
+## The issue numbers
+Parent #625; steps #626 (timing script), #627 (load less), #628 (one process per phase), #629 (label reads), #630 (append-only log), #631 (easy test wins).
