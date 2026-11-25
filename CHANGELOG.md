@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode: the final suite run is in progress on the last code change (#644); the live-run write-up now records the two things the round 3 reviewer found in run 6 (a double launch and the final pass reopening steps).
+
 Quiet unattended mode passes acceptance round 3 with all twelve criteria (#644); the tree fingerprint now ignores `docs/page-style.json` (a live run showed the final pass reopening every step by writing it), with a delegation case, and the QA page content is drafted. The full suites are re-running on that last change before the stamp.
 
 Quiet unattended mode acceptance round 3 is running (#644): a reviewer is re-judging all twelve criteria after the choices check and live run 6; nothing in the plugin changed since the last entry.
