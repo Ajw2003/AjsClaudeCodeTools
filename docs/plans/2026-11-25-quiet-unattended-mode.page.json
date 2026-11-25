@@ -173,7 +173,7 @@
   "blocking": "Your approval line; no code is touched until you send it.",
   "next": "After you approve, I build it in small steps. I run verify.py (the check that the hooks match the docs). Then I test a real unattended session before the QA page.",
   "todo": [
-   "Read the five changes.",
+   "Read the six changes.",
    "Tap Copy my reply.",
    "Send it."
   ]

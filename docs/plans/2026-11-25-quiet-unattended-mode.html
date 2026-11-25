@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.94.7 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="20613528e24c9a983b217571df32f1854c36ef4ac9fd27e0181a013be466c01c;open-risks;1">
+<meta name="house-rules-reviewed" content="b3ba8218ae400016037d34ba157a0c96d277a74a7b19362ddf84264df8e81e16;open-risks;1">
 <meta name="house-rules-page" content="proposal">
 <title>Quiet unattended mode: decide, log, keep going</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -259,7 +259,7 @@ dialog.lightbox button{margin-top:10px}
   <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
-    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the five changes.</label></li><li><label><input type="checkbox"> Tap Copy my reply.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: quiet unattended mode", or say what to change.</label></li></ol></div></div></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the six changes.</label></li><li><label><input type="checkbox"> Tap Copy my reply.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: quiet unattended mode", or say what to change.</label></li></ol></div></div></div>
     <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Where: rules/show-dont-tell.md:11, rules/detail/show-dont-tell.md:11, scripts/house_rules/core.py:1610, rules/standards/coding-philosophy.md:58.</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Approve it as written</p></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
@@ -455,7 +455,7 @@ const PAGE = {
     "blocking": "Your approval line; no code is touched until you send it.",
     "next": "After you approve, I build it in small steps. I run verify.py (the check that the hooks match the docs). Then I test a real unattended session before the QA page.",
     "todo": [
-      "Read the five changes.",
+      "Read the six changes.",
       "Tap Copy my reply.",
       "Tap <b>Copy my reply<\/b> and send it: \"Design approved: quiet unattended mode\", or say what to change."
     ]
