@@ -1,5 +1,7 @@
 # Today — 2026-11-25
 
+Quiet unattended mode: acceptance round 2 left C8; a once-only choices check was added to the stop hook, the full suites are re-running, then a live run and round 3.
+
 Quiet unattended mode, round 2 of acceptance passed 11 of 12 criteria; C8 needs a live run whose prompt does not say to decide or log. That run (run 5, sonnet) is in progress; then round 3, the stamp, QA page, label swap and pull request.
 
 Quiet unattended mode, round 2 of acceptance is running after the round-1 fixes; all suites pass. Next: read `round-2.md`, then stamp, QA page, label swap, pull request.
