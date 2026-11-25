@@ -4,7 +4,7 @@
  "pageType": "proposal",
  "approval": "Design approved: quiet unattended mode",
  "short": {
-  "lead": "Unattended mode still stops. Five things in the rules and hooks make me ask or let me quit. This plan removes all five. I need one approval line from you.",
+  "lead": "Unattended mode still stops. Six things in the rules and hooks make me ask or let me quit. This plan removes all six. I need one approval line from you.",
   "hint": "Tap a step to see it.",
   "key": [
    [
@@ -22,7 +22,7 @@
     "Idea",
     "I decide, you design",
     "",
-    "Only choices that change how something looks or what it does come to you. Every other choice I make myself, write down, and carry on.",
+    "Only choices that change how something looks or what it does come to you. Every other choice I make myself, write down, and carry on. Once a goal is set, I work its steps to the end.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%22300%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EA%20choice%20comes%20up%3C/text%3E%3Cpath%20d=%22M160%2055%20V70%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%2210%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%2218%22%20y=%2290%22%3EChanges%20the%20look%3C/text%3E%3Ctext%20x=%2218%22%20y=%22106%22%3Eor%20what%20it%20does%3C/text%3E%3Crect%20x=%22165%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22173%22%20y=%2290%22%3EAnything%20else%3C/text%3E%3Ctext%20x=%2214%22%20y=%22140%22%20fill=%22%23c33%22%3EAsk%20you,%20as%20a%20page%3C/text%3E%3Ctext%20x=%22169%22%20y=%22140%22%3EI%20decide%20and%20write%20it%20down%3C/text%3E%3Ctext%20x=%22169%22%20y=%22156%22%3Ethen%20carry%20on%3C/text%3E%3C/svg%3E",
@@ -35,7 +35,7 @@
     "Idea",
     "Keep going until the goal is met",
     "",
-    "The check at the end of a reply now runs on every reply, not only after two set phrases. A second loop outside the session restarts it if it quits.",
+    "The plan becomes numbered steps. A check on every reply blocks the stop while a step is open, in every mode. A second loop outside the session restarts it if it quits.",
     "Nothing from you.",
     {
      "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2220%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2240%22%3EWork%3C/text%3E%3Crect%20x=%22120%22%20y=%2220%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22128%22%20y=%2240%22%3EGoal%20met%3F%3C/text%3E%3Cpath%20d=%22M100%2040%20H120%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Cpath%20d=%22M165%2060%20V100%20H55%20V60%22%20fill=%22none%22%20stroke=%22%23c33%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2262%22%20y=%2292%22%20fill=%22%23c33%22%3Eno:%20block%20the%20stop%3C/text%3E%3Cpath%20d=%22M210%2040%20H235%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%22235%22%20y=%2220%22%20width=%2275%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22243%22%20y=%2240%22%3EStop%3C/text%3E%3Ctext%20x=%22243%22%20y=%2256%22%3Eyes%20only%3C/text%3E%3Ctext%20x=%2210%22%20y=%22130%22%3EToday:%20two%20phrases,%20two%20blocks,%20then%20it%20quits.%3C/text%3E%3Ctext%20x=%2210%22%20y=%22150%22%3EPlan:%20every%20reply%20end,%20plus%20an%20outer%20loop.%3C/text%3E%3C/svg%3E",
@@ -95,27 +95,27 @@
   ],
   [
    "changed",
-   "Unattended switches the ledger off",
-   "Unattended keeps the ledger, pages and QA page",
+   "Unattended switches the design loop off",
+   "Unattended keeps the design loop and runs it itself",
    null,
-   "Unattended turns off every switch except autosave. Pages, the ledger and the QA check come back on. The source-edit lock stays off, in unattended only; bypass mode keeps it, because you also use bypass while present.",
+   "The design loop stays on. I design, decide, have the plan reviewed by a helper, approve it myself, build the steps and hand over a QA page. Every self-approval and decision is logged and shown on the QA page.",
    [
     "Where: core.py:2737, 2850 and 2853; design_loop.py:2952; core.py:696.",
-    "The edit lock and approval wait stay off.",
+    "Self-approval is recorded as auto-approved, unattended. Only unattended does this.",
     "Writing checks, builders and issues stay off."
    ],
    null
   ],
   [
    "new",
-   "A stop that is held until the goal is met",
-   "Goal check on every reply, plus a restart loop",
+   "Stopping part-way, in any mode",
+   "No stopping with steps left, in any mode",
    null,
-   "Today the check fires only on two phrases, blocks twice, and quits. It reads the first message as the goal, which changes after a restart. The new version writes a goal file at the start and checks it on every reply.",
+   "Your screenshot shows a session ending with \"is not done\". The plan becomes a numbered step list. A check on every reply blocks the stop while a step is open. A step that truly needs you goes to the QA ledger and I carry on.",
    [
     "Where: core.py:3516, 3518, 3684, 3840; tools/overnight.sh.",
-    "Limits: 5 restarts, 8 hours in total, and a hard stop or NEEDS YOU ends the run.",
-    "A separate judge, not me, marks the goal file done. In the web app a scheduled task resumes it."
+    "Cost limits only: 5 restarts, 8 hours in total. They end the run into QA, not into a question.",
+    "A separate judge marks each step done. In the web app a scheduled task resumes it."
    ],
    null
   ],
@@ -135,12 +135,12 @@
   [
    "changed",
    "Earlier decisions of yours are reversed",
-   "Five earlier decisions are reversed",
+   "Six earlier decisions are reversed",
    null,
    "Each reversal gets a new dated entry in docs/6-decisions/Decisions.md and a pointer left in the old one.",
    [
-    "Where: Decisions.md lines 87, 101, 133, 141 and 143.",
-    "Reversed: stall phrases only at turn end, block twice, rule text only overridden by a note, refusals under Waiting on you, all switches off.",
+    "Where: Decisions.md lines 87, 101, 133, 141 and 143, and the rule that approval only counts from your own message.",
+    "Reversed: stall phrases only at turn end, block twice, rule text only overridden by a note, refusals under Waiting on you, all switches off, approval only from you.",
     "The goal check now blocks up to 7 times, below Claude Code's limit of 8."
    ],
    null
@@ -155,7 +155,7 @@
      "A",
      "Approve it as written",
      1,
-     "Fixes all five causes together, with the limits above."
+     "Fixes all six causes together, with the limits above."
     ],
     [
      "B",
@@ -164,11 +164,11 @@
      "Tell me what, in your own words."
     ]
    ],
-   "I recommend A. Fixing only some of the five would still leave unattended mode stopping."
+   "I recommend A. Fixing only some of the six would still leave unattended mode stopping."
   ]
  ],
  "wrapup": {
-  "summary": "Five rule and hook problems (plus five reversals of earlier decisions) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
+  "summary": "Six rule and hook problems (plus six reversals of earlier decisions) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
   "changing": "The rule files, the I-went-with check, what unattended turns off, the goal check, the guard messages, tools/overnight.sh, ledger_note.py, hooks.json, the tests, the docs and the changelog.",
   "blocking": "Your approval line; no code is touched until you send it.",
   "next": "After you approve, I build it in small steps. I run verify.py (the check that the hooks match the docs). Then I test a real unattended session before the QA page.",
