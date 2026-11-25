@@ -1399,7 +1399,7 @@ def handover_record_offers(payload, have_reply, reply_text, trace_lines):
         if changed:
             _st["offered"] = offered
         # #459: a reply in Build that asks aj something holds code edits until aj's next message
-        if _st.get("stage") == "build" and _asks_aj(reply_text):
+        if _st.get("stage") == "build" and _asks_aj(reply_text) and not core.nobody_present(payload):  # #637
             if "[HARD STOP]" in _MD_FENCED_BLOCK_RE.sub("", reply_text or "").strip().split("\n\n")[-1]:
                 if not _st.get("held"):
                     _st["held"] = True
@@ -1544,12 +1544,13 @@ def _loop_gate(payload):
             return hold, None
     if script and state["stage"] == "build":
         return None, None  # Build: nothing changes for shell commands
-    if state["stage"] == "build" and state.get("held"):
+    nobody = core.nobody_present(payload)  # #637: no question hold, no GitHub-label refusals
+    if state["stage"] == "build" and state.get("held") and not nobody:
         return ("House rules, design loop: the last reply asked aj a question, so code edits wait for their "
                 "answer."), None
     if state["stage"] == "build":
         labels, src = _loop_labels(state, record=False)
-        if src:  # D9: GitHub could not be read, and the record of an old branch is not evidence
+        if src and not nobody:  # D9: GitHub could not be read, and the record of an old branch is not evidence
             return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, but "
                     "this hook could not read GitHub (%s), so the edit is refused. It will work once gh can read the issues."
                     % (state.get("feature") or "", LOOP_WORKING, src)), None
@@ -1560,7 +1561,7 @@ def _loop_gate(payload):
         if state.get("reopened") != reopened:  # #504: the issues are back at in progress
             _loop_write(git_dir, state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
-        if not wrong:
+        if not wrong or nobody:
             return None, src or None
         return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, and "
                 "these are not: %s. Fix the labels, then edit again.%s"
@@ -2932,6 +2933,8 @@ CHECKPOINTS = [
 ]
 
 
+NOBODY_CHECKPOINTS = ("evidence", "commit", "deviation", "qa page", "changelog", "decided for you")
+
 CHECKPOINT_RULES = {
     "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
     "editor": "A page goes past @house-rules:editor before aj reads it; a long reply too when HOUSE_RULES_EDITOR=on.",
@@ -2951,8 +2954,10 @@ def _missed_checkpoints(ctx):
     """[(rule name, fix)] for every blocking checkpoint at 'reply ends' that the reply misses."""
     if not _loop_enabled():  # light mode: evidence and commit still arrive, as the stop hook's reminders
         return []
+    quiet = ctx.get("hands_off") or core.unattended()  # #637: nobody present runs only these six
     return [(name, fix) for moment, name, fn, mode in CHECKPOINTS
-            if moment == "reply ends" and mode == "block" for fix in [fn(ctx)] if fix]
+            if moment == "reply ends" and mode == "block" and (not quiet or name in NOBODY_CHECKPOINTS)
+            for fix in [fn(ctx)] if fix]
 
 
 def _checkpoint_reason(missed):
