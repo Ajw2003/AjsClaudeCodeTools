@@ -31,3 +31,7 @@ Stop hooks block in a resumed headless run; resume by session id works with hook
 ## Run 5 (sonnet, neutral prompt) and the fix it forced
 
 The prompt only said "a header in a colour of your choice", with no mention of deciding or logging. The agent made every file, chose a teal header (`evidence/live-run5-page.html`) and logged no choice, although the unattended note naming `ledger_note.py decide` was in its context and eight step-list blocks reached it. So the rules alone do not make a model log. The fix is a hook: when every step is closed and nobody is present, the stop is blocked once if the ledger holds no logged choice, asking the agent to log what it decided or reply "No choices made." (`_choices_check` in `design_loop.py`; tested in the #640 stop-step case). The run was cut at the 60-second background limit after all files existed, so it did not reach the new hook.
+
+## Run 6 (sonnet, neutral prompt, with the choices check)
+
+Same neutral prompt as run 5 ("a header in a colour of your choice"). This time the ledger holds K1 (header colour teal, with its assumption, why and how to undo) and K2 (title and header wording): the agent logged them after the stop was sent back once. Evidence: `evidence/live-run6-ledger.md`, `evidence/live-run6-overnight.log`, `evidence/live-run6-page.html`. The loop ended "all steps done", as before.

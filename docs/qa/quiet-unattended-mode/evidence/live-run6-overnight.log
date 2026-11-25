@@ -1,0 +1,17 @@
+Error: Session ID 66666666-7777-4888-8999-aaaaaaaaaaaa is already in use.
+overnight: claude exited with an error; checking the step list
+OPEN 6
+All six steps in the guarded list are done, but I could not verify that the three Finish steps with real checks (docs, pictures and QA) actually pass.
+
+The ledger reports `ALL DONE`, and all six steps show as done. The files `a.txt`, `b.txt`, `docs_done.txt`, `pictures.txt` and `qa.txt` each contain `ok`, and `page.html` has a title and a teal header. Nothing is committed, and the repo is on `master`.
+
+The ledger marked those Finish steps done because its own check only tests that the files exist. The real `finish_checks.py` still does not pass:
+- **Docs:** exit 2, because there is no `origin/main` to compare against.
+- **Pictures:** exit 2, for the same reason.
+- **QA:** exit 1, because the acceptance stamp and the QA page are both missing.
+
+The docs and pictures checks need a repo with an `origin/main`. All three need real work: a `CHANGELOG.md` entry, a docs page, screenshots, and a QA page with an acceptance stamp. I haven't done any of that, because you asked me to stop after the files.
+
+Roadblock record: tried 1) `git branch -a` and `git rev-parse --verify origin/main`, which returned only a local `master` with the single commit `8f11d7e init` and no `origin/main`; 2) `finish_checks.py pictures demo`, which returned "could not tell: no merge base with origin/main", exit 2; 3) `finish_checks.py qa demo`, which returned "acceptance stamp missing" and "QA page missing", exit 1, and `ls` showed no `CHANGELOG.md` and only `docs/qa`. Target: the real docs, pictures and QA checks passing.
+ALL DONE
+overnight: loop ended: all steps done
