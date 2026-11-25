@@ -3757,3 +3757,13 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 **Why.** Code, planted-bug file: both models found 6 of 6; Sonnet took 10.4 s against 39.0 s. Code, real six-file batch: Opus 26 findings (43,196 tokens, 98.9 s), Sonnet 21 (35,815 tokens, 27.3 s); each found a real bug the other missed, Opus the cross-project transcript read in `session_ledger.py`, Sonnet the merge-base mismatch in `check_plugin_version_bump.py`. Page, the speed first plan: Opus 17 findings (81,316 tokens, 137.4 s), Sonnet 12 (77,323 tokens, 80.9 s); only Opus opened the saved baseline and found that step 2 cannot be built as written, so plan, which cross-checks a plan against code the same way, goes back to Opus. Diff of commit 09be0861: Opus 8 findings, Sonnet 7, close to parity. Dollar cost was not measured (the agent reports give one token total); image and style were not run.
 
 **Status.** Standing. Supersedes the plan and code on Sonnet default of plugin 2.94.5 and refines the reviewer on Opus tier line of the earlier tier entry. Open to a larger sample.
+
+## 2026-11-25 — Quiet unattended mode: design and build plan approved
+
+**Context.** Unattended mode still stopped and asked: rule text said to ask, a check blocked "I went with", unattended switched the design loop off, and nothing held a session open until its goal was met. Two design review rounds and two build plan review rounds found 83 holes; all are applied or decided on `docs/plans/2026-11-25-quiet-unattended-mode.html` and `docs/plans/2026-11-25-quiet-unattended-mode-plan.html`.
+
+**Decision.** aj wrote "Design approved: quiet unattended mode 1A" and "Build plan approved: quiet unattended mode". Unattended and bypass mean nobody is present and run the design loop to QA alone; auto stays attended; every list ends in four required finish-line steps; decisions show only on the QA page. Parent issue #634, steps #635 to #649. Decided by me while planning and listed on the build plan page: the verdict rule, staleness by tree fingerprint, the step list filed by session id, checks as start and poll calls, K and S ledger letters, speed first restored under features, the block cap set to 1000, and the finish order.
+
+**Why.** aj asked that unattended mode decide for itself, keep working until its goal is met, and leave only what truly needs aj for QA. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+**Status.** Building. The twelve reversals of earlier decisions get their own dated entries in step 14 (#645).
