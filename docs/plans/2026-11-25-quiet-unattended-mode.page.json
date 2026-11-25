@@ -70,52 +70,52 @@
   [
    "changed",
    "Rules tell me to hand routine choices to you",
-   "Rules say: decide unless it is look or function",
+   "Ask you only about look or function",
    null,
-   "Three places tell me to ask you. show-dont-tell.md line 11: routine calls go to you. core.py line 1610: a reminder sent on every prompt, even unattended, says to ask when unclear. coding-philosophy.md line 58: ask before adding a new dependency (an outside library) or a large refactor (reorganising existing code).",
+   "Four places tell me to ask. After the change, only choices about how something looks or what it does go to you, in every mode. Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people.",
    [
-    "Today the unattended note only overrides these in words.",
-    "I rewrite those three lines so nothing contradicts the unattended note.",
-    "You are asked about look and function only, plus hard stops: a licence, a login, a purchase, a deletion, money, secrets or other people."
+    "Where: rules/show-dont-tell.md:11, rules/detail/show-dont-tell.md:11, scripts/house_rules/core.py:1610, rules/standards/coding-philosophy.md:58.",
+    "A public API change counts as function, so it still comes to you.",
+    "Everything else I decide, log, and carry on."
    ],
    null
   ],
   [
    "changed",
-   "A check blocks me for deciding",
-   "\"I went with\" is logged, not blocked",
+   "\"I went with\" is blocked",
+   "Saying \"I went with\" or \"I chose\" is logged, not blocked",
    null,
-   "design_loop.py line 2831 holds back any reply that says \"I went with\". It tells me to give you the choice as options instead. You don't want that in unattended mode.",
+   "Today the check only runs in bypass mode, because unattended turns the loop off. Once the loop stays on, it would block me, so it must become a reminder to log the choice.",
    [
-    "Today it blocks the reply once.",
-    "It becomes a reminder to log the choice with one command (ledger_note.py).",
-    "You stop being asked."
+    "Where: design_loop.py:2839 and 2842.",
+    "The log gets a new row type, ledger_note.py decide.",
+    "Outside the design loop it logs under the branch name."
    ],
    null
   ],
   [
    "changed",
    "Unattended switches the ledger off",
-   "Unattended keeps the ledger and the QA page",
+   "Unattended keeps the ledger, pages and QA page",
    null,
-   "Typing unattended on turns the design loop off (core.py lines 2723 and 2850). With the loop off, the ledger (the file of my logged decisions) and the QA checks do nothing (design_loop.py line 2952). Bypass mode on its own (permissions skipped) keeps the loop on, so source edits stay locked until you type approved.",
+   "Unattended turns off every switch except autosave. Pages, the ledger and the QA check come back on. The source-edit lock stays off, in unattended only; bypass mode keeps it, because you also use bypass while present.",
    [
-    "Today each mode fails in its own way. Unattended loses the ledger. Bypass keeps the edit lock.",
-    "Both modes will have the edit lock off, the ledger on, and the QA page required at the end.",
-    "When a guard refuses an action, I write that to the ledger instead of telling you in the reply."
+    "Where: core.py:2737, 2850 and 2853; design_loop.py:2952; core.py:696.",
+    "The edit lock and approval wait stay off.",
+    "Writing checks, builders and issues stay off."
    ],
    null
   ],
   [
    "new",
    "A stop that is held until the goal is met",
-   "Goal check on every reply, plus an outer loop",
+   "Goal check on every reply, plus a restart loop",
    null,
-   "Three limits. It fires only on the phrases not done and I've stopped (core.py line 3516). It blocks at most twice (line 3731), and Claude Code overrides any end-of-reply hook after 8 blocks. A reply ending on a question never triggers it. Also, the number 6 at line 3684 is never used.",
+   "Today the check fires only on two phrases, blocks twice, and quits. It reads the first message as the goal, which changes after a restart. The new version writes a goal file at the start and checks it on every reply.",
    [
-    "Today, one polite closing line is enough to end the session.",
-    "I write a goal file. The check runs on every reply. tools/overnight.sh restarts the session until the goal file says done.",
-    "Where overnight.sh cannot launch the session (the web app), a scheduled task that resumes it is the fallback."
+    "Where: core.py:3516, 3518, 3684, 3840; tools/overnight.sh.",
+    "Limits: 5 restarts, 8 hours in total, and a hard stop or NEEDS YOU ends the run.",
+    "A separate judge, not me, marks the goal file done. In the web app a scheduled task resumes it."
    ],
    null
   ],
@@ -124,11 +124,24 @@
    "Decisions shown too early",
    "Decisions appear only on the QA page",
    null,
-   "When a guard refuses an action, its message tells me to list it under Waiting on you in my reply (safe_git.py lines 1584 and 1620). Parked questions (reversible questions I set aside) go in the final report. Both reach you before the QA page.",
+   "Four messages tell me to report decisions in replies or in the final report. They change to: write it to the ledger, say nothing, and show it on the QA page.",
    [
-    "Today they show up in my replies.",
-    "They go only into the ledger file, shown first on the QA page.",
-    "One exception: a hard stop is still reported to you straight away."
+    "Where: safe_git.py:1584 and 1620; core.py:2800 and 2958; tools/overnight.sh:4.",
+    "A hard stop is reported with NEEDS YOU in the reply.",
+    "Nothing else is said before QA."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "Earlier decisions of yours are reversed",
+   "Five earlier decisions are reversed",
+   null,
+   "Each reversal gets a new dated entry in docs/6-decisions/Decisions.md and a pointer left in the old one.",
+   [
+    "Where: Decisions.md lines 87, 101, 133, 141 and 143.",
+    "Reversed: stall phrases only at turn end, block twice, rule text only overridden by a note, refusals under Waiting on you, all switches off.",
+    "The goal check now blocks up to 7 times, below Claude Code's limit of 8."
    ],
    null
   ]
@@ -142,7 +155,7 @@
      "A",
      "Approve it as written",
      1,
-     "Fixes all five causes together, in one change."
+     "Fixes all five causes together, with the limits above."
     ],
     [
      "B",
@@ -155,8 +168,8 @@
   ]
  ],
  "wrapup": {
-  "summary": "Five rule and hook problems make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
-  "changing": "Three rule sources (show-dont-tell.md, core.py, coding-philosophy.md), the I-went-with check, what unattended turns off, the goal check, the guard messages and tools/overnight.sh.",
+  "summary": "Five rule and hook problems (plus five reversals of earlier decisions) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
+  "changing": "The rule files, the I-went-with check, what unattended turns off, the goal check, the guard messages, tools/overnight.sh, ledger_note.py, hooks.json, the tests, the docs and the changelog.",
   "blocking": "Your approval line; no code is touched until you send it.",
   "next": "After you approve, I build it in small steps. I run verify.py (the check that the hooks match the docs). Then I test a real unattended session before the QA page.",
   "todo": [
