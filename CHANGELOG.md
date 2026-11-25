@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode step 7 merged (#640): a stop check runs on every stop, even with no reply text, and blocks while a step in the guarded list is open, names the next step and its check commands, marks a step stuck after three blocks with no progress, lets a `QUESTION FOR YOU:` line through only when aj is present, and the judge blocks once per step set; NEEDS YOU text no longer exempts a session that has a step list.
+
 Quiet unattended mode build status (#634): nine of fifteen steps are merged and verified (#638, #636, #637, #639, #646, #647, #643, #635 and the fixes the suites caught); builders for the stop check (#640) and self-approval (#641) are running.
 
 Quiet unattended mode steps 6 and 13 merged (#647, #635): every step list ends with four required `Finish:` steps (docs, pictures, tests, QA page) checked by `finish_checks.py`, Build moves to QA from the step list when nobody is present and a pull request is denied while a step is open; the rule files now say to decide and log with `ledger_note.py decide` and ask only about look or function. The cap on `rules/show-dont-tell.md` is raised from 3307 to 3600 characters for that policy.
