@@ -2187,6 +2187,14 @@ report("PASS" if '"permissionDecision":"deny"' not in _un_cr_on and "credit rule
        and '"permissionDecision":"deny"' in _un_cr_off and "Remove every `Co-Authored-By:`" in _un_cr_off else "FAIL",
        "unattended: a Claude credit line is allowed with a note; attended the commit is still refused")
 print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
+# #643: a pull request body with a credit line is denied even with nobody present
+_un_pr_cmd = "gh pr " + 'create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"'
+_un_pr_pl = json.dumps({"session_id": "verify", "cwd": _u7, "tool_name": "Bash", "tool_input": {"command": _un_pr_cmd}})
+_un_pr_on = run_hook("guard", _un_pr_pl, env=dict(_project_env(_u7), HOUSE_RULES_UNATTENDED="on"))[1]
+_un_pr_off = run_hook("guard", _un_pr_pl, env=_project_env(_u7))[1]
+report("PASS" if '"permissionDecision":"deny"' in _un_pr_on and '"permissionDecision":"deny"' in _un_pr_off
+       and "credit rule was relaxed" not in _un_pr_on else "FAIL",
+       "#643: a pull request body with a credit line is denied unattended and attended")
 
 
 # --- #562: a background launch with no deadline is refused; an unchecked one is reported once ---

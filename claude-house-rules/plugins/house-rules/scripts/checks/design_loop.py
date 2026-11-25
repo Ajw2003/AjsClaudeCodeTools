@@ -3522,6 +3522,19 @@ _pf7_qa = {"qa_stage": "qa", "qa_page": "docs/plans/feat-qa.html", "cwd": _loop_
 _pf7.append(("proof (#507) D8: a bare claude.ai link is not the QA page; this feature's page file name is",
              _dl_mod._check_qa_page(dict(_pf7_qa, reply="QA page: https://claude" ".ai/artifact/abc")) != ""
              and _dl_mod._check_qa_page(dict(_pf7_qa, reply="QA page: docs/plans/feat-qa.html")) == ""))
+# #643: with K rows on the feature's ledger, a reply linking the QA page must say how many decisions were logged
+import tempfile as _k_tmp
+_k_top = _k_tmp.mkdtemp()
+os.makedirs(os.path.join(_k_top, ".git")); os.makedirs(os.path.join(_k_top, "docs", "qa", "feat"))
+_k_led = os.path.join(_k_top, "docs", "qa", "feat", "ledger.md")
+_k_ctx = dict(_pf7_qa, cwd=_k_top, qa_feature="feat", reply="QA page: docs/plans/feat-qa.html")
+open(_k_led, "w").write("## Choices\n\n| # | Step |\n|---|---|\n")
+_k_none = _dl_mod._check_qa_page(dict(_k_ctx))
+open(_k_led, "a").write("| K1 | 1 | a | b | c | d |\n")
+_k_with = _dl_mod._check_qa_page(dict(_k_ctx))
+_k_ok = _dl_mod._check_qa_page(dict(_k_ctx, reply=_k_ctx["reply"] + " 1 decision logged"))
+_pf7.append(("#643: QA page linked + K rows: blocked without a decision count; no K rows or a count: not",
+             _k_none == "" and "how many decisions" in _k_with and _k_ok == ""))
 
 # #102: before a change ships aj gets a final pass/fail through a QA page: in QA, a reply with no page is blocked.
 _ck_stage("qa")
