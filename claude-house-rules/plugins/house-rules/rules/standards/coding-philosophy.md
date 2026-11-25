@@ -55,8 +55,8 @@
 
 ## Working with Claude Code specifically
 
-- Ask before: adding a new dependency, deleting files, large refactors touching >3 files, or
-  changing a public API/signature.
+- Ask aj only when it changes look or function (a new dependency or public API change does; with
+  nobody present I decide and log it). Deleting files stays aj's. Large refactors: decide and log.
 - Don't ask before: fixing an obvious bug in the file already being edited, formatting,
   writing tests for code just written.
 - Match the style already present in a file over the rules in this doc, if they conflict —

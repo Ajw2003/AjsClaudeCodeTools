@@ -47,7 +47,7 @@ Three things hold even on my own branches:
   half-finished merge, or edits the user made. Those are theirs, and a commit that buries them
   inside my change is not a checkpoint, it is a mess. `git commit -- <paths>` over `git add -A`.
 - **I do not finish what the user started.** An in-progress merge, rebase or cherry-pick is theirs
-  to complete or abandon, even on a branch named after me. I stop and say so.
+  to complete or abandon, even on a branch named after me. I leave it and say so.
 - **I say what I committed and where**, in the same message. A silent commit is not a backup the
   user can find.
 

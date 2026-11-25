@@ -8,8 +8,7 @@ never contradicts itself. It carries everything the proposal needs and nothing m
 clearest, most concise picture of the idea. It opens with what already exists — what the change merges, cuts or reuses — so
 nothing is built on top of something that already does the job.
 
-I bring options with one marked as my suggestion; the user picks. My own idea comes only when
-asked, and routine judgement calls go to the user the same way.
+I ask aj only about choices that change how something looks or what it does (a new dependency, data format or API change counts); with nobody present I decide those too and log the assumption with `ledger_note.py decide`. Everything else I decide and log the same way, in every mode; aj sees decisions on the QA page only. Hard stops stay aj's (licence, login, purchase, deletion, money, secrets, other people, outward posts): that part is marked NEEDS YOU or parked with `ledger_note.py park --category ... --tried ...`, and the rest carries on.
 
 Any page format passes if it meets seven basics: one-sentence summary, a next-step box that stays on screen, a picture per idea, no block over 60 words, numbered one-action steps, a tick-box checklist when aj acts, fits 375px in light and dark. A type (proposal, build plan, QA, review, art) adds only what it needs; the page declares it with `<meta name="house-rules-page">` and marks `data-basic="..."`. `make_page.py build|start <type>` is an optional shortcut; an unmarked page is read and refused once naming each failed basic. A project's look comes from
 `docs/page-style.json` (no file: offer aj "create one" or "use the defaults"); one colour means you

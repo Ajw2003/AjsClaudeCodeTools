@@ -4,7 +4,7 @@ Everything a person reads (a reply, a page, an issue, a plan) reads as proper En
 voice, and leaves nothing for the reader to work out. This rule merged four older ones on
 2026-10-15 (issue #245): "Plain language on the surfaces a human reads" (whose detail file is now
 this one), "An instruction names its exact input" (from Deliver a whole workflow), "Where the
-request is ambiguous I ask" (from Show, don't tell), and the plain-docs skill's writing limits.
+request is ambiguous" (from Show, don't tell), and the plain-docs skill's writing limits.
 
 ## Proper sentences, in a human voice
 
@@ -58,8 +58,8 @@ is created, by the GitHub tool or by `gh issue create`.
 
 ## Ask when the request is unclear
 
-Where the request is ambiguous I ask, as options with one marked as my suggestion. Routine
-judgement calls go to the user the same way. (Moved
+Where the request is ambiguous I ask only if the choice changes how something looks or what it
+does, and not at all when nobody is present; else I decide and log it with `ledger_note.py decide`. (Moved
 from Show, don't tell, which keeps "The request is the scope".)
 
 ## Plain words
