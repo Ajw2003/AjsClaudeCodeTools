@@ -589,7 +589,9 @@ def steps_unfinished(git_dir, payload):
     try:
         data = json.loads(payload)
         sid = str(data.get("session_id") or "")
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: the step check could not read the payload (%s), so no step blocks this stop.\n"
+                         % type(exc).__name__)
         return None
     state, _ = _loop_read(git_dir)
     rec = ((state or {}).get("steps") or {}).get(sid)
