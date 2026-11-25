@@ -4,7 +4,7 @@
  "pageType": "proposal",
  "approval": "Design approved: quiet unattended mode",
  "short": {
-  "lead": "Unattended mode still stops. Six things in the rules and hooks make me ask or let me quit. This plan removes all six. I need one approval line from you.",
+  "lead": "Unattended mode still stops. This plan closes 11 ways it can ask or quit, after two independent reviews. I need one approval line from you.",
   "hint": "Tap a step to see it.",
   "key": [
    [
@@ -69,27 +69,27 @@
  "changes": [
   [
    "changed",
-   "Rules tell me to hand routine choices to you",
-   "Ask you only about look or function",
+   "Rule text tells me to ask, wait or stop",
+   "Ask only about look or function; never stop to ask",
    null,
-   "Four places tell me to ask. After the change, only choices about how something looks or what it does go to you, in every mode. Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people.",
+   "Many lines tell me to ask, wait or hand over. After the change, only choices about how something looks or what it does come to you. A dependency, data format or API change counts as function.",
    [
-    "Where: rules/show-dont-tell.md:11, rules/detail/show-dont-tell.md:11, scripts/house_rules/core.py:1610, rules/standards/coding-philosophy.md:58.",
-    "A public API change counts as function, so it still comes to you.",
-    "Everything else I decide, log, and carry on."
+    "Where: rules/show-dont-tell.md:5, 11, 12; rules/house-rules.md:91; rules/detail/clear-writing.md:19, 61; rules/detail/handover-command.md:28, 51, 163; rules/detail/commit-branches.md:50; rules/standards/coding-philosophy.md:58; agents/builder.md:11, 18; core.py:1546, 1610.",
+    "Everything else I decide, log, and carry on.",
+    "Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people."
    ],
    null
   ],
   [
-   "changed",
-   "\"I went with\" is blocked",
-   "Saying \"I went with\" or \"I chose\" is logged, not blocked",
+   "new",
+   "One test for nobody is there",
+   "Unattended, bypass, auto and dontAsk all count as nobody present",
    null,
-   "Today the check only runs in bypass mode, because unattended turns the loop off. Once the loop stays on, it would block me, so it must become a reminder to log the choice.",
+   "Today only unattended and bypass are recognised, so auto mode still asks and waits. One helper replaces every separate test.",
    [
-    "Where: design_loop.py:2839 and 2842.",
-    "The log gets a new row type, ledger_note.py decide.",
-    "Outside the design loop it logs under the branch name."
+    "Where: core.py:2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150.",
+    "The prompt timer refuses any permission prompt after its timeout when nobody is present.",
+    "Auto mode has its own safety check I cannot rewrite, so overnight runs use bypass."
    ],
    null
   ],
@@ -98,24 +98,76 @@
    "Unattended switches the design loop off",
    "Unattended keeps the design loop and runs it itself",
    null,
-   "The design loop stays on. I design, decide, have the plan reviewed by a helper, approve it myself, build the steps and hand over a QA page. Every self-approval and decision is logged and shown on the QA page.",
+   "The design loop stays on. I design, decide, have a helper review the plan, approve it, build the steps and hand over a QA page.",
    [
-    "Where: core.py:2737, 2850 and 2853; design_loop.py:2952; core.py:696.",
-    "Self-approval is recorded as auto-approved, unattended. Only unattended does this.",
-    "Writing checks, builders and issues stay off."
+    "Where: core.py:2723, 2737, 2850; design_loop.py:2952; hook.py:122.",
+    "Handover comes back on with these checks: evidence, commit, deviation, QA page, changelog, decision log.",
+    "Off: editor, page cap, plain summary, send page, builders, issues."
    ],
    null
   ],
   [
    "new",
-   "Stopping part-way, in any mode",
-   "No stopping with steps left, in any mode",
+   "Self-approval a hook records",
+   "The hook approves, only when a real review exists",
    null,
-   "Your screenshot shows a session ending with \"is not done\". The plan becomes a numbered step list. A check on every reply blocks the stop while a step is open. A step that truly needs you goes to the QA ledger and I carry on.",
+   "Today only your typed message moves the stage. A hook function, not a command I can run, records auto-approval. It needs: the launcher or your typed switch, a stored reviewer verdict for this page's hash, and a build plan with a done-when command per step.",
    [
-    "Where: core.py:3516, 3518, 3684, 3840; tools/overnight.sh.",
-    "Cost limits only: 5 restarts, 8 hours in total. They end the run into QA, not into a question.",
-    "A separate judge marks each step done. In the web app a scheduled task resumes it."
+    "Where: design_loop.py:621, 1157, 1418, 1476; make_page.py:609.",
+    "Agent writes to house-rules-mode.json are refused, so I cannot switch unattended on myself.",
+    "QA passed and Close approved stay yours only. Self-approval never updates the other-branch lock."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A step list I cannot edit",
+   "Steps live in a guarded file; the hook runs each check",
+   null,
+   "At approval the hook copies the steps from the reviewed build plan into the guarded stage file with a hash. A step is done only when its done-when command exits 0. I cannot mark it done or shrink the list.",
+   [
+    "Changes go only through ledger_note.py deviate, shown on the QA page.",
+    "A step is parked only with a hard-stop category, and still counts as not done on the QA page.",
+    "The open steps are re-injected at session start, resume and compaction, and in every stop block."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A check on every stop",
+   "One deterministic check, one shared counter, no model needed",
+   null,
+   "Today the check fires on two phrases and blocks twice. The new check reads the step file on every stop, even with no reply text. A missing step file while a goal is active counts as open.",
+   [
+    "Where: core.py:3516, 3518, 3684, 3731, 3835, 3840, 3869.",
+    "NEEDS YOU ends the stop only when every open step is marked needs-you.",
+    "overnight.sh sets CLAUDE_CODE_STOP_HOOK_BLOCK_CAP to 0 and the plugin keeps one counter. At most one model judge per stop, used only when the reply claims the last step is done; it can block but never end the run."
+   ],
+   null
+  ],
+  [
+   "new",
+   "Look or function choices with nobody there",
+   "Take the safe default, park it, list it first on QA",
+   null,
+   "A choice about look or function cannot wait for you, and I must not stop. I take the safest reversible default and log it as your call. Attended, a reply ending QUESTION FOR YOU: is allowed, and a new message from you clears any block.",
+   [
+    "The ledger gets a new row type, C for choice, via ledger_note.py decide.",
+    "QA lists your-call rows and auto-approvals first, with why and how to undo.",
+    "Outside the design loop the ledger is named after the branch, with / changed to -."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A restart loop outside the session",
+   "overnight.sh becomes a headless loop that resumes the session",
+   null,
+   "Today overnight.sh starts Claude once and sits idle after any stop. The new version starts with a fixed session id and resumes it by id after any stop, never by most recent session. The resume text is marked relayed, so it can never count as your approval.",
+   [
+    "Rate and usage limits: wait until the reset time, without using a restart.",
+    "Ends into QA when every step is done or parked; a last short run builds the QA page.",
+    "Limits: 24 hours and 5 restarts with no step closed. The web app has no loop; it relies on Claude Code's /goal and the step check, and is unverified."
    ],
    null
   ],
@@ -124,24 +176,37 @@
    "Decisions shown too early",
    "Decisions appear only on the QA page",
    null,
-   "Four messages tell me to report decisions in replies or in the final report. They change to: write it to the ledger, say nothing, and show it on the QA page.",
+   "Guard refusals, denied questions and the unattended note all tell me to report in the reply or the final report. They change to: write it to the ledger, say nothing, continue with the next open step.",
    [
-    "Where: safe_git.py:1584 and 1620; core.py:2800 and 2958; tools/overnight.sh:4.",
-    "A hard stop is reported with NEEDS YOU in the reply.",
-    "Nothing else is said before QA."
+    "Where: safe_git.py:1584, 1620; core.py:2800, 2958; tools/overnight.sh:4.",
+    "A hard stop marks its step needs-you and I continue with the others.",
+    "ExitPlanMode is allowed when nobody is present, and logged as a decision."
    ],
    null
   ],
   [
    "changed",
-   "Earlier decisions of yours are reversed",
-   "Six earlier decisions are reversed",
+   "Gates that freeze a run nobody can answer",
+   "Skipped when nobody is present",
    null,
-   "Each reversal gets a new dated entry in docs/6-decisions/Decisions.md and a pointer left in the old one.",
+   "With the loop on, a reply asking a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear any of these. A pull request opens only when every step is done or parked.",
    [
-    "Where: Decisions.md lines 87, 101, 133, 141 and 143, and the rule that approval only counts from your own message.",
-    "Reversed: stall phrases only at turn end, block twice, rule text only overridden by a note, refusals under Waiting on you, all switches off, approval only from you.",
-    "The goal check now blocks up to 7 times, below Claude Code's limit of 8."
+    "Where: design_loop.py:1401, 1524, 1547, 1552, 1562, 860, 872.",
+    "The step list, not a pull request, moves Build to QA.",
+    "In-flight speed-first build: this plan waits for it to leave Build."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "Earlier decisions reversed",
+   "Twelve earlier decisions are reversed, each logged",
+   null,
+   "Each gets a dated entry in docs/6-decisions/Decisions.md and a pointer left in the old one.",
+   [
+    "Where: Decisions.md lines 22, 54, 87, 92, 101, 121, 126, 133, 141, 143, and #460.",
+    "Includes: approval only from your message, one cap of two blocks, unattended or bypass only, relaxed credit check.",
+    "Tests to change: checks/core.py, checks/design_loop.py, checks/safe_git.py; new ones for self-approval, the step file and the shared counter."
    ],
    null
   ]
@@ -155,7 +220,7 @@
      "A",
      "Approve it as written",
      1,
-     "Fixes all six causes together, with the limits above."
+     "Closes all eleven holes together."
     ],
     [
      "B",
@@ -164,16 +229,16 @@
      "Tell me what, in your own words."
     ]
    ],
-   "I recommend A. Fixing only some of the six would still leave unattended mode stopping."
+   "I recommend A. Any hole left open would still let a run stop."
   ]
  ],
  "wrapup": {
-  "summary": "Six rule and hook problems (plus six reversals of earlier decisions) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
-  "changing": "The rule files, the I-went-with check, what unattended turns off, the goal check, the guard messages, tools/overnight.sh, ledger_note.py, hooks.json, the tests, the docs and the changelog.",
+  "summary": "Eleven rule, hook and launcher problems (plus twelve reversals) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
+  "changing": "Rules, hooks, guards, the step file, ledger_note.py, make_page.py, hooks.json, tools/overnight.sh, the tests, the docs and the changelog.",
   "blocking": "Your approval line; no code is touched until you send it.",
-  "next": "After you approve, I build it in small steps. I run verify.py (the check that the hooks match the docs). Then I test a real unattended session before the QA page.",
+  "next": "After you approve, I write a build plan page with a done-when command per step, then build. I test a real headless session before the QA page.",
   "todo": [
-   "Read the six changes.",
+   "Read the eleven changes.",
    "Tap Copy my reply.",
    "Send it."
   ]
