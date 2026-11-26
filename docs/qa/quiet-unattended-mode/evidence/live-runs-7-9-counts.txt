@@ -1,0 +1,2 @@
+run7 (consecutive blocks, no tools): 122 records, 19 distinct assistant messages, 0 with a tool call, 54 step-list block records
+run9 (reviewer verdict, self-approval): 40 records, 2 distinct assistant messages, 1 with a tool call, 0 step-list block records
