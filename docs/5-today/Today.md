@@ -478,3 +478,5 @@ Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stal
 2026-11-25 (acceptance in progress): the live-run write-up (`docs/qa/quiet-unattended-mode/live-run.md`), the criteria (C1 to C12) and the evidence folder are committed; a reviewer in acceptance mode is judging the criteria and will write `round-1.md`. After it: fix any FAIL, stamp, build the QA page, set the issues to `needs review`, open the pull request.
 
 2026-11-26 (QA failed): the Canada trial failed finish checks pictures, tests and qa. Fixed: the pictures check accepts `round-N/`; `overnight.sh` turns a leftover `HOUSE_RULES_LOOP=off` back on (the trial inherited it, so no design loop ran). A second trial (`/home/user/canada-trial2`, log `/home/user/canada-trial2.log`) is running with the loop on; its result decides the next fix.
+
+2026-11-26 (shell-write lock): with nobody present the design lock refuses a shell write of a named source file, except after a `cd` or into `.git/`; the refusal says how to run the loop. The second Canada trial then switched to design pages and a reviewer. Suites re-running.
