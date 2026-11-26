@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode, fourth QA fix round (#634): the third trial got round the shell-write refusal with `cd controller && python3 - <<EOF`, because my own exemption for a `cd` let it through. The lock now follows a leading `cd DIR &&` (also after `export` lines), so the target path means what the shell means; a second `cd` still only reports. `tools/overnight.sh` takes `HOUSE_RULES_OVERNIGHT_RESUME=<session id>` to continue a run that a container restart killed. design_loop 562 and tools 72 checks pass. A fourth, clean trial is running.
+
 Quiet unattended mode, third QA fix round (#634): `overnight.sh` keeps resuming a run whose feature is still in Design or Plan with no step list (`ledger_note.py steps-status` prints OPEN 2 or OPEN 1 there); `finish_checks.py` ignores plan-page pictures under `docs/plans/` and falls back to the local `main` when there is no `origin/main`; the shell-write refusal skips a command that does a `cd` or writes into `.git/`. Cases added to the design_loop and tools suites. A third trial is running.
 
 Quiet unattended mode, second QA failure (#634): the second Canada trial showed the design loop was on yet never ran, because the agent wrote every source file from the shell and the design lock only reported shell writes (#309). With nobody present, a shell write of a source file the hook can name is now refused in Design and Plan, and the refusal (and the Edit refusal) tells the agent to run the loop itself: build a design page, have a reviewer judge it, and the hook moves the stage. Writes whose file cannot be named, and docs, stay open. Two cases added to the design_loop suite.
