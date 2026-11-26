@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode, CI and the unverified list (#634): the failing CI checks (core 184 and 188) ran the stop hook inside this repo, whose committed loop state adds a QA-page block, so they now run in a clean fixture project; a bypass guard refusal no longer names the unattended switch and a subagent refusal no longer says Approve to let it run (new test); live runs 7 to 9 check a ninth consecutive stop block at cap 1000 (holds, about 18), that the cheap model logs its choices (it does), and the not-clean-verdict case of self-approval; the stop-failure payload was checked against the official documentation.
+
 Quiet unattended mode QA page sent (#634): `docs/plans/2026-11-25-quiet-unattended-mode-qa.html`, built with `make_page.py` from `docs/plans/2026-11-25-quiet-unattended-mode-qa.page.json`; no plugin code changed.
 
 Quiet unattended mode is in QA (#634): every issue from #634 to #649 is now `needs review` and pull request 650 is open with `Refs #634`; nothing in the plugin changed.

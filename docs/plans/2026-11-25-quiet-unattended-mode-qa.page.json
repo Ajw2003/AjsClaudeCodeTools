@@ -33,6 +33,14 @@
     "Nothing from you."
    ],
    [
+    "flask",
+    "Run",
+    "The unverified items I could reach are now checked",
+    "",
+    "A ninth consecutive stop block at a cap of 1000 holds (run 7: 19 replies with no tool call, about 18 blocks in a row). The cheap model (haiku) now logs its choices (run 8). Self-approval was run live for the not-clean verdict (run 9). The stop-failure payload was checked against the official documentation. Write-up: docs/qa/quiet-unattended-mode/live-run.md, runs 7 to 9.",
+    "Nothing from you."
+   ],
+   [
     "check",
     "Stamp",
     "Acceptance: 12 of 12 in round 3",
@@ -110,14 +118,11 @@
   "feature": "quiet-unattended-mode",
   "base": "origin/main",
   "unverified": [
-   "Self-approval by a hook was tested by the suites only, never in a live run.",
-   "A ninth stop block in a row at a cap of 1000 is not proven; the live runs showed about 42 blocks but one block can appear in more than one record.",
-   "The real stop-failure payload and a real rate-limit wait were never seen; no live run hit a usage limit.",
-   "I do not know whether the web app has /goal or what its pause-goal tool is called; the web app keeps Claude Code's cap of 8 stop blocks and has no outer loop.",
-   "The cheap model (haiku) does not log choices by itself; the new stop check covers it in tests, but I only saw it work live with sonnet.",
-   "The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; run 6's final pass could not pass the real ones because the fixture has no origin/main.",
-   "One early failure of the design_loop big-files check (#511) in step 1's first run passed on rerun and its cause is unexplained.",
-   "With bypass on and the unattended switch off, the guard refusal still says HOUSE_RULES_UNATTENDED=on, and a subagent refusal says both Refused and Approve to let it run."
+   "Self-approval by a hook: the case where a clean reviewer verdict moves the stage was tested by the suites only. A live run (run 9) showed the other case: the reviewer said 17 findings, so nothing was approved.",
+   "A real rate-limit wait was never seen, because no run hit a usage limit. The stop-failure hook was checked on the payload shape the official documentation gives (error rate_limit, no reset time), not on a real failure.",
+   "Whether the web app has /goal, and whether any tool pauses a goal, is not stated in the official documentation, so I could not check it. The web app keeps Claude Code's stop-block cap unless the environment variable is set.",
+   "The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; the real ones need a repository with origin/main, which the throwaway repos do not have.",
+   "One early failure of the design_loop big-files check (#511) passed on every later run, including the CI runs, and its cause is still unexplained."
   ],
   "files": {}
  },

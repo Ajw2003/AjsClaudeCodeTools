@@ -1,5 +1,7 @@
 # Today — 2026-11-25
 
+Quiet unattended mode: CI failure fixed (two core checks ran inside this repo's QA state), two guard-refusal wordings fixed, and the unverified list worked through with live runs 7 to 9; suites re-running before the push.
+
 Quiet unattended mode is in QA: issues #634 to #649 say `needs review`, pull request 650 is open, the QA page is sent. Waiting on aj's QA.
 
 Quiet unattended mode: round 3 passed 12 of 12; the page-style.json fingerprint fix is in and the suites are re-running; next the stamp, the QA page, the label swap and the pull request.
