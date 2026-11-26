@@ -1084,7 +1084,7 @@ def _event_guard_main():
         lines.append("  " + docs_note)
 
     lines.append("")
-    if not core.nobody_present(payload):  # nobody present: no timeout line and no approve prompt, the ask becomes a refusal
+    if _someone_can_answer(payload):  # nobody present, or inside a helper: no timeout line and no approve prompt, the ask becomes a refusal
         _tl = _prompt_timeout_line()
         if _tl:
             lines.append(_tl)
@@ -1591,6 +1591,15 @@ def _prompt_deny(text):
                                  "decision": {"behavior": "deny", "message": text, "reason": text}}})
 
 
+def _someone_can_answer(payload):
+    """False when nobody is present or the call comes from a helper (subagent): the guard then refuses instead of asking."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = {}
+    return not core.nobody_present(payload) and not (isinstance(data, dict) and data.get("agent_id"))
+
+
 def _prompt_timeout_line():
     """The guard prompts' one line about the timer; "" when the timer is off."""
     secs, _ = _prompt_timeout_seconds()
@@ -1637,7 +1646,7 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
     if secs is not None and data.get("agent_id"):
         why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
     if core.nobody_present(payload):
-        why = "this is an unattended run (HOUSE_RULES_UNATTENDED=on), so nobody can answer a prompt"
+        why = "this is an unattended run (the unattended switch or bypass mode), so nobody can answer a prompt"
     if not why:
         _record_ask(session_id, _waiting_key(str(data.get("tool_name") or "?"), data.get("tool_input")))
         out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",
