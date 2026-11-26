@@ -2092,6 +2092,12 @@ _un1l = _un1.lower().replace("-", " ")
 report("PASS" if "ledger_note.py decide" in _un1 and "waiting on you" not in _un1l and "final report" not in _un1l
        and "approve to let it run" not in _un1l and "nobody answers" not in _un1l else "FAIL",
        "unattended: the guard refusal says to write it with ledger_note.py decide, never mentions the waiting list, a timeout or approving (#643, C10)")
+_by1 = _ua_guard("verify-un-byp", extra={"permission_mode": "bypassPermissions"}, env_extra={"HOUSE_RULES_UNATTENDED": "off"})
+_sb1 = _ua_guard("verify-un-sub", extra={"agent_id": "a1"})
+report("PASS" if _ua_dec(_by1) == "deny" and "HOUSE_RULES_UNATTENDED" not in _by1 and "unattended run" in _by1
+       and _ua_dec(_sb1) == "deny" and "Refused, not asked" in _sb1 and "Approve to let it run" not in _sb1
+       and "nobody answers" not in _sb1 else "FAIL",
+       "round-2 side notes: a bypass refusal does not name the unattended switch, and a subagent refusal says Refused with no approve or timeout line")
 
 _un4 = _ua_guard("verify-un4", env_extra=dict(_un_on, HOUSE_RULES_PROMPT_TIMEOUT="off"))
 _un5 = _ua_guard("verify-un5", env_extra={"HOUSE_RULES_PROMPT_TIMEOUT": "off"})
