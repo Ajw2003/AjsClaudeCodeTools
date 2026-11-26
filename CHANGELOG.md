@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode, QA failed on the Canada trial (#634): a headless run on a copy of the Canada party controller built and reviewed the power meter but failed three finish checks. Cause 1: the shell carried HOUSE_RULES_LOOP=off, so the design loop never started and there was no stage file or step list; `tools/overnight.sh` now turns a leftover `off` back on and says so. Cause 2: the pictures check looked only in `docs/qa/<feature>/shots/` while the visual-loop skill writes `round-N/`; `finish_checks.py pictures` now accepts both. One case added to each suite (design_loop, tools 70); a second trial is running with the loop on.
+
 Quiet unattended mode trial on a real project (#634): the Canada party repo is attached for the trial; a throwaway copy of its `controller/` folder (no remote, `gh` stubbed to fail) runs an unattended build of a throw-power meter through `tools/overnight.sh`; no plugin code changed.
 
 Quiet unattended mode re-stamped after the CI fix (#634): the acceptance stamp was stale because the CI and wording fixes changed source after round 3, so the full suites were re-run (seven parts and the tools suite exit 0), the real `finish_checks.py qa` now exits 0, and the QA page was rebuilt with the shorter unverified list.
