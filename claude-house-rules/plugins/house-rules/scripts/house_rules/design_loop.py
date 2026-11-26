@@ -2021,7 +2021,8 @@ def _loop_stop_line(payload):
 def _shell_command(payload):
     try:
         return str(((json.loads(payload) or {}).get("tool_input") or {}).get("command") or "")
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: the design-loop lock could not read the shell command (%s); a cd check is skipped.\n" % exc)
         return ""
 
 

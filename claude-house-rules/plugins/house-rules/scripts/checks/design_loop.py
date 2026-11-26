@@ -4221,6 +4221,8 @@ os.rename(sh, os.path.join(d, "docs", "qa", "f", "round-1")); r["pic_round"] = f
 r["tests_pass"] = fc("tests") == 0
 rec('python3 -c "raise SystemExit(3)"'); r["tests_fail"] = fc("tests") == 3
 r["qa_fail"] = fc("qa") == 1
+os.makedirs(os.path.join(d, "docs", "plans", "pictures"), exist_ok=True); time.sleep(0.05)
+open(os.path.join(d, "docs", "plans", "pictures", "m.svg"), "w").write("<svg/>"); r["pic_plan_mockup_ignored"] = fc("pictures") == 0
 import acceptance
 os.makedirs(os.path.join(d, ".claude"), exist_ok=True); open(os.path.join(d, "page.html"), "w").write("<p>")
 state = dl._loop_read(g)[0]; state.update(feature="f", stage="build", qa_page="page.html"); dl._loop_write(g, state)

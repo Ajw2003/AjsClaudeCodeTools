@@ -36,9 +36,12 @@ def ignored(p):
 
 def changed():
     """Changed paths since the merge base with origin/main, plus untracked ones; exits 2 when it cannot tell."""
-    mb = run("git", "merge-base", "HEAD", "origin/main")
-    if mb.returncode:
-        print("could not tell: no merge base with origin/main (%s)" % mb.stderr.strip())
+    for base in ("origin/main", "main"):  # a repo with no remote still has its own main
+        mb = run("git", "merge-base", "HEAD", base)
+        if not mb.returncode:
+            break
+    else:
+        print("could not tell: no merge base with origin/main or main (%s)" % mb.stderr.strip())
         sys.exit(2)
     out = run("git", "diff", "--name-only", mb.stdout.strip()).stdout.split()
     out += run("git", "ls-files", "-o", "--exclude-standard").stdout.split()

@@ -884,7 +884,7 @@ fi
             p = subprocess.run(["sh", script, "do", "the", "work"], cwd=repo, env=env, stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE, text=True, timeout=40)
             return p, open(log).read().splitlines()
-        resume = "[Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step."
+        resume = "[Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. If there is no step list yet, you are still in the design loop: read the reviewer verdict, then the build plan, then build."
         p, lines = run()
         sid = lines[0].split("|")[1] if lines else ""
         check(len(lines) == 3 and sid and lines[0] == "1000|%s|-p do the work --session-id %s --dangerously-skip-permissions" % (sid, sid)
@@ -975,6 +975,15 @@ fi
         got = (status(None), status([st]), status([dict(st, stuck=True)]))
         check(got == ((0, "NO STEP LIST"), (1, "OPEN 1"), (0, "ALL DONE (1 STUCK: Step 1)")),
               "ledger_note.py steps-status prints NO STEP LIST, OPEN n, ALL DONE with the right exit codes", "got %r" % (got,))
+        def stage_only(stage):
+            json.dump({"feature": "feature", "stage": stage, "skip": False, "approvals": [], "steps": {}}, open(loop, "w"))
+            r = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+            return r.returncode, r.stdout.strip()
+        got = (stage_only("design"), stage_only("plan"), stage_only("build"), stage_only("qa"))
+        check(got == ((1, "OPEN 2"), (1, "OPEN 1"), (0, "NO STEP LIST"), (0, "NO STEP LIST")),
+              "ledger_note.py steps-status: a feature still in Design or Plan with no step list counts as open (2, 1); Build and QA do not",
+              "got %r" % (got,))
     finally:
         shutil.rmtree(d, True)
 _overnight_loop_case()
