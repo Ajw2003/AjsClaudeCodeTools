@@ -1,5 +1,7 @@
 # Today — 2026-11-25
 
+Quiet unattended mode on a real project: your Canada party repo (`Ajw2003/AjsCanadaPrty`, a Unity sword-fighting game with a phone-controller web app) is attached and cloned at `/home/user/ajscanadaprty`. A throwaway copy of its `controller/` folder, with no remote and no `gh`, is running a full unattended trial in `/home/user/canada-trial` (a throw-power meter); a scheduled check reads it back. Nothing was pushed to your repo.
+
 Quiet unattended mode: CI failure fixed (two core checks ran inside this repo's QA state), two guard-refusal wordings fixed, and the unverified list worked through with live runs 7 to 9; suites re-running before the push.
 
 Quiet unattended mode is in QA: issues #634 to #649 say `needs review`, pull request 650 is open, the QA page is sent. Waiting on aj's QA.

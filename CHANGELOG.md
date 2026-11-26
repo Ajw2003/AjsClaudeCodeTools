@@ -4,6 +4,8 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode trial on a real project (#634): the Canada party repo is attached for the trial; a throwaway copy of its `controller/` folder (no remote, `gh` stubbed to fail) runs an unattended build of a throw-power meter through `tools/overnight.sh`; no plugin code changed.
+
 Quiet unattended mode re-stamped after the CI fix (#634): the acceptance stamp was stale because the CI and wording fixes changed source after round 3, so the full suites were re-run (seven parts and the tools suite exit 0), the real `finish_checks.py qa` now exits 0, and the QA page was rebuilt with the shorter unverified list.
 
 Quiet unattended mode, CI and the unverified list (#634): the failing CI checks (core 184 and 188) ran the stop hook inside this repo, whose committed loop state adds a QA-page block, so they now run in a clean fixture project; a bypass guard refusal no longer names the unattended switch and a subagent refusal no longer says Approve to let it run (new test); live runs 7 to 9 check a ninth consecutive stop block at cap 1000 (holds, about 18), that the cheap model logs its choices (it does), and the not-clean-verdict case of self-approval; the stop-failure payload was checked against the official documentation.
