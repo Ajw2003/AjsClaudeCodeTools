@@ -1614,7 +1614,8 @@ commit_case(
 
 # --- the check gives guidance, not a hook error ----------------------------------------------
 code, out, err = run_hook(
-    "handover", stop_payload(last_assistant_message="```powershell\nGet-ChildItem\n```")
+    "handover", stop_payload(last_assistant_message="```powershell\nGet-ChildItem\n```"),
+    env=_project_env(_FIXTURE_ROOT),  # not this repo: its committed loop state (stage QA) adds a QA-page block
 )
 if '"hookEventName":"Stop"' in out and '"decision"' not in out:
     report("PASS", "the handover check emits Stop feedback, not a blocking hook error")

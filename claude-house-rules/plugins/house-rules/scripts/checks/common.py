@@ -680,6 +680,7 @@ RESTATEMENTS = [
                     "last_assistant_message": "```powershell\nGet-ChildItem\n```",
                 }
             ),
+            env=_project_env(_FIXTURE_ROOT),  # not this repo: its committed loop state (stage QA) adds a QA-page block
         )[1],
         [
             "fence label", "working directory", "UNTESTED", "Run button",
