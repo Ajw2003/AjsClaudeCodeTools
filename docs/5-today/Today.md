@@ -480,3 +480,5 @@ Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stal
 2026-11-26 (QA failed): the Canada trial failed finish checks pictures, tests and qa. Fixed: the pictures check accepts `round-N/`; `overnight.sh` turns a leftover `HOUSE_RULES_LOOP=off` back on (the trial inherited it, so no design loop ran). A second trial (`/home/user/canada-trial2`, log `/home/user/canada-trial2.log`) is running with the loop on; its result decides the next fix.
 
 2026-11-26 (shell-write lock): with nobody present the design lock refuses a shell write of a named source file, except after a `cd` or into `.git/`; the refusal says how to run the loop. The second Canada trial then switched to design pages and a reviewer. Suites re-running.
+
+2026-11-26 (third fix round): launcher resumes while the stage is before Build; finish checks ignore plan-page pictures and fall back to local main. Suites: core 281, safe_git 313, design_loop 561, docs 176, writing 24, tools 71 passed; make_page and delegation read next. Third trial running in `/home/user/canada-trial3` (log `/home/user/canada-trial3.log`).
