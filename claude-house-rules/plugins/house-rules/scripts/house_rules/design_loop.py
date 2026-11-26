@@ -2018,6 +2018,23 @@ def _loop_stop_line(payload):
                " Code edits are refused until they are." if stage == "build" else "")), src or None
 
 
+def _lock_text(state, feature, nobody, shell_files=""):
+    """The refusal for a source write in a stage that is not Build; with nobody present it names the self-approval route."""
+    stage = "%s%s" % (LOOP_STAGE_NAMES[state["stage"]], ' of "%s"' % feature if feature else "")
+    if nobody:
+        return ("House rules, design loop: code edits are closed in the %s stage%s. Nobody is present, so you run the "
+                "loop yourself: write the design as a page (make_page.py start proposal, then build), have a "
+                "house-rules reviewer judge it in page mode, and when its verdict is clean the hook moves the stage; "
+                "then the same for the build plan. docs/, .claude/ and .md files stay open for this. Run `python3 "
+                "${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py start proposal` first. See rules/detail/show-dont-tell.md."
+                % (stage, " (this command writes %s)" % shell_files if shell_files else ""))
+    return (
+        "House rules, design loop: code edits are closed in the %s stage. They open when aj types "
+        "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
+        "change. docs/ pages, .claude/ files other than settings, and .md, .txt and .csv files stay open, so write the design or plan as a page "
+        "now. To switch this off: HOUSE_RULES_LOOP=off." % stage)
+
+
 def _loop_gate(payload):
     """(deny reason or None, problem or None): code edits only in Build, or once after skip design."""
     git_dir, problem = _gated_edit(payload, "design-loop lock")
@@ -2068,6 +2085,10 @@ def _loop_gate(payload):
         _loop_write(git_dir, state)
         return None, None
     feature = state.get("feature") or ""
+    if script and nobody and script_paths:
+        # Canada trial 2026-11-26: with nobody present the agent wrote every source file from the shell and
+        # skipped the loop, so no stage file or step list ever existed. Only files the hook can name are refused.
+        return _lock_text(state, feature, nobody, ", ".join(script_paths)), None
     if script:
         # #309 (incident 4 of #303): a shell command is reported, never refused, until the restructure. The
         # refusal stopped docs and .claude/ writes made from the shell, which are meant to stay open.
@@ -2076,14 +2097,7 @@ def _loop_gate(payload):
         return None, ("house-rules design loop (report only, #309): code is locked in the %s stage, and this "
                       "shell command writes %s. It was let through; the shell-write refusal is switched off "
                       "until the restructure." % (LOOP_STAGE_NAMES[state["stage"]], what))
-    return (
-        "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
-        "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
-        "change. docs/ pages, .claude/ files other than settings, and .md, .txt and .csv files stay open, so write the design or plan as a page "
-        "now. To switch this off: HOUSE_RULES_LOOP=off." % (
-            LOOP_STAGE_NAMES[state["stage"]], ' of "%s"' % feature if feature else ""),
-        None,
-    )
+    return _lock_text(state, feature, nobody), None
 
 
 _GH_ISSUE_CREATE_RE = re.compile(_GH_PREFIX + r"issue\s+create\b")
