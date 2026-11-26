@@ -2018,6 +2018,13 @@ def _loop_stop_line(payload):
                " Code edits are refused until they are." if stage == "build" else "")), src or None
 
 
+def _shell_command(payload):
+    try:
+        return str(((json.loads(payload) or {}).get("tool_input") or {}).get("command") or "")
+    except (ValueError, AttributeError):
+        return ""
+
+
 def _lock_text(state, feature, nobody, shell_files=""):
     """The refusal for a source write in a stage that is not Build; with nobody present it names the self-approval route."""
     stage = LOOP_STAGE_NAMES[state["stage"]]
@@ -2086,10 +2093,13 @@ def _loop_gate(payload):
         _loop_write(git_dir, state)
         return None, None
     feature = state.get("feature") or ""
-    if script and nobody and script_paths:
+    names = [t for t in script_paths if ".git/" not in t.replace("\\", "/")]
+    if names and re.search(r"(?:^|[;&|\n])\s*(?:cd|pushd)\s", _shell_command(payload)):
+        names = []  # a cd changes what a relative path means and the hook does not follow it, so only report (#309)
+    if script and nobody and names:
         # Canada trial 2026-11-26: with nobody present the agent wrote every source file from the shell and
         # skipped the loop, so no stage file or step list ever existed. Only files the hook can name are refused.
-        return _lock_text(state, feature, nobody, ", ".join(script_paths)), None
+        return _lock_text(state, feature, nobody, ", ".join(names)), None
     if script:
         # #309 (incident 4 of #303): a shell command is reported, never refused, until the restructure. The
         # refusal stopped docs and .claude/ writes made from the shell, which are meant to stay open.

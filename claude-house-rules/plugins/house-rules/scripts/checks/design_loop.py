@@ -934,11 +934,15 @@ def _wt_un_run(cmd):
 _wt_u1 = _wt_un_run(_wt_heredoc)
 _wt_u2 = _wt_un_run("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" app.py")
 _wt_u3 = _wt_un_run("echo hi > notes.md")
+_wt_u4 = _wt_un_run("cd docs/plans && cat > pictures/x.py <<'E'\nx = 1\nE")
+_wt_u5 = _wt_un_run("echo x >> .git/info/exclude")
 for _t, _ok in (
         ("Canada trial: with nobody present a shell write of a named source file in Design is refused, and the reason gives the self-approval route",
          '"deny"' in _wt_u1 and "Nobody is present" in _wt_u1 and "app.py" in _wt_u1 and "make_page.py start proposal" in _wt_u1),
         ("Canada trial: with nobody present a shell write whose file can't be named, and a .md write, still go through",
          '"deny"' not in _wt_u2 and '"deny"' not in _wt_u3),
+        ("Canada trial: with nobody present a write after a cd (the hook cannot follow the new folder) and a write into .git/ are not refused",
+         '"deny"' not in _wt_u4 and '"deny"' not in _wt_u5),
         ("a worktree reads the main checkout's stage: Build lets its Edit through", _wt_a == "allow"),
         ("a worktree reads the main checkout's stage: Design refuses its Edit", _wt_d == "deny"),
         ("a python heredoc writing a .py file is allowed in Build", _wt_b == "allow"),
