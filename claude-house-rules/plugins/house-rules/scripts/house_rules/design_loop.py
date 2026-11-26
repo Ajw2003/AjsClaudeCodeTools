@@ -2020,19 +2020,20 @@ def _loop_stop_line(payload):
 
 def _lock_text(state, feature, nobody, shell_files=""):
     """The refusal for a source write in a stage that is not Build; with nobody present it names the self-approval route."""
-    stage = "%s%s" % (LOOP_STAGE_NAMES[state["stage"]], ' of "%s"' % feature if feature else "")
+    stage = LOOP_STAGE_NAMES[state["stage"]]
+    of = ' of "%s"' % feature if feature else ""
     if nobody:
-        return ("House rules, design loop: code edits are closed in the %s stage%s. Nobody is present, so you run the "
+        return ("House rules, design loop: code edits are closed in the %s stage%s%s. Nobody is present, so you run the "
                 "loop yourself: write the design as a page (make_page.py start proposal, then build), have a "
                 "house-rules reviewer judge it in page mode, and when its verdict is clean the hook moves the stage; "
                 "then the same for the build plan. docs/, .claude/ and .md files stay open for this. Run `python3 "
                 "${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py start proposal` first. See rules/detail/show-dont-tell.md."
-                % (stage, " (this command writes %s)" % shell_files if shell_files else ""))
+                % (stage, of, " (this command writes %s)" % shell_files if shell_files else ""))
     return (
-        "House rules, design loop: code edits are closed in the %s stage. They open when aj types "
+        "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
         "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
         "change. docs/ pages, .claude/ files other than settings, and .md, .txt and .csv files stay open, so write the design or plan as a page "
-        "now. To switch this off: HOUSE_RULES_LOOP=off." % stage)
+        "now. To switch this off: HOUSE_RULES_LOOP=off." % (stage, of))
 
 
 def _loop_gate(payload):
