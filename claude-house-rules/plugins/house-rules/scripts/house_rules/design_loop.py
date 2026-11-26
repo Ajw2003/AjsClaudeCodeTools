@@ -323,6 +323,9 @@ def _script_write_targets(cmd):
     return targets, unreadable
 
 
+_LEAD_CD_RE = re.compile(r"\s*cd\s+(\"[^\"]+\"|'[^']+'|[^\s;&|]+)\s*(?:&&|;|\n)")
+
+
 def _gated_script_write(payload):
     """(git_dir, problem, paths, unreadable) for a Bash/PowerShell command that writes a source
     file through a script, sed -i, tee or a redirect. git_dir None when nothing is gated."""
@@ -344,6 +347,9 @@ def _gated_script_write(payload):
     top, git_dir = _issues_locate(cwd)
     if not git_dir:
         return None, None, [], False
+    lead = _LEAD_CD_RE.match(cmd)  # `cd DIR && ...`: relative targets mean DIR/target (Canada trial 2026-11-26)
+    if lead:
+        cwd = os.path.normpath(os.path.join(cwd, lead.group(1).strip("\"'")))
     src = [t for t in targets if _is_source_path(t, cwd, top)]
     if not src and not unreadable:
         return None, None, [], False
@@ -2095,8 +2101,9 @@ def _loop_gate(payload):
         return None, None
     feature = state.get("feature") or ""
     names = [t for t in script_paths if ".git/" not in t.replace("\\", "/")]
-    if names and re.search(r"(?:^|[;&|\n])\s*(?:cd|pushd)\s", _shell_command(payload)):
-        names = []  # a cd changes what a relative path means and the hook does not follow it, so only report (#309)
+    rest = _LEAD_CD_RE.sub("", _shell_command(payload), count=1)
+    if names and re.search(r"(?:^|[;&|\n])\s*(?:cd|pushd)\s", rest):
+        names = []  # a later cd changes what a relative path means and the hook does not follow it, so only report (#309)
     if script and nobody and names:
         # Canada trial 2026-11-26: with nobody present the agent wrote every source file from the shell and
         # skipped the loop, so no stage file or step list ever existed. Only files the hook can name are refused.
