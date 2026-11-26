@@ -824,6 +824,19 @@ def _overnight_case():
               and os.access(os.path.join(HERE, "overnight.sh"), os.X_OK),
               "overnight.sh --interactive exports both variables and runs claude once with the permission flag and its arguments",
               "got %r %r" % (p.stdout, p.stderr))
+        with open(os.path.join(d, "claude"), "w") as f:
+            f.write('#!/bin/sh\necho "loop=${HOUSE_RULES_LOOP:-unset}"\n')
+        loops = {}
+        for v in ("off", "unset"):
+            e = dict(env)
+            e.pop("HOUSE_RULES_LOOP", None)
+            if v == "off":
+                e["HOUSE_RULES_LOOP"] = "off"
+            q = subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "--interactive"], env=e,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            loops[v] = (q.stdout.strip(), "design loop on" in q.stderr)
+        check(loops["off"] == ("loop=on", True) and loops["unset"] == ("loop=unset", False),
+              "overnight.sh turns a leftover HOUSE_RULES_LOOP=off on and says so; an unset value stays unset", "got %r" % (loops,))
     finally:
         shutil.rmtree(d, True)
 _overnight_case()

@@ -14,6 +14,12 @@ set -eu
 HOUSE_RULES_UNATTENDED=on
 ART_PIPELINE=unattended
 export HOUSE_RULES_UNATTENDED ART_PIPELINE
+# A leftover HOUSE_RULES_LOOP=off skips the whole design loop (no plan pages, stage file or step list), so the
+# finish checks cannot pass; an unattended run keeps the loop on (found in the 2026-11-26 AjsCanadaPrty trial).
+if [ "${HOUSE_RULES_LOOP:-}" = "off" ]; then
+  echo "overnight: HOUSE_RULES_LOOP=off was set in this shell; turning the design loop on for this run" >&2
+  HOUSE_RULES_LOOP=on; export HOUSE_RULES_LOOP
+fi
 if [ "${1:-}" = "--interactive" ]; then
   shift
   exec claude --dangerously-skip-permissions "$@"
