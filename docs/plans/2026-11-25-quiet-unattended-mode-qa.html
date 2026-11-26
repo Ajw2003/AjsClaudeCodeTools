@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- house-rules make_page 2.95.0 -->
 <meta charset="utf-8">
-<meta name="house-rules-reviewed" content="900bf49dccc9f764f5dfdcff6ac36d280e3a068325ea5e5536d4561fb61b0392;clean;2">
+<meta name="house-rules-reviewed" content="434e9e17432a46dffda630e32d3d039f60e61d063e82d42ff3c9a3f9785fc3b0;clean;2">
 <meta name="house-rules-page" content="qa">
 <title>Quiet Unattended Mode QA</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
@@ -260,7 +260,7 @@ dialog.lightbox button{margin-top:10px}
     <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
     <div class="wrapup" id="wrapup"></div>
     <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Open docs/qa/quiet-unattended-mode/round-3.md and expect twelve PASS lines and STATUS: pass.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "QA passed: quiet-unattended-mode", or send "QA failed: quiet-unattended-mode" with what to change.</label></li></ol></div></div></div>
-    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Self-approval by a hook was tested by the suites only, never in a live run. A ninth stop block in a row at a cap of 1000 is not proven; the live runs showed about 42 blocks but one block can appear in more than one record. The real stop-failure payload and a real rate-limit wait were never seen; no live run hit a usage limit. I do not know whether the web app has /goal or what its pause-goal tool is called; the web app keeps Claude Code's cap of 8 stop blocks and has no outer loop. The cheap model (haiku) does not log choices by itself; the new stop check covers it in tests, but I only saw it work live with sonnet. The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; run 6's final pass could not pass the real ones because the fixture has no origin/main. One early failure of the design_loop big-files check (#511) in step 1's first run passed on rerun and its cause is unexplained. With bypass on and the unattended switch off, the guard refusal still says HOUSE_RULES_UNATTENDED=on, and a subagent refusal says both Refused and Approve to let it run.</p></details></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Still unverified</h3><details><summary>Show</summary><p data-basic="unverified">Self-approval by a hook: the case where a clean reviewer verdict moves the stage was tested by the suites only. A live run (run 9) showed the other case: the reviewer said 17 findings, so nothing was approved. A real rate-limit wait was never seen, because no run hit a usage limit. The stop-failure hook was checked on the payload shape the official documentation gives (error rate_limit, no reset time), not on a real failure. Whether the web app has /goal, and whether any tool pauses a goal, is not stated in the official documentation, so I could not check it. The web app keeps Claude Code's stop-block cap unless the environment variable is set. The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; the real ones need a repository with origin/main, which the throwaway repos do not have. One early failure of the design_loop big-files check (#511) passed on every later run, including the CI runs, and its cause is still unexplained.</p></details></div></div></div>
     <div class="reply">
       <pre id="out" aria-live="polite"></pre>
       <p class="status" id="miss"></p>
@@ -312,6 +312,14 @@ const PAGE = {
         "Six real headless runs of the overnight loop",
         "",
         "tools/overnight.sh drove a real headless claude six times on a throwaway repo. They found and fixed three bugs the suites missed and proved: stop hooks block in a resumed run, resume by session id works, a stuck step ends the run, the final QA pass runs, and with a neutral prompt a sonnet run logged its header colour and wording as K1 and K2 after being sent back once. Write-up: docs/qa/quiet-unattended-mode/live-run.md.",
+        "Nothing from you."
+      ],
+      [
+        "flask",
+        "Run",
+        "The unverified items I could reach are now checked",
+        "",
+        "A ninth consecutive stop block at a cap of 1000 holds (run 7: 19 replies with no tool call, about 18 blocks in a row). The cheap model (haiku) now logs its choices (run 8). Self-approval was run live for the not-clean verdict (run 9). The stop-failure payload was checked against the official documentation. Write-up: docs/qa/quiet-unattended-mode/live-run.md, runs 7 to 9.",
         "Nothing from you."
       ],
       [
@@ -399,7 +407,7 @@ const PAGE = {
     [
       "chg",
       "Files changed, counted from git against origin/main",
-      "75 files, +5505 −158",
+      "80 files, +7084 −160",
       null,
       "The added and removed counts come from git (git diff --numstat origin/main...HEAD); the estimates beside them come from the plan.",
       null,
@@ -418,7 +426,7 @@ const PAGE = {
         ],
         [
           "CHANGELOG.md",
-          46,
+          54,
           0,
           [
             [
@@ -585,9 +593,21 @@ const PAGE = {
           ]
         ],
         [
+          "claude-house-rules/plugins/house-rules/scripts/checks/common.py",
+          1,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "claude-house-rules/plugins/house-rules/scripts/checks/core.py",
-          46,
-          12,
+          48,
+          13,
           [
             [
               "Not in the plan",
@@ -634,7 +654,7 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/checks/safe_git.py",
-          75,
+          81,
           5,
           [
             [
@@ -718,8 +738,8 @@ const PAGE = {
         ],
         [
           "claude-house-rules/plugins/house-rules/scripts/house_rules/safe_git.py",
-          26,
-          17,
+          36,
+          18,
           [
             [
               "Not in the plan",
@@ -814,7 +834,7 @@ const PAGE = {
         ],
         [
           "docs/5-today/Today.md",
-          52,
+          56,
           0,
           [
             [
@@ -885,8 +905,20 @@ const PAGE = {
           ]
         ],
         [
+          "docs/plans/2026-11-25-quiet-unattended-mode-qa.html",
+          1480,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/plans/2026-11-25-quiet-unattended-mode-qa.page.json",
-          134,
+          139,
           0,
           [
             [
@@ -1101,6 +1133,42 @@ const PAGE = {
           ]
         ],
         [
+          "docs/qa/quiet-unattended-mode/evidence/live-run8-ledger.md",
+          20,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/quiet-unattended-mode/evidence/live-run8-overnight.log",
+          29,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
+          "docs/qa/quiet-unattended-mode/evidence/live-runs-7-9-counts.txt",
+          2,
+          0,
+          [
+            [
+              "Not in the plan",
+              0,
+              0
+            ]
+          ]
+        ],
+        [
           "docs/qa/quiet-unattended-mode/evidence/round2-c10-guard-probe.txt",
           14,
           0,
@@ -1222,7 +1290,7 @@ const PAGE = {
         ],
         [
           "docs/qa/quiet-unattended-mode/live-run.md",
-          42,
+          54,
           0,
           [
             [
@@ -1309,9 +1377,9 @@ const PAGE = {
     [
       "keep",
       "Still unverified",
-      "8 things not yet proven",
+      "5 things not yet proven",
       null,
-      "Self-approval by a hook was tested by the suites only, never in a live run. A ninth stop block in a row at a cap of 1000 is not proven; the live runs showed about 42 blocks but one block can appear in more than one record. The real stop-failure payload and a real rate-limit wait were never seen; no live run hit a usage limit. I do not know whether the web app has /goal or what its pause-goal tool is called; the web app keeps Claude Code's cap of 8 stop blocks and has no outer loop. The cheap model (haiku) does not log choices by itself; the new stop check covers it in tests, but I only saw it work live with sonnet. The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; run 6's final pass could not pass the real ones because the fixture has no origin/main. One early failure of the design_loop big-files check (#511) in step 1's first run passed on rerun and its cause is unexplained. With bypass on and the unattended switch off, the guard refusal still says HOUSE_RULES_UNATTENDED=on, and a subagent refusal says both Refused and Approve to let it run.",
+      "Self-approval by a hook: the case where a clean reviewer verdict moves the stage was tested by the suites only. A live run (run 9) showed the other case: the reviewer said 17 findings, so nothing was approved. A real rate-limit wait was never seen, because no run hit a usage limit. The stop-failure hook was checked on the payload shape the official documentation gives (error rate_limit, no reset time), not on a real failure. Whether the web app has /goal, and whether any tool pauses a goal, is not stated in the official documentation, so I could not check it. The web app keeps Claude Code's stop-block cap unless the environment variable is set. The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; the real ones need a repository with origin/main, which the throwaway repos do not have. One early failure of the design_loop big-files check (#511) passed on every later run, including the CI runs, and its cause is still unexplained.",
       null,
       null
     ]
@@ -1320,14 +1388,11 @@ const PAGE = {
     "feature": "quiet-unattended-mode",
     "base": "origin/main",
     "unverified": [
-      "Self-approval by a hook was tested by the suites only, never in a live run.",
-      "A ninth stop block in a row at a cap of 1000 is not proven; the live runs showed about 42 blocks but one block can appear in more than one record.",
-      "The real stop-failure payload and a real rate-limit wait were never seen; no live run hit a usage limit.",
-      "I do not know whether the web app has /goal or what its pause-goal tool is called; the web app keeps Claude Code's cap of 8 stop blocks and has no outer loop.",
-      "The cheap model (haiku) does not log choices by itself; the new stop check covers it in tests, but I only saw it work live with sonnet.",
-      "The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; run 6's final pass could not pass the real ones because the fixture has no origin/main.",
-      "One early failure of the design_loop big-files check (#511) in step 1's first run passed on rerun and its cause is unexplained.",
-      "With bypass on and the unattended switch off, the guard refusal still says HOUSE_RULES_UNATTENDED=on, and a subagent refusal says both Refused and Approve to let it run."
+      "Self-approval by a hook: the case where a clean reviewer verdict moves the stage was tested by the suites only. A live run (run 9) showed the other case: the reviewer said 17 findings, so nothing was approved.",
+      "A real rate-limit wait was never seen, because no run hit a usage limit. The stop-failure hook was checked on the payload shape the official documentation gives (error rate_limit, no reset time), not on a real failure.",
+      "Whether the web app has /goal, and whether any tool pauses a goal, is not stated in the official documentation, so I could not check it. The web app keeps Claude Code's stop-block cap unless the environment variable is set.",
+      "The finish steps in the live runs were stand-ins, not the real docs, pictures, tests and QA checks; the real ones need a repository with origin/main, which the throwaway repos do not have.",
+      "One early failure of the design_loop big-files check (#511) passed on every later run, including the CI runs, and its cause is still unexplained."
     ],
     "files": {}
   },
