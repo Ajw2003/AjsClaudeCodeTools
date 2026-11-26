@@ -835,6 +835,20 @@ def _overnight_case():
             q = subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "--interactive"], env=e,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             loops[v] = (q.stdout.strip(), "design loop on" in q.stderr)
+        with open(os.path.join(d, "claude"), "w") as f:
+            f.write('#!/bin/sh\necho "$*" >> "$CALLS"\n')
+        calls = {}
+        for v in ("fresh", "resume"):
+            cf = os.path.join(d, "calls-" + v)
+            e = dict(env, CALLS=cf)
+            e.pop("HOUSE_RULES_OVERNIGHT_RESUME", None)
+            if v == "resume":
+                e["HOUSE_RULES_OVERNIGHT_RESUME"] = "abc-123"
+            subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "task"], env=e, cwd=d, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, text=True)
+            calls[v] = open(cf).read() if os.path.isfile(cf) else ""
+        check("--session-id" in calls["fresh"] and calls["resume"] == "",
+              "overnight.sh: HOUSE_RULES_OVERNIGHT_RESUME skips the first claude call (the loop then resumes that id)", "got %r" % (calls,))
         check(loops["off"] == ("loop=on", True) and loops["unset"] == ("loop=unset", False),
               "overnight.sh turns a leftover HOUSE_RULES_LOOP=off on and says so; an unset value stays unset", "got %r" % (loops,))
     finally:

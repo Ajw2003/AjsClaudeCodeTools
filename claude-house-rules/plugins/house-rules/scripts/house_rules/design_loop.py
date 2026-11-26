@@ -323,7 +323,7 @@ def _script_write_targets(cmd):
     return targets, unreadable
 
 
-_LEAD_CD_RE = re.compile(r"\s*cd\s+(\"[^\"]+\"|'[^']+'|[^\s;&|]+)\s*(?:&&|;|\n)")
+_LEAD_CD_RE = re.compile(r"(?:\s*(?:export\s+)?\w+=\S*\s*(?:;|&&|\n))*\s*cd\s+(\"[^\"]+\"|'[^']+'|[^\s;&|]+)\s*(?:&&|;|\n)")
 
 
 def _gated_script_write(payload):

@@ -24,7 +24,8 @@ if [ "${1:-}" = "--interactive" ]; then
   shift
   exec claude --dangerously-skip-permissions "$@"
 fi
-sid=$(uuidgen 2>/dev/null || python3 -c 'import uuid; print(uuid.uuid4())')
+# HOUSE_RULES_OVERNIGHT_RESUME=<session id> picks up a run that was killed (a container restart): no first call, straight to the loop.
+sid=${HOUSE_RULES_OVERNIGHT_RESUME:-$(uuidgen 2>/dev/null || python3 -c 'import uuid; print(uuid.uuid4())')}
 CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=1000
 CLAUDE_SESSION_ID=$sid
 export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP CLAUDE_SESSION_ID
@@ -62,7 +63,9 @@ after_run() {
   fi
 }
 mkdir -p "$sfdir"; touch "$mark"
-claude -p "$*" --session-id "$sid" --dangerously-skip-permissions || echo "overnight: claude exited with an error; checking the step list" >&2
+if [ -z "${HOUSE_RULES_OVERNIGHT_RESUME:-}" ]; then
+  claude -p "$*" --session-id "$sid" --dangerously-skip-permissions || echo "overnight: claude exited with an error; checking the step list" >&2
+fi
 after_run
 # Two real limits: 24 h of work (wall clock minus waits) and 5 restarts with no step closed. Rate-limit waits never count.
 clock=${HOUSE_RULES_OVERNIGHT_NOW:-date +%s}
