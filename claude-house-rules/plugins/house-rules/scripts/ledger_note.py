@@ -236,7 +236,9 @@ def steps_status_cmd(a):
                                         json.dumps({"session_id": a.session, "cwd": os.getcwd()}))
     if left is None:
         gd = os.path.abspath(top.stdout.strip())
-        if os.path.isfile(design_loop._loop_path(gd)):  # a feature was started but no build plan has been approved yet
+        import glob  # a feature was started if the stage file exists or a QA ledger does (a fresh repo has no stage file until a verdict is stored)
+        started = os.path.isfile(design_loop._loop_path(gd)) or glob.glob(os.path.join(os.path.dirname(gd), "docs", "qa", "*", "ledger.md"))
+        if started:  # but no build plan has been approved yet
             state, _ = design_loop._loop_read(gd)
             n = {"design": 2, "plan": 1}.get((state or {}).get("stage"))
             if n:

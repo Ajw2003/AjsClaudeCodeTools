@@ -994,6 +994,17 @@ fi
             r = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
             return r.returncode, r.stdout.strip()
+        os.remove(loop)
+        bare = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+        os.makedirs(os.path.join(repo, "docs", "qa", "f"), exist_ok=True)
+        open(os.path.join(repo, "docs", "qa", "f", "ledger.md"), "w").write("x\n")
+        withl = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+        os.remove(os.path.join(repo, "docs", "qa", "f", "ledger.md"))
+        got = ((bare.returncode, bare.stdout.strip()), (withl.returncode, withl.stdout.strip()))
+        check(got == ((0, "NO STEP LIST"), (1, "OPEN 2")),
+              "ledger_note.py steps-status: with no stage file, a QA ledger makes the feature open (Design), no ledger means no step list", "got %r" % (got,))
         got = (stage_only("design"), stage_only("plan"), stage_only("build"), stage_only("qa"))
         check(got == ((1, "OPEN 2"), (1, "OPEN 1"), (0, "NO STEP LIST"), (0, "NO STEP LIST")),
               "ledger_note.py steps-status: a feature still in Design or Plan with no step list counts as open (2, 1); Build and QA do not",
