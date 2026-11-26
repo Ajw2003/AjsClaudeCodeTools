@@ -5,7 +5,7 @@
 
 Exit 0 = pass, 1 = fail (the reason is printed), 2 = could not tell. Run from the project root.
 docs      CHANGELOG.md and a docs/ page (not docs/qa/ or docs/plans/) changed since the merge base with origin/main
-pictures  a docs/qa/<folder>/shots image newer than the newest changed visual file; or no visual file
+pictures  an image in docs/qa/<folder>/round-N/ (or shots/) newer than the newest changed visual file; or no visual file
           changed and `ledger.py status` says NEXT: done (a reviewer writes that round, never the builder)
 tests     the plan's test_command from the steps record, 20-minute cap, exits with its code
 qa        `acceptance.py check docs/qa/<folder>` exits 0 and the QA page file exists
@@ -72,9 +72,11 @@ def main(argv):
             print("pictures: no visual file changed, but the ledger does not say NEXT: done:\n" + r.stdout + r.stderr)
             return 1
         newest = max(os.path.getmtime(p) for p in vis)
-        shots = os.path.join(folder, "shots")
-        new = [f for f in (os.listdir(shots) if os.path.isdir(shots) else [])
-               if f.lower().endswith(IMG) and os.path.getmtime(os.path.join(shots, f)) > newest]
+        # shots/ is the old name; visual-loop writes round-N/ (and before/), so a shot is an image in either
+        dirs = [os.path.join(folder, d) for d in (sorted(os.listdir(folder)) if os.path.isdir(folder) else [])
+                if d == "shots" or d.startswith("round-")]
+        new = [f for d in dirs if os.path.isdir(d) for f in os.listdir(d)
+               if f.lower().endswith(IMG) and os.path.getmtime(os.path.join(d, f)) > newest]
         print("pictures: %d shot(s) newer than the newest changed visual file (%s)" % (len(new), max(vis, key=os.path.getmtime)))
         return 0 if new else 1
     if which == "tests":

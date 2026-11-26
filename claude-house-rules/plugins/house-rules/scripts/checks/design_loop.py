@@ -4202,6 +4202,7 @@ r["pic_fail_noledger"] = fc("pictures") == 1
 open(os.path.join(d, "s.css"), "w").write("a{}\n"); r["pic_fail_noshot"] = fc("pictures") == 1
 sh = os.path.join(d, "docs", "qa", "f", "shots"); os.makedirs(sh); time.sleep(0.05)
 open(os.path.join(sh, "a.png"), "wb").write(b"x"); r["pic_pass"] = fc("pictures") == 0
+os.rename(sh, os.path.join(d, "docs", "qa", "f", "round-1")); r["pic_round"] = fc("pictures") == 0
 r["tests_pass"] = fc("tests") == 0
 rec('python3 -c "raise SystemExit(3)"'); r["tests_fail"] = fc("tests") == 3
 r["qa_fail"] = fc("qa") == 1
