@@ -31,7 +31,7 @@ def run(*cmd):
 
 def ignored(p):
     return (p.startswith(IGNORED) or p in ("CHANGELOG.md", ".claude/house-rules-loop.json")
-            or (p.startswith("docs/plans/") and p.endswith((".html", ".page.json"))))
+            or p.startswith("docs/plans/"))  # plan-page mock-ups are not the product's visuals
 
 
 def changed():

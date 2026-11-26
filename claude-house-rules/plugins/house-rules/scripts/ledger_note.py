@@ -235,6 +235,13 @@ def steps_status_cmd(a):
     left = design_loop.steps_unfinished(os.path.abspath(top.stdout.strip()),
                                         json.dumps({"session_id": a.session, "cwd": os.getcwd()}))
     if left is None:
+        gd = os.path.abspath(top.stdout.strip())
+        if os.path.isfile(design_loop._loop_path(gd)):  # a feature was started but no build plan has been approved yet
+            state, _ = design_loop._loop_read(gd)
+            n = {"design": 2, "plan": 1}.get((state or {}).get("stage"))
+            if n:
+                print("OPEN %d" % n)  # design -> plan -> build: each approval closes one
+                return 1
         print("NO STEP LIST")
         return 0
     if left:

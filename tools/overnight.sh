@@ -31,7 +31,7 @@ export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP CLAUDE_SESSION_ID
 here=$(dirname "$0")
 note="$here/../claude-house-rules/plugins/house-rules/scripts/ledger_note.py"
 slept=0
-resume_text='[Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step.'
+resume_text='[Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. If there is no step list yet, you are still in the design loop: read the reviewer verdict, then the build plan, then build.'
 sleeper=${HOUSE_RULES_OVERNIGHT_SLEEP:-sleep}
 sfdir=${CLAUDE_CONFIG_DIR:-$HOME/.claude}/house-rules-steps
 sf="$sfdir/stopfailure-$sid.json"
