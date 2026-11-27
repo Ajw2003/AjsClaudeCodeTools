@@ -1,0 +1,29 @@
+Roadblock record: I checked for a QA page and a stamp, and I found neither. The step 6 check is still only `test -f qa.txt`, which passes.
+
+Target: a built QA page for the demo feature, stamped.
+
+1) Searched for files with "qa" or "stamp" in the name (`find`, excluding `.git`). Returned `./qa.txt` and the directory `./docs/qa`. The only file under `docs/` is `docs/qa/demo/ledger.md`, which is the decision ledger, not a QA page.
+2) Grepped every file in the repo for "stamp" and "QA page" (excluding `.git`). Returned two hits: `docs/qa/demo/ledger.md:3`, which says aj reviews this on the QA page, and the guard file `.claude/house-rules-loop.json`, which contains the step title. Neither is a page or a stamp.
+3) Listed `docs/`. Returned one file, `docs/qa/demo/ledger.md`.
+4) Ran `git status`. Returned the untracked files `a.txt`, `b.txt`, `docs/`, `docs_done.txt`, `page.html`, `pictures.txt`, `qa.txt`, and `.claude/`. No tracked file was modified, and there is no stamp file among them.
+5) Ran `git log`. Returned one commit, `f9043e9 init`, so there is no history with a stamp.
+
+Goal status: blocked. The QA page and its stamp do not exist anywhere in the repo, and nothing I ran produced one. The step 6 check passes only because `qa.txt` exists. The guard now marks step 6 `done`, so the step's title is not met.
+
+To finish it, a QA page needs to be built, and I can do that. But the page's content and what "stamped" means are your call, not mine. Once you tell me what the QA page should contain and what the stamp is, I'll build the page, run the check, and report the result.
+ALL DONE
+overnight: loop ended: all steps done
+**Open or stuck steps: none.** All six steps show `done` in the guard file. The one earlier block was on step 6, "Finish: QA page built and stamped". The judge blocked my reply that claimed no QA page existed (block 1 of 2). This page resolves it.
+
+The QA page is at `docs/qa/demo/index.html`. It is inside the project, and `git status` lists it as untracked. The hook said the file was written outside the project. That is wrong, because the project directory is the same path. I sent the page to you with the file-send tool.
+
+The page has five parts:
+- the step status table, with each step's check;
+- the ledger choices, which holds the one choice K1 (the blue header on `page.html`);
+- a note that the step checks only test that files exist;
+- a stamp with the build time (`2026-11-26T00:09:21Z`) and the step-state fingerprint;
+- the recorded block on step 6.
+
+I chose the stamp format myself, because the step title never defined "stamped". I recorded that choice as K2 in the ledger. The stamp is a dated, fingerprinted record on the page, not a signature or approval. If you meant something else, tell me and I'll change it.
+
+I did not commit anything, and I did not start new work. The branch is `master`, and the house rules ask for work on a separate branch, so I can make one if you want the page committed.

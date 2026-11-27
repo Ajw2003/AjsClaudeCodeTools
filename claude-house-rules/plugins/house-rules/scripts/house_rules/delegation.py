@@ -8,6 +8,7 @@ label recording, the edit gates) it loops over a core link list the design loop 
 import json
 import os
 import re
+import sys
 import tempfile
 import time
 
@@ -734,12 +735,37 @@ def _override_note(asked, file_declared):
     return " (model set at spawn; the agent file declares %s)" % (file_declared or "no model")
 
 
+def _store_reviewer_verdict(payload):
+    """#641: hand a reviewer's final report to design_loop.record_verdict. Never raises; every give-up says so on stderr."""
+    if not payload:
+        return
+    agent_type = _field(_AGENT_TYPE_RE, payload)
+    if agent_type.split(":")[-1] != "reviewer":
+        return
+    try:
+        found = next((c for c in _transcript_candidates(payload) if os.path.isfile(c)), "")
+        if not found:
+            sys.stderr.write("house-rules: reviewer verdict not stored: its transcript was not found.\n")
+            return
+        last_text = _observed_models(found)[3]
+        with open(found, encoding="utf-8", errors="replace") as f:
+            whole = f.read()
+        from house_rules import design_loop
+        sid = _field(re.compile(r'"session_id"\s*:\s*"([^"]*)"'), payload)
+        note = design_loop.record_verdict(payload, agent_type, last_text, whole, sid)
+        if note:
+            sys.stderr.write("house-rules: %s.\n" % note)
+    except Exception as exc:
+        sys.stderr.write("house-rules: reviewer verdict not stored (%s: %s).\n" % (type(exc).__name__, exc))
+
+
 def event_verdict():
     """SubagentStop: say which model ACTUALLY served the subagent, from its transcript."""
     try:
+        payload = read_payload()
+        _store_reviewer_verdict(payload)  # #641: runs even when helpers are off (unattended mode turns them off)
         if not _delegation_enabled():
             return 0
-        payload = read_payload()
         if not payload:
             emit(
                 {
@@ -1699,9 +1725,14 @@ def event_commitgate():
     moved), commit for the subagent instead and let the edit through. It also carries the issue
     gate (_issues_gate), which applies on any branch of the main session."""
     try:
+        payload = read_payload()
+        refusal = core.switch_file_refusal(payload) if payload else None  # #636: not behind any switch
+        if refusal:
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                         "permissionDecisionReason": refusal}})
+            return 0
         if not _autosave_enabled() and not _issues_enabled() and not _loop_enabled():
             return 0
-        payload = read_payload()
         if not payload:
             emit({"systemMessage": "house-rules plugin: commitgate got an empty payload and did not run for this call."})
             return 0

@@ -1,0 +1,8 @@
+Live run 1 (stopped on purpose after the fixes): the agent's poll printed these lines, yet the stage record kept every step open (the hook matched the command text 'ledger_note.py check', and the agent used a shell variable), and the stuck counter never reached 3 because the autosave commit changed HEAD at every stop.
+RESULT: pass step 1 fp=1bbcae52511f87331d377efe8453b906b771e7480f85ad7cd51d4104f
+RESULT: pass step 2 fp=1bbcae52511f87331d377efe8453b906b771e7480f85ad7cd51d4104f
+RESULT: pass step 1 fp=1bbcae52511f87331d377efe8453b906b771e7480f85ad7cd51d4104f
+RESULT: pass step 1 fp=1bbcae52511f87331d377efe8453b906b771e7480f85ad7cd51d4104f
+RESULT: pass step 1 fp=1bbcae52511f87331d377efe8453b906b771e7480f85ad7cd51d4104f
+RESULT: pass step 1 fp=1bbcae52511f87331d377efe8453b906b771e7480f85ad7cd51d4104f
+RESULT: pass step 2 fp=1bbcae52511f87331d377efe8453b906b771e7480f85ad7cd51d4104f

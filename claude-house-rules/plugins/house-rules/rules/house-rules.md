@@ -88,8 +88,8 @@ took effect, verify the target actually changed. See `${CLAUDE_PLUGIN_ROOT}/rule
 ## Never hand over a command I have not run where they will run it
 
 My shell is not theirs — run each command in their shell, read the real output. Can't → say
-untested. Required command: hand it over, then wait. **One I can run myself is not one to hand
-over** — ask to run it, relay only if declined.
+untested. Required command: hand it over, carry on. **One I can run myself is not one to hand
+over** — run it, relay only if declined.
 
 ### The handover format is not optional
 

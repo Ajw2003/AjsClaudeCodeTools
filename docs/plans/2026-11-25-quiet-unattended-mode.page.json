@@ -1,0 +1,259 @@
+{
+ "title": "Quiet unattended mode: decide, log, keep going",
+ "eyebrow": "Proposal · nothing built yet",
+ "pageType": "proposal",
+ "approval": "Design approved: quiet unattended mode",
+ "short": {
+  "lead": "Unattended mode still stops. This plan closes 12 ways it can ask or quit, after two independent reviews. I need one approval line from you.",
+  "hint": "Tap a step to see it.",
+  "key": [
+   [
+    "We work on it",
+    ""
+   ],
+   [
+    "You act on it",
+    "you"
+   ]
+  ],
+  "items": [
+   [
+    "bulb",
+    "Idea",
+    "I decide, you design",
+    "",
+    "In auto or normal mode, only choices about how something looks or what it does come to you. In unattended or bypass, I decide those too, state my assumption, and carry on. Once a goal is set, I work its steps to the end.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%22300%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EA%20choice%20comes%20up%3C/text%3E%3Cpath%20d=%22M160%2055%20V70%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%2210%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%2218%22%20y=%2290%22%3EChanges%20the%20look%3C/text%3E%3Ctext%20x=%2218%22%20y=%22106%22%3Eor%20what%20it%20does%3C/text%3E%3Crect%20x=%22165%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22173%22%20y=%2290%22%3EAnything%20else%3C/text%3E%3Ctext%20x=%2214%22%20y=%22140%22%20fill=%22%23c33%22%3EAsk%20you,%20if%20you%20are%20here%3C/text%3E%3Ctext%20x=%22169%22%20y=%22140%22%3EI%20decide%20and%20write%20it%20down%3C/text%3E%3Ctext%20x=%22169%22%20y=%22156%22%3ENobody%20here:%20I%20decide%20both%3C/text%3E%3C/svg%3E",
+     "alt": "A choice about look or function goes to you; any other choice I decide and log",
+     "caption": "Who decides what"
+    }
+   ],
+   [
+    "bulb",
+    "Idea",
+    "Keep going until the goal is met",
+    "",
+    "The plan becomes numbered steps. A check on every reply blocks the stop while a step is open, in every mode. A second loop outside the session restarts it if it quits.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2220%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2240%22%3EWork%3C/text%3E%3Crect%20x=%22120%22%20y=%2220%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22128%22%20y=%2240%22%3EGoal%20met%3F%3C/text%3E%3Cpath%20d=%22M100%2040%20H120%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Cpath%20d=%22M165%2060%20V100%20H55%20V60%22%20fill=%22none%22%20stroke=%22%23c33%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2262%22%20y=%2292%22%20fill=%22%23c33%22%3Eno:%20block%20the%20stop%3C/text%3E%3Cpath%20d=%22M210%2040%20H235%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%22235%22%20y=%2220%22%20width=%2275%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22243%22%20y=%2240%22%3EStop%3C/text%3E%3Ctext%20x=%22243%22%20y=%2256%22%3Eyes%20only%3C/text%3E%3Ctext%20x=%2210%22%20y=%22130%22%3EToday:%20two%20phrases,%20two%20blocks,%20then%20it%20quits.%3C/text%3E%3Ctext%20x=%2210%22%20y=%22150%22%3EPlan:%20every%20reply%20end,%20plus%20an%20outer%20loop.%3C/text%3E%3C/svg%3E",
+     "alt": "A goal check blocks the stop until the goal is met",
+     "caption": "Why it stops today and what changes"
+    }
+   ],
+   [
+    "bulb",
+    "Idea",
+    "Decisions arrive once, at QA",
+    "",
+    "Each decision goes into one file as I make it. You first see them on the QA page, once everything is built and tested.",
+    "Nothing from you.",
+    {
+     "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EBuild%3C/text%3E%3Crect%20x=%22115%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22123%22%20y=%2235%22%3ETest%3C/text%3E%3Crect%20x=%22220%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22228%22%20y=%2235%22%3EQA%20page%3C/text%3E%3Cpath%20d=%22M100%2035%20H115%20M205%2035%20H220%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2210%22%20y=%2285%22%3EDecisions%20are%20written%20to%20a%20file%3C/text%3E%3Ctext%20x=%2210%22%20y=%22102%22%3Eall%20the%20way%20through.%20Nothing%20is%3C/text%3E%3Ctext%20x=%2210%22%20y=%22119%22%3Esaid%20about%20them%20until%20the%3C/text%3E%3Ctext%20x=%2210%22%20y=%22136%22%20fill=%22%23c33%22%3EQA%20page,%20after%20all%20tests%20pass.%3C/text%3E%3C/svg%3E",
+     "alt": "Decisions are written quietly during build and test, then shown on the QA page",
+     "caption": "When you see the decisions"
+    }
+   ],
+   [
+    "lock",
+    "Approve",
+    "You approve it",
+    "you",
+    "Your approval is recorded as one line in the decisions log.",
+    "Send the approval line below."
+   ]
+  ]
+ },
+ "changes": [
+  [
+   "changed",
+   "Rules tell me to ask, wait or stop",
+   "Ask about look or function only when you are here",
+   null,
+   "In auto or normal mode, only choices about how something looks or what it does come to you. A new dependency, a data format or an API change counts as function. In unattended or bypass I decide those too. Everything else I decide and log, in every mode.",
+   [
+    "Today: rules say to ask, wait or hand over (show-dont-tell.md:5, 11, 12; house-rules.md:91; clear-writing.md:59-62; handover-command.md:28, 51; commit-branches.md:50; coding-philosophy.md:58; builder.md:11; core.py:1546, 1610).",
+    "New: those lines are rewritten. Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people, outward posts.",
+    "For you: far fewer questions in every mode, and none in unattended or bypass."
+   ],
+   null
+  ],
+  [
+   "new",
+   "One test for who is present",
+   "Unattended and bypass count as nobody present",
+   null,
+   "Unattended and bypass mean nobody is here, and the loop runs alone. Auto mode keeps you present: the design loop still gates every step. Auto still gets every change that cuts your decisions.",
+   [
+    "Today: only unattended and bypass are recognised, in separate places (core.py:1487, 2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150; design_loop.py:3555).",
+    "New: one helper that all those places use. When nobody is here, a permission prompt is denied at once, a plan-exit prompt is allowed, and pause-goal is denied. Agent writes to house-rules-mode.json and HOUSE_RULES_ keys in .claude/settings are refused.",
+    "For you: auto keeps your gates but asks far less: rules, step check, ledger and QA-only reporting all apply. The launcher is still best overnight, because auto mode has its own safety check I cannot rewrite."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "Unattended switches the design loop off",
+   "Unattended keeps the design loop and runs it itself",
+   null,
+   "The loop stays on. I design, decide, have a helper review the plan, approve it, build the steps and hand over a QA page.",
+   [
+    "Today: unattended turns the loop and the end-of-reply check off (core.py:2723, 2737, 2850; hook.py:122; design_loop.py:2952).",
+    "New: the end-of-reply check comes back for these items only: evidence, commit, deviation, QA page, changelog, decision log. The editor, page limit, plain summary, page send, helpers and issues stay off.",
+    "For you: the loop flows without you from goal to QA, ending on the finish line below."
+   ],
+   null
+  ],
+  [
+   "new",
+   "I can approve my own plan, but only a hook records it",
+   "A hook approves, and only when a real review exists",
+   null,
+   "The hook may move Design to Plan, and Plan to Build, with the issue-label read skipped. It needs the unattended switch or bypass mode, never auto, a stored reviewer verdict for this page's hash, and a build plan with a test command per step.",
+   [
+    "Today: only your typed message moves the stage, and the stage file refuses agent writes (design_loop.py:429, 621, 1157, 1418). The review stamp is self-declared (make_page.py:609), and the verdict hook is off when helpers are off (delegation.py:740).",
+    "New: a verdict hook for reviewer helpers stays on, and writes the verdict and page hash to the stage file. QA passed and Close approved stay yours. The newest-approval marker (design_loop.py:525) is not touched, so your other branches stay open.",
+    "For you: every self-approval is the first row on the QA page."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A step list I cannot shrink",
+   "Steps live in a guarded file, one per session",
+   null,
+   "A hook copies the steps from the reviewed build plan into the stage file, with a hash, under the launcher's session id. Only that session is blocked by them, and only for features approved after this change.",
+   [
+    "Today: no step list exists. Parking has no category (ledger_note.py:43-46), and deviate only adds a ledger row.",
+    "New: a step passes when I run ledger_note.py check for it, through a normal Bash call, so every guard and timeout applies. A hook records the exit code and the commit; a moved commit makes it stale. The hash is also kept outside the repo.",
+    "For you: a step is parked only with a hard-stop category and the command that showed it. Deviate may add or replace a step, never delete one, and never touch the four finish-line steps."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A finish line, the same in every mode",
+   "Four required last steps on every step list",
+   null,
+   "Every step list, in every mode, ends with the same four steps. None can be parked, replaced, deleted or skipped, and QA cannot open until all four pass.",
+   [
+    "Today: QA starts when a pull request opens or every issue says needs review (design_loop.py:860, 872). Nothing checks tests, docs or pictures first.",
+    "New: 1 tests pass (verify.py exits 0). 2 docs written (the changed docs tier and CHANGELOG.md have new lines). 3 before-and-after pictures saved under docs/qa, or a check that no visual file changed. 4 QA page built and stamped.",
+    "For you: you reach QA only with tests green, docs written and pictures to look at."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A check on every stop",
+   "One fixed check reads the step list; no model decides",
+   null,
+   "The check runs on every stop, even with no reply text. A missing step file for an active session counts as open. The words NEEDS YOU no longer exempt anything; only a parked step does.",
+   [
+    "Today: two phrases trigger it, and two blocks end it (core.py:3516, 3518, 3731, 3835, 3840, 3869). The 6 at core.py:3684 is unused and is deleted.",
+    "New: the existing shared counter (core.py:3655) is reused. After 3 blocks with no step closed and no commit, a step is marked stuck, shown on QA, and the check moves on. overnight.sh sets CLAUDE_CODE_STOP_HOOK_BLOCK_CAP to 0.",
+    "For you: the model judge blocks at most once per step set. Sessions with no step list keep the current goal check. The web app keeps Claude Code's cap of 8 blocks."
+   ],
+   null
+  ],
+  [
+   "new",
+   "Look or function choices when nobody is here",
+   "Decide with a stated assumption, list it first on QA",
+   null,
+   "In unattended or bypass I decide these myself. I record my assumption and why it is reasonable, then carry on. In auto mode, a reply ending QUESTION FOR YOU: is allowed.",
+   [
+    "Today: a plain question in Build parks, and a [HARD STOP] question holds edits (design_loop.py:1401, 1547).",
+    "New: ledger_note.py decide adds a C row (choice) with an Assumption column, and a new message from you clears any block. The ledger is named after the branch, with / changed to - (make_page.py:53).",
+    "For you: QA lists these assumptions and auto-approvals first, with why and how to undo each."
+   ],
+   null
+  ],
+  [
+   "new",
+   "A restart loop outside the session",
+   "overnight.sh becomes a loop that runs Claude without a window",
+   null,
+   "It starts with --session-id, then resumes by id with --resume and -p after any stop, never by most recent session. The resume text is marked relayed (core.py:2040), so it never counts as your approval.",
+   [
+    "Today: overnight.sh runs Claude once and sits idle after any stop (tools/overnight.sh:12; test tools/verify_tools.py:813). Rate limits end the turn with no way to block it.",
+    "New: a small script that runs when a stop fails writes the error and reset time to a file. The loop waits for the reset, not counting it, and backs off after crashes. A last short run builds the QA page. overnight.sh --interactive keeps the old behaviour.",
+    "For you: limits are 24 hours of work and 5 restarts with no step closed. They end the run into QA with open steps listed first. This is the one exception to never stopping."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "Decisions shown too early",
+   "Decisions appear only on the QA page",
+   null,
+   "Guard refusals, denied questions and the unattended note all tell me to report in the reply. They change to: write it to the ledger and carry on with the next open step. The QA reply says how many were logged.",
+   [
+    "Today: replies must list refusals under Waiting on you (safe_git.py:1584, 1620) and questions in the final report (core.py:2800, 2958; overnight.sh:4).",
+    "New: the ledger gets them. A hard stop parks its step and I continue with the others. A pull request to main may be opened by me, never merged.",
+    "For you: you see nothing about decisions until the QA page."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "Gates that freeze a run nobody can answer",
+   "Skipped when nobody is present",
+   null,
+   "With the loop on, a reply that asks a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear these. In unattended and bypass the step list, not a pull request, moves Build to QA.",
+   [
+    "Today: design_loop.py:860, 872, 1401, 1524, 1547, 1552, 1562.",
+    "New: when nobody is present, the holds and label checks are skipped, and a pull request opens only when every step is done, stuck or parked. Attended sessions do not change.",
+    "For you: the speed-first build already in Build is not affected; this plan waits for it to leave Build."
+   ],
+   null
+  ],
+  [
+   "changed",
+   "Earlier decisions reversed",
+   "Twelve earlier decisions are reversed, each logged",
+   null,
+   "Each gets a dated entry in docs/6-decisions/Decisions.md and a pointer left in the old one.",
+   [
+    "Today: Decisions.md lines 22, 54, 87, 92, 101, 121, 126, 133, 141 and 143 stand, plus the rule that approval comes only from your message, and Nothing fails silently.",
+    "New: all twelve are reversed. The relaxed credit check stays relaxed, and a final check strips credit lines before a pull request opens.",
+    "For you: tests change in checks/core.py, checks/design_loop.py, checks/safe_git.py and tools/verify_tools.py, with new cases for self-approval, the step file, the counter and the loop."
+   ],
+   null
+  ]
+ ],
+ "choices": [
+  [
+   "first",
+   "Do you approve this plan as written?",
+   [
+    [
+     "A",
+     "Approve it as written",
+     1,
+     "Closes all twelve holes together, after three review rounds."
+    ],
+    [
+     "B",
+     "Change something first",
+     0,
+     "Tell me what, in your own words."
+    ]
+   ],
+   "I recommend A. Any hole left open would still let a run stop."
+  ]
+ ],
+ "wrapup": {
+  "summary": "Twelve rule, hook and launcher problems (plus twelve reversals) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
+  "changing": "Rules, hooks, guards, the step file, ledger_note.py, make_page.py, hooks.json, tools/overnight.sh, the tests, the docs and the changelog.",
+  "blocking": "Your approval line; no code is touched until you send it.",
+  "next": "Send \"Design approved: quiet unattended mode\". Then I write the build plan page for you to approve, then build and test a real headless run.",
+  "todo": [
+   "Read the twelve changes.",
+   "Tap Copy my reply.",
+   "Send it."
+  ]
+ }
+}

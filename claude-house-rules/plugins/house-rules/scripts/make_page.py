@@ -17,6 +17,11 @@ The project style file is `docs/page-style.json` (see docs/plans/page-style/plun
 `{"use": "defaults"}` means the template's own look. One palette is applied in every theme the file
 allows; when `themes` has one entry the page is forced to that theme.
 
+A build-plan Changes row whose title starts with "Step " carries its check command as the 8th list
+element (index 7), or as the key `check` when the row is a dict (a dict row also takes `title`). The spec
+then needs a top-level `test_command` string, and `build` refuses a missing one. The rule applies only when
+the spec has `"step_checks_required": true` or any row already has a check, so older plans keep building.
+
 `start` copies the optional starter for a page type from templates/starters/. A content field `"pageType"` (one of
 those five) is written into the built page's head as <meta name="house-rules-page">.
 
@@ -52,7 +57,7 @@ HEX = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 
 def qa_folder(feature):
     """docs/qa/<folder> name for a feature (ledger_note.py uses it too)."""
-    return feature.lower().replace(" ", "-")
+    return feature.lower().replace(" ", "-").replace("/", "-")
 
 
 def die(msg, code=2):
@@ -326,15 +331,22 @@ def apply_qa(page, project):
             for ln in f.read().splitlines():
                 # split on an unescaped pipe only; ledger_note.py writes a pipe in a cell as \|
                 c = [x.strip().replace("\\|", "|") for x in re.split(r"(?<!\\)\|", ln)]
-                if ln.startswith("| D") and len(c) > 4:
+                if ln.startswith("| S") and len(c) > 6:  # #641: a hook's self-approval, shown first
+                    ledger.append(("S", "SELF-APPROVED %s: %s (verdict %s, %s; undo: %s)" % (c[2], c[3], c[4][:12], c[5], c[6])))
+                elif ln.startswith("| K") and len(c) > 6:
+                    ledger.append(("K", "%s: %s (why: %s; undo: %s)" % (c[1], c[3], c[5], c[6])))
+                elif ln.startswith("| D") and len(c) > 4:
                     ledger.append(("D", "%s: %s" % (c[1], c[4])))
                 elif ln.startswith("| P") and len(c) > 3:
                     ledger.append(("P", "%s: %s" % (c[1], c[3])))
         short = lambda s: s if len(s) <= 160 else s[:157].rstrip() + "..."
-        nd = sum(1 for k, _ in ledger if k == "D")
+        ledger.sort(key=lambda kt: "SK".find(kt[0]) if kt[0] in "SK" else 2)  # self-approvals, choices, then the file's order (stable)
+        nd, nk = sum(1 for k, _ in ledger if k == "D"), sum(1 for k, _ in ledger if k == "K")
+        ns = sum(1 for k, _ in ledger if k == "S")
         page.setdefault("changes", []).insert(
-            0, ["chg", "Deviations and parked decisions", "%d deviation(s), %d parked" % (nd, len(ledger) - nd), None,
-                "\n".join(short(t) for _, t in ledger) or "None recorded", None, None])
+            0, ["chg", "Deviations and parked decisions", "%d deviation(s), %d parked" % (nd, len(ledger) - nd - nk - ns)
+                + (", %d choice(s)" % nk if nk else "") + (", %d SELF-APPROVAL(s)" % ns if ns else ""), None,
+                "\n".join(t if k in "SK" else short(t) for k, t in ledger) or "None recorded", None, None])
     plan = qa.get("files") or {}
     base = qa["base"]
     rows, seen, tot_a, tot_r = [], set(), 0, 0
@@ -540,6 +552,28 @@ def static_parts(page):
             "".join('<li><label><input type="checkbox"> %s</label></li>' % x for x in todo), "".join(rows))
 
 
+def step_rows(page):
+    """[(title, check)] for each build-plan Changes row titled "Step ..." (list row: check at index 7; dict row: keys title, check)."""
+    out = []
+    for c in page.get("changes") or []:
+        t, ck = (c.get("title"), c.get("check")) if isinstance(c, dict) else (
+            (c[1], c[7] if len(c) > 7 else None) if isinstance(c, list) and len(c) > 1 else (None, None))
+        if str(t or "").startswith("Step "):
+            out.append((str(t), ck if isinstance(ck, str) else ""))
+    return out
+
+
+def check_steps(page):
+    steps = step_rows(page)
+    if not (page.get("step_checks_required") is True or any(ck.strip() for _, ck in steps)):
+        return  # older plan: exempt
+    for t, ck in steps:
+        if not ck.strip():
+            die("build plan step %r has no check command (8th element of its Changes row)" % t)
+    if not isinstance(page.get("test_command"), str) or not page["test_command"].strip():
+        die("a build plan with step checks needs a top-level test_command string")
+
+
 def build(args):
     project = os.path.abspath(args.project or os.getcwd())
     style_path = os.path.join(project, STYLE_REL)
@@ -565,6 +599,8 @@ def build(args):
             isinstance(c, list) and len(c) > 4 and str(c[1]).startswith("Acceptance") and str(c[4] or "").strip()
             for c in page.get("changes") or []):
         die("a build plan page needs an Acceptance tests item: one test per design item")
+    if page.get("pageType") == "build-plan":
+        check_steps(page)
     check_approval(page)
     apply_approval_todo(page)
     page.setdefault("choices", [])  # the template maps over the list, so a page with no choices gets an empty one

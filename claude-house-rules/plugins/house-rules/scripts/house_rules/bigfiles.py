@@ -147,7 +147,7 @@ def _bigfile_guard(subject, payload):
                         ".gitignore line `%s`, or if aj wants it stored, aj can write \"LFS approved: %s\" "
                         "(I then check the LFS allowance and track it)."
                         % (rel, _mb(size), _mb(BIG_FILE_BYTES), " and ".join(why), rel, rel))
-    if refusals and core.unattended():  # nobody can write "LFS approved": let it through and say so for the morning
+    if refusals and core.nobody_present(payload):  # nobody can write "LFS approved": let it through and say so for the morning
         return ("note", "", "House rules, UNATTENDED run: this commit was NOT refused for big files (HOUSE_RULES_UNATTENDED=on). "
                 "Review in the morning:\n  - " + "\n  - ".join(refusals))
     if refusals:

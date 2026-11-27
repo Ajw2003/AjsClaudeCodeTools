@@ -1,5 +1,23 @@
 # Today — 2026-11-25
 
+Quiet unattended mode on a real project: your Canada party repo (`Ajw2003/AjsCanadaPrty`, a Unity sword-fighting game with a phone-controller web app) is attached and cloned at `/home/user/ajscanadaprty`. A throwaway copy of its `controller/` folder, with no remote and no `gh`, is running a full unattended trial in `/home/user/canada-trial` (a throw-power meter); a scheduled check reads it back. Nothing was pushed to your repo.
+
+Quiet unattended mode: CI failure fixed (two core checks ran inside this repo's QA state), two guard-refusal wordings fixed, and the unverified list worked through with live runs 7 to 9; suites re-running before the push.
+
+Quiet unattended mode is in QA: issues #634 to #649 say `needs review`, pull request 650 is open, the QA page is sent. Waiting on aj's QA.
+
+Quiet unattended mode: round 3 passed 12 of 12; the page-style.json fingerprint fix is in and the suites are re-running; next the stamp, the QA page, the label swap and the pull request.
+
+Quiet unattended mode: live run 6 logged K1 and K2 after the once-only choices check; all suites pass; acceptance round 3 is open with a reviewer.
+
+Quiet unattended mode: acceptance round 2 left C8; a once-only choices check was added to the stop hook, the full suites are re-running, then a live run and round 3.
+
+Quiet unattended mode, round 2 of acceptance passed 11 of 12 criteria; C8 needs a live run whose prompt does not say to decide or log. That run (run 5, sonnet) is in progress; then round 3, the stamp, QA page, label swap and pull request.
+
+Quiet unattended mode, round 2 of acceptance is running after the round-1 fixes; all suites pass. Next: read `round-2.md`, then stamp, QA page, label swap, pull request.
+
+Quiet unattended mode, acceptance round 1 failed six criteria (C1, C2, C6, C8, C10, C12). Fixes and tests are written and the full suites are running; next are round 2 (`ledger.py new-round`), the stamp, the QA page, the issue label swap and the pull request.
+
 Plugin bumped to 2.94.7 for #633 (CI version-bump gate); verify_tools now passes in CI.
 Pull request #633 (speed first) is open; CI failed once on a stale time_hooks check in verify_tools.py, fixed (0a17a8ca), second run pending.
 Speed first, continued on ccr-3849bb3b-c267ho: step 3 merged in, Write hooks 649 to 145 ms and Bash 458 to 163 ms (median of 5, sandbox), step 5 hook log now appends (0.384 to 0.011 ms), step 4 needs no change. Steps 2 and 6 still open; results in docs/qa/speed-first/results.md.
@@ -418,3 +436,53 @@ Pull request #602 (roadblock detection fix, Refs #587) is open; QA page `docs/pl
 Pull request #602 has Auto-fix on (aj said yes). The live status page was edited by the editor and marked superseded by the QA page.
 
 Status page 2026-11-23-roadblock-live-status.html had a second editor pass; stale 9:20pm wording now reads as past.
+
+2026-11-25: aj asked for unattended mode to decide for itself, keep working until its goal is met, and show decisions only on the QA page. I traced five causes in the code and wrote the proposal page `docs/plans/2026-11-25-quiet-unattended-mode.html` (stage: Plan, nothing built). Waiting on aj's approval line "Design approved: quiet unattended mode".
+
+2026-11-25 (later): aj added that unattended mode must keep the design loop on and run it itself, and that no mode may stop part-way once a goal is set; user-only items go to the QA page. The proposal page was updated to six changes, reviewed once (open risks, the new parts not re-reviewed) and sent. Still Plan stage, nothing built.
+
+2026-11-25 (review): two reviewers found 45 holes in the first plan (self-approval, step list, stop-hook caps, restart loop, auto mode) and a third round found 38 more. The proposal page now has eleven changes and a review stamp (open risks, round 2). Still Plan stage, nothing built. Waiting on aj's line "Design approved: quiet unattended mode", then a build plan page.
+
+2026-11-25 (change from aj): with nobody present, unattended mode also decides look and function choices itself, states its assumption, and lists it first on the QA page. Attended sessions still ask about those. The proposal page, idea card and two change cards were updated. Still Plan stage, nothing built.
+
+2026-11-25 (change from aj): auto mode is attended, so the design loop still gates every step and waits for aj; only unattended mode runs the loop to QA alone. Every unattended step list ends with four fixed steps: tests pass, docs written, before-and-after pictures saved, QA page built. Plan page updated; still Plan stage, nothing built.
+
+2026-11-25 (change from aj): bypass mode counts as unattended in full. Auto mode stays attended at the design loop's gates but gets every change that cuts aj's decisions (ask only about look or function, decide and log the rest, step check, QA-only reporting). Plan page updated; still Plan stage, nothing built.
+
+2026-11-25 (change from aj): the finish line is the same in every mode and required: four last steps (tests pass, docs written, before-and-after pictures saved or no visual change shown, QA page built and stamped) that cannot be parked, replaced or skipped. Plan page now has twelve changes; still Plan stage, nothing built.
+
+2026-11-25: aj approved the design ("Design approved: quiet unattended mode 1A"). Stage is Plan. Wrote the systems doc `docs/4-systems/quiet-unattended-mode.md`, parent issue #634 with eleven step issues #635 to #645, and the build plan page `docs/plans/2026-11-25-quiet-unattended-mode-plan.html`. A plan-mode review of that page is running; then it is sent for "Build plan approved: quiet unattended mode". No code changed.
+
+2026-11-25 (build plan): a first plan-mode review found 29 problems (tests deferred to the end, three steps too big, wrong order, done-whens not runnable). The build plan is rebuilt as fifteen steps with issues #635 to #649 under #634, a verify.py command per step, and file and line citations. A second review round is running; then the page is stamped and sent for "Build plan approved: quiet unattended mode". No code changed.
+
+2026-11-25 (later): the fifteen-step build plan page was sent unstamped; the second plan-mode review round (checking all 29 first-round fixes) is running. After it: apply findings, stamp, resend, wait for aj's "Build plan approved: quiet unattended mode". No code changed.
+
+2026-11-25 (build plan, round 2): the second plan-mode review found 30 more problems: the 60-second wait guard refuses every long check (so checks become start and poll calls), the branch's stage file lacks speed first (step 1 restores it), a failed check never reaches PostToolUse, plus order, citation and naming fixes. The plan page is stamped open risks, round 2, and issues #634 to #649 match it. No code changed; waiting on aj's "Build plan approved: quiet unattended mode".
+
+2026-11-25 (Build): aj approved the build plan ("Build plan approved: quiet unattended mode"); stage is Build. Added the stage entry to Decisions.md. Builders started on step 1 (#638 ledger commands) and step 2 (#636 presence test), each in its own worktree; steps 3 to 15 wait on them. Main has no new commits, so there was nothing to merge.
+
+2026-11-25 (Build, step 1): the builder for #638 (ledger commands) committed `decide`, stricter `park` and K rows first on the QA page; I merged it. The merge briefly left conflict markers in `.claude/house-rules-loop.json` (an autosave committed them); I restored `.claude/` from the last clean commit, stage still Build. Speed first was not restored under features because the stage-file guard refuses hand edits; three deviations are in `docs/qa/quiet-unattended-mode/ledger.md`. The make_page and design_loop suites are running in the background; step 1 is not counted done until they pass. Step 2 (#636) builder still running.
+
+2026-11-25 (Build, steps 1 and 2 verified): step 1 (#638) passed make_page and design_loop (529 checks). Step 2 (#636, one nobody_present test, prompts denied at once, plan-exit allowed, pause-goal denied, switch-file write guard) merged; its first suite run had three failures (a silent except, a pinned "prompttimer never allows" test, an unattended deviation case that needs step 3), fixed; rerun: core 279, safe_git 309, design_loop 541 passed, delegation 207 passed earlier. Bypass now relaxes the whole-file write, credit and big-file refusals like unattended, as aj asked. Steps 3 (#637) and 4 (#639) next.
+
+2026-11-25 (Build, steps 3, 4, 5, 12, 13 merged): step 3 (#637) keeps the design loop and handover on when unattended; step 4 (#639) adds the guarded step list (file, inside and outside hashes, check field in build plans, deviate rules); step 5 (#646) adds `ledger_note.py check --start/--poll`, a hook that records RESULT lines, and staleness by fingerprint; step 12 (#643) moves decisions and refusals to the ledger, adds the QA decision count and denies credit lines in pull requests; step 13 (#635) rewrites the rule lines that ask or wait. Full suite after steps 3, 4, 5 and 12: core 279, safe_git 311, design_loop 552, delegation 207, docs 176, make_page 123, writing 24 passed, except one core case (a silent handler in step 12's QA count), fixed afterwards; tools/verify_tools.py exit 0. Bugs found by the suites, not the builders: step 4's session id read crashed on every "Build plan approved" message (fixed), and a redundant unattended core case (removed). A rerun with step 13 is in progress. Steps 6 (#647) and the rest follow.
+
+2026-11-25 (Build, steps 6 and 13 verified): step 6 (#647) adds the four `Finish:` steps (docs, pictures, tests, QA page) with `finish_checks.py`, Build to QA from the step list when nobody is present, and a pull request denied while a step is open. Step 13 (#635) rewrites the rule lines that told the agent to ask or wait. The suites caught four things the builders missed: step 13's new rule text dropped two phrases the tests pin and exceeded a 3307-character cap on `show-dont-tell.md` (raised to 3600, with the showrule slot at 2141 of 9500), and two handlers gave up silently (fixed). Results: core 279, safe_git 311, design_loop 553, delegation 207, docs 176, make_page 123, writing 24 passed; tools/verify_tools.py exit 0. Builders for step 7 (#640 stop check) and step 8 (#641 self-approval) are running.
+
+2026-11-25 (Build, step 7 verified): step 7 (#640) adds `step_stop_check`, called first on every stop even with no reply text: it blocks while a step is open (naming the next step and the check commands), lets a line starting `QUESTION FOR YOU:` through only when aj is present, marks a step stuck after 3 no-progress blocks, makes the judge block once per step set, and deletes the unused `GOALCHECK_BLOCKS`. NEEDS YOU text no longer exempts a session that has a step list. Full suite: core 279, safe_git 311, design_loop 554, delegation 207, docs 176, make_page 123, writing 24 passed; tools/verify_tools.py exit 0. The step 8 (#641) builder was cut off by a usage limit and restarted from its saved partial branch; step 9 (#642, restart loop) has a builder running.
+
+2026-11-25 (Build, steps 8 to 11 and 14): step 8 (#641) self-approval by a hook on a clean reviewer verdict; step 9 (#642) overnight.sh resumes by session id; step 10 (#648) a stopfailure hook and waits for rate limits and crashes; step 11 (#649) the 24-hour and no-progress limits and a final QA pass; step 14 (#645) twelve dated reversal entries in Decisions.md with pointers in the old entries, the systems docs, ProjectState, and plugin version 2.95.0. Suites after step 10: core 279 (after adding the stopfailure rows to two doc tables), safe_git 311, design_loop 557, delegation 214, docs 176, make_page 124, writing 24 passed; tools/verify_tools.py exit 0 (step 11 raised it to 69 checks in the builder's run). docref and docs_drift pass. The final full run on the integrated build and step 15 (#644, the live headless run) are next.
+
+2026-11-25 (step 15, live runs): four real headless runs of `tools/overnight.sh` with `claude -p` (evidence in `docs/qa/quiet-unattended-mode/`). They found three bugs the suites missed and the fixes are merged: a step result was never recorded when the agent called the check through a shell variable; the stuck rule never fired because the autosave commit at every stop changed HEAD (now the tree fingerprint); the agent had no path to `ledger_note.py decide` (now in the unattended note and the stop block). Live: stop hooks block in a resumed run, resume by session id works after a kill, the stuck rule ends a run that cannot finish, the final QA pass runs, and a stronger model logged a look choice as K1 (the cheap model did not). Not live: self-approval, a ninth consecutive block at cap 1000, a real rate-limit wait, `/goal` in the web app. Final suite: core 279, safe_git 311, design_loop 557, delegation 214, docs 176, make_page 124, writing 24 passed; tools/verify_tools.py 69 passed. An acceptance run by a reviewer is in progress.
+
+2026-11-25 (acceptance in progress): the live-run write-up (`docs/qa/quiet-unattended-mode/live-run.md`), the criteria (C1 to C12) and the evidence folder are committed; a reviewer in acceptance mode is judging the criteria and will write `round-1.md`. After it: fix any FAIL, stamp, build the QA page, set the issues to `needs review`, open the pull request.
+
+2026-11-26 (QA failed): the Canada trial failed finish checks pictures, tests and qa. Fixed: the pictures check accepts `round-N/`; `overnight.sh` turns a leftover `HOUSE_RULES_LOOP=off` back on (the trial inherited it, so no design loop ran). A second trial (`/home/user/canada-trial2`, log `/home/user/canada-trial2.log`) is running with the loop on; its result decides the next fix.
+
+2026-11-26 (shell-write lock): with nobody present the design lock refuses a shell write of a named source file, except after a `cd` or into `.git/`; the refusal says how to run the loop. The second Canada trial then switched to design pages and a reviewer. Suites re-running.
+
+2026-11-26 (third fix round): launcher resumes while the stage is before Build; finish checks ignore plan-page pictures and fall back to local main. Suites: core 281, safe_git 313, design_loop 561, docs 176, writing 24, tools 71 passed; make_page and delegation read next. Third trial running in `/home/user/canada-trial3` (log `/home/user/canada-trial3.log`).
+
+2026-11-26 (fourth fix round): the shell-write lock follows a leading `cd`; `overnight.sh` can resume a killed run by id (`HOUSE_RULES_OVERNIGHT_RESUME`). The third trial was killed by a container restart mid-run and had slipped past the lock through a `cd`. design_loop 562, tools 72, make_page 124 pass. Fourth trial: `/home/user/canada-trial4`, log `/home/user/canada-trial4.log`.
+
+2026-11-26 (fifth fix): a fresh repo has no stage file until a verdict is stored, so `steps-status` now treats a QA ledger as a started feature (OPEN 2). Trial 4 had ended its turn waiting on a reviewer, and the container restart killed the launcher; it is resumed by session id (log `/home/user/canada-trial4b.log`). Tools suite 73 pass.

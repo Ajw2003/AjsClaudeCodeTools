@@ -168,3 +168,8 @@ or compacted session's summary, the first user message is not the real goal (lim
 check passes a stall phrase through when the goal is reached, so ordinary "next step" lines in
 finished work stop costing a block. The agent hook type (reads files itself) ran in a test but
 its verdict could not be observed in that run, so it is not used.
+
+## Changed by quiet unattended mode (2.95.0)
+
+A session with a guarded step list is blocked on every stop while a step is open (`step_stop_check`, run first by the roadblocks Stop hook, even with no reply text); the words NEEDS YOU no longer exempt it, only a parked step does; after 3 blocks with no step closed a step is marked stuck. The judge blocks once per step set. Sessions with no step list keep the goal check and the cap of two described above. The unused `GOALCHECK_BLOCKS` constant is deleted. See [quiet-unattended-mode.md](quiet-unattended-mode.md).
+

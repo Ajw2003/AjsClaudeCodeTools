@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -817,15 +818,200 @@ def _overnight_case():
             f.write('#!/bin/sh\necho "$HOUSE_RULES_UNATTENDED $ART_PIPELINE $*"\n')
         os.chmod(os.path.join(d, "claude"), 0o755)
         env = dict(os.environ, PATH=d + os.pathsep + os.environ["PATH"])
-        p = subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "-p", "hi"], env=env,
+        p = subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "--interactive", "-p", "hi"], env=env,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         check(p.returncode == 0 and p.stdout.strip() == "on unattended --dangerously-skip-permissions -p hi"
               and os.access(os.path.join(HERE, "overnight.sh"), os.X_OK),
-              "overnight.sh exports both variables and runs claude with the permission flag and its arguments",
+              "overnight.sh --interactive exports both variables and runs claude once with the permission flag and its arguments",
               "got %r %r" % (p.stdout, p.stderr))
+        with open(os.path.join(d, "claude"), "w") as f:
+            f.write('#!/bin/sh\necho "loop=${HOUSE_RULES_LOOP:-unset}"\n')
+        loops = {}
+        for v in ("off", "unset"):
+            e = dict(env)
+            e.pop("HOUSE_RULES_LOOP", None)
+            if v == "off":
+                e["HOUSE_RULES_LOOP"] = "off"
+            q = subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "--interactive"], env=e,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            loops[v] = (q.stdout.strip(), "design loop on" in q.stderr)
+        with open(os.path.join(d, "claude"), "w") as f:
+            f.write('#!/bin/sh\necho "$*" >> "$CALLS"\n')
+        calls = {}
+        for v in ("fresh", "resume"):
+            cf = os.path.join(d, "calls-" + v)
+            e = dict(env, CALLS=cf)
+            e.pop("HOUSE_RULES_OVERNIGHT_RESUME", None)
+            if v == "resume":
+                e["HOUSE_RULES_OVERNIGHT_RESUME"] = "abc-123"
+            subprocess.run(["sh", os.path.join(HERE, "overnight.sh"), "task"], env=e, cwd=d, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, text=True)
+            calls[v] = open(cf).read() if os.path.isfile(cf) else ""
+        check("--session-id" in calls["fresh"] and calls["resume"] == "",
+              "overnight.sh: HOUSE_RULES_OVERNIGHT_RESUME skips the first claude call (the loop then resumes that id)", "got %r" % (calls,))
+        check(loops["off"] == ("loop=on", True) and loops["unset"] == ("loop=unset", False),
+              "overnight.sh turns a leftover HOUSE_RULES_LOOP=off on and says so; an unset value stays unset", "got %r" % (loops,))
     finally:
         shutil.rmtree(d, True)
 _overnight_case()
+
+def _overnight_loop_case():
+    sys.path.insert(0, os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scripts"))
+    from house_rules import core
+    d = tempfile.mkdtemp()
+    try:
+        repo = os.path.join(d, "repo")
+        os.makedirs(os.path.join(repo, ".claude"))
+        subprocess.run(["git", "init", "-q", repo], check=True)
+        log = os.path.join(d, "log")
+        stub = os.path.join(d, "bin", "claude")
+        os.makedirs(os.path.dirname(stub))
+        # every call rewrites the stage file: one step for the session id, stuck only on a --resume call unless NEVER_CLOSE is set
+        with open(stub, "w") as f:
+            f.write("""#!/bin/sh
+echo "$CLAUDE_CODE_STOP_HOOK_BLOCK_CAP|$CLAUDE_SESSION_ID|$*" >> "$LOG"
+python3 - "$REPO" "$CLAUDE_SESSION_ID" "${NEVER_CLOSE:-}" "$*" <<'PY'
+import json, sys
+repo, sid, never, argv = sys.argv[1:5]
+stuck = "--resume" in argv and not never
+rec = {"feature": "feature", "steps": [{"n": 1, "title": "Step 1", "check": "true", "state": "open", "stuck": stuck}]}
+json.dump({"feature": "feature", "stage": "build", "skip": False, "approvals": [], "steps": {sid: rec}},
+          open(repo + "/.claude/house-rules-loop.json", "w"))
+PY
+# #648: SF_KIND leaves a stopfailure file like the hook does (every call, or only the first when SF_FIRST is set)
+if [ -n "${SF_KIND:-}" ] && { [ -z "${SF_FIRST:-}" ] || [ "${*#*--resume}" = "$*" ]; }; then
+  mkdir -p "$CLAUDE_CONFIG_DIR/house-rules-steps"
+  printf '{"error":"x","kind":"%s","reset_at":%s,"at":1}' "$SF_KIND" "${SF_RESET:-null}" > "$CLAUDE_CONFIG_DIR/house-rules-steps/stopfailure-$CLAUDE_SESSION_ID.json"
+fi
+""")
+        os.chmod(stub, 0o755)
+        script = os.path.join(HERE, "overnight.sh")
+        def run(extra=None, cap=None):
+            env = dict(os.environ, PATH=os.path.dirname(stub) + os.pathsep + os.environ["PATH"], LOG=log, REPO=repo,
+                       CLAUDE_CONFIG_DIR=os.path.join(d, "cfg"))
+            env.pop("CLAUDE_SESSION_ID", None)
+            if cap:
+                env["HOUSE_RULES_OVERNIGHT_NO_PROGRESS"] = cap
+            env.update(extra or {})
+            if os.path.exists(log):
+                os.remove(log)
+            p = subprocess.run(["sh", script, "do", "the", "work"], cwd=repo, env=env, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, text=True, timeout=40)
+            return p, open(log).read().splitlines()
+        resume = "[Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. If there is no step list yet, you are still in the design loop: read the reviewer verdict, then the build plan, then build."
+        p, lines = run()
+        sid = lines[0].split("|")[1] if lines else ""
+        check(len(lines) == 3 and sid and lines[0] == "1000|%s|-p do the work --session-id %s --dangerously-skip-permissions" % (sid, sid)
+              and lines[1] == "1000|%s|-p %s --resume %s --dangerously-skip-permissions" % (sid, resume, sid)
+              and lines[2].startswith("1000|%s|-p [Subagent hand-back] Final pass: the run is ending (all steps closed, but some are stuck: 1 STUCK: Step 1)." % sid)
+              and not any("--continue" in l for l in lines),
+              "overnight.sh loop: first call --session-id, one --resume with the same id and resume text, cap exported, no --continue",
+              "got %r %r" % (lines, p.stderr))
+        check(bool(core._RELAYED_PROMPT_RE.search(resume)), "overnight.sh resume text matches core._RELAYED_PROMPT_RE", resume)
+        p, lines = run({"NEVER_CLOSE": "1"}, cap="1")
+        check(len(lines) == 3 and "loop ended: 5 restarts with no step closed" in p.stdout and "(5 restarts with no step closed)" in lines[2],
+              "overnight.sh stops after HOUSE_RULES_OVERNIGHT_NO_PROGRESS no-progress restarts, says so and makes the final call", "got %r %r" % (lines, p.stdout))
+        # #648: waits go through HOUSE_RULES_OVERNIGHT_SLEEP (stubbed to log its argument)
+        slp = os.path.join(d, "bin", "fakesleep")
+        with open(slp, "w") as f:
+            f.write('#!/bin/sh\necho "$1" >> "$LOG.sleep"\n')
+        os.chmod(slp, 0o755)
+        def waits(extra, cap=None):
+            if os.path.exists(log + ".sleep"):
+                os.remove(log + ".sleep")
+            p, lines = run(dict(extra, HOUSE_RULES_OVERNIGHT_SLEEP=slp), cap=cap)
+            sl = open(log + ".sleep").read().split() if os.path.exists(log + ".sleep") else []
+            return p, lines, sl
+        p, lines, sl = waits({})
+        check(len(lines) == 3 and sl == [] and "waiting" not in p.stdout, "overnight.sh: no stopfailure file means no wait",
+              "got %r %r %r" % (lines, sl, p.stdout))
+        p, lines, sl = waits({"SF_KIND": "rate_limit", "SF_FIRST": "1", "NEVER_CLOSE": "1"}, cap="1")
+        check(len(lines) == 3 and sl == ["300"] and "rate limit" in p.stdout and "not counted" in p.stdout,
+              "overnight.sh: a rate_limit file with no reset time waits HOUSE_RULES_OVERNIGHT_RATE_WAIT (300) and spends no resume",
+              "got %r %r %r" % (lines, sl, p.stdout))
+        p, lines, sl = waits({"SF_KIND": "rate_limit", "SF_FIRST": "1", "SF_RESET": str(int(time.time()) + 1000), "NEVER_CLOSE": "1"}, cap="1")
+        check(len(sl) == 1 and 1000 <= int(sl[0]) <= 1031, "overnight.sh: a rate_limit file with reset_at waits until reset_at plus 30 s", "got %r" % (sl,))
+        p, lines, sl = waits({"SF_KIND": "crash", "NEVER_CLOSE": "1"}, cap="2")
+        left = [f for f in os.listdir(os.path.join(d, "cfg", "house-rules-steps")) if f.startswith("stopfailure")]
+        check(len(lines) == 4 and sl == ["30", "60", "120"] and not left,
+              "overnight.sh: crash files back off 30, 60, 120 s, each resume counts (2 no-progress stops after 3 calls plus the final), file deleted",
+              "got %r %r %r %r" % (lines, sl, left, p.stdout))
+        # #649: limits. Stub clock advances STEP s per read; stub wait advances it by its argument (real time passing).
+        clk = os.path.join(d, "bin", "fakeclock")
+        with open(clk, "w") as f:
+            f.write('#!/bin/sh\nc=$(cat "$LOG.clock"); echo "$c"; echo $((c + ${STEP:-0})) > "$LOG.clock"\n')
+        os.chmod(clk, 0o755)
+        slp2 = os.path.join(d, "bin", "clockwait")
+        with open(slp2, "w") as f:
+            f.write('#!/bin/sh\necho "$1" >> "$LOG.sleep"\nc=$(cat "$LOG.clock"); echo $((c + $1)) > "$LOG.clock"\n')
+        os.chmod(slp2, 0o755)
+        def limits(extra, cap="50"):
+            open(log + ".clock", "w").write("1000")
+            if os.path.exists(log + ".sleep"):
+                os.remove(log + ".sleep")
+            return run(dict(extra, HOUSE_RULES_OVERNIGHT_NOW=clk, HOUSE_RULES_OVERNIGHT_SLEEP=slp2, NEVER_CLOSE="1"), cap=cap)
+        p, lines = limits({"STEP": "30000"})
+        check(len(lines) > 2 and "Final pass: the run is ending (24-hour limit)." in lines[-1] and "loop ended: 24-hour limit" in p.stdout and p.returncode == 0,
+              "overnight.sh: 24 hours of work ends the loop with the 24-hour limit final call", "got %r %r" % (lines, p.stdout))
+        p, lines = limits({"STEP": "1"}, cap="5")
+        check(len(lines) == 7 and "(5 restarts with no step closed)" in lines[-1] and p.returncode == 0,
+              "overnight.sh: 5 restarts with no step closed end the loop (first call, 5 resumes, final call)", "got %r %r" % (lines, p.stdout))
+        # a resume that closes a step resets the count: status reads OPEN 2, 2, 1, 1, 1, 1, ALL DONE -> count 1, 0, 1, 2, 3 would stop at cap 3 without the reset
+        seq = os.path.join(d, "bin", "seqnote.py")
+        open(seq, "w").write("import sys, os\nf = sys.argv[0] + '.n'\ni = int(open(f).read()) if os.path.exists(f) else 0\nopen(f, 'w').write(str(i + 1))\n"
+                             "v = [2, 2, 1, 1, 1, 0][i]\nprint('OPEN %d' % v if v else 'ALL DONE')\nsys.exit(1 if v else 0)\n")
+        script2 = os.path.join(d, "overnight2.sh")
+        open(script2, "w").write(open(script).read().replace('python3 "$note"', 'python3 ' + seq).replace('$(dirname "$0")', '.'))
+        open(log + ".clock", "w").write("1000")
+        env = dict(os.environ, PATH=os.path.dirname(stub) + os.pathsep + os.environ["PATH"], LOG=log, REPO=repo,
+                   CLAUDE_CONFIG_DIR=os.path.join(d, "cfg"), HOUSE_RULES_OVERNIGHT_NO_PROGRESS="3", HOUSE_RULES_OVERNIGHT_NOW=clk, NEVER_CLOSE="1")
+        env.pop("CLAUDE_SESSION_ID", None)
+        os.remove(log)
+        p = subprocess.run(["sh", script2, "x"], cwd=repo, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+        lines = open(log).read().splitlines()
+        check(len(lines) == 7 and "(all steps done)" in lines[-1] and "5 restarts" not in p.stdout,
+              "overnight.sh: a resume that closes a step resets the no-progress count (cap 3 not hit)", "got %r %r" % (lines, p.stdout))
+        # rate-limit waits are not work: 100000 s of waiting (> 24 h) does not trip the 24-hour limit
+        p, lines = limits({"STEP": "0", "SF_KIND": "rate_limit", "SF_FIRST": "1", "HOUSE_RULES_OVERNIGHT_RATE_WAIT": "100000"}, cap="1")
+        check("loop ended: 5 restarts" in p.stdout and "24-hour" not in p.stdout and open(log + ".sleep").read().split() == ["100000"],
+              "overnight.sh: rate-limit wait seconds are not counted toward the 24 hours", "got %r %r" % (lines, p.stdout))
+        fin = "[Subagent hand-back] Final pass: the run is ending (all steps done). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work."
+        check(bool(core._RELAYED_PROMPT_RE.search(fin)), "overnight.sh final-pass text matches core._RELAYED_PROMPT_RE", fin)
+        note = os.path.join(ROOT, "claude-house-rules", "plugins", "house-rules", "scripts", "ledger_note.py")
+        loop = os.path.join(repo, ".claude", "house-rules-loop.json")
+        def status(steps):
+            json.dump({"feature": "feature", "stage": "build", "skip": False, "approvals": [],
+                       "steps": {"S1": {"feature": "feature", "steps": steps}} if steps else {}}, open(loop, "w"))
+            r = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+            return r.returncode, r.stdout.strip()
+        st = {"n": 1, "title": "Step 1", "check": "true", "state": "open"}
+        got = (status(None), status([st]), status([dict(st, stuck=True)]))
+        check(got == ((0, "NO STEP LIST"), (1, "OPEN 1"), (0, "ALL DONE (1 STUCK: Step 1)")),
+              "ledger_note.py steps-status prints NO STEP LIST, OPEN n, ALL DONE with the right exit codes", "got %r" % (got,))
+        def stage_only(stage):
+            json.dump({"feature": "feature", "stage": stage, "skip": False, "approvals": [], "steps": {}}, open(loop, "w"))
+            r = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+            return r.returncode, r.stdout.strip()
+        os.remove(loop)
+        bare = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+        os.makedirs(os.path.join(repo, "docs", "qa", "f"), exist_ok=True)
+        open(os.path.join(repo, "docs", "qa", "f", "ledger.md"), "w").write("x\n")
+        withl = subprocess.run([sys.executable, note, "steps-status", "feature", "--session", "S1"], cwd=repo,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=40)
+        os.remove(os.path.join(repo, "docs", "qa", "f", "ledger.md"))
+        got = ((bare.returncode, bare.stdout.strip()), (withl.returncode, withl.stdout.strip()))
+        check(got == ((0, "NO STEP LIST"), (1, "OPEN 2")),
+              "ledger_note.py steps-status: with no stage file, a QA ledger makes the feature open (Design), no ledger means no step list", "got %r" % (got,))
+        got = (stage_only("design"), stage_only("plan"), stage_only("build"), stage_only("qa"))
+        check(got == ((1, "OPEN 2"), (1, "OPEN 1"), (0, "NO STEP LIST"), (0, "NO STEP LIST")),
+              "ledger_note.py steps-status: a feature still in Design or Plan with no step list counts as open (2, 1); Build and QA do not",
+              "got %r" % (got,))
+    finally:
+        shutil.rmtree(d, True)
+_overnight_loop_case()
 
 def _time_hooks_case():
     p = subprocess.run([sys.executable, os.path.join(HERE, "time_hooks.py"), "--quick"],

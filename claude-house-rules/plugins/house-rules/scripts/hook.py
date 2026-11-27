@@ -108,7 +108,12 @@ def event_roadblocks():
         return 0
     retry = bool(re.search(r'"stop_hook_active"\s*:\s*true', payload))
     reply_text = handover_evidence_check(payload)[0]
-    block, msg = roadblock_check(payload, reply_text, retry)
+    block, msg = step_stop_check(payload, reply_text)  # #640: first, on every stop, even with no reply text
+    if block:
+        emit({"decision": "block", "reason": block})
+        return 0
+    block, msg2 = roadblock_check(payload, reply_text, retry)
+    msg = msg or msg2
     if block:
         emit({"decision": "block", "reason": block})
     elif msg:
@@ -308,7 +313,7 @@ PRE_CHECKS = [
     (_GH + "(create_pull_request|update_pull_request|issue_write|add_issue_comment|update_issue_comment|"
      "add_reply_to_pull_request_comment|add_comment_to_pending_review|pull_request_review_write|push_files|"
      "create_or_update_file|create_branch)", "guardgithub"),
-    ("AskUserQuestion|ExitPlanMode", "noask"),
+    ("AskUserQuestion|ExitPlanMode|.*[Pp]ause_goal.*", "noask"),
     ("Agent|Task", "agentcap"),
     ("Write|Edit|NotebookEdit|Bash|PowerShell", "commitgate"),
     ("Write|Artifact", "pagecheck"),
@@ -459,6 +464,7 @@ EVENTS = {
     "subagentcommit": event_subagentcommit,
     "autosave": event_autosave,
     "autosavefinal": event_autosave_final,
+    "stopfailure": event_stopfailure,
     "pickup": event_pickup,
     "commitgate": event_commitgate,
     "worktreesweep": event_worktreesweep,

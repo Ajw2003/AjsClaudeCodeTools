@@ -707,8 +707,8 @@ except Exception:
     pass
 _loop_cases.append(("a helper starts knowing the feature, its stage and issues, and that it only builds",
                     '"blockers"' in _so and "Build" in _so and "#102" in _so and "never design" in _so))
-_loop_cases.append(("a helper is told to park a reversible question with ledger_note.py park, and to report only a [HARD STOP] (#598)",
-                    "ledger_note.py park" in _so and "[HARD STOP]" in _so))
+_loop_cases.append(("a helper is told to record a reversible choice with ledger_note.py decide, and to report only a [HARD STOP] (#598)",
+                    "ledger_note.py decide" in _so and "needs --category and --tried" in _so and "[HARD STOP]" in _so))
 _loop_cases.append(("the stage carries into a new session", _loop_stage() == "build"
                     and _loop_edit("app.py", session_id="other") == "allow"))
 _loop_log("build log for blockers")
@@ -927,7 +927,26 @@ _wt_n = _wt_raw("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" ap
 _wt_loop_off = dict(_loop_env, HOUSE_RULES_LOOP="off")
 _, _wt_o, _ = run_hook("commitgate", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt",
                        "cwd": _wt_main, "tool_input": {"command": _wt_heredoc}}), env=_wt_loop_off)
+_wt_un = dict(_loop_env, HOUSE_RULES_UNATTENDED="on")
+def _wt_un_run(cmd):
+    return run_hook("commitgate", json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "wt",
+                    "cwd": _wt_main, "tool_input": {"command": cmd}}), env=_wt_un)[1]
+_wt_u1 = _wt_un_run(_wt_heredoc)
+_wt_u2 = _wt_un_run("python3 -c \"import sys; open(sys.argv[1], 'w').write('x')\" app.py")
+_wt_u3 = _wt_un_run("echo hi > notes.md")
+_wt_u4 = _wt_un_run("cd docs/plans && cat > pictures/x.svg <<'E'\n<svg/>\nE")
+_wt_u5 = _wt_un_run("echo x >> .git/info/exclude")
+_wt_u6 = _wt_un_run("cd . && python3 - <<'E'\nopen('app.py', 'w').write('x')\nE")
+_wt_u7 = _wt_un_run("cd a && echo x > b.py && cd .. && echo y > c.py")
 for _t, _ok in (
+        ("Canada trial: with nobody present a shell write of a named source file in Design is refused, and the reason gives the self-approval route",
+         '"deny"' in _wt_u1 and "Nobody is present" in _wt_u1 and "app.py" in _wt_u1 and "make_page.py start proposal" in _wt_u1),
+        ("Canada trial: with nobody present a shell write whose file can't be named, and a .md write, still go through",
+         '"deny"' not in _wt_u2 and '"deny"' not in _wt_u3),
+        ("Canada trial: with nobody present `cd docs/plans && cat > pictures/x.svg` (a docs folder) and a write into .git/ are not refused",
+         '"deny"' not in _wt_u4 and '"deny"' not in _wt_u5),
+        ("Canada trial: a leading cd is followed, so `cd . && python3 - <<E open('app.py'...)` is refused; a second cd makes it report only",
+         '"deny"' in _wt_u6 and "app.py" in _wt_u6 and '"deny"' not in _wt_u7),
         ("a worktree reads the main checkout's stage: Build lets its Edit through", _wt_a == "allow"),
         ("a worktree reads the main checkout's stage: Design refuses its Edit", _wt_d == "deny"),
         ("a python heredoc writing a .py file is allowed in Build", _wt_b == "allow"),
@@ -3183,7 +3202,7 @@ _ex = [run_hook(_e, "", env=env_in(ROOT, HOUSE_RULES_LOOP="on"))[1] for _e in ("
 _hq_text = " ".join(_ex) + read(os.path.join(DETAIL_DIR, "clear-writing.md"))
 _hq_cases.append(("#458: the injected rule text and its detail carry no 'unless they have said otherwise' exception",
                     "said otherwise" not in _hq_text and "said to make them myself" not in _hq_text
-                    and "judgement calls go to the user the same way" in " ".join(_ex).replace("\\n", " ")))
+                    and "decide and log it with `ledger_note.py decide`" in " ".join(_ex).replace("\\n", " ")))
 _loop_gh("in progress", 7)
 _hq_build = {"feature": "F", "stage": "build", "issues": [{"repo": "o/r", "number": 7, "labelled": True}],
              "approvals": [{"stage": "Build plan approved", "name": "F", "at": 1000}]}
@@ -3195,7 +3214,7 @@ _hq_cases.append(("a Build reply with no question holds nothing", not _ma_stage(
 _, _hq_out, _ = run_hook("handover", stop_payload(last_assistant_message="Step done.\n\nShould the header be blue or green?", cwd=_d), env=_loop_env)
 _hq_cases.append(("#598: a plain question in Build holds nothing, edits stay allowed, and the end-of-reply output carries the park note",
                   not _ma_stage(_d).get("held") and _p5_edit(_d)[0] == "allow"
-                  and "Build stage: park a reversible question with ledger_note.py park" in _hq_out))
+                  and "Build stage: record a reversible choice with ledger_note.py decide" in _hq_out))
 run_hook("handover", stop_payload(last_assistant_message="Step done.\n\n[HARD STOP] Delete the user table?", cwd=_d), env=_loop_env)
 _dec, _why = _p5_edit(_d)
 _hq_cases.append(("#598: a [HARD STOP] question in Build sets held and the next code edit is refused with the note",
@@ -3267,6 +3286,44 @@ _dv_cases = [
 ]
 for _t, _ok in _dv_cases:
     report("PASS" if _ok else "FAIL", _t)
+# ---- #637: nobody present keeps the loop on, runs six checkpoints, and skips three GitHub/question refusals ----
+from house_rules import design_loop as _np_dl  # noqa: E402
+_np_saved = (_np_dl.CHECKPOINTS, _np_dl._loop_enabled)
+_np_dl.CHECKPOINTS = [(m, n, (lambda c: "fix"), mode) for m, n, _f, mode in _np_saved[0]]
+_np_dl._loop_enabled = lambda: True
+try:
+    _np_names = [n for n, _ in _np_dl._missed_checkpoints({"hands_off": True})]
+    _np_att = [n for n, _ in _np_dl._missed_checkpoints({"hands_off": False})]
+finally:
+    _np_dl.CHECKPOINTS, _np_dl._loop_enabled = _np_saved
+_np_six = {"evidence", "commit", "deviation", "qa page", "changelog", "decided for you"}
+_np_gate_saved = {k: getattr(_np_dl, k) for k in ("_gated_edit", "_loop_file_refusal", "_loop_read_merged", "_loop_stale_hold", "_loop_labels")}
+_np_dl._gated_edit = lambda payload, what: ("/g", None)
+_np_dl._loop_file_refusal = lambda payload: None
+_np_dl._loop_stale_hold = lambda gd, st: None
+
+
+def _np_gate(held, labels, src, mode):
+    _np_dl._loop_read_merged = lambda gd: ({"stage": "build", "held": held, "feature": "F"}, None)
+    _np_dl._loop_labels = lambda st, record=False: (labels, src)
+    return _np_dl._loop_gate('{"permission_mode": "%s", "cwd": "/g"}' % mode)[0]
+
+
+try:
+    _np_unlab = {"o/r#1": ["backlog"]}
+    _np_g = [(_np_gate(True, {"o/r#1": ["in progress"]}, "", m), _np_gate(False, {}, "gh down", m), _np_gate(False, _np_unlab, "", m))
+             for m in ("bypassPermissions", "default")]
+finally:
+    for _k, _v in _np_gate_saved.items():
+        setattr(_np_dl, _k, _v)
+_np_cases = [
+    ("#637: nobody present runs only the six named checkpoints", set(_np_names) == _np_six),
+    ("#637: attended runs every blocking checkpoint, including the page-side ones", {"editor", "plain summary", "handoff", "send page"} <= set(_np_att)),
+    ("#637: nobody present skips the question hold, the unreadable-GitHub refusal and the unlabelled refusal", _np_g[0] == (None, None, None)),
+    ("#637: attended still refuses all three", all(_np_g[1])),
+]
+for _t, _ok in _np_cases:
+    report("PASS" if _ok else "FAIL", _t)
 # ---- #598: noask in the Build stage, with someone present ----
 _na_root = tempfile.mkdtemp(prefix="noask-build-")
 _na_cases = []
@@ -3291,9 +3348,9 @@ _na_cases.append(("attended Build question with [HARD STOP] is allowed", _na("bu
 for _s in ("design", "plan", "qa"):
     _na_cases.append(("attended %s question is allowed as before" % _s, _na(_s)[1] == ""))
 _na_cases.append(("attended Build ExitPlanMode is untouched", _na("build", tool="ExitPlanMode")[1] == ""))
-_na_cases.append(("unattended denies with the old text and names ledger_note.py park",
-                  all(t in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1] for t in ("nobody is there to answer", "ledger_note.py park"))))
-_na_cases.append(("bypassPermissions denies with the old text and names ledger_note.py park",
+_na_cases.append(("unattended denies with the old text and names ledger_note.py decide, no final report",
+                  all(t in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1] for t in ("nobody is there to answer", "ledger_note.py decide")) and "final report" not in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1] and "Waiting on you" not in _na("design", env={"HOUSE_RULES_UNATTENDED": "on"})[1]))
+_na_cases.append(("bypassPermissions denies with the old text and names ledger_note.py decide, no final report",
                   all(t in _na("design", mode="bypassPermissions")[1] for t in ("nobody is there to answer", "ledger_note.py park"))))
 _o = _na("design", mode=None)
 _na_cases.append(("missing permission_mode: allowed outside Build (said on stderr)", _o[1] == "" and "no permission_mode" in _o[2]))
@@ -3484,6 +3541,19 @@ _pf7_qa = {"qa_stage": "qa", "qa_page": "docs/plans/feat-qa.html", "cwd": _loop_
 _pf7.append(("proof (#507) D8: a bare claude.ai link is not the QA page; this feature's page file name is",
              _dl_mod._check_qa_page(dict(_pf7_qa, reply="QA page: https://claude" ".ai/artifact/abc")) != ""
              and _dl_mod._check_qa_page(dict(_pf7_qa, reply="QA page: docs/plans/feat-qa.html")) == ""))
+# #643: with K rows on the feature's ledger, a reply linking the QA page must say how many decisions were logged
+import tempfile as _k_tmp
+_k_top = _k_tmp.mkdtemp()
+os.makedirs(os.path.join(_k_top, ".git")); os.makedirs(os.path.join(_k_top, "docs", "qa", "feat"))
+_k_led = os.path.join(_k_top, "docs", "qa", "feat", "ledger.md")
+_k_ctx = dict(_pf7_qa, cwd=_k_top, qa_feature="feat", reply="QA page: docs/plans/feat-qa.html")
+open(_k_led, "w").write("## Choices\n\n| # | Step |\n|---|---|\n")
+_k_none = _dl_mod._check_qa_page(dict(_k_ctx))
+open(_k_led, "a").write("| K1 | 1 | a | b | c | d |\n")
+_k_with = _dl_mod._check_qa_page(dict(_k_ctx))
+_k_ok = _dl_mod._check_qa_page(dict(_k_ctx, reply=_k_ctx["reply"] + " 1 decision logged"))
+_pf7.append(("#643: QA page linked + K rows: blocked without a decision count; no K rows or a count: not",
+             _k_none == "" and "how many decisions" in _k_with and _k_ok == ""))
 
 # #102: before a change ships aj gets a final pass/fail through a QA page: in QA, a reply with no page is blocked.
 _ck_stage("qa")
@@ -3927,6 +3997,22 @@ report("PASS" if _ubf_off[0] == "deny" and "huge.bin" in _ubf_off[1] and _iss_de
        and "UNATTENDED run" in _ubf_on and "huge.bin" in _ubf_on else "FAIL",
        "unattended: a big-file commit is allowed with a note naming the file; attended it is still refused")
 
+# --- #636: big files and hands_off (the deviation check), one case per mode ---
+for _nm, _mode, _on, _gone in (("unattended", "default", True, True), ("bypass", "bypassPermissions", False, True),
+                               ("auto", "auto", False, False), ("normal", "default", False, False),
+                               ("plan", "plan", False, False), ("unknown", "somethingNew", False, False)):
+    _pl = _iss_payload("PreToolUse", "Bash", _ubf, command="git add -A && git commit -m x")
+    _pl["permission_mode"] = _mode
+    _o = _iss_call("guard", _pl, _ubf, HOUSE_RULES_UNATTENDED="on" if _on else "off")[1]
+    report("PASS" if (_iss_decision(_o) != "deny") == _gone else "FAIL",
+           "#636 big-file commit, %s: %s" % (_nm, "allowed with a note" if _gone else "refused"))
+    _, _o, _ = run_hook("handover", stop_payload(last_assistant_message=_dv_reply, cwd=_loop_dir, session_id="verify-636",
+                                                 permission_mode=_mode, transcript_path=_dv_unlogged),
+                        env=dict(_loop_env, HOUSE_RULES_UNATTENDED="on" if _on else "off"))
+    _dv_gone = _gone
+    report("PASS" if ("deviation" in _o) == _dv_gone else "FAIL",
+           "#636 hands_off (deviation check), %s: %s" % (_nm, "sent back" if _dv_gone else "passes"))
+
 # -- #559: the send-page checkpoint (Stop) and sendcheck (PreToolUse on SendUserFile) -------------
 _sp_dir = tempfile.mkdtemp(prefix="sendpage-", dir=_FIXTURE_ROOT)
 _sp_page = os.path.join(_sp_dir, "docs", "plans", "p.html")
@@ -3973,6 +4059,340 @@ _sp_cases.append(("#559: HOUSE_RULES_PAGES=off turns the send check off",
                         last_assistant_message="Done.", cwd=_sp_dir, session_id="verify-send"),
                         env=dict(_sp_env, HOUSE_RULES_PAGES="off"))[1]))
 
+
+# --- #639: step list store, integrity, and ledger_note step deviations ---
+_st_snip = os.path.join(_FIXTURE_ROOT, "steps_snip.py")
+with open(_st_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile
+sys.path.insert(0, sys.argv[1])
+os.environ["CLAUDE_CONFIG_DIR"] = tempfile.mkdtemp()
+from house_rules import design_loop as dl
+d = tempfile.mkdtemp(); subprocess.run(["git", "init", "-q", d], check=True)
+g = os.path.join(d, ".git"); plan = os.path.join(d, "p.page.json")
+json.dump({"test_command": "t", "changes": [["chg", "Step 1: a", "", None, "", None, None, "echo 1"]]}, open(plan, "w"))
+dl.record_steps(g, "f", plan, "sess1")
+st, _ = dl._loop_read(g); rec = st["steps"]["sess1"]
+o = dl._steps_outside(g, "sess1")
+r = [os.path.isfile(o) and rec["sha256"] == json.load(open(o))["sha256"], dl.steps_integrity(g, "f", "sess1") == ""]
+rec["steps"][0]["check"] = "true"; dl._loop_write(g, st)
+r.append(bool(dl.steps_integrity(g, "f", "sess1")))
+print(r == [True, True, True])
+""")
+_r = subprocess.run([sys.executable, _st_snip, HERE], capture_output=True, text=True)
+_sp_cases.append(("#639: steps recorded under the session id with matching hashes; an altered inside copy is detected",
+                  _r.stdout.strip() == "True"))
+_LN = os.path.join(HERE, "ledger_note.py")
+def _ln(*a):
+    return subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Step 2", "--plan", "p", "--done", "d",
+                           "--why", "w", "--undo", "u"] + list(a), capture_output=True, text=True, cwd=_FIXTURE_ROOT)
+_sp_cases.append(("#639: deviate refuses deleting a step", _ln("--step-action", "delete").returncode == 2))
+_sp_cases.append(("#639: deviate replace needs a check and a step id", _ln("--step-action", "replace").returncode == 2))
+_ln_repo = os.path.join(_FIXTURE_ROOT, "ln-repo")
+os.makedirs(_ln_repo, exist_ok=True)
+subprocess.run(["git", "init", "-q"], cwd=_ln_repo, check=True)
+_ln_env = dict(os.environ, CLAUDE_CONFIG_DIR=os.path.join(_FIXTURE_ROOT, "ln-cfg"), CLAUDE_SESSION_ID="lns")
+_ln_rep = [sys.executable, _LN, "deviate", "feat", "--step", "Step 2", "--plan", "p", "--done", "d", "--why", "w",
+           "--undo", "u", "--step-action", "replace", "--step-id", "2", "--check", "echo ok"]
+_ln_gd = os.path.realpath(os.path.join(_ln_repo, ".git"))
+os.makedirs(_ln_env["CLAUDE_CONFIG_DIR"] + "/house-rules-steps", exist_ok=True)
+with open(os.path.join(_ln_env["CLAUDE_CONFIG_DIR"], "house-rules-steps", hashlib.sha1(_ln_gd.encode("utf-8")).hexdigest() + "-lns.json"), "w") as _f:
+    json.dump({"feature": "feat", "at": 1000}, _f)
+_r = subprocess.run(_ln_rep, capture_output=True, text=True, cwd=_ln_repo, env=_ln_env)
+_sp_cases.append(("#641: deviate replace is refused with no stored reviewer verdict, in plain words",
+                  _r.returncode == 2 and "no stage file" in _r.stderr))
+os.makedirs(os.path.join(_ln_repo, ".claude"), exist_ok=True)
+with open(os.path.join(_ln_repo, ".claude", "house-rules-loop.json"), "w") as _f:
+    json.dump({"stage": "build", "verdicts": {"old": {"at": 900}}}, _f)
+_r = subprocess.run(_ln_rep, capture_output=True, text=True, cwd=_ln_repo, env=_ln_env)
+_sp_cases.append(("#641: deviate replace is refused when the only verdict is older than the step list",
+                  _r.returncode == 2 and "newer than the step list" in _r.stderr))
+with open(os.path.join(_ln_repo, ".claude", "house-rules-loop.json"), "w") as _f:
+    json.dump({"stage": "build", "verdicts": {"new": {"at": 2000}}}, _f)
+_r = subprocess.run(_ln_rep, capture_output=True, text=True, cwd=_ln_repo, env=_ln_env)
+_sp_cases.append(("#639/#641: deviate replace keeps the step id and logs the new check once a newer clean verdict is stored",
+                  _r.returncode == 0 and "step replace 2" in open(_r.stdout.split(" in ", 1)[1].strip(), encoding="utf-8").read()))
+_r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Finish: x", "--plan", "p", "--done", "d", "--why", "w",
+                     "--undo", "u", "--step-action", "add", "--check", "c"], capture_output=True, text=True, cwd=_ln_repo)
+_sp_cases.append(("#639: deviate refuses touching a Finish: step", _r.returncode == 2))
+# round-1 C6: replace aimed at a Finish step by its id, with a plain --step title, is refused too
+with open(os.path.join(_ln_env["CLAUDE_CONFIG_DIR"], "house-rules-steps", hashlib.sha1(_ln_gd.encode("utf-8")).hexdigest() + "-lns.json"), "w") as _f:
+    json.dump({"feature": "feat", "at": 1000, "steps": [{"n": 2, "title": "Step 2: x"}, {"n": 3, "title": "Finish: tests pass"}]}, _f)
+_r = subprocess.run([sys.executable, _LN, "deviate", "feat", "--step", "Step 3", "--plan", "p", "--done", "d", "--why", "w", "--undo", "u",
+                     "--step-action", "replace", "--step-id", "3", "--check", "true"], capture_output=True, text=True, cwd=_ln_repo, env=_ln_env)
+_sp_cases.append(("C6: deviate replace by the id of a Finish step is refused even when --step is a plain title",
+                  _r.returncode == 2 and "Finish" in _r.stderr))
+
+# --- #646: start/poll a step check, record its result by hook, mark steps stale by the tree fingerprint ---
+_pl_snip = os.path.join(_FIXTURE_ROOT, "poll_snip.py")
+with open(_pl_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile, time
+here = sys.argv[1]
+sys.path.insert(0, here)
+cfg = tempfile.mkdtemp(); os.environ["CLAUDE_CONFIG_DIR"] = cfg; os.environ["CLAUDE_SESSION_ID"] = "s1"
+from house_rules import design_loop as dl
+d = os.path.realpath(tempfile.mkdtemp()); g = os.path.join(d, ".git")
+def git(*a): subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=d, check=True, capture_output=True)
+git("init", "-q"); open(os.path.join(d, "a.py"), "w").write("x=1\n"); git("add", "-A"); git("commit", "-qm", "init")
+plan = os.path.join(d, "p.page.json")
+json.dump({"test_command": "t", "changes": [["c", "Step 1: ok", "", None, "", None, None, "python3 -c \"print('ok')\""],
+    ["c", "Step 2: bad", "", None, "", None, None, "python3 -c \"import sys; print('boom'); sys.exit(3)\""]]}, open(plan, "w"))
+dl.record_steps(g, "f", plan, "s1")
+LN = os.path.join(here, "ledger_note.py")
+def ln(n, mode, env=None):
+    return subprocess.run([sys.executable, LN, "check", "f", "--step", str(n), mode], cwd=d, capture_output=True, text=True, env=dict(os.environ, **(env or {})))
+r = []
+t0 = time.time()
+s = ln(1, "--start"); p = ln(1, "--poll")
+r.append(s.stdout.strip() == "STARTED step 1" and p.returncode == 0 and p.stdout.startswith("RESULT: pass step 1 fp=") and time.time() - t0 < 55)
+ln(2, "--start"); pf = ln(2, "--poll")
+r.append(pf.returncode == 0 and pf.stdout.startswith("RESULT: fail step 2 fp=") and "boom" in pf.stdout)
+def hook(out, ev, n=1):
+    dl._record_step_result({"hook_event_name": ev, "tool_name": "Bash", "session_id": "s1", "cwd": d,
+        "tool_input": {"command": "python3 ledger_note.py check f --step %d --poll" % n},
+        "tool_response": {"stdout": out} if ev == "PostToolUse" else None, "error": out if ev != "PostToolUse" else None})
+def st(n): return dl._loop_read(g)[0]["steps"]["s1"]["steps"][n - 1]["state"]
+fp = p.stdout.split("fp=")[1].split()[0]
+hook(p.stdout, "PostToolUse", 1); hook(pf.stdout, "PostToolUse", 2)
+r.append([st(1), st(2)] == ["done", "open"])
+hook("RESULT: fail step 1 fp=abc\nboom", "PostToolUseFailure", 1); r.append(st(1) == "open")
+hook(p.stdout, "PostToolUseFailure", 1); r.append(st(1) == "done")
+hook("no result here", "PostToolUseFailure", 2); r.append(st(2) == "open")
+r.append({k: v for k, v in dl.steps_status(g, "f", "s1", fp).items() if k < 3} == {1: "done", 2: "open"})  # #647: Finish: steps follow
+# a variable-style call (found in the live run) records; a typed RESULT line with no passing run file does not
+hook("RESULT: fail step 1 fp=abc\nboom", "PostToolUse", 1); r.append(st(1) == "open")
+dl._record_step_result({"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "s1", "cwd": d,
+    "tool_input": {"command": 'S=/x/ledger_note.py; python3 "$S" check f --step 1 --poll 2>&1; echo "exit=$?"'},
+    "tool_response": {"stdout": p.stdout}, "error": None})
+r.append(st(1) == "done")
+dl._record_step_result({"hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "s1", "cwd": d,
+    "tool_input": {"command": 'echo "check --poll"; echo "RESULT: pass step 2 fp=abc"'},
+    "tool_response": {"stdout": "RESULT: pass step 2 fp=abc\n"}, "error": None})
+r.append(st(2) == "open")
+open(os.path.join(d, "CHANGELOG.md"), "w").write("x\n"); os.makedirs(os.path.join(d, "docs", "qa"))
+open(os.path.join(d, "docs", "qa", "l.md"), "w").write("x\n"); git("add", "-A"); git("commit", "-qm", "wip: autosave")
+fp2 = ln(1, "--poll").stdout.split("fp=")[1].split()[0]
+r.append(fp2 == fp and dl.steps_status(g, "f", "s1", fp2)[1] == "done")
+open(os.path.join(d, "a.py"), "w").write("x=2\n")
+fp3 = ln(1, "--poll").stdout.split("fp=")[1].split()[0]
+r.append(fp3 != fp and dl.steps_status(g, "f", "s1", fp3)[1] == "stale")
+slow = ln(1, "--poll", {"HOUSE_RULES_FP_TIMEOUT": "0.001"}).stdout
+r.append("fp=slow" in slow and "fingerprint timed out, counted as stale" in slow and dl.steps_status(g, "f", "s1", "slow")[1] == "stale")
+print(r, file=sys.stderr)
+print(all(r))
+""")
+_r = subprocess.run([sys.executable, _pl_snip, HERE], capture_output=True, text=True, timeout=120)
+_sp_cases.append(("#646: step check start/poll gives RESULT pass/fail, the hook records done/open on both events, "
+                  "an autosave commit keeps a step done, an edit or a slow fingerprint makes it stale",
+                  _r.stdout.strip() == "True"))
+
+# --- #647: the four Finish: steps, park refusal, finish_checks, Build to QA by the step list, PR held while a step is open ---
+_fn_snip = os.path.join(_FIXTURE_ROOT, "finish_snip.py")
+with open(_fn_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile, time
+here = sys.argv[1]
+sys.path.insert(0, here)
+cfg = tempfile.mkdtemp(); os.environ["CLAUDE_CONFIG_DIR"] = cfg; os.environ["CLAUDE_SESSION_ID"] = "s1"
+os.environ.pop("HOUSE_RULES_UNATTENDED", None)
+from house_rules import design_loop as dl, core
+base = os.path.realpath(tempfile.mkdtemp())
+bare, d = os.path.join(base, "o.git"), os.path.join(base, "w")
+def git(*a): return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=d, check=True, capture_output=True)
+subprocess.run(["git", "init", "-q", "--bare", "-b", "main", bare], check=True)
+subprocess.run(["git", "clone", "-q", bare, d], check=True, capture_output=True)
+git("checkout", "-q", "-b", "main"); open(os.path.join(d, "a.py"), "w").write("x=1\n"); git("add", "-A"); git("commit", "-qm", "init"); git("push", "-q", "origin", "main")
+git("checkout", "-q", "-b", "feat")
+g = os.path.join(d, ".git"); plan = os.path.join(d, "p.page.json")
+def rec(tc):
+    json.dump({"test_command": tc, "changes": [["c", "Step 1: a", "", None, "", None, None, "echo 1"]]}, open(plan, "w"))
+    dl.record_steps(g, "f", plan, "s1")
+rec('python3 -c "raise SystemExit(0)"')
+st = dl._loop_read(g)[0]["steps"]["s1"]
+r = {}
+r["four"] = [s["title"] for s in st["steps"][1:]] == ["Finish: docs written", "Finish: before-and-after pictures", "Finish: tests pass", "Finish: QA page built and stamped"] and st["sha256"] == dl._steps_hash(st["steps"]) and dl.steps_integrity(g, "f", "s1") == ""
+LN = os.path.join(here, "ledger_note.py"); FC = os.path.join(here, "finish_checks.py")
+def park(step): return subprocess.run([sys.executable, LN, "park", "f", "--step", step, "--question", "q", "--default", "d", "--affects", "a", "--category", "other-people", "--tried", "x -> y"], cwd=d, capture_output=True, text=True)
+r["park"] = [park("Finish: tests pass").returncode, park("Step 3").returncode, park("Step 9: z").returncode] == [2, 2, 0]
+def fc(w): return subprocess.run([sys.executable, FC, w, "f"], cwd=d, capture_output=True, text=True).returncode
+r["docs_fail"] = fc("docs") == 1
+os.makedirs(os.path.join(d, "docs", "4-systems")); open(os.path.join(d, "docs", "4-systems", "x.md"), "w").write("x\n")
+r["docs_fail2"] = fc("docs") == 1
+open(os.path.join(d, "CHANGELOG.md"), "w").write("x\n"); r["docs_pass"] = fc("docs") == 0
+r["pic_fail_noledger"] = fc("pictures") == 1
+open(os.path.join(d, "s.css"), "w").write("a{}\n"); r["pic_fail_noshot"] = fc("pictures") == 1
+sh = os.path.join(d, "docs", "qa", "f", "shots"); os.makedirs(sh); time.sleep(0.05)
+open(os.path.join(sh, "a.png"), "wb").write(b"x"); r["pic_pass"] = fc("pictures") == 0
+os.rename(sh, os.path.join(d, "docs", "qa", "f", "round-1")); r["pic_round"] = fc("pictures") == 0
+r["tests_pass"] = fc("tests") == 0
+rec('python3 -c "raise SystemExit(3)"'); r["tests_fail"] = fc("tests") == 3
+r["qa_fail"] = fc("qa") == 1
+os.makedirs(os.path.join(d, "docs", "plans", "pictures"), exist_ok=True); time.sleep(0.05)
+open(os.path.join(d, "docs", "plans", "pictures", "m.svg"), "w").write("<svg/>"); r["pic_plan_mockup_ignored"] = fc("pictures") == 0
+import acceptance
+os.makedirs(os.path.join(d, ".claude"), exist_ok=True); open(os.path.join(d, "page.html"), "w").write("<p>")
+state = dl._loop_read(g)[0]; state.update(feature="f", stage="build", qa_page="page.html"); dl._loop_write(g, state)
+json.dump({"tree": acceptance.tree(d)}, open(os.path.join(d, "docs", "qa", "f", "acceptance-stamp.json"), "w"))
+r["qa_pass"] = fc("qa") == 0
+payload = json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "s1", "cwd": d, "tool_input": {"file_path": os.path.join(d, "a.py")}})
+def stage(): return dl._loop_read(g)[0]["stage"]
+def gate(): return dl._loop_gate(payload)
+core._PAYLOAD_CACHE = payload
+st2 = dl._loop_read(g)[0]
+fp = subprocess.run([sys.executable, os.path.join(here, "acceptance.py"), "tree", "--root", d], capture_output=True, text=True).stdout.strip()
+for s in st2["steps"]["s1"]["steps"]:
+    s.update(state="done", fp=fp)
+dl._loop_write(g, st2)
+gate(); r["attended_stays"] = stage() == "build"
+os.environ["HOUSE_RULES_UNATTENDED"] = "on"
+st2["steps"]["s1"]["steps"][0]["fp"] = "old"; dl._loop_write(g, st2)
+r["open_unfinished"] = dl.steps_unfinished(g, payload) == ["Step 1: a"]
+gate(); r["open_stays"] = stage() == "build"
+why = dl._pr_open_steps_deny({}, payload); r["pr_denied"] = bool(why) and "Step 1: a" in why
+os.environ.pop("HOUSE_RULES_UNATTENDED"); r["pr_attended_ok"] = dl._pr_open_steps_deny({}, payload) is None
+os.environ["HOUSE_RULES_UNATTENDED"] = "on"
+open(os.path.join(d, "docs", "qa", "f", "ledger.md"), "w").write("## Parked decisions\n\n| # | Step | Q |\n|---|---|---|\n| P1 | Step 1: a | q |\n")
+r["parked_ok"] = dl.steps_unfinished(g, payload) == [] and dl._pr_open_steps_deny({}, payload) is None
+gate(); r["moves_to_qa"] = stage() == "qa"
+print(r, file=sys.stderr)
+print(all(r.values()))
+""")
+_r = subprocess.run([sys.executable, _fn_snip, HERE], capture_output=True, text=True, timeout=120)
+_sp_cases.append(("#647: four Finish: steps appended and in the sha; park refuses a Finish: step; finish_checks docs/pictures/tests/qa "
+                  "pass and fail on fixtures; Build moves to QA from the step list only when nobody is present; a pull request is "
+                  "denied while a step is open and nobody is present", _r.stdout.strip() == "True"))
+
+# --- #640: a stop check on every stop that blocks while a step is open ---
+_ss_snip = os.path.join(_FIXTURE_ROOT, "stopstep_snip.py")
+with open(_ss_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile
+here = sys.argv[1]
+sys.path.insert(0, here)
+cfg = tempfile.mkdtemp(); os.environ["CLAUDE_CONFIG_DIR"] = cfg
+for k in ("HOUSE_RULES_UNATTENDED", "HOUSE_RULES_LOOP"): os.environ.pop(k, None)
+from house_rules import design_loop as dl, core
+d = os.path.realpath(tempfile.mkdtemp())
+def git(*a): return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), cwd=d, check=True, capture_output=True)
+git("init", "-q", "-b", "feat"); open(os.path.join(d, "a.py"), "w").write("x=1\n"); git("add", "-A"); git("commit", "-qm", "init")
+g = os.path.join(d, ".git"); plan = os.path.join(d, "p.page.json")
+json.dump({"test_command": "true", "changes": [["c", "Step 1: a", "", None, "", None, None, "echo 1"]]}, open(plan, "w"))
+dl.record_steps(g, "f", plan, "s1")
+tr = os.path.join(d, "t.jsonl")
+def user(): return json.dumps({"type": "user", "origin": {"kind": "human"}, "message": {"content": "go"}})
+open(tr, "w").write(user() + "\n")
+def pl(sid="s1", mode="default"): return json.dumps({"session_id": sid, "cwd": d, "transcript_path": tr, "permission_mode": mode})
+def chk(reply, sid="s1", mode="default"): return dl.step_stop_check(pl(sid, mode), reply)
+rec = lambda: dl._loop_read(g)[0]["steps"]["s1"]
+r = {}
+b = chk("All done, here is the summary.")[0]
+r["normal"] = bool(b) and "Step 1: a" in b and "--step 1 --start" in b and "--poll" in b and "park" in b and "--tried" in b
+r["needs_you"] = bool(chk("NEEDS YOU: the licence.")[0])
+r["empty"] = bool(chk("")[0])
+r["no_list"] = chk("x", sid="other") == (None, None)
+r["question_attended"] = chk("hmm\nQUESTION FOR YOU: which colour?")[0] is None
+r["question_nobody"] = bool(chk("QUESTION FOR YOU: which colour?", mode="bypassPermissions")[0])
+os.environ["HOUSE_RULES_UNATTENDED"] = "on"; r["question_unattended"] = bool(chk("QUESTION FOR YOU: x")[0]); os.environ.pop("HOUSE_RULES_UNATTENDED")
+r["stuck_after_3"] = any(s.get("stuck") for s in rec()["steps"])
+r["stuck_listed"] = bool(dl.steps_stuck(g, pl()))
+open(tr, "a").write(user() + "\n")
+chk("x"); open(tr, "a").write(user() + "\n")
+chk("x"); r["reset_on_message"] = sum(rec()["blocks"].values()) == 1
+for _ in range(20):
+    if chk("x")[0] is None: break
+r["allowed_when_all_stuck"] = chk("x")[0] is None and len(dl.steps_stuck(g, pl())) == len(rec()["steps"])
+stub = os.path.join(d, "judge.py"); open(stub, "w").write("print('{\"ok\": false, \"criterion\": \"C2\", \"reason\": \"x\"}')\n")
+os.environ.update(HOUSE_RULES_JUDGE="on", HOUSE_RULES_JUDGE_CMD=stub, HOUSE_RULES_ROADBLOCKS_STATE=os.path.join(d, "rb.json"))
+os.environ.pop("HOUSE_RULES_ROADBLOCKS", None)
+def jb(sid):
+    if os.path.exists(os.environ["HOUSE_RULES_ROADBLOCKS_STATE"]): os.remove(os.environ["HOUSE_RULES_ROADBLOCKS_STATE"])
+    return [bool(core.roadblock_check(pl(sid), "I finished the thing.", False)[0]) for _ in range(3)]
+r["judge_once_with_list"] = jb("s1") == [True, False, False]
+r["judge_old_without_list"] = jb("none") == [True, True, False]
+# live run: an autosave commit at every stop must not count as progress, or a looping agent is never marked stuck
+dl.record_steps(g, "f", plan, "s3")
+os.makedirs(os.path.join(d, "docs", "5-today"), exist_ok=True)
+for i in range(5):
+    open(os.path.join(d, "docs", "5-today", "n%d.md" % i), "w").write("x\n"); git("add", "-A"); git("commit", "-qm", "wip: autosave")
+    chk("x", sid="s3")
+r["stuck_despite_autosave_commits"] = any(s.get("stuck") for s in dl._loop_read(g)[0]["steps"]["s3"]["steps"])
+# round-2 C8: with every step closed and nobody present, one block asks for the choices made unasked (none logged yet)
+def allstuck(sid):
+    dl.record_steps(g, "f", plan, sid)
+    st = dl._loop_read(g)[0]
+    for x in st["steps"][sid]["steps"]: x["stuck"] = True
+    dl._loop_write(g, st)
+allstuck("s4"); allstuck("s5")
+r["choices_attended_none"] = chk("x", sid="s4", mode="default")[0] is None
+_c1 = chk("x", sid="s1", mode="bypassPermissions")[0]
+r["choices_block"] = bool(_c1) and "ledger_note.py" in _c1 and " decide " in _c1 and "No choices made" in _c1
+r["choices_once"] = chk("x", sid="s1", mode="bypassPermissions")[0] is None
+os.makedirs(os.path.join(d, "docs", "qa", "f"), exist_ok=True)
+open(os.path.join(d, "docs", "qa", "f", "ledger.md"), "w").write("| K1 | s | c | a | w | u |\n")
+r["choices_skipped_when_logged"] = chk("x", sid="s5", mode="bypassPermissions")[0] is None
+print(r, file=sys.stderr)
+print(all(r.values()))
+""")
+_r = subprocess.run([sys.executable, _ss_snip, HERE], capture_output=True, text=True, timeout=120)
+_sp_cases.append(("#640: a stop is blocked while a step is open (normal, NEEDS YOU and empty replies), a step goes stuck after 3 no-progress "
+                  "blocks and then the stop is allowed, a new user message resets the counters, the judge blocks once per step set, "
+                  "a session with no step list keeps the old checks, QUESTION FOR YOU passes only when attended",
+                  _r.stdout.strip() == "True"))
+
+
+# --- #641: a stored reviewer verdict and the hook's self-approval when nobody is present ---
+_sa_snip = os.path.join(_FIXTURE_ROOT, "selfapprove_snip.py")
+with open(_sa_snip, "w", encoding="utf-8") as _f:
+    _f.write(r"""import os, sys, json, subprocess, tempfile
+sys.path.insert(0, sys.argv[1])
+os.environ["CLAUDE_CONFIG_DIR"] = tempfile.mkdtemp(); os.environ.pop("HOUSE_RULES_UNATTENDED", None)
+from house_rules import design_loop as dl
+d = os.path.realpath(tempfile.mkdtemp()); subprocess.run(["git", "init", "-q", d], check=True); g = os.path.join(d, ".git")
+os.makedirs(os.path.join(d, "docs", "plans")); os.makedirs(os.path.join(d, ".claude"))
+des, pln = "docs/plans/f-design.page.json", "docs/plans/f-plan.page.json"
+json.dump({"title": "Feat X: why", "pageType": "proposal", "changes": []}, open(os.path.join(d, des), "w"))
+json.dump({"title": "Feat X plan", "pageType": "build-plan", "changes": [["c", "Step 1: a", "", None, "", None, None, "echo 1"]]}, open(os.path.join(d, pln), "w"))
+sf = os.path.join(d, ".claude", "house-rules-loop.json"); seen = os.path.join(g, "house-rules-loop-seen.json")
+def put(stage): json.dump({"feature": "Feat X", "stage": stage, "skip": False, "approvals": []}, open(sf, "w"))
+def st(): return json.load(open(sf))
+def pay(mode): return json.dumps({"cwd": d, "permission_mode": mode, "session_id": "sid"})
+def rv(page, mode, report="Looks fine.\nVERDICT: clean"): return dl.record_verdict(pay(mode), "house-rules:reviewer", report + "\n" + page, "", "sid")
+r = {}
+put("design"); rv(des, "bypassPermissions", "x\nVERDICT: 2 findings")
+r["findings_not_stored"] = "verdicts" not in st() and st()["stage"] == "design"
+r["builder_not_stored"] = dl.record_verdict(pay("bypassPermissions"), "house-rules:builder", "VERDICT: clean " + des, "", "sid") == "" and "verdicts" not in st()
+rv("no page named here", "bypassPermissions"); r["no_page_stores_nothing"] = "verdicts" not in st()
+for m in ("default", "auto", "acceptEdits"):
+    rv(des, m)
+r["attended_stores_but_never_approves"] = len(st()["verdicts"]) == 1 and st()["stage"] == "design" and "auto_approvals" not in st()
+h = dl.page_hash(os.path.join(d, des))
+r["keyed_by_hash"] = list(st()["verdicts"]) == [h] and st()["verdicts"][h]["mode"] == "page"
+json.dump({"at": 5, "branch": "", "feature": "x"}, open(seen, "w")); before = open(seen, "rb").read()
+note = rv(des, "bypassPermissions")
+s = st()
+r["design_to_plan"] = s["stage"] == "plan" and s["auto_approvals"][0]["by"] == "auto-unattended" and s["auto_approvals"][0]["hash"] == h and not s["approvals"]
+dl._loop_read(g); dl._loop_write(g, dl._loop_read(g)[0]); dl._loop_read(g)
+r["marker_unchanged"] = open(seen, "rb").read() == before
+led = open(os.path.join(d, "docs", "qa", "feat-x", "ledger.md")).read() if os.path.isdir(os.path.join(d, "docs", "qa", "feat-x")) else ""
+r["s_row"] = "## Self-approvals" in led and "| S1 | Plan | docs/plans/f-design.page.json | " + h in led
+rv(des, "bypassPermissions"); r["design_page_in_plan_does_nothing"] = st()["stage"] == "plan"
+rv(pln, "bypassPermissions")
+s = st(); r["plan_to_build"] = s["stage"] == "build" and len(s["auto_approvals"]) == 2 and "sid" in s["steps"] and s["steps"]["sid"]["at"] > 0
+r["build_never_moves_on"] = (rv(pln, "bypassPermissions"), st()["stage"])[1] == "build"
+put("qa"); rv(des, "bypassPermissions"); rv(pln, "bypassPermissions"); r["qa_never_approved"] = st()["stage"] == "qa" and "auto_approvals" not in st()
+put("done"); rv(pln, "bypassPermissions"); r["close_never_approved"] = st()["stage"] == "done"
+put("design"); s = st(); s["verdicts"] = {}; json.dump(s, open(sf, "w"))
+r["no_verdict_refused"] = dl._self_approve(g, st(), os.path.join(d, des), "0" * 64, "proposal", "sid").startswith("no self-approval") and st()["stage"] == "design"
+put("design"); rv(des, "default"); json.dump({"title": "Feat X: changed", "pageType": "proposal", "changes": []}, open(os.path.join(d, des), "w"))
+r["changed_page_refused"] = dl._self_approve(g, st(), os.path.join(d, des), h, "proposal", "sid").startswith("no self-approval") and st()["stage"] == "design"
+json.dump({"title": "Feat X: why", "pageType": "proposal", "changes": []}, open(os.path.join(d, des), "w")); put("design")
+os.environ["HOUSE_RULES_UNATTENDED"] = "on"; rv(des, "default")
+r["unattended_switch_approves"] = st()["stage"] == "plan"
+print(r, file=sys.stderr)
+print(all(r.values()))
+""")
+_r = subprocess.run([sys.executable, _sa_snip, HERE], capture_output=True, text=True, timeout=120)
+_sp_cases.append(("#641: a verdict is stored only for VERDICT: clean from a reviewer on an identifiable page, keyed by the page hash; "
+                  "a self-approval moves Design to Plan and Plan to Build only when nobody is present, with a matching verdict, "
+                  "never QA or Close, records under auto_approvals and an S row, and leaves the newest-approval marker byte for byte unchanged",
+                  _r.stdout.strip() == "True"))
 
 for _t, _ok in _sp_cases:
     report("PASS" if _ok else "FAIL", "design loop: " + _t)

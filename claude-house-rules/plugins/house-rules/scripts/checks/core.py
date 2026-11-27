@@ -1399,13 +1399,9 @@ _rb_stall = "I've stopped here; next step is yours."
 report("PASS" if '"decision":"block"' not in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
        "#588: a stall phrase is not scanned when attended")
 _rb_fresh()
-# the real path: HOUSE_RULES_UNATTENDED=on makes the hook's own apply_switches turn HANDOVER off; roadblocks must still run
+# the real path: HOUSE_RULES_UNATTENDED=on; roadblocks must still run (#637: handover stays on too)
 _rb_un = _rb_run(_rb_t, reply=_rb_stall, env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
 report("PASS" if '"decision":"block"' in _rb_un else "FAIL", "#588: a stall phrase is flagged when unattended (the roadblocks hook, via apply_switches)")
-_rb_fresh()
-_, _rb_un_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM),
-                          env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on"))
-report("PASS" if _rb_un_h.strip() == "" else "FAIL", "#588: unattended really turns the handover hook off (so only the roadblocks hook can catch it)")
 _rb_fresh()
 # attended: the handover hook no longer runs the check, so one turn is counted once, not twice
 _, _rb_h, _ = run_hook("handover", stop_payload(transcript_path=_rb_t, last_assistant_message=_RB_CLAIM), env=_RB_ENV)
@@ -1430,6 +1426,15 @@ _rb_fresh()
 report("PASS" if "no permission_mode" in _rb_run(_rb_t, reply=_rb_stall) else "FAIL",
        "#588: a missing permission_mode is announced")
 _rb_fresh()
+# #636: the stall scan, one case per mode (unattended comes from the switch, the rest from permission_mode)
+for _nm, _mode, _on, _want in (("unattended", "default", True, True), ("bypass", "bypassPermissions", False, True),
+                               ("auto", "auto", False, False), ("normal", "default", False, False),
+                               ("plan", "plan", False, False), ("unknown", "somethingNew", False, False)):
+    _, _o, _ = run_hook("roadblocks", stop_payload(transcript_path=_rb_t, last_assistant_message=_rb_stall, permission_mode=_mode),
+                        env=dict(_RB_ENV, HOUSE_RULES_UNATTENDED="on" if _on else "off"))
+    report("PASS" if ('"decision":"block"' in _o) == _want else "FAIL",
+           "#636 stall scan, %s: %s" % (_nm, "flagged" if _want else "not scanned"))
+    _rb_fresh()
 _rb_car = _hand_transcript("rb-carrier", [_rb_user("build it"), _rb_tool("pytest -q"), json.dumps(
     {"type": "user", "message": {"content": "<system-reminder>x</system-reminder>"}})])
 _rb_run(_rb_car)
@@ -1609,7 +1614,8 @@ commit_case(
 
 # --- the check gives guidance, not a hook error ----------------------------------------------
 code, out, err = run_hook(
-    "handover", stop_payload(last_assistant_message="```powershell\nGet-ChildItem\n```")
+    "handover", stop_payload(last_assistant_message="```powershell\nGet-ChildItem\n```"),
+    env=_project_env(_FIXTURE_ROOT),  # not this repo: its committed loop state (stage QA) adds a QA-page block
 )
 if '"hookEventName":"Stop"' in out and '"decision"' not in out:
     report("PASS", "the handover check emits Stop feedback, not a blocking hook error")
@@ -2477,9 +2483,30 @@ report("PASS" if rc == 0 and "UNATTENDED run: a house-rules update is available 
        and "wait for the user" not in out and "OUT OF DATE" not in out and not os.path.isfile(vc_marker_path("vc-un"))
        and not vc_fake_calls("vc-un") else "FAIL",
        "unattended: versioncheck says one line, runs no update, writes no marker, never says wait or ask")
+# round-1 C2: versioncheck across every permission_mode (no switch): only bypass counts as nobody present
+_vc_modes = {}
+for _m in ("bypassPermissions", "auto", "default", "acceptEdits", "plan", ""):
+    vc_clear("vc-m")
+    _pl = json.dumps(dict(json.loads(vc_payload("vc-m")), **({"permission_mode": _m} if _m else {})))
+    _vc_modes[_m] = run_hook("versioncheck", _pl, vc_env("vc-m", HOUSE_RULES_UNATTENDED="off", HOUSE_RULES_VC_MARKETPLACE="99.0.0", HOUSE_RULES_VC_GITHUB="99.0.0"))[1]
+report("PASS" if "UNATTENDED run: a house-rules update is available" in _vc_modes["bypassPermissions"]
+       and all("UNATTENDED run" not in _vc_modes[k] for k in ("auto", "default", "acceptEdits", "plan", "")) else "FAIL",
+       "C2: versioncheck treats only bypassPermissions (not auto, default, acceptEdits, plan or no mode) as nobody present")
+# round-1 C1: no rule, skill or agent file may still tell the agent to wait or ask where nobody can answer
+_old_asks = ("I propose, show, and wait", "and stop for their answer", "I ask\nfor permission to run it myself", "stop and ask")
+_hits = []
+for _dp in ("rules", "skills", "agents"):
+    for _root, _ds, _fs in os.walk(os.path.join(os.path.dirname(HERE), _dp)):
+        for _fn in _fs:
+            if _fn.endswith(".md"):
+                _t = open(os.path.join(_root, _fn), encoding="utf-8").read()
+                _hits += ["%s: %s" % (_fn, o) for o in _old_asks if o in _t]
+report("PASS" if not _hits else "FAIL", "C1: no rule, skill or agent file still carries an old wait-or-ask line")
+if _hits:
+    print("          " + "; ".join(_hits))
 rc, out, err = run_hook("inject", "{}", env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))
-report("PASS" if "OVERRIDDEN" in out and "never stop or wait for the user" in out and "Waiting-on-you list" in out else "FAIL",
-       "unattended: the session note overrides the hand-over-then-wait and ask-before rule text")
+report("PASS" if "OVERRIDDEN" in out and "never stop or wait for the user" in out and "ledger_note.py decide" in out and "Waiting on you" not in out and "final report" not in out else "FAIL",
+       "unattended: the session note overrides the hand-over-then-wait rule and names ledger_note.py decide, not the reply")
 # #403: in a synced copy (claude.ai cloud) the update commands cannot work, so one plain line.
 _sy_root = "/root/.claude/plugins/synced/org_id/house-rules~g2"
 rc, out, err = run_hook("versioncheck", vc_payload("vc-sync-old"),
@@ -2654,24 +2681,24 @@ vc_banner_out = out
 banner_ok = (
     "UNTESTED" in vc_banner_out
     and "step-card" in vc_banner_out
-    and "stop and wait" in vc_banner_out
+    and "carry on" in vc_banner_out
     and "permission" in vc_banner_out
     and "run the command(s) below yourself" in vc_banner_out
     and "Do not ask in chat" in vc_banner_out
     and "could not finish" in vc_banner_out
 )
 if banner_ok:
-    report("PASS", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
-    print("          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the stop-and-wait instruction")
+    report("PASS", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then carry on")
+    print("          banner names the failure, the run-it-yourself-now instruction, the card/UNTESTED fallback, and the carry-on instruction")
 else:
-    report("FAIL", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then stop and wait")
+    report("FAIL", "when the automatic update fails, the banner says why and tells Claude to run it itself without asking, falling back to the card marked UNTESTED, then carry on")
     print(f"          out={vc_banner_out[:400]!r}")
 
 # --- that same instruction has not drifted from the rules document, bidirectionally ----------
 # Same shape as the delegate/harvest drift checks: the phrase must appear in BOTH house-rules.md
 # and what versioncheck actually emits, or a reword on one side silently stops matching the other.
 drift = []
-for phrase in ("relayed", "step-card", "UNTESTED", "stop and wait", "permission"):
+for phrase in ("relayed", "step-card", "UNTESTED", "carry on", "permission"):
     if phrase.lower() not in rules_text.lower():
         drift.append(f"{phrase!r} missing from rules/house-rules.md")
     if phrase.lower() not in vc_banner_out.lower():
@@ -3025,6 +3052,14 @@ try:
     _un_ok = _un_ok and _fs_env_seen(_un_d, "HOUSE_RULES_PAGES") == "on" and _fs_env_seen(_un_d, "HOUSE_RULES_VOICE") == "off"
 finally:
     del _fs_env["HOUSE_RULES_UNATTENDED"]
+_fs_env["HOUSE_RULES_UNATTENDED"] = "on"
+try:
+    _un_ok2 = (_fs_env_seen(_un_d, "HOUSE_RULES_LOOP") == "unset" and _fs_env_seen(_un_d, "HOUSE_RULES_HANDOVER") == "unset"
+               and _fs_env_seen(_un_d, "HOUSE_RULES_ISSUES") == "off" and _fs_env_seen(_un_d, "HOUSE_RULES_DELEGATION") == "off"
+               and _fs_env_seen(_un_d, "HOUSE_RULES_AGENTS") == "off")
+finally:
+    del _fs_env["HOUSE_RULES_UNATTENDED"]
+report("PASS" if _un_ok2 else "FAIL", "#637: unattended leaves the design loop and handover hook on; issues and builders stay off")
 report("PASS" if _un_ok else "FAIL",
        "unattended: apply_switches sets PAGES off, leaves AUTOSAVE alone (HANDOFF too), and a typed 'pages on' still wins")
 

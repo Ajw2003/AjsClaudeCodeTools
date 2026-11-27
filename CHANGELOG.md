@@ -4,6 +4,74 @@ What changed in this repo, newest first. Plain words first, exact detail after.
 
 ## Unreleased
 
+Quiet unattended mode, fifth fix (#634): in a fresh repo there is no stage file until a reviewer's verdict is stored, so the launcher read a run waiting on its first reviewer as finished. `ledger_note.py steps-status` now counts a feature as open (Design) when a QA ledger exists under `docs/qa/` even with no stage file. Tools suite 73 checks pass. Trial 4 was killed by a restart and is resumed by id.
+
+Quiet unattended mode, fourth QA fix round (#634): the third trial got round the shell-write refusal with `cd controller && python3 - <<EOF`, because my own exemption for a `cd` let it through. The lock now follows a leading `cd DIR &&` (also after `export` lines), so the target path means what the shell means; a second `cd` still only reports. `tools/overnight.sh` takes `HOUSE_RULES_OVERNIGHT_RESUME=<session id>` to continue a run that a container restart killed. design_loop 562 and tools 72 checks pass. A fourth, clean trial is running.
+
+Quiet unattended mode, third QA fix round (#634): `overnight.sh` keeps resuming a run whose feature is still in Design or Plan with no step list (`ledger_note.py steps-status` prints OPEN 2 or OPEN 1 there); `finish_checks.py` ignores plan-page pictures under `docs/plans/` and falls back to the local `main` when there is no `origin/main`; the shell-write refusal skips a command that does a `cd` or writes into `.git/`. Cases added to the design_loop and tools suites. A third trial is running.
+
+Quiet unattended mode, second QA failure (#634): the second Canada trial showed the design loop was on yet never ran, because the agent wrote every source file from the shell and the design lock only reported shell writes (#309). With nobody present, a shell write of a source file the hook can name is now refused in Design and Plan, and the refusal (and the Edit refusal) tells the agent to run the loop itself: build a design page, have a reviewer judge it, and the hook moves the stage. Writes whose file cannot be named, and docs, stay open. Two cases added to the design_loop suite.
+
+Quiet unattended mode, QA failed on the Canada trial (#634): a headless run on a copy of the Canada party controller built and reviewed the power meter but failed three finish checks. Cause 1: the shell carried HOUSE_RULES_LOOP=off, so the design loop never started and there was no stage file or step list; `tools/overnight.sh` now turns a leftover `off` back on and says so. Cause 2: the pictures check looked only in `docs/qa/<feature>/shots/` while the visual-loop skill writes `round-N/`; `finish_checks.py pictures` now accepts both. One case added to each suite (design_loop, tools 70); a second trial is running with the loop on.
+
+Quiet unattended mode trial on a real project (#634): the Canada party repo is attached for the trial; a throwaway copy of its `controller/` folder (no remote, `gh` stubbed to fail) runs an unattended build of a throw-power meter through `tools/overnight.sh`; no plugin code changed.
+
+Quiet unattended mode re-stamped after the CI fix (#634): the acceptance stamp was stale because the CI and wording fixes changed source after round 3, so the full suites were re-run (seven parts and the tools suite exit 0), the real `finish_checks.py qa` now exits 0, and the QA page was rebuilt with the shorter unverified list.
+
+Quiet unattended mode, CI and the unverified list (#634): the failing CI checks (core 184 and 188) ran the stop hook inside this repo, whose committed loop state adds a QA-page block, so they now run in a clean fixture project; a bypass guard refusal no longer names the unattended switch and a subagent refusal no longer says Approve to let it run (new test); live runs 7 to 9 check a ninth consecutive stop block at cap 1000 (holds, about 18), that the cheap model logs its choices (it does), and the not-clean-verdict case of self-approval; the stop-failure payload was checked against the official documentation.
+
+Quiet unattended mode QA page sent (#634): `docs/plans/2026-11-25-quiet-unattended-mode-qa.html`, built with `make_page.py` from `docs/plans/2026-11-25-quiet-unattended-mode-qa.page.json`; no plugin code changed.
+
+Quiet unattended mode is in QA (#634): every issue from #634 to #649 is now `needs review` and pull request 650 is open with `Refs #634`; nothing in the plugin changed.
+
+Quiet unattended mode is ready for QA (#634): the acceptance run is stamped (12 of 12, round 3), all seven verify parts and the tools suite pass on the final code, and the QA page is `docs/plans/2026-11-25-quiet-unattended-mode-qa.html`.
+
+Quiet unattended mode: the final suite run is in progress on the last code change (#644); the live-run write-up now records the two things the round 3 reviewer found in run 6 (a double launch and the final pass reopening steps).
+
+Quiet unattended mode passes acceptance round 3 with all twelve criteria (#644); the tree fingerprint now ignores `docs/page-style.json` (a live run showed the final pass reopening every step by writing it), with a delegation case, and the QA page content is drafted. The full suites are re-running on that last change before the stamp.
+
+Quiet unattended mode acceptance round 3 is running (#644): a reviewer is re-judging all twelve criteria after the choices check and live run 6; nothing in the plugin changed since the last entry.
+
+Live run 6 proved the choices check (#644): with a neutral prompt, a sonnet run was sent back once at the end and logged its header colour and wording as K1 and K2; the seven verify parts and the tools suite pass on the new code. Round 3 of acceptance is open.
+
+Unattended and bypass runs now get one reminder to log their choices (#644): live run 5 showed a model picks a header colour and logs nothing, so a stop with every step closed and no logged choice is sent back once to run `ledger_note.py decide` or reply "No choices made.". Criterion C8 is back to its original wording and deviation D4 is reversed.
+
+Quiet unattended mode acceptance round 2 result (#644): 11 of 12 criteria pass; C8 (the agent decides and logs a look choice) failed because the earlier live run's prompt said to decide and log. A fifth live run with a neutral prompt (a header colour of the agent's choice, no mention of deciding or logging) is running to settle it; the reviewer's evidence is in `docs/qa/quiet-unattended-mode/evidence/round2-*`.
+
+Quiet unattended mode acceptance round 2 is open (#644): the full suites pass on the round-1 fixes (seven parts exit 0, tools 69 of 69 after two tests were updated for the new stuck-step message in `steps-status` and `tools/overnight.sh`), and a reviewer is re-judging all twelve criteria into `docs/qa/quiet-unattended-mode/round-2.md`.
+
+Quiet unattended mode acceptance round 1 failed six of twelve criteria, and the fixes are in (#644): old wait-or-ask lines in three rule files are rewritten and guarded by a new check, a refusal with nobody present no longer carries the approve prompt or a waiting-list entry, `deviate --step-action replace` refuses a Finish step named by id, the overnight loop now says when steps are stuck or no list exists, one missing Decisions pointer is added, and criterion C8 is narrowed to a capable model (deviation D4). Tests added for each; round 2 follows the suites.
+
+Quiet unattended mode acceptance started (#644): the twelve acceptance criteria and the live-run write-up are saved in `docs/qa/quiet-unattended-mode/`, and a reviewer is judging them; the QA page and pull request follow.
+
+Quiet unattended mode live runs (#644): four real headless runs of `tools/overnight.sh` found and fixed three bugs the suites had missed (step results not recorded when the check is called through a shell variable, the stuck rule defeated by the autosave commit, and the agent having no path to `ledger_note.py decide`); evidence is saved in `docs/qa/quiet-unattended-mode/`.
+
+Plugin version 2.95.0, quiet unattended mode (#634) steps 8 to 11 and 14 merged: a hook can approve a stage when nobody is present, only on a stored clean reviewer verdict and recorded apart from aj's approvals (#641); `tools/overnight.sh` resumes by session id, waits out rate limits through a new `stopfailure` hook, backs off after crashes, stops at 24 hours of work or 5 restarts with no step closed and runs one final QA pass (#642, #648, #649); twelve earlier decisions are reversed with dated entries and the systems docs are updated (#645).
+
+Quiet unattended mode step 7 merged (#640): a stop check runs on every stop, even with no reply text, and blocks while a step in the guarded list is open, names the next step and its check commands, marks a step stuck after three blocks with no progress, lets a `QUESTION FOR YOU:` line through only when aj is present, and the judge blocks once per step set; NEEDS YOU text no longer exempts a session that has a step list.
+
+Quiet unattended mode build status (#634): nine of fifteen steps are merged and verified (#638, #636, #637, #639, #646, #647, #643, #635 and the fixes the suites caught); builders for the stop check (#640) and self-approval (#641) are running.
+
+Quiet unattended mode steps 6 and 13 merged (#647, #635): every step list ends with four required `Finish:` steps (docs, pictures, tests, QA page) checked by `finish_checks.py`, Build moves to QA from the step list when nobody is present and a pull request is denied while a step is open; the rule files now say to decide and log with `ledger_note.py decide` and ask only about look or function. The cap on `rules/show-dont-tell.md` is raised from 3307 to 3600 characters for that policy.
+
+Quiet unattended mode build progress (#634): the QA decision count now says when it cannot read a ledger (fix after the suite caught a silent handler), and a suite re-run covering steps 3, 4, 5, 12 and 13 is in progress with step 6 (#647) still being built.
+
+Quiet unattended mode steps 3, 4, 5, 12 and 13 merged (#637, #639, #646, #643, #635): unattended keeps the design loop and handover on and skips the holds nobody can clear; a guarded step list with a check per build-plan step; `ledger_note.py check --start/--poll` with results recorded by a hook and staleness by fingerprint; decisions and guard refusals go to the ledger, the QA reply counts the decisions, and credit lines in pull requests are denied; the rule lines that told the agent to ask or wait are rewritten.
+
+Quiet unattended mode step 2 (#636) merged: one `nobody_present` test (unattended or bypass) replaces the separate ones, permission prompts are denied at once when nobody is present, a plan-exit prompt is allowed, the pause-goal tool is denied, and agent writes to the typed-switch file or HOUSE_RULES_ settings keys are refused; bypass now relaxes the whole-file write, credit and big-file refusals like unattended.
+
+Quiet unattended mode step 1 (#638) merged: `ledger_note.py decide` records a choice, `park` now needs a hard-stop category and the command tried, choice rows come first on the QA page, and a branch name with a slash gives one ledger folder; its suites were still being run when this line was written.
+
+Started building quiet unattended mode (#634): aj approved the build plan, the Decisions.md entry is added, and builders began on steps #638 and #636; no step is merged yet.
+
+Sent the stamped fifteen-step build plan page for quiet unattended mode to aj for approval (`docs/plans/2026-11-25-quiet-unattended-mode-plan.html`, issues #634 to #649); no code changed.
+
+Quiet unattended mode plan, second review round applied: checks run as start and poll calls so they obey the 60-second wait guard, the speed-first feature is kept under features, and the issues and build plan page were brought in line; no code changed (#634).
+
+Quiet unattended mode planning notes refreshed: the fifteen-step build plan page is sent to aj for review; a second plan-mode review round is running, and no code has changed (#634).
+
+Planned, not built: quiet unattended mode, where a run with nobody present decides for itself, logs every decision, works a guarded step list ending in tests, docs, pictures and a QA page, and cannot stop part-way. Added the systems doc `docs/4-systems/quiet-unattended-mode.md`, the approved design page, the build plan page `docs/plans/2026-11-25-quiet-unattended-mode-plan.html`, and issues #634 to #649 (fifteen steps, after a plan review reordered and split them).
+
 Plugin version 2.94.7: the speed-first change touches hook files, so CI requires a version bump; installed copies pick up the faster one-process-per-phase hooks on their next plugin update (#633).
 
 Fixed the `verify_tools.py` check for `time_hooks.py --quick`: after step 3 there are 4 timing lines (a pre and a post line for Write and Bash), not 6, so it now expects at least 4 (CI on #633 failed on this).

@@ -1084,12 +1084,13 @@ def _event_guard_main():
         lines.append("  " + docs_note)
 
     lines.append("")
-    _tl = _prompt_timeout_line()
-    if _tl:
-        lines.append(_tl)
-    lines.append(
-        "Approve to let it run, or reject and Claude will explain what it was about to do."
-    )
+    if _someone_can_answer(payload):  # nobody present, or inside a helper: no timeout line and no approve prompt, the ask becomes a refusal
+        _tl = _prompt_timeout_line()
+        if _tl:
+            lines.append(_tl)
+        lines.append(
+            "Approve to let it run, or reject and Claude will explain what it was about to do."
+        )
     reason_text = "\n".join(lines)
     rewrite = None
     all_hits = [r for rs in hits.values() for r in rs]
@@ -1372,7 +1373,7 @@ def event_guardwrite():
         "Fix: edit it in place with the Edit tool, changing only the lines that need to change. A whole-file "
         "rewrite needs aj's approval by name first, with what it discards and why an in-place edit will not do."
     )
-    if core.unattended():  # nobody can approve a whole-file rewrite by name: allow it and say so for the morning
+    if core.nobody_present(payload):  # nobody can approve a whole-file rewrite by name: allow it and say so for the morning
         emit({"systemMessage": "House rules, UNATTENDED run (HOUSE_RULES_UNATTENDED=on): whole-file Write to `%s` "
                                "was allowed instead of refused. Review it in the morning." % file_path})
         return 0
@@ -1581,13 +1582,22 @@ def _prompt_refusal(minutes, path, summary):
         "make the change with Edit instead of a full-file Write). Never get the same destructive "
         "result another way - deleting, force-pushing or killing a process has no substitute: leave "
         "it. Carry on with every part of the task that does not depend on this. Before you stop, "
-        "list each refused action under 'Waiting on you' in your reply." % (minutes, path, summary)
+        "write it to the ledger with `ledger_note.py decide` (or `ledger_note.py park` with --category and --tried only for a hard stop) and carry on with the next open step." % (minutes, path, summary)
     )
 
 
 def _prompt_deny(text):
     emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest",
                                  "decision": {"behavior": "deny", "message": text, "reason": text}}})
+
+
+def _someone_can_answer(payload):
+    """False when nobody is present or the call comes from a helper (subagent): the guard then refuses instead of asking."""
+    try:
+        data = json.loads(payload)
+    except ValueError:
+        data = {}
+    return not core.nobody_present(payload) and not (isinstance(data, dict) and data.get("agent_id"))
 
 
 def _prompt_timeout_line():
@@ -1617,7 +1627,7 @@ def _record_ask(session_id, key):
 UNATTENDED_REFUSAL = (
     "\n\nRefused, not asked: %s, so a prompt would only sit unanswered. Do not retry this action, "
     "or reach the same result another way. Carry on with everything that does not depend on it, "
-    "and list it under 'Waiting on you' before you stop."
+    "and write it to the ledger with `ledger_note.py decide` (or `ledger_note.py park` with --category and --tried only for a hard stop) and carry on with the next open step."
 )
 
 
@@ -1635,8 +1645,8 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
     session_id = str(data.get("session_id") or "")
     if secs is not None and data.get("agent_id"):
         why = "this runs inside a helper (subagent), which cannot answer a permission prompt"
-    if core.unattended():
-        why = "this is an unattended run (HOUSE_RULES_UNATTENDED=on), so nobody can answer a prompt"
+    if core.nobody_present(payload):
+        why = "this is an unattended run (the unattended switch or bypass mode), so nobody can answer a prompt"
     if not why:
         _record_ask(session_id, _waiting_key(str(data.get("tool_name") or "?"), data.get("tool_input")))
         out = {"hookEventName": "PreToolUse", "permissionDecision": "ask",
@@ -1653,9 +1663,10 @@ def _ask_or_refuse(payload, reason_text, context=None, rewrite=None):
         entry = {"session_id": session_id, "key": _waiting_key(tool, ti), "tool": tool,
                  "summary": _waiting_summary(tool, ti), "started": now, "status": "refused", "timed_out_at": now}
         try:
-            path, _ = _waiting_path(session_id)
-            _waiting_update(path, lambda es: [e for e in es if not (e.get("session_id") == session_id
-                                                                     and e.get("key") == entry["key"])] + [entry], "guard")
+            if not core.nobody_present(payload):  # nobody present: the refusal is logged by the agent with ledger_note.py, not queued for aj
+                path, _ = _waiting_path(session_id)
+                _waiting_update(path, lambda es: [e for e in es if not (e.get("session_id") == session_id
+                                                                         and e.get("key") == entry["key"])] + [entry], "guard")
         except Exception as exc:
             sys.stderr.write("house-rules guard: could not add the refused action to the waiting-on-you "
                              "list (%s: %s); it is still refused.\n" % (type(exc).__name__, exc))
@@ -1677,9 +1688,6 @@ def event_prompttimer():
     secs, problem = _prompt_timeout_seconds()
     if problem:
         sys.stderr.write("house-rules prompttimer: %s.\n" % problem)
-    if secs is None:
-        sys.stderr.write("house-rules prompttimer: off (HOUSE_RULES_PROMPT_TIMEOUT), no timer for this prompt.\n")
-        return 0
     try:
         payload = read_payload()
     except Exception as exc:
@@ -1698,6 +1706,16 @@ def event_prompttimer():
             "house-rules prompttimer: could not read the permission-request payload (%s: %s); "
             "no timer, the dialog decides.\n" % (type(exc).__name__, exc)
         )
+        return 0
+    if core.nobody_present(payload):  # #636: nobody can answer, so a prompt is settled at once
+        if tool_name == "ExitPlanMode":
+            emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}})
+        else:
+            _prompt_deny("This is an unattended run (nobody is present to answer a permission prompt), so this "
+                         "was refused at once, never approved. Choose another way, or decide it yourself and log the choice with ledger_note.py decide.")
+        return 0
+    if secs is None:
+        sys.stderr.write("house-rules prompttimer: off (HOUSE_RULES_PROMPT_TIMEOUT), no timer for this prompt.\n")
         return 0
     if tool_name in PROMPT_TIMER_EXEMPT_TOOLS:
         sys.stderr.write("house-rules prompttimer: %s is a question for aj, not a permission prompt; "
@@ -1932,7 +1950,7 @@ def _attribution_guard(subject, payload):
         m = rx.search(text)
         if m:
             kind = "commit message" if _GIT_COMMIT_RE.search(cmd) else "pull request or issue text"
-            if core.unattended():  # allowed so the run does not stall; the credit line is fixed in the morning
+            if kind == "commit message" and core.nobody_present(payload):  # #643: PR/issue text is always denied; a commit is allowed so the run does not stall; the credit line is fixed in the morning
                 return ("note", "", "House rules, UNATTENDED run: the credit rule was relaxed for this %s (it carries \"%s\"). "
                         "Remove that line in the morning." % (kind, m.group(0).strip()[:60]))
             return ("deny", ATTRIBUTION_DENY % (kind, m.group(0).strip()[:60]), None)

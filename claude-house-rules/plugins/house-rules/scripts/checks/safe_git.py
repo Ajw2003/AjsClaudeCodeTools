@@ -1549,8 +1549,9 @@ commit_case(
 _pt_src = read(SAFE_GIT)  # prompttimer moved to the safe git part (#358); its block now ends at a marker line
 _pt_block = _pt_src[_pt_src.index("# prompttimer - PermissionRequest"):_pt_src.index("# End of the prompttimer block")]
 commit_case(
-    "prompttimer: the handler source has no route to an allow decision",
-    "allow" not in _pt_block.lower() and 'behavior": "deny"' in _pt_block,
+    "prompttimer: the handler source has one allow route, for ExitPlanMode when nobody is present (#636)",
+    _pt_block.count('"behavior": "allow"') == 1 and 'tool_name == "ExitPlanMode"' in _pt_block
+    and 'behavior": "deny"' in _pt_block,
     "%d characters of handler source scanned" % len(_pt_block),
 )
 _pt_hj = json.load(open(HOOKS_JSON, encoding="utf-8"))["hooks"].get("PermissionRequest", [])
@@ -2087,6 +2088,16 @@ report("PASS" if _ua_dec(_un1) == "deny" and "Refused, not asked" in _un1 and "u
        and _ua_dec(_un2) == "deny" and _ua_dec(_un3) == "ask" else "FAIL",
        "unattended: a guard ask becomes a refusal naming the unattended run; not unattended it is still an ask")
 print("          on %s, ON %s, off %s" % (_ua_dec(_un1), _ua_dec(_un2), _ua_dec(_un3)))
+_un1l = _un1.lower().replace("-", " ")
+report("PASS" if "ledger_note.py decide" in _un1 and "waiting on you" not in _un1l and "final report" not in _un1l
+       and "approve to let it run" not in _un1l and "nobody answers" not in _un1l else "FAIL",
+       "unattended: the guard refusal says to write it with ledger_note.py decide, never mentions the waiting list, a timeout or approving (#643, C10)")
+_by1 = _ua_guard("verify-un-byp", extra={"permission_mode": "bypassPermissions"}, env_extra={"HOUSE_RULES_UNATTENDED": "off"})
+_sb1 = _ua_guard("verify-un-sub", extra={"agent_id": "a1"})
+report("PASS" if _ua_dec(_by1) == "deny" and "HOUSE_RULES_UNATTENDED" not in _by1 and "unattended run" in _by1
+       and _ua_dec(_sb1) == "deny" and "Refused, not asked" in _sb1 and "Approve to let it run" not in _sb1
+       and "nobody answers" not in _sb1 else "FAIL",
+       "round-2 side notes: a bypass refusal does not name the unattended switch, and a subagent refusal says Refused with no approve or timeout line")
 
 _un4 = _ua_guard("verify-un4", env_extra=dict(_un_on, HOUSE_RULES_PROMPT_TIMEOUT="off"))
 _un5 = _ua_guard("verify-un5", env_extra={"HOUSE_RULES_PROMPT_TIMEOUT": "off"})
@@ -2102,9 +2113,10 @@ def _un_noask(tool, on):
 
 
 _un_n = [_un_noask(t, on) for t in ("AskUserQuestion", "ExitPlanMode") for on in (True, False)]
-report("PASS" if all(_ua_dec(o[1]) == "deny" and "nobody is there to answer" in o[1] for o in _un_n[0::2])
-       and all(o[0] == 0 and o[1] == "" for o in _un_n[1::2]) else "FAIL",
-       "noask: AskUserQuestion and ExitPlanMode are denied when unattended; silent and exit 0 when not")
+report("PASS" if _ua_dec(_un_n[0][1]) == "deny" and "nobody is there to answer" in _un_n[0][1]
+       and _ua_dec(_un_n[2][1]) == "allow"  # #636: a plan-exit prompt is allowed when nobody is present
+       and all(o[0] == 0 and o[1] == "" for o in (_un_n[1], _un_n[3])) else "FAIL",
+       "noask: AskUserQuestion is denied and ExitPlanMode allowed when unattended; silent and exit 0 when not")
 
 _bp = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "bp", "tool_name": "AskUserQuestion",
                                     "tool_input": {}, "permission_mode": "bypassPermissions"}), env=dict(os.environ, HOUSE_RULES_UNATTENDED="off"))
@@ -2119,6 +2131,53 @@ report("PASS" if _un_n[1][1] == "" and "no permission_mode" in _un_n[1][2] and _
 report("PASS" if all("noask" in merged_wiring("Pre", t)[0] for t in ("AskUserQuestion", "ExitPlanMode"))
                      and "noask" not in merged_wiring("Pre", "Bash")[0] else "FAIL",
        "hooks.json registers noask on AskUserQuestion|ExitPlanMode")
+
+# --- #636: one test for who is present, at each old call site, one case per mode ---
+_np_off = dict(os.environ, HOUSE_RULES_UNATTENDED="off")
+_np_modes = [("unattended", "default", dict(_np_off, HOUSE_RULES_UNATTENDED="on"), True),
+             ("bypass", "bypassPermissions", _np_off, True), ("auto", "auto", _np_off, False),
+             ("normal", "default", _np_off, False), ("plan", "plan", _np_off, False),
+             ("unknown", "somethingNew", _np_off, False)]
+for _nm, _mode, _env, _gone in _np_modes:
+    _o = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "np", "tool_name": "AskUserQuestion",
+                                       "tool_input": {}, "permission_mode": _mode}), env=_env)[1]
+    report("PASS" if (_ua_dec(_o) == "deny") == _gone else "FAIL", "#636 noask, %s: question %s" % (_nm, "denied" if _gone else "left alone"))
+    _o = _ua_guard("np-ask-" + _nm, extra={"permission_mode": _mode}, env_extra={"HOUSE_RULES_UNATTENDED": _env["HOUSE_RULES_UNATTENDED"]})
+    report("PASS" if (_ua_dec(_o) == "deny") == _gone else "FAIL",
+           "#636 guard ask (safe_git), %s: %s" % (_nm, "refused, not asked" if _gone else "still an ask"))
+    _o = run_hook("guardwrite", json.dumps(dict(json.loads(guardwrite_payload(_gw_existing)), permission_mode=_mode)), env=_env)[1]
+    report("PASS" if ('"permissionDecision"' not in _o) == _gone else "FAIL",
+           "#636 whole-file Write (safe_git), %s: %s" % (_nm, "allowed with a note" if _gone else "refused"))
+_o = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "np", "tool_name": "ExitPlanMode",
+                                   "tool_input": {}, "permission_mode": "bypassPermissions"}), env=_np_off)[1]
+report("PASS" if _ua_dec(_o) == "allow" else "FAIL", "#636 ExitPlanMode is allowed when nobody is present (bypass)")
+_o = run_hook("noask", json.dumps({"hook_event_name": "PreToolUse", "session_id": "np", "tool_name": "mcp__goal__Pause_Goal",
+                                   "tool_input": {}, "permission_mode": "default"}), env=_np_off)[1]
+report("PASS" if _ua_dec(_o) == "deny" and "noask" in merged_wiring("Pre", "mcp__goal__pause_goal")[0] else "FAIL",
+       "#636 the pause-goal tool is denied, and hooks.json wires it to noask")
+_pt_pl = _pt_tool("Bash", {"command": "rm -rf /tmp/np-victim"})
+_t0 = time.time()
+_o = run_hook("prompttimer", _pt_pl, env=_pt_env(HOUSE_RULES_PROMPT_TIMEOUT="30", HOUSE_RULES_UNATTENDED="on"))[1]
+_o2 = run_hook("prompttimer", _pt_tool("ExitPlanMode", {}), env=_pt_env(HOUSE_RULES_PROMPT_TIMEOUT="30", HOUSE_RULES_UNATTENDED="on"))[1]
+report("PASS" if time.time() - _t0 < 10 and '"behavior":"deny"' in _o and "unattended run" in _o and '"behavior":"allow"' in _o2 else "FAIL",
+       "#636 prompttimer: a permission prompt is denied at once when nobody is present; a plan-exit prompt is allowed")
+_nf_d = tempfile.mkdtemp(prefix="np-switchfile-")
+
+
+def _nf(tool, **ti):
+    return _ua_dec(run_hook("commitgate", json.dumps({"session_id": "nf", "cwd": _nf_d, "tool_name": tool, "tool_input": ti}), env=_np_off)[1])
+
+
+_nf_mode = os.path.join(_nf_d, ".claude", "house-rules-mode.json")
+_nf_set = os.path.join(_nf_d, ".claude", "settings.json")
+report("PASS" if _nf("Write", file_path=_nf_mode, content="{}") == "deny" and _nf("Edit", file_path=_nf_mode, old_string="a", new_string="b") == "deny"
+       and _nf("Bash", command="echo '{\"unattended\":\"on\"}' > .claude/house-rules-mode.json") == "deny"
+       and _nf("Bash", command="cat .claude/house-rules-mode.json") != "deny" else "FAIL",
+       "#636 an agent write to the mode file is refused (Write, Edit, shell redirect); a read is not")
+report("PASS" if _nf("Write", file_path=_nf_set, content='{"env":{"HOUSE_RULES_UNATTENDED":"on"}}') == "deny"
+       and _nf("Bash", command="echo '{\"env\":{\"HOUSE_RULES_LOOP\":\"off\"}}' > .claude/settings.local.json") == "deny"
+       and _nf("Write", file_path=_nf_set, content='{"theme":"dark"}') != "deny" else "FAIL",
+       "#636 an agent write of a HOUSE_RULES_ key into .claude/settings.json is refused; other settings are not")
 
 # --- unattended relaxations (the user approved them 2026-11-22): allowed with a note, strict when attended ---
 _un_gw_on = run_hook("guardwrite", guardwrite_payload(_gw_existing), env=dict(os.environ, HOUSE_RULES_UNATTENDED="on"))[1]
@@ -2136,6 +2195,23 @@ report("PASS" if '"permissionDecision":"deny"' not in _un_cr_on and "credit rule
        and '"permissionDecision":"deny"' in _un_cr_off and "Remove every `Co-Authored-By:`" in _un_cr_off else "FAIL",
        "unattended: a Claude credit line is allowed with a note; attended the commit is still refused")
 print("          on %s | off %s" % (_un_cr_on[-200:], _un_cr_off[:80]))
+# round-1 C2: the credit-line commit rule across every mode (permission_mode in the payload, no switch)
+_cr_res = {}
+for _m in ("bypassPermissions", "auto", "default", "acceptEdits", "plan", ""):
+    _pl = json.dumps(dict(json.loads(_un_cr_pl), **({"permission_mode": _m} if _m else {})))
+    _cr_res[_m] = run_hook("guard", _pl, env=dict(_project_env(_u7), HOUSE_RULES_UNATTENDED="off"))[1]
+report("PASS" if "credit rule was relaxed" in _cr_res["bypassPermissions"] and '"permissionDecision":"deny"' not in _cr_res["bypassPermissions"]
+       and all('"permissionDecision":"deny"' in _cr_res[k] and "credit rule was relaxed" not in _cr_res[k]
+               for k in ("auto", "default", "acceptEdits", "plan", "")) else "FAIL",
+       "C2: the credit-line commit is relaxed only in bypass; auto, default, acceptEdits, plan and no mode still deny it")
+# #643: a pull request body with a credit line is denied even with nobody present
+_un_pr_cmd = "gh pr " + 'create --title T --body "Refs #5\n\nGenerated with [Claude Code](https://claude.com/claude-code)"'
+_un_pr_pl = json.dumps({"session_id": "verify", "cwd": _u7, "tool_name": "Bash", "tool_input": {"command": _un_pr_cmd}})
+_un_pr_on = run_hook("guard", _un_pr_pl, env=dict(_project_env(_u7), HOUSE_RULES_UNATTENDED="on"))[1]
+_un_pr_off = run_hook("guard", _un_pr_pl, env=_project_env(_u7))[1]
+report("PASS" if '"permissionDecision":"deny"' in _un_pr_on and '"permissionDecision":"deny"' in _un_pr_off
+       and "credit rule was relaxed" not in _un_pr_on else "FAIL",
+       "#643: a pull request body with a credit line is denied unattended and attended")
 
 
 # --- #562: a background launch with no deadline is refused; an unchecked one is reported once ---

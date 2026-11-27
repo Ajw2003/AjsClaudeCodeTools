@@ -1,0 +1,675 @@
+<!doctype html>
+<!-- house-rules make_page 2.94.7 -->
+<meta charset="utf-8">
+<meta name="house-rules-reviewed" content="1a6d9b266092d4cf11d0348519588bda45be74565736e735602611e2648a8c16;open-risks;2">
+<meta name="house-rules-page" content="proposal">
+<title>Quiet unattended mode: decide, log, keep going</title><!-- also set this to PAGE.title: galleries read this tag, not the script -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a four-step walkthrough. One step on screen at a time; a stepper on top; the same wrap-up block closes every page. */
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --fg:#17202e; --muted:#566174; --line:#d5dbe6;
+  --accent:#2f5bd3; --accent-soft:#e3eafc;
+  --you:#b35f00; --you-soft:#fdeed9;
+  --ok:#1f7a4d; --ok-soft:#dff3e8; --gap:#b4232f; --gap-soft:#fbe1e3;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --card:#18202d; --fg:#eef2f8; --muted:#a4afc0; --line:#2d3748;
+  --accent:#86a7ff; --accent-soft:#1f2c4a; --you:#f2b35c; --you-soft:#3a2a12;
+  --ok:#62d69d; --ok-soft:#173527; --gap:#ff8089; --gap-soft:#3d1a1f; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:17px/1.55 var(--body)}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:1.9rem;font-weight:800}
+h2{font-size:1.45rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.ico{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* stepper */
+.stepper{position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--bg);padding-block:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stepper button{border:0;background:none;display:grid;justify-items:center;gap:4px;padding:4px 0;font-size:.72rem;color:var(--muted)}
+.stepper .bar{width:100%;height:6px;border-radius:3px;background:var(--line)}
+.stepper button.done .bar{background:var(--accent)}
+.stepper button[aria-current="step"]{color:var(--fg);font-weight:700}
+.stepper button[aria-current="step"] .bar{background:var(--accent)}
+
+.panel{display:grid;gap:18px}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.lead{font-size:1.1rem}
+
+/* at-a-glance strip */
+.glance{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.g{display:grid;justify-items:center;gap:4px;width:56px;text-align:center;font-size:.72rem;color:var(--muted)}
+.g span.c{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.g.you span.c{border-radius:12px;background:var(--you-soft);color:var(--you)}
+.arrow{color:var(--muted);font-size:1.1rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.lk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--you-soft);color:var(--you);margin-right:6px;vertical-align:-5px}
+.glance .lk .ico{width:14px;height:14px}
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p,.crb li{font-size:.9rem}
+.crb ul.cl{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.g.done span.c{background:var(--ok-soft);color:var(--ok);border-radius:50%}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.sd h3{display:flex;gap:8px;align-items:center}
+.sd .back{padding-left:0}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.key i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border-radius:50%;background:var(--accent-soft);border:2px solid var(--accent)}
+.key i.y{border-radius:4px;background:var(--you-soft);border-color:var(--you)}
+
+/* stage list */
+.stages{display:grid;gap:8px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.st > summary{list-style:none;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;cursor:pointer;min-height:48px}
+.st > summary::-webkit-details-marker{display:none}
+.st .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.st.you .c{border-radius:11px;background:var(--you-soft);color:var(--you)}
+.st.you{border-color:var(--you)}
+.st .nm b{display:block}
+.st .nm small{color:var(--muted);font-size:.85rem}
+.more{font-size:.78rem;color:var(--accent);font-weight:700;white-space:nowrap}
+details[open] > summary .more::after{content:" ▲"} details:not([open]) > summary .more::after{content:" ▼"}
+.detail{padding:0 14px 14px 68px;display:grid;gap:8px;font-size:.92rem}
+@media (max-width:420px){.detail{padding-left:14px}}
+.row{display:grid;grid-template-columns:72px 1fr;gap:8px}
+.row > span:first-child{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.back{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--you);padding-left:12px}
+
+/* created / changed */
+.cc{display:grid;gap:8px}
+.ci{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.ci > summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;cursor:pointer;min-height:48px}
+.ci > summary::-webkit-details-marker{display:none}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.new{background:var(--ok-soft);color:var(--ok)} .tag.chg{background:var(--accent-soft);color:var(--accent)} .tag.keep{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ci b{display:block}
+.ci small{color:var(--muted);font-size:.86rem}
+.ci .detail{padding:0 14px 14px 14px}
+.ci .detail p{white-space:pre-line}
+.fromto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;font-size:.88rem}
+.fromto span{border-radius:8px;padding:6px 8px;background:var(--bg)}
+.fromto span.to{background:var(--accent-soft)}
+.flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:stretch;font-size:.84rem}
+.flow > span{border-radius:8px;padding:8px;background:var(--bg);display:grid;gap:2px;align-content:start;min-width:0}
+.flow > span.mid{background:var(--accent-soft)}
+.flow > i{align-self:center;color:var(--muted);font-style:normal}
+.flow small{font-size:.66rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+@media (max-width:479px){.flow{grid-template-columns:minmax(0,1fr)}.flow > i{justify-self:center;transform:rotate(90deg)}}
+.files{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.files h4{margin:0;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.frow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;align-items:baseline}
+.frow code{font-size:.82rem;word-break:break-all}
+.files .n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.parts{margin:0 0 4px;padding-left:18px;display:grid;gap:4px;font-size:.86rem}
+.parts li span:first-child{margin-right:8px}
+
+/* choices */
+.q{display:grid;gap:8px}
+.q h3{display:flex;gap:10px;align-items:flex-start}
+.qn{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--bg);font:800 .85rem var(--display);flex:none}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;min-height:48px}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt input[type=radio]{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.opt small{display:block;color:var(--muted);font-size:.86rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+.rec{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.rec .ico{width:12px;height:12px}
+.why{font-size:.88rem}
+.why summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:32px}
+.why p{margin-top:6px;color:var(--muted)}
+
+/* wrap-up */
+.wrapup{display:grid;gap:10px}
+.wu{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.wu .c{width:40px;height:40px;border-radius:10px;display:grid;place-items:center}
+.wu h3{margin-bottom:2px}
+.wu p,.wu li{font-size:.94rem}
+.wu ol{margin:4px 0 0;padding-left:20px;display:grid;gap:4px}
+.wu.do{border:2px solid var(--you)}
+.reply{display:grid;gap:8px}
+.reply pre{white-space:pre-wrap;margin:0;background:var(--card);border:1px dashed var(--accent);border-radius:10px;padding:12px;font-size:.92rem}
+.primary{background:var(--accent);color:var(--bg);border:0;border-radius:12px;padding:14px 18px;font-weight:800;min-height:48px}
+.secondary{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:700;min-height:48px}
+.nav{display:flex;justify-content:space-between;gap:10px}
+.nav .primary{margin-left:auto}
+.nextbox{position:sticky;bottom:0;z-index:3;background:var(--card);border:2px solid var(--you);border-radius:12px;padding:10px 14px;display:grid;gap:2px;font-size:.92rem}
+.nextbox b{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--you)}
+.wu li label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.wu li label > span{min-width:0;overflow-wrap:anywhere}
+.wu li code{font-size:.82rem;overflow-wrap:anywhere;word-break:break-all}
+.wu li input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--accent)}
+.status{font-size:.88rem;color:var(--muted)}
+.missing{color:var(--gap);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.panel{animation:in .2s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+<style>
+.cr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.crb{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.crb.you{border-color:var(--you);background:var(--you-soft)}
+.crh{display:flex;gap:6px;align-items:center;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.crb.you .crh{color:var(--you)}
+.crh .ico{width:16px;height:16px}
+.crb p{font-size:.9rem}
+.g{border:0;background:none;padding:0;cursor:pointer}
+.g[aria-pressed="true"] span.c{outline:3px solid var(--accent);outline-offset:2px}
+.g.you[aria-pressed="true"] span.c{outline-color:var(--you)}
+.g[aria-pressed="true"]{color:var(--fg);font-weight:700}
+.g.done span.c{background:var(--ok-soft);color:var(--ok)}
+.sd{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:8px;font-size:.94rem}
+.owntext{display:block;width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);min-height:44px}
+/* pictures: thumbnail opens a full-width overlay; compare is two frames wide, one slider frame narrow. Never --you: orange means the user acts. */
+.pic{display:grid;gap:6px;justify-items:start;max-width:100%;min-width:0}
+.pic button{display:grid;gap:6px;justify-items:start;max-width:100%;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;text-align:left}
+.pic img,.cmp img{display:block;max-width:100%;height:auto;background:var(--bg)}
+.pic,.pic button{width:100%;box-sizing:border-box}
+/* A tall screenshot shrunk to fit a short box is a sliver: fill the width and show its top instead. */
+.pic button img{width:100%;max-height:280px;object-fit:cover;object-position:top;border-radius:6px}
+.pic figcaption,.cmp figcaption{font-size:.86rem;color:var(--muted)}
+.pic,.cmp{margin:0}
+.cmp{display:grid;gap:6px;min-width:0}
+.cmp-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+body{overflow-wrap:anywhere}
+.crb p,.crb li,.fromto span,.flow > span,.ci .detail p,.sd{overflow-wrap:anywhere;min-width:0}
+@media (max-width:479px){.cr{grid-template-columns:minmax(0,1fr)}}
+.cmp-side > div{display:grid;gap:4px;align-content:start;min-width:0;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--card)}
+.cmp-side b,.cmp-slide label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cmp-slide{display:none;gap:6px;min-width:0}
+.cmp-frame{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.cmp-frame img{width:100%}
+.cmp-frame img + img{position:absolute;inset:0;height:100%;object-fit:fill;clip-path:inset(0 0 0 var(--pos,50%))}
+.cmp-slide input[type=range]{width:100%;accent-color:var(--accent);min-height:44px;margin:0}
+@media (max-width:639px){.cmp-side{display:none}.cmp-slide{display:grid}}
+dialog.lightbox{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--fg);padding:12px;width:min(96vw,960px);max-height:94vh;box-sizing:border-box;overflow:auto}
+dialog.lightbox::backdrop{background:rgba(0,0,0,.6)}
+dialog.lightbox img{display:block;width:100%;height:auto}
+dialog.lightbox p{margin-top:8px;font-size:.9rem}
+dialog.lightbox button{margin-top:10px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L3 15l3 3 8-8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6m0-1V4a1.5 1.5 0 0 1 3 0v6m0-1V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.6-1.5L8 14"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></symbol>
+</defs></svg>
+
+<!--
+  Handover page template (house-rules, issue #233). The approved format: four parts in this order -
+  In short, Changes, Choices, Wrap-up - and a part is left out only when it would be empty.
+  Copy this file, edit PAGE below, and nothing else. Every part keeps four rules:
+  detail only on tap; names, never bare numbers; one colour, one meaning (orange = the user acts,
+  green = done, nothing else orange); I check it first (phone width, light and dark, every tap,
+  a bare-number search). Rule: rules/detail/show-dont-tell.md.
+-->
+<div class="wrap">
+  <header style="display:grid;gap:6px">
+    <span class="eyebrow" id="eyebrow"></span>
+    <h1 id="title"></h1>
+  </header>
+  <nav class="stepper" aria-label="Steps" id="stepper"></nav>
+  <section class="panel" data-part="short" aria-labelledby="h-short">
+    <h2 id="h-short" tabindex="-1">In short</h2>
+    <div class="card">
+      <p class="lead" id="lead" data-basic="summary">Unattended mode still stops. This plan closes 12 ways it can ask or quit, after two independent reviews. I need one approval line from you.</p>
+      <div class="key" id="key"></div>
+      <div class="glance" id="glance" role="group" aria-label="Tap an item for detail."></div>
+      <p class="muted" style="font-size:.85rem" id="hint"></p>
+      <div class="sd" id="sd" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="panel" data-part="changes" aria-labelledby="h-changes" hidden>
+    <h2 id="h-changes" tabindex="-1">What this creates or changes</h2>
+    <p class="muted" id="cc-count"></p>
+    <div class="cc" id="cc"></div>
+  </section>
+  <section class="panel" data-part="choices" aria-labelledby="h-choices" hidden>
+    <h2 id="h-choices" tabindex="-1">Your choices</h2>
+    <p class="muted">My suggestion is marked, nothing is picked for you, and each has room for your own answer.</p>
+    <div id="qs" style="display:grid;gap:22px"></div>
+  </section>
+  <section class="panel" data-part="wrapup" aria-labelledby="h-wrapup" hidden>
+    <h2 id="h-wrapup" tabindex="-1">Wrap-up</h2>
+    <div class="wrapup" id="wrapup"></div>
+    <div class="wu do"><span class="c" style="background:var(--you-soft);color:var(--you)"><svg class="ico"><use href="#i-hand"/></svg></span><div><h3>What you need to do</h3><div data-basic="checklist"><ol id="todo" data-basic="steps"><li><label><input type="checkbox"> Read the twelve changes.</label></li><li><label><input type="checkbox"> Tap Copy my reply.</label></li><li><label><input type="checkbox"> Tap <b>Copy my reply</b> and send it: "Design approved: quiet unattended mode", or say what to change.</label></li></ol></div></div></div>
+    <div class="wrapup" id="facts"><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>What exists today</h3><p data-basic="exists">Today: rules say to ask, wait or hand over (show-dont-tell.md:5, 11, 12; house-rules.md:91; clear-writing.md:59-62; handover-command.md:28, 51; commit-branches.md:50; coding-philosophy.md:58; builder.md:11; core.py:1546, 1610).</p></div></div><div class="wu"><span class="c" style="background:var(--accent-soft);color:var(--accent)"><svg class="ico"><use href="#i-file"/></svg></span><div><h3>Suggested</h3><p data-basic="suggested">A · Approve it as written</p></div></div></div>
+    <div class="reply">
+      <pre id="out" aria-live="polite"></pre>
+      <p class="status" id="miss"></p>
+      <button class="primary" id="copy" type="button">Copy my reply</button>
+      <p class="status" id="st"></p>
+    </div>
+  </section>
+  <div class="nav">
+    <button class="secondary" id="prev" type="button">‹ Back</button>
+    <button class="primary" id="next" type="button">Next ›</button>
+  </div>
+  <aside class="nextbox" data-basic="next" aria-label="Your next step"><b>Your next step</b><span id="nextstep">Send "Design approved: quiet unattended mode". Then I write the build plan page for you to approve, then build and test a real headless run.</span></aside>
+</div>
+
+<script>
+// ---- PAGE: the only part you edit. Example content shows every field. ----------------------
+// Tiny inline SVGs so the template stays one file; real pages use a data: URI or a path next to the page.
+const EXAMPLE_PIC = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#e3eafc"/><circle cx="160" cy="90" r="40" fill="#2f5bd3"/></svg>');
+const EXAMPLE_PIC_AFTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dff3e8"/><rect x="100" y="50" width="120" height="80" rx="12" fill="#1f7a4d"/></svg>');
+const PAGE = {
+  "title": "Quiet unattended mode: decide, log, keep going",
+  "eyebrow": "Proposal · nothing built yet",
+  "pageType": "proposal",
+  "approval": "Design approved: quiet unattended mode",
+  "short": {
+    "lead": "Unattended mode still stops. This plan closes 12 ways it can ask or quit, after two independent reviews. I need one approval line from you.",
+    "hint": "Tap a step to see it.",
+    "key": [
+      [
+        "We work on it",
+        ""
+      ],
+      [
+        "You act on it",
+        "you"
+      ]
+    ],
+    "items": [
+      [
+        "bulb",
+        "Idea",
+        "I decide, you design",
+        "",
+        "In auto or normal mode, only choices about how something looks or what it does come to you. In unattended or bypass, I decide those too, state my assumption, and carry on. Once a goal is set, I work its steps to the end.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%22300%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EA%20choice%20comes%20up%3C/text%3E%3Cpath%20d=%22M160%2055%20V70%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%2210%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23c33%22/%3E%3Ctext%20x=%2218%22%20y=%2290%22%3EChanges%20the%20look%3C/text%3E%3Ctext%20x=%2218%22%20y=%22106%22%3Eor%20what%20it%20does%3C/text%3E%3Crect%20x=%22165%22%20y=%2270%22%20width=%22145%22%20height=%2250%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22173%22%20y=%2290%22%3EAnything%20else%3C/text%3E%3Ctext%20x=%2214%22%20y=%22140%22%20fill=%22%23c33%22%3EAsk%20you,%20if%20you%20are%20here%3C/text%3E%3Ctext%20x=%22169%22%20y=%22140%22%3EI%20decide%20and%20write%20it%20down%3C/text%3E%3Ctext%20x=%22169%22%20y=%22156%22%3ENobody%20here:%20I%20decide%20both%3C/text%3E%3C/svg%3E",
+          "alt": "A choice about look or function goes to you; any other choice I decide and log",
+          "caption": "Who decides what"
+        }
+      ],
+      [
+        "bulb",
+        "Idea",
+        "Keep going until the goal is met",
+        "",
+        "The plan becomes numbered steps. A check on every reply blocks the stop while a step is open, in every mode. A second loop outside the session restarts it if it quits.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2220%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2240%22%3EWork%3C/text%3E%3Crect%20x=%22120%22%20y=%2220%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22128%22%20y=%2240%22%3EGoal%20met%3F%3C/text%3E%3Cpath%20d=%22M100%2040%20H120%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Cpath%20d=%22M165%2060%20V100%20H55%20V60%22%20fill=%22none%22%20stroke=%22%23c33%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2262%22%20y=%2292%22%20fill=%22%23c33%22%3Eno:%20block%20the%20stop%3C/text%3E%3Cpath%20d=%22M210%2040%20H235%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Crect%20x=%22235%22%20y=%2220%22%20width=%2275%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22243%22%20y=%2240%22%3EStop%3C/text%3E%3Ctext%20x=%22243%22%20y=%2256%22%3Eyes%20only%3C/text%3E%3Ctext%20x=%2210%22%20y=%22130%22%3EToday:%20two%20phrases,%20two%20blocks,%20then%20it%20quits.%3C/text%3E%3Ctext%20x=%2210%22%20y=%22150%22%3EPlan:%20every%20reply%20end,%20plus%20an%20outer%20loop.%3C/text%3E%3C/svg%3E",
+          "alt": "A goal check blocks the stop until the goal is met",
+          "caption": "Why it stops today and what changes"
+        }
+      ],
+      [
+        "bulb",
+        "Idea",
+        "Decisions arrive once, at QA",
+        "",
+        "Each decision goes into one file as I make it. You first see them on the QA page, once everything is built and tested.",
+        "Nothing from you.",
+        {
+          "src": "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22320%22%20height=%22180%22%20font-family=%22sans-serif%22%20font-size=%2212%22%3E%3Crect%20width=%22320%22%20height=%22180%22%20fill=%22%23e3eafc%22/%3E%3Crect%20x=%2210%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%2218%22%20y=%2235%22%3EBuild%3C/text%3E%3Crect%20x=%22115%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22123%22%20y=%2235%22%3ETest%3C/text%3E%3Crect%20x=%22220%22%20y=%2215%22%20width=%2290%22%20height=%2240%22%20rx=%226%22%20fill=%22%23fff%22%20stroke=%22%23345%22/%3E%3Ctext%20x=%22228%22%20y=%2235%22%3EQA%20page%3C/text%3E%3Cpath%20d=%22M100%2035%20H115%20M205%2035%20H220%22%20stroke=%22%23345%22%20stroke-width=%222%22/%3E%3Ctext%20x=%2210%22%20y=%2285%22%3EDecisions%20are%20written%20to%20a%20file%3C/text%3E%3Ctext%20x=%2210%22%20y=%22102%22%3Eall%20the%20way%20through.%20Nothing%20is%3C/text%3E%3Ctext%20x=%2210%22%20y=%22119%22%3Esaid%20about%20them%20until%20the%3C/text%3E%3Ctext%20x=%2210%22%20y=%22136%22%20fill=%22%23c33%22%3EQA%20page,%20after%20all%20tests%20pass.%3C/text%3E%3C/svg%3E",
+          "alt": "Decisions are written quietly during build and test, then shown on the QA page",
+          "caption": "When you see the decisions"
+        }
+      ],
+      [
+        "lock",
+        "Approve",
+        "You approve it",
+        "you",
+        "Your approval is recorded as one line in the decisions log.",
+        "Send the approval line below."
+      ]
+    ]
+  },
+  "changes": [
+    [
+      "changed",
+      "Rules tell me to ask, wait or stop",
+      "Ask about look or function only when you are here",
+      null,
+      "In auto or normal mode, only choices about how something looks or what it does come to you. A new dependency, a data format or an API change counts as function. In unattended or bypass I decide those too. Everything else I decide and log, in every mode.",
+      [
+        "Today: rules say to ask, wait or hand over (show-dont-tell.md:5, 11, 12; house-rules.md:91; clear-writing.md:59-62; handover-command.md:28, 51; commit-branches.md:50; coding-philosophy.md:58; builder.md:11; core.py:1546, 1610).",
+        "New: those lines are rewritten. Hard stops stay yours: a licence, a login, a purchase, a deletion, money, secrets, other people, outward posts.",
+        "For you: far fewer questions in every mode, and none in unattended or bypass."
+      ],
+      null
+    ],
+    [
+      "new",
+      "One test for who is present",
+      "Unattended and bypass count as nobody present",
+      null,
+      "Unattended and bypass mean nobody is here, and the loop runs alone. Auto mode keeps you present: the design loop still gates every step. Auto still gets every change that cuts your decisions.",
+      [
+        "Today: only unattended and bypass are recognised, in separate places (core.py:1487, 2794, 3840; safe_git.py:1375, 1638, 1935; bigfiles.py:150; design_loop.py:3555).",
+        "New: one helper that all those places use. When nobody is here, a permission prompt is denied at once, a plan-exit prompt is allowed, and pause-goal is denied. Agent writes to house-rules-mode.json and HOUSE_RULES_ keys in .claude/settings are refused.",
+        "For you: auto keeps your gates but asks far less: rules, step check, ledger and QA-only reporting all apply. The launcher is still best overnight, because auto mode has its own safety check I cannot rewrite."
+      ],
+      null
+    ],
+    [
+      "changed",
+      "Unattended switches the design loop off",
+      "Unattended keeps the design loop and runs it itself",
+      null,
+      "The loop stays on. I design, decide, have a helper review the plan, approve it, build the steps and hand over a QA page.",
+      [
+        "Today: unattended turns the loop and the end-of-reply check off (core.py:2723, 2737, 2850; hook.py:122; design_loop.py:2952).",
+        "New: the end-of-reply check comes back for these items only: evidence, commit, deviation, QA page, changelog, decision log. The editor, page limit, plain summary, page send, helpers and issues stay off.",
+        "For you: the loop flows without you from goal to QA, ending on the finish line below."
+      ],
+      null
+    ],
+    [
+      "new",
+      "I can approve my own plan, but only a hook records it",
+      "A hook approves, and only when a real review exists",
+      null,
+      "The hook may move Design to Plan, and Plan to Build, with the issue-label read skipped. It needs the unattended switch or bypass mode, never auto, a stored reviewer verdict for this page's hash, and a build plan with a test command per step.",
+      [
+        "Today: only your typed message moves the stage, and the stage file refuses agent writes (design_loop.py:429, 621, 1157, 1418). The review stamp is self-declared (make_page.py:609), and the verdict hook is off when helpers are off (delegation.py:740).",
+        "New: a verdict hook for reviewer helpers stays on, and writes the verdict and page hash to the stage file. QA passed and Close approved stay yours. The newest-approval marker (design_loop.py:525) is not touched, so your other branches stay open.",
+        "For you: every self-approval is the first row on the QA page."
+      ],
+      null
+    ],
+    [
+      "new",
+      "A step list I cannot shrink",
+      "Steps live in a guarded file, one per session",
+      null,
+      "A hook copies the steps from the reviewed build plan into the stage file, with a hash, under the launcher's session id. Only that session is blocked by them, and only for features approved after this change.",
+      [
+        "Today: no step list exists. Parking has no category (ledger_note.py:43-46), and deviate only adds a ledger row.",
+        "New: a step passes when I run ledger_note.py check for it, through a normal Bash call, so every guard and timeout applies. A hook records the exit code and the commit; a moved commit makes it stale. The hash is also kept outside the repo.",
+        "For you: a step is parked only with a hard-stop category and the command that showed it. Deviate may add or replace a step, never delete one, and never touch the four finish-line steps."
+      ],
+      null
+    ],
+    [
+      "new",
+      "A finish line, the same in every mode",
+      "Four required last steps on every step list",
+      null,
+      "Every step list, in every mode, ends with the same four steps. None can be parked, replaced, deleted or skipped, and QA cannot open until all four pass.",
+      [
+        "Today: QA starts when a pull request opens or every issue says needs review (design_loop.py:860, 872). Nothing checks tests, docs or pictures first.",
+        "New: 1 tests pass (verify.py exits 0). 2 docs written (the changed docs tier and CHANGELOG.md have new lines). 3 before-and-after pictures saved under docs/qa, or a check that no visual file changed. 4 QA page built and stamped.",
+        "For you: you reach QA only with tests green, docs written and pictures to look at."
+      ],
+      null
+    ],
+    [
+      "new",
+      "A check on every stop",
+      "One fixed check reads the step list; no model decides",
+      null,
+      "The check runs on every stop, even with no reply text. A missing step file for an active session counts as open. The words NEEDS YOU no longer exempt anything; only a parked step does.",
+      [
+        "Today: two phrases trigger it, and two blocks end it (core.py:3516, 3518, 3731, 3835, 3840, 3869). The 6 at core.py:3684 is unused and is deleted.",
+        "New: the existing shared counter (core.py:3655) is reused. After 3 blocks with no step closed and no commit, a step is marked stuck, shown on QA, and the check moves on. overnight.sh sets CLAUDE_CODE_STOP_HOOK_BLOCK_CAP to 0.",
+        "For you: the model judge blocks at most once per step set. Sessions with no step list keep the current goal check. The web app keeps Claude Code's cap of 8 blocks."
+      ],
+      null
+    ],
+    [
+      "new",
+      "Look or function choices when nobody is here",
+      "Decide with a stated assumption, list it first on QA",
+      null,
+      "In unattended or bypass I decide these myself. I record my assumption and why it is reasonable, then carry on. In auto mode, a reply ending QUESTION FOR YOU: is allowed.",
+      [
+        "Today: a plain question in Build parks, and a [HARD STOP] question holds edits (design_loop.py:1401, 1547).",
+        "New: ledger_note.py decide adds a C row (choice) with an Assumption column, and a new message from you clears any block. The ledger is named after the branch, with / changed to - (make_page.py:53).",
+        "For you: QA lists these assumptions and auto-approvals first, with why and how to undo each."
+      ],
+      null
+    ],
+    [
+      "new",
+      "A restart loop outside the session",
+      "overnight.sh becomes a loop that runs Claude without a window",
+      null,
+      "It starts with --session-id, then resumes by id with --resume and -p after any stop, never by most recent session. The resume text is marked relayed (core.py:2040), so it never counts as your approval.",
+      [
+        "Today: overnight.sh runs Claude once and sits idle after any stop (tools/overnight.sh:12; test tools/verify_tools.py:813). Rate limits end the turn with no way to block it.",
+        "New: a small script that runs when a stop fails writes the error and reset time to a file. The loop waits for the reset, not counting it, and backs off after crashes. A last short run builds the QA page. overnight.sh --interactive keeps the old behaviour.",
+        "For you: limits are 24 hours of work and 5 restarts with no step closed. They end the run into QA with open steps listed first. This is the one exception to never stopping."
+      ],
+      null
+    ],
+    [
+      "changed",
+      "Decisions shown too early",
+      "Decisions appear only on the QA page",
+      null,
+      "Guard refusals, denied questions and the unattended note all tell me to report in the reply. They change to: write it to the ledger and carry on with the next open step. The QA reply says how many were logged.",
+      [
+        "Today: replies must list refusals under Waiting on you (safe_git.py:1584, 1620) and questions in the final report (core.py:2800, 2958; overnight.sh:4).",
+        "New: the ledger gets them. A hard stop parks its step and I continue with the others. A pull request to main may be opened by me, never merged.",
+        "For you: you see nothing about decisions until the QA page."
+      ],
+      null
+    ],
+    [
+      "changed",
+      "Gates that freeze a run nobody can answer",
+      "Skipped when nobody is present",
+      null,
+      "With the loop on, a reply that asks a question holds edits, unreadable GitHub refuses them, and unlabelled issues refuse them. Nobody can clear these. In unattended and bypass the step list, not a pull request, moves Build to QA.",
+      [
+        "Today: design_loop.py:860, 872, 1401, 1524, 1547, 1552, 1562.",
+        "New: when nobody is present, the holds and label checks are skipped, and a pull request opens only when every step is done, stuck or parked. Attended sessions do not change.",
+        "For you: the speed-first build already in Build is not affected; this plan waits for it to leave Build."
+      ],
+      null
+    ],
+    [
+      "changed",
+      "Earlier decisions reversed",
+      "Twelve earlier decisions are reversed, each logged",
+      null,
+      "Each gets a dated entry in docs/6-decisions/Decisions.md and a pointer left in the old one.",
+      [
+        "Today: Decisions.md lines 22, 54, 87, 92, 101, 121, 126, 133, 141 and 143 stand, plus the rule that approval comes only from your message, and Nothing fails silently.",
+        "New: all twelve are reversed. The relaxed credit check stays relaxed, and a final check strips credit lines before a pull request opens.",
+        "For you: tests change in checks/core.py, checks/design_loop.py, checks/safe_git.py and tools/verify_tools.py, with new cases for self-approval, the step file, the counter and the loop."
+      ],
+      null
+    ]
+  ],
+  "choices": [
+    [
+      "first",
+      "Do you approve this plan as written?",
+      [
+        [
+          "A",
+          "Approve it as written",
+          1,
+          "Closes all twelve holes together, after three review rounds."
+        ],
+        [
+          "B",
+          "Change something first",
+          0,
+          "Tell me what, in your own words."
+        ]
+      ],
+      "I recommend A. Any hole left open would still let a run stop."
+    ]
+  ],
+  "wrapup": {
+    "summary": "Twelve rule, hook and launcher problems (plus twelve reversals) make unattended mode ask or quit, and this plan replaces them with decide, log, and keep going.",
+    "changing": "Rules, hooks, guards, the step file, ledger_note.py, make_page.py, hooks.json, tools/overnight.sh, the tests, the docs and the changelog.",
+    "blocking": "Your approval line; no code is touched until you send it.",
+    "next": "Send \"Design approved: quiet unattended mode\". Then I write the build plan page for you to approve, then build and test a real headless run.",
+    "todo": [
+      "Read the twelve changes.",
+      "Tap Copy my reply.",
+      "Tap <b>Copy my reply<\/b> and send it: \"Design approved: quiet unattended mode\", or say what to change."
+    ]
+  }
+};
+// ---- End of PAGE. Nothing below needs editing. ----------------------------------------------
+
+const ic = id => `<svg class="ico"><use href="#i-${id}"/></svg>`;
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// A picture is found by shape (src or before), not position, because flow and files before it are optional.
+const picOf = (a, from) => a.slice(from).find(x => x && typeof x === "object" && !Array.isArray(x) && (x.src || x.before));
+let picN = 0; const PICS = [];
+const picHtml = p => {
+  if (!p) return "";
+  if (p.before && p.after) {
+    const id = "cmp" + (picN++), cap = p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : "";
+    const im = x => `<img src="${esc(x.src)}" alt="${esc(x.alt || p.caption || "")}">`;
+    return `<figure class="cmp"><div class="cmp-side"><div><b>Before</b>${im(p.before)}</div><div><b>After</b>${im(p.after)}</div></div>
+      <div class="cmp-slide"><div class="cmp-frame">${im(p.before)}${im(p.after)}</div><label for="${id}">Reveal after over before: drag to compare</label><input type="range" id="${id}" min="0" max="100" value="50" aria-label="Compare before and after: ${esc(p.caption || "")}"></div>${cap}</figure>`;
+  }
+  const alt = p.alt || p.caption || "", k = PICS.push({ src: p.src, alt, caption: p.caption || "" }) - 1;
+  return `<figure class="pic"><button type="button" data-pic="${k}" aria-label="Open full width: ${esc(alt)}"><img src="${esc(p.src)}" alt="${esc(alt)}">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ""}</button></figure>`;
+};
+document.addEventListener("input", e => { if (e.target.matches(".cmp-slide input[type=range]")) e.target.closest(".cmp-slide").querySelector(".cmp-frame").style.setProperty("--pos", e.target.value + "%"); });
+const box = document.createElement("dialog"); box.className = "lightbox"; box.setAttribute("aria-label", "Picture");
+box.innerHTML = `<img alt=""><p></p><button type="button" class="secondary">Close</button>`; document.body.appendChild(box);
+let boxFrom = null;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-pic]");
+  if (b) { const p = PICS[+b.dataset.pic]; boxFrom = b; box.querySelector("img").src = p.src; box.querySelector("img").alt = p.alt; box.querySelector("p").textContent = p.caption; box.showModal(); return; }
+  if (e.target === box || e.target.closest("dialog.lightbox")) box.close();  // tap anywhere on it closes; Escape does too
+});
+box.addEventListener("close", () => { if (boxFrom) boxFrom.focus(); boxFrom = null; });
+document.title = PAGE.title;
+document.getElementById("title").textContent = PAGE.title;
+document.getElementById("eyebrow").textContent = PAGE.eyebrow;
+document.getElementById("lead").textContent = PAGE.short.lead;
+document.getElementById("hint").textContent = PAGE.short.hint;
+document.getElementById("key").innerHTML = PAGE.short.key.map(([l, k]) =>
+  `<span><i class="${k === "you" ? "y" : ""}"${k === "done" ? ' style="background:var(--ok-soft);border-color:var(--ok)"' : ""}></i>${esc(l)}</span>`).join("");
+
+// A part is left out only when it would be empty.
+const PARTS = [["short", "In short"], ["changes", "Changes"], ["choices", "Choices"], ["wrapup", "Wrap-up"]]
+  .filter(([id]) => id === "short" || id === "wrapup" || (PAGE[id] && PAGE[id].length));
+document.querySelectorAll("[data-part]").forEach(p => { if (!PARTS.some(([id]) => id === p.dataset.part)) p.remove(); });
+
+const flow = fl => `<div class="flow"><span><small>What exists today</small>${esc(fl[0])}</span><i aria-hidden="true">→</i><span class="mid"><small>What this creates</small>${esc(fl[1])}</span><i aria-hidden="true">→</i><span><small>How it impacts you</small>${esc(fl[2])}</span></div>`;
+const lst = v => Array.isArray(v) ? `<ul class="cl">${v.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p>${esc(v)}</p>`;
+const glance = document.getElementById("glance"), sd = document.getElementById("sd");
+glance.innerHTML = PAGE.short.items.map(([i, s, t, k], n) =>
+  `${n ? '<span class="arrow" aria-hidden="true">›</span>' : ""}<button type="button" class="g${k === "you" ? " you" : k === "done" ? " done" : ""}" data-s="${n}" aria-pressed="false"><span class="c">${ic(i)}</span>${esc(s)}</button>`).join("");
+function showItem(n) {
+  glance.querySelectorAll(".g").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === n));
+  const [, , t, , creates, requires] = PAGE.short.items[n], pic = picOf(PAGE.short.items[n], 6);
+  const row = PAGE.short.items[n], summary = PAGE.kind === "summary";
+  const strip = Array.isArray(row[6]) && row[6].length === 3 && row[6].every(x => typeof x === "string") ? row[6] : null;
+  const needsYou = !summary && !/^Nothing/.test(Array.isArray(requires) ? requires.join(" ") : requires);
+  sd.innerHTML = `<h3>${esc(t)}</h3>${strip ? flow(strip) : ""}<div class="cr"><div class="crb"><span class="crh">${ic("swap")}Creates or changes</span>${lst(creates)}</div>
+    <div class="crb${needsYou ? " you" : ""}"><span class="crh">${summary ? ic("check") + "Decided by" : ic("hand") + "Requires"}</span>${lst(requires)}</div></div>${picHtml(pic)}`;
+}
+glance.addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) showItem(+b.dataset.s); });
+if (PAGE.short.items.length) showItem(0);
+
+if (document.getElementById("cc")) {
+  const counts = { new: 0, chg: 0, keep: 0 }; PAGE.changes.forEach(c => counts[c[0]]++);
+  document.getElementById("cc-count").textContent =
+    `${counts.new} new, ${counts.chg} changed, ${counts.keep} kept. Tap one for before and after.`;
+  // A New item's picture (#241): what sets it off -> what it does -> what you get.
+  // Every item's files (#241), shown only once it is opened: each file once, then its parts in plain words.
+  const lineCounts = (a, r) => `+${a} \u2212${r}`;
+  const files = fs => !fs || !fs.length ? "" : `<div class="files"><h4>${fs.length} ${fs.length === 1 ? "file" : "files"} \u00b7 ${lineCounts(fs.reduce((t, f) => t + f[1], 0), fs.reduce((t, f) => t + f[2], 0))}</h4>` +
+    fs.map(([p, a, r, parts]) => `<div class="frow"><code>${esc(p)}</code><span class="n">${lineCounts(a, r)}</span></div>` +
+      (parts && parts.length ? `<ul class="parts">${parts.map(([w, pa, pr]) => `<li><span>${esc(w)}</span><span class="n">${lineCounts(pa, pr)}</span></li>`).join("")}</ul>` : "")).join("") + `</div>`;
+  document.getElementById("cc").innerHTML = PAGE.changes.map(([k, t, s, ft, d, fl0, fs0], n) => { const row = PAGE.changes[n], pic = picOf(row, 5), fl = Array.isArray(fl0) ? fl0 : null, fs = Array.isArray(fs0) ? fs0 : null; return `<details class="ci"><summary><span class="tag ${k}">${{ new: "New", chg: "Changed", keep: "Kept" }[k]}</span><span><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="more">More</span></summary>
+     <div class="detail">${ft ? `<div class="fromto"><span>${esc(ft[0])}</span><span aria-hidden="true">→</span><span class="to">${esc(ft[1])}</span></div>` : ""}${fl ? flow(fl) : ""}<p>${esc(d)}</p>${picHtml(pic)}${files(fs)}</div></details>`; }).join("");
+}
+
+if (document.getElementById("qs")) {
+  document.getElementById("qs").innerHTML = PAGE.choices.map(([id, q, opts, why], n) =>
+    `<fieldset class="q" style="border:0;padding:0;margin:0;min-width:0"><legend style="padding:0"><h3><span class="qn">${n + 1}</span>${esc(q)}</h3></legend>
+     ${opts.map(o => { const [v, l, rec, d] = o; return `<label class="opt"><input type="radio" name="${id}" value="${v}"><span><b>${v} · ${esc(l)}</b>${rec ? '<span class="rec">' + ic("check") + 'Suggested</span>' : ""}${d ? `<small>${esc(d)}</small>` : ""}</span></label>${picHtml(picOf(o, 4))}`; }).join("")}
+     <label class="opt own"><input type="radio" name="${id}" value="own"><span><b>Something else</b><small>Write your own answer.</small><input type="text" class="owntext" data-for="${id}" aria-label="Your own answer to: ${esc(q)}" placeholder="Type your idea here"></span></label>
+     ${why ? `<details class="why"><summary>Why I suggest this</summary><p>${esc(why)}</p></details>` : ""}</fieldset>`).join("");
+}
+
+const W = PAGE.wrapup;
+document.getElementById("wrapup").innerHTML = [
+  ["file", "Summary", W.summary, "accent"], ["swap", "What's changing", W.changing, "accent"],
+  ["stop", "What's blocking", W.blocking, "gap"], ["next", "What's next", W.next, "ok"]
+].map(([i, h, t, c]) => `<div class="wu"><span class="c" style="background:var(--${c}-soft);color:var(--${c})">${ic(i)}</span><div><h3>${h}</h3><p>${esc(t)}</p></div></div>`).join("");
+// The to-do list is ticked off; make_page.py writes the same list and next-step text into the file so a reader without script sees them.
+document.getElementById("todo").innerHTML = W.todo.map(x => `<li><label><input type="checkbox"><span>${x}</span></label></li>`).join("");
+document.getElementById("nextstep").textContent = W.next || W.todo[0].replace(/<[^>]*>/g, "");
+
+const out = document.getElementById("out"), miss = document.getElementById("miss");
+function reply() {
+  const picks = PAGE.choices.map(([id], i) => {
+    const c = document.querySelector(`input[name=${id}]:checked`);
+    if (c && c.value === "own") { const t = document.querySelector(`.owntext[data-for=${id}]`).value.trim(); return [i + 1, t ? "own" : null, t]; }
+    return [i + 1, c && c.value];
+  });
+  const [A, ...more] = (PAGE.approval || PAGE.replyPrefix).split("\n");  // replyPrefix: only for pages built before approval existed
+  const tail = more.map(l => "\n" + l).join("");  // #600: a second approval line (build plan) follows the design line and its picks
+  out.textContent = picks.length
+    ? A + " " + picks.map(([n, v]) => `${n}${v === "own" ? "*" : v || "?"}`).join(" ") +
+      picks.filter(([, v]) => v === "own").map(([n, , t]) => `\nChoice ${n}, my own answer: ${t}`).join("") + tail
+    : A + tail;  // no choices: the approval phrase alone, such as "QA passed: <feature>"
+  const m = picks.filter(([, v]) => !v).map(([n]) => n);
+  miss.innerHTML = m.length ? `<span class="missing">Still to pick: choice ${m.join(", ")}.</span> <button type="button" class="secondary" style="min-height:36px;padding:4px 10px" id="goq">Go to choices</button>` : "";
+  const g = document.getElementById("goq"); if (g) g.onclick = () => go(PARTS.findIndex(([id]) => id === "choices") + 1);
+}
+document.addEventListener("change", reply);
+document.addEventListener("input", e => { if (e.target.classList.contains("owntext")) { const r = document.querySelector(`input[name=${e.target.dataset.for}][value=own]`); if (e.target.value.trim()) r.checked = true; reply(); } });
+document.getElementById("copy").onclick = () => { const st = document.getElementById("st");
+  // navigator.clipboard is missing on file:// and other non-https pages, so it is called inside a promise and falls back to execCommand.
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(out); getSelection().removeAllRanges(); getSelection().addRange(r);
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    st.textContent = ok ? "Copied. Paste it into the chat." : "Couldn't copy automatically. The reply is selected; copy it by hand."; };
+  Promise.resolve().then(() => navigator.clipboard.writeText(out.textContent))
+  .then(() => st.textContent = "Copied. Paste it into the chat.").catch(fallback); };
+
+let cur = 1;
+const stepper = document.getElementById("stepper");
+stepper.style.gridTemplateColumns = `repeat(${PARTS.length},1fr)`;
+stepper.innerHTML = PARTS.map(([, s], i) => `<button type="button" data-go="${i + 1}"><span class="bar"></span>${s}</button>`).join("");
+function go(n, focus = true) {
+  cur = Math.min(PARTS.length, Math.max(1, n));
+  const id = PARTS[cur - 1][0];
+  document.querySelectorAll("[data-part]").forEach(p => p.hidden = p.dataset.part !== id);
+  stepper.querySelectorAll("button").forEach((b, i) => { b.classList.toggle("done", i + 1 < cur); if (i + 1 === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  document.getElementById("prev").hidden = cur === 1;
+  const nx = document.getElementById("next"); nx.hidden = cur === PARTS.length; nx.textContent = cur === PARTS.length - 1 ? "Wrap-up ›" : "Next ›";
+  if (focus) { document.getElementById("h-" + id).focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+}
+stepper.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(+b.dataset.go); });
+document.getElementById("prev").onclick = () => go(cur - 1);
+document.getElementById("next").onclick = () => go(cur + 1);
+go(1, false); reply();
+</script>

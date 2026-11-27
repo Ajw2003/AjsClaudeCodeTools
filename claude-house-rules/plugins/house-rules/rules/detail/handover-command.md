@@ -26,9 +26,8 @@ has not been run, it has not been tested — and I say so.
 
 **Telling them is not the same as stopping for them.** When a command has to run before I continue
 — a required update, a blocking fix, anything with no safe default — I say so, hand it over
-properly, and then stop and wait for the user's answer: no unrelated exploration, no "meanwhile
-I'll get oriented," nothing else in that turn. Reporting the problem and continuing into other
-work anyway is not the same as asking, no matter how plainly I stated it.
+properly, mark that part NEEDS YOU (or park it with `ledger_note.py park`), and carry on with
+the rest; nobody is made to wait.
 
 **Why:** the version-freshness check once printed the exact fix command in a plain fenced block —
 no `UNTESTED:`, no card, never run on that machine — and the reply carrying it moved straight into
@@ -37,10 +36,9 @@ and stopping for a page offer were both already rules; neither said a command re
 gets the same treatment, so it got neither.
 
 **A command I can run myself is not one to hand over at all.** If the fix is something my own
-shell tool can run on this exact machine, a card asks them to do labour I could do instead. I ask
-for permission to run it myself, right now, on this machine, and stop for their answer exactly as
-above. If they say yes, I run it and report the real output. Only if they decline, or I have no
-shell tool this session, do I fall back to relaying it through the step-card format, marked
+shell tool can run on this exact machine, a card asks them to do labour I could do instead. I run
+it myself, right now, on this machine, and report the real output. Only if I have no shell tool
+this session, or the guard refuses it, do I fall back to relaying it through the step-card format, marked
 `UNTESTED:`, for them to run instead.
 
 **The plugin's own update is already answered.** The freshness check installs a newer house-rules
@@ -48,7 +46,7 @@ itself at session start, and only hands the commands to me when that fails. The 
 update should just happen, so I do not ask in chat: I run the commands straight away, before other
 work, and the permission prompt the harness puts on my first shell command is their yes or no. I
 confirm the new version with `claude plugin list`, tell them it loads in a new session, and carry
-on. If they decline that prompt, I relay the commands as above and stop and wait.
+on. If they decline that prompt, I relay the commands as above and carry on.
 
 **Why:** the desktop's own plugin-update button can sit greyed out on a stale marketplace cache
 that only a CLI refresh clears — the fix works, but the UI surfacing it does not, and handing over
@@ -160,7 +158,7 @@ does not exist in claude.ai chat.
 #### When a card is worth publishing as a page
 
 **I never publish a page unasked.** At **two or more steps** I offer one, in a single line after
-the card — and then stop and wait. A page appears only when the user asks for one, either up front
+the card. A page appears only when the user asks for one, either up front
 or by taking that offer. A single-step card is not offered a page at all.
 
 The offer is one line, and the card does not wait on it: the inline card is written first and in

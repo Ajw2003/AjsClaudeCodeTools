@@ -1484,7 +1484,7 @@ def event_versioncheck():
                 )
             return 0
 
-        if unattended():  # nobody to wait for: no update, no wait/ask banner, no first-command prompt marker
+        if nobody_present():  # nobody to wait for: no update, no wait/ask banner, no first-command prompt marker
             emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext":
                   "UNATTENDED run: a house-rules update is available and was not applied."}})
             return 0
@@ -1543,7 +1543,7 @@ def event_versioncheck():
                 "If they decline that prompt, or this session has no shell tool to run them "
                 "with, relay the command(s) instead - through the step-card format, marked "
                 "`UNTESTED:` since this hook relayed them and they have not been run on this "
-                "machine - then stop and wait for the user's answer.",
+                "machine - then carry on with the rest of the work.",
                 "",
             ]
         )
@@ -1607,7 +1607,7 @@ SCOPE_REMINDER = (
 SCOPE_REMINDER_SHORT = (
     "House rules reminder: update the docs tier that changed; no success claim without a run "
     "you can quote; commit finished work on your own branch. Never hand over a command you "
-    "have not run. Build only what was asked - where it is ambiguous, ask instead of assuming."
+    "have not run. Build only what was asked - where it is ambiguous, decide and log it."
 )
 
 # Prompt text suggesting this turn will involve commands, files, or builds - the case the full
@@ -2785,22 +2785,81 @@ def unattended():
     return os.environ.get("HOUSE_RULES_UNATTENDED", "").strip().lower() == "on"
 
 
+_SWITCH_WRITE_RE = re.compile(r">|\btee\b|\bsed\b[^;|&]*\s-\w*i|\b(?:mv|cp|rm|truncate|dd|install|ln)\b"
+                              r"|\b(?:python3?|py|node|perl|ruby|sh|bash)\b", re.IGNORECASE)
+_SETTINGS_NAME_RE = re.compile(r"settings(?:\.local)?\.json")
+
+
+def switch_file_refusal(payload):
+    """#636: deny reason when an agent tool call writes the typed-switch file, or puts a HOUSE_RULES_ key into
+    .claude/settings(.local).json. aj's typed switch is written by the hook itself, never through a tool call."""
+    try:
+        data = json.loads(payload)
+    except ValueError as exc:
+        sys.stderr.write("house-rules: the switch-file guard could not read the tool payload (%s), so it allowed "
+                         "the call.\n" % type(exc).__name__)
+        return None
+    ti = data.get("tool_input") if isinstance(data, dict) and isinstance(data.get("tool_input"), dict) else {}
+    tool = data.get("tool_name") if isinstance(data, dict) else None
+    if tool in ("Write", "Edit", "NotebookEdit"):
+        path = str(ti.get("file_path") or ti.get("notebook_path") or "")
+        text = " ".join(str(ti.get(k) or "") for k in ("content", "new_string", "new_source"))
+        base = os.path.basename(path.replace("\\", "/"))
+        mode_hit = base == MODE_FILE
+        settings_hit = bool(_SETTINGS_NAME_RE.fullmatch(base)) and "HOUSE_RULES_" in text
+    elif tool in ("Bash", "PowerShell") and isinstance(ti.get("command"), str):
+        cmd = ti["command"]
+        write = bool(_SWITCH_WRITE_RE.search(cmd))
+        mode_hit = MODE_FILE in cmd and write
+        settings_hit = bool(_SETTINGS_NAME_RE.search(cmd)) and "HOUSE_RULES_" in cmd and write
+    else:
+        return None
+    if mode_hit:
+        return ("House rules: %s holds aj's typed switches, so only aj's typed message changes it. An agent write "
+                "to it is refused." % MODE_FILE)
+    if settings_hit:
+        return ("House rules: a HOUSE_RULES_ key in .claude/settings.json or settings.local.json is a switch, and "
+                "only aj sets those. This write is refused.")
+    return None
+
+
+def nobody_present(payload=None):
+    """#636: the one test for "nobody is here": the unattended switch, or permission_mode bypassPermissions.
+    Auto, default, plan, acceptEdits and a missing or unknown mode stay attended."""
+    raw = payload if payload is not None else (_PAYLOAD_CACHE or "")
+    return unattended() or _field(_MODE_RE, raw) == "bypassPermissions"
+
+
 def event_noask():
-    """PreToolUse on AskUserQuestion|ExitPlanMode: unattended or bypassPermissions, deny so the agent chooses
-    itself and carries on (#590). A payload with no permission_mode is treated as attended, said on stderr."""
+    """PreToolUse on AskUserQuestion|ExitPlanMode|pause_goal: nobody present, deny so the agent chooses
+    itself and carries on (#590); ExitPlanMode is allowed then (#636). A payload with no permission_mode is
+    treated as attended, said on stderr."""
     mode = _field(_MODE_RE, _PAYLOAD_CACHE or "")
-    park = "python3 %s park <feature> --step <n> --question ... --default ... --affects ..." % os.path.join(
+    try:
+        tool = str(json.loads(_PAYLOAD_CACHE or "").get("tool_name") or "")
+    except (ValueError, AttributeError):
+        tool = ""
+    if "pause_goal" in tool.lower():
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+              "permissionDecisionReason": "House rules: pausing the goal is refused. The run is never paused "
+              "for aj; carry on, and mark a part that truly needs aj NEEDS YOU in your reply and park it with `ledger_note.py park` (--category, --tried)."}})
+        return 0
+    if tool == "ExitPlanMode" and nobody_present():  # #636: nobody to approve the plan: let it through
+        emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
+              "permissionDecisionReason": "Nobody is present to approve the plan, so leaving plan mode is allowed."}})
+        return 0
+    park = "python3 %s decide <feature> --step <n> --choice ... --assumption ... --why ... --undo ..." % os.path.join(
         SCRIPTS_DIR, "ledger_note.py")
-    if not (unattended() or mode == "bypassPermissions"):
+    if not nobody_present():
         if not mode:
             sys.stderr.write("house-rules: the PreToolUse payload carried no permission_mode, so the question "
                              "was treated as attended (allowed, except in Build, where a plain question is refused).\n")
         return _noask_build(park)
     emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
           "permissionDecisionReason": "This is an unattended or bypass-permission run: nobody is there to "
-          "answer. Choose the most reasonable reversible option yourself, record the question and your choice "
-          "in the final report (park it with `%s`), and carry on. A licence, login, purchase or destructive "
-          "step blocks only its own part (mark it NEEDS YOU); the rest carries on." % park}})
+          "answer. Choose the most reasonable reversible option yourself, write the question and your choice "
+          "to the ledger with `%s`, and carry on with the next open step. A hard stop (licence, login, purchase, deletion, money, secrets, other people, outward posts) "
+          "blocks only its own part: mark it NEEDS YOU in the reply and park it with `ledger_note.py park` (--category, --tried); the rest carries on." % park}})
     return 0
 
 
@@ -2847,9 +2906,9 @@ def apply_switches():
     typed = _mode_typed(_payload_cwd(raw)) if raw else {}
     if "unattended" in typed:  # a typed `unattended on|off` decides before the presets below
         os.environ["HOUSE_RULES_UNATTENDED"] = typed["unattended"]
-    if unattended():  # everything off but autosave; a typed switch below still wins
+    if unattended():  # everything off but autosave, the design loop and the handover hook; a typed switch below still wins
         for var in _MODE_GROUPS["house"]:
-            if var not in _MODE_GROUPS["autosave"]:
+            if var not in _MODE_GROUPS["autosave"] and var not in ("HOUSE_RULES_LOOP", "HOUSE_RULES_HANDOVER"):
                 os.environ[var] = "off"
     for group in sorted(typed, key=lambda g: g != "house"):
         if group == "unattended":
@@ -2955,13 +3014,13 @@ def _mode_note(payload=None):
             parts.append(text % ((("you typed \"%s off\"" % {"writing": "writing checks", "house": "house rules"}.get(g, g)) + _mode_where(g, raw))
                                  if g in typed else "%s=off in settings.json" % var))
     if unattended():
-        parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): nobody can approve or answer; guard prompts are "
-                     "refused instead of asked and listed under \"Waiting on you\"; decide and keep going. For this run these "
+        parts.append("UNATTENDED run (HOUSE_RULES_UNATTENDED=on): the design loop stays ON and runs itself "
+                     "(no approval wait, no question hold); nobody can approve or answer; guard prompts are "
+                     "refused instead of asked; write each refusal or choice to the ledger and keep going, with: python3 " + os.path.join(SCRIPTS_DIR, "ledger_note.py") + " decide <feature> --step <n> --choice ... --assumption ... --why ... --undo ... (a look or function choice too: decide it and state the assumption). For this run these "
                      "instructions are OVERRIDDEN: never stop or wait for the user (\"hand it over, then wait\", "
-                     "\"stop and wait for the user's answer\"). For a command only the user can run, write it into the "
-                     "final report and the Waiting-on-you list and continue with other work. For ask-before items "
+                     "\"stop and wait for the user's answer\"). For a command only the user can run, park it with `ledger_note.py park` (--category, --tried) and continue with other work. For ask-before items "
                      "(new dependency, deleting files, refactors over 3 files, public API changes) take the most "
-                     "conservative reversible option and log the choice in the final report; the destructive-command "
+                     "conservative reversible option and write the choice to the ledger with `ledger_note.py decide`; the destructive-command "
                      "guard still applies to deletes. Use your own judgment instead of asking. Commit and push only "
                      "to your own AjsAgent/ branch, never to main or master (the main-branch guard refuses it); if "
                      "you are on main, branch off first with `git switch -c AjsAgent/<topic>`.")
@@ -3681,7 +3740,6 @@ def _roadblock_advice(phrase):
 
 # #591: the goal check. A stall phrase at the end of an unattended or bypass turn: a nested headless claude call
 # decides whether the session genuinely cannot move forward or can carry on until its goal is reached.
-GOALCHECK_BLOCKS = 6  # below Claude Code's own limit of 8 consecutive Stop-hook blocks
 GOALCHECK_TIMEOUT = 22  # seconds; hooks.json gives the roadblocks hook 30
 _GOAL_PROMPT = (
     "You judge whether an unattended coding session may stop. The session's first user message (its goal) was:\n"
@@ -3837,7 +3895,7 @@ def roadblock_check(payload, reply_text, retry):
     claims = _roadblock_claims(reply_text)
     note = None
     mode = _field(_MODE_RE, payload)
-    if (unattended() or mode == "bypassPermissions") and "NEEDS YOU" not in reply_text:  # #609: exempts the goal check
+    if nobody_present(payload) and "NEEDS YOU" not in reply_text:  # #609: exempts the goal check
         stalls = _roadblock_claims(reply_text, _STALL_RE)
     else:
         stalls = []
@@ -3855,8 +3913,12 @@ def roadblock_check(payload, reply_text, retry):
         if done >= ROADBLOCK_BLOCKS:
             return None, ("house-rules: the checks blocked %d times in a row and now let the reply go; unverified: "
                           "the roadblock judge did not rule on this reply (no tool call since the last block)." % done)
+        from house_rules import design_loop  # lazy: design_loop imports core
+        if design_loop.judge_blocked(payload):  # #640: once per step set
+            return None, note
         jblock, jmsg = _judge_check(transcript_path, reply_text)
         if jblock:
+            design_loop.judge_blocked(payload, mark=True)
             try:
                 write(done + 1)
             except OSError as exc:

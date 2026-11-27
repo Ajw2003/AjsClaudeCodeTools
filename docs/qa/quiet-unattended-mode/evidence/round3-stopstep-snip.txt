@@ -1,0 +1,2 @@
+{'normal': True, 'needs_you': True, 'empty': True, 'no_list': True, 'question_attended': True, 'question_nobody': True, 'question_unattended': True, 'stuck_after_3': True, 'stuck_listed': True, 'reset_on_message': True, 'allowed_when_all_stuck': True, 'judge_once_with_list': True, 'judge_old_without_list': True, 'stuck_despite_autosave_commits': True, 'choices_attended_none': True, 'choices_block': True, 'choices_once': True, 'choices_skipped_when_logged': True}
+True

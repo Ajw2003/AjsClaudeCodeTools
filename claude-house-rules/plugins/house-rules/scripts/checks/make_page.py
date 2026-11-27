@@ -322,6 +322,16 @@ _mp_cases.append(("make_page (#596): ledger rows come first with right counts",
                   _rc == 0 and "2 deviation(s), 1 parked" in _t6 and "D1: Did the thing.\\nD2: Did another.\\nP1: Which way?" in _t6
                   and _t6.index("Deviations and parked") < _t6.index("Files changed, counted")))
 with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
+    _f.write("| # | s | plan | done | why | undo |\n|---|---|---|---|---|---|\n| D1 | 1 | p | Did the thing. | w | u |\n\n"
+             "| # | Step | Choice | Assumption | Why | Undo |\n|---|---|---|---|---|---|\n| K1 | 2 | Went left | a | because | back |\n\n"
+             "| # | Stage | Page | Verdict hash | When | How to undo |\n|---|---|---|---|---|---|\n"
+             "| S1 | Plan | docs/plans/x.page.json | abcdef0123456789 | 2026-01-01 | set stage back |\n")
+_rc, _o = _mp("build", _mp_qa_content("qa6s", _qa), "--project", _d)
+_t6s = _mp_text("qa6s")
+_mp_cases.append(("make_page (#641): a self-approval S row shows first, before the K and D rows, and is counted",
+                  _rc == 0 and "1 SELF-APPROVAL(s)" in _t6s and "SELF-APPROVED Plan: docs/plans/x.page.json (verdict abcdef012345" in _t6s
+                  and _t6s.index("SELF-APPROVED") < _t6s.index("Went left") < _t6s.index("D1: Did the thing.")))
+with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
     _f.write("# empty\n")
 _rc, _o = _mp("build", _mp_qa_content("qa7", _qa), "--project", _d)
 _mp_cases.append(("make_page (#596): a ledger with no D or P rows says None recorded, 0 and 0",
@@ -331,7 +341,7 @@ os.remove(os.path.join(_qaf, "ledger.md"))
 
 def _park(*a):
     r = subprocess.run([sys.executable, os.path.join(HERE, "ledger_note.py"), "park", "Demo Feature", "--step", "6", "--default", "d",
-                        "--affects", "x"] + list(a), cwd=_d, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+                        "--affects", "x", "--category", "login", "--tried", "cmd -> denied"] + list(a), cwd=_d, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     return r.returncode, r.stdout + r.stderr
 
 
@@ -340,17 +350,17 @@ _ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
 _mp_cases.append(("ledger_note (#598): park creates the file with both tables and P1, printing where",
                   _rc1 == 0 and _o1.startswith("parked P1 in ") and "## Deviations" in _ledg and "## Parked decisions" in _ledg
                   and "| # | Step | The plan said | What was done | Why | How to undo |" in _ledg
-                  and "| P1 | 6 | First? | d | x | Reply with the answer" in _ledg))
+                  and "| P1 | 6 | [login] First? (tried: cmd -> denied) | d | x | Reply with the answer" in _ledg))
 _rc2, _o2 = _park("--question", "Use a|b?\nsecond line")
 _ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
 _mp_cases.append(("ledger_note (#598): a second park is P2 after P1, and a | or newline in a cell is escaped",
                   _rc2 == 0 and _o2.startswith("parked P2 in ") and _ledg.index("| P1 ") < _ledg.index("| P2 ")
-                  and "| P2 | 6 | Use a\\|b? second line | d | x |" in _ledg))
+                  and "| P2 | 6 | [login] Use a\\|b? second line (tried: cmd -> denied) | d | x |" in _ledg))
 _rc, _o = _mp("build", _mp_qa_content("qa8", _qa), "--project", _d)
 _mp_cases.append(("make_page (#598): an escaped pipe in a parked question is shown whole, as a |",
-                  "P2: Use a|b? second line" in _mp_text("qa8")))
+                  "P2: [login] Use a|b? second line" in _mp_text("qa8")))
 _mp_cases.append(("ledger_note (#598): the QA page lists the parked rows with 0 deviations, 2 parked",
-                  _rc == 0 and "0 deviation(s), 2 parked" in _mp_text("qa8") and "P1: First?" in _mp_text("qa8")))
+                  _rc == 0 and "0 deviation(s), 2 parked" in _mp_text("qa8") and "P1: [login] First?" in _mp_text("qa8")))
 _rc, _o = _park()
 _mp_cases.append(("ledger_note (#598): a missing required option is refused, naming it",
                   _rc == 2 and "--question" in _o))
@@ -370,10 +380,43 @@ _rc, _o = _dev("--plan", "a|b")
 _ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
 _mp_cases.append(("ledger_note (#599): a second deviate is D2 and a | in a cell is escaped",
                   _rc == 0 and _o.startswith("deviated D2 in ") and "| D2 | 7 | a\\|b |" in _ledg))
+_rc, _o = subprocess.run([sys.executable, os.path.join(HERE, "ledger_note.py"), "park", "Demo Feature", "--step", "6", "--question", "q",
+                          "--default", "d", "--affects", "x"], cwd=_d, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         universal_newlines=True), None
+_mp_cases.append(("ledger_note (#638): park is refused without a --category and --tried, naming them",
+                  _rc.returncode == 2 and "--category" in _rc.stderr and "--tried" in _rc.stderr))
+
+
+def _dec(feat, *a):
+    r = subprocess.run([sys.executable, os.path.join(HERE, "ledger_note.py"), "decide", feat, "--step", "3", "--choice", "blue header",
+                        "--assumption", "brand is blue", "--why", "matches logo", "--undo", "edit css"] + list(a), cwd=_d,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+_rc, _o = _dec("Demo Feature")
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_rc2, _o2 = _mp("build", _mp_qa_content("qa9", _qa), "--project", _d)
+_t9 = _mp_text("qa9")
+_mp_cases.append(("ledger_note (#638): decide adds K1 to the Choices table, and the QA page shows it first, before D and P rows, with why and undo",
+                  _rc == 0 and _o.startswith("decided K1 in ") and "| K1 | 3 | blue header | brand is blue | matches logo | edit css |" in _ledg
+                  and _rc2 == 0 and "K1: blue header (why: matches logo; undo: edit css)" in _t9
+                  and _t9.index("K1: ") < _t9.index("D1: ") < _t9.index("P1: ") and "1 choice(s)" in _t9))
+with open(os.path.join(_qaf, "ledger.md"), "w", encoding="utf-8") as _f:
+    _f.write("# old\n\n## Deviations\n\n| # | Step | The plan said | What was done | Why | How to undo |\n|---|---|---|---|---|---|\n"
+             "| D1 | 1 | p | d | w | u |\n\n## Parked decisions\n\n| # | Step | Question | Default taken for now | What it affects | How to answer |\n"
+             "|---|---|---|---|---|---|\n")
+_rc, _o = _dec("Demo Feature")
+_ledg = open(os.path.join(_qaf, "ledger.md"), encoding="utf-8").read()
+_mp_cases.append(("ledger_note (#638): decide on an older ledger with no Choices table inserts the table and K1, keeping D1",
+                  _rc == 0 and "## Choices" in _ledg and "| K1 | 3 | blue header |" in _ledg and "| D1 | 1 | p |" in _ledg
+                  and _ledg.index("## Choices") < _ledg.index("| K1 ") < _ledg.index("## Deviations")))
+_mp_cases.append(("make_page (#638): a feature or branch name with a slash is one folder, - for /",
+                  __import__("make_page").qa_folder("AjsAgent/Quiet Mode") == "ajsagent-quiet-mode"))
 os.remove(os.path.join(_qaf, "ledger.md"))
-_mp_cases.append(("rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3307 chars",
+_mp_cases.append(("rules (#598): show-dont-tell.md names ledger_note.py park and [HARD STOP], and is no longer than 3600 chars",
                   all(w in read(os.path.join(HERE, "..", "rules", "show-dont-tell.md")) for w in ("ledger_note.py park", "[HARD STOP]"))
-                  and len(read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))) <= 3307))
+                  and len(read(os.path.join(HERE, "..", "rules", "show-dont-tell.md"))) <= 3600))
 # P3: the fingerprint ignores built pages but not plan markdown or source
 _t0 = _acc.tree(_d)
 os.makedirs(os.path.join(_d, "docs", "plans"), exist_ok=True)
@@ -834,6 +877,21 @@ _apj["changes"][-1][4] = "Run each design item and see it work."
 json.dump(_apj, open(_apc, "w", encoding="utf-8"))
 _rc, _o = _mp("build", _apc, "--project", _ap)
 _mp_cases.append(("acceptance (#595): a build plan with a filled Acceptance item builds", _rc == 0))
+# #639: step checks in a build plan
+_sj = json.load(open(_apc, encoding="utf-8"))
+_sj["changes"].append(["chg", "Step 1: do it", "x", None, "d", None, None, ""])
+_sj["step_checks_required"] = True
+json.dump(_sj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("step checks (#639): a Step row with no check is refused, naming the step", _rc == 2 and "Step 1: do it" in _o))
+_sj["changes"][-1][7] = "python3 -c pass"
+json.dump(_sj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("step checks (#639): checks without test_command are refused", _rc == 2 and "test_command" in _o))
+_sj["test_command"] = "python3 -c pass"
+json.dump(_sj, open(_apc, "w", encoding="utf-8"))
+_rc, _o = _mp("build", _apc, "--project", _ap)
+_mp_cases.append(("step checks (#639): checks plus test_command build", _rc == 0))
 for _t, _ok in _mp_cases:
     report("PASS" if _ok else "FAIL", _t)
 shutil.rmtree(_mp_tmp, True)

@@ -8,8 +8,7 @@ never contradicts itself. It carries everything the proposal needs and nothing m
 clearest, most concise picture of the idea. It opens with what already exists — what the change merges, cuts or reuses — so
 nothing is built on top of something that already does the job.
 
-I bring options with one marked as my suggestion; the user picks. My own idea comes only when
-asked, and routine judgement calls go to the user the same way.
+I ask aj only about choices that change how something looks or what it does, with options and one marked as my suggestion; with nobody present I decide those too. For everything else: decide and log it with `ledger_note.py decide` (assumption included), in every mode; aj sees decisions on the QA page only. A hard stop (licence, login, purchase, deletion, money, secrets, other people, outward posts) marks only its own part.
 
 Any page format passes if it meets seven basics: one-sentence summary, a next-step box that stays on screen, a picture per idea, no block over 60 words, numbered one-action steps, a tick-box checklist when aj acts, fits 375px in light and dark. A type (proposal, build plan, QA, review, art) adds only what it needs; the page declares it with `<meta name="house-rules-page">` and marks `data-basic="..."`. `make_page.py build|start <type>` is an optional shortcut; an unmarked page is read and refused once naming each failed basic. A project's look comes from
 `docs/page-style.json` (no file: offer aj "create one" or "use the defaults"); one colour means you
@@ -27,5 +26,5 @@ reply of 160 words or more needs a page (see above).
 Ideas come before code. Every session starts locked: a hook refuses source edits until the user
 types "approved" naming what was approved ("Idea A approved", "approved 1A 2C"). A bare
 "approved" does not count. "skip design" lets one change through; "design loop off" or "builders off" typed on its own line, switches the loop or the helpers off for the repo. Each issue's label says whose move it is (`in progress`
-mine, `needs review` the user's) and every step checks it. A build is handed over for QA with a QA page built by the page builder (`make_page.py` QA mode); QA starts when a pull request opens or every issue says `needs review`. In Build I log a departure from the plan (`ledger_note.py deviate`) and go on; unattended or bypass, I park a reversible question or a change to what aj approved (`ledger_note.py park`); licence, login, purchase, deletion, money, secrets, people: [HARD STOP]: ask. Build replies end with the next step. Docs and `.md` files stay
+mine, `needs review` the user's) and every step checks it. A build is handed over for QA with a QA page built by the page builder (`make_page.py` QA mode); QA starts when a pull request opens or every issue says `needs review`. In Build I log a departure from the plan (`ledger_note.py deviate`) and go on; a change to what aj approved is parked (`ledger_note.py park --category ... --tried ...`); a hard stop is marked [HARD STOP]. Build replies end with the next step. Docs and `.md` files stay
 editable. See `${CLAUDE_PLUGIN_ROOT}/rules/detail/show-dont-tell.md`.

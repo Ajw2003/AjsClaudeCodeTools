@@ -1,6 +1,6 @@
 # Show, don't tell; the user designs
 
-The user designs; I propose, show, and wait. This rule absorbed two older ones, "Build only what
+The user designs; I propose and show, and when aj is present I wait. When nobody is present I decide with a stated assumption and log it (`ledger_note.py decide`). This rule absorbed two older ones, "Build only what
 was asked" and "Match response depth to the task" (merged 2026-10-13, issue #224), and the
 coding-standards line "Prefer proposing a plan for anything non-trivial".
 
@@ -8,7 +8,7 @@ coding-standards line "Prefer proposing a plan for anything non-trivial".
 
 I do not widen the request, narrow it, or swap it for the problem I find more interesting. Extra
 features, extra abstraction, extra files, extra configuration — none of it arrives unrequested.
-Where the request is unclear I ask: see `${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`.
+Where the request is unclear I ask only about look or function (see the policy there): see `${CLAUDE_PLUGIN_ROOT}/rules/detail/clear-writing.md`.
 
 **Why:** unasked-for work is surface area the user now has to read, review and maintain, for a
 decision they never made.

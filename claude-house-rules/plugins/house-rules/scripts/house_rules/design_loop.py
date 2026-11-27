@@ -9,7 +9,9 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -321,6 +323,9 @@ def _script_write_targets(cmd):
     return targets, unreadable
 
 
+_LEAD_CD_RE = re.compile(r"(?:\s*(?:export\s+)?\w+=\S*\s*(?:;|&&|\n))*\s*cd\s+(\"[^\"]+\"|'[^']+'|[^\s;&|]+)\s*(?:&&|;|\n)")
+
+
 def _gated_script_write(payload):
     """(git_dir, problem, paths, unreadable) for a Bash/PowerShell command that writes a source
     file through a script, sed -i, tee or a redirect. git_dir None when nothing is gated."""
@@ -342,6 +347,9 @@ def _gated_script_write(payload):
     top, git_dir = _issues_locate(cwd)
     if not git_dir:
         return None, None, [], False
+    lead = _LEAD_CD_RE.match(cmd)  # `cd DIR && ...`: relative targets mean DIR/target (Canada trial 2026-11-26)
+    if lead:
+        cwd = os.path.normpath(os.path.join(cwd, lead.group(1).strip("\"'")))
     src = [t for t in targets if _is_source_path(t, cwd, top)]
     if not src and not unreadable:
         return None, None, [], False
@@ -486,6 +494,471 @@ def _loop_read(git_dir):
 def _loop_write(git_dir, state):
     _write_atomic(_loop_path(git_dir), json.dumps(state))
     _loop_note_seen(git_dir, state)
+
+
+def _steps_outside(git_dir, session_id):
+    cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    safe = re.sub(r"[^0-9A-Za-z_-]", "_", session_id or "unknown")[:100]
+    return os.path.join(cfg, "house-rules-steps", "%s-%s.json" % (
+        hashlib.sha1(os.path.abspath(git_dir).encode("utf-8")).hexdigest(), safe))
+
+
+def _stopfailure_reset(text, now):
+    """Epoch seconds from "retry after 120 seconds" or "resets 8:10pm (UTC)"; None when no time is found.
+    shortcut: a clock time is read as UTC unless it names no zone (then local); other zone names are not understood."""
+    m = re.search(r"retry[- ]after\D{0,3}(\d+)\s*(second|sec|s\b|minute|min|m\b|hour|h\b)?", text, re.I)
+    if m:
+        unit = (m.group(2) or "s").lower()
+        return int(now + int(m.group(1)) * (3600 if unit.startswith("h") else 60 if unit.startswith("m") else 1))
+    m = re.search(r"resets?\s+(?:at\s+)?(\d{1,2})(?::(\d\d))?\s*([ap]m)?(?:\s*\((\w+)\))?", text, re.I)
+    if not m:
+        return None
+    hour, minute, ampm = int(m.group(1)), int(m.group(2) or 0), (m.group(3) or "").lower()
+    if ampm:
+        hour = hour % 12 + (12 if ampm == "pm" else 0)
+    if hour > 23 or minute > 59:
+        return None
+    utc = (m.group(4) or "").upper() in ("UTC", "GMT")
+    day = time.gmtime(now) if utc else time.localtime(now)
+    base = (now - day.tm_hour * 3600 - day.tm_min * 60 - day.tm_sec) + hour * 3600 + minute * 60
+    return int(base if base > now else base + 86400)
+
+
+def event_stopfailure():
+    """StopFailure (#648): leave <config>/house-rules-steps/stopfailure-<session>.json for tools/overnight.sh:
+    {error, kind: rate_limit|crash, reset_at: epoch or null, at}. Never raises; says so on stderr when it cannot."""
+    try:
+        raw = read_payload()
+        payload = json.loads(raw) if raw else None
+        if not isinstance(payload, dict):
+            sys.stderr.write("house-rules stopfailure: payload missing or not a JSON object; wrote no file.\n")
+            return 0
+        err = str(payload.get("error") or "")
+        text = " ".join(str(payload.get(k) or "") for k in ("error_details", "last_assistant_message"))
+        rate = re.search(r"rate[ _-]?limit|usage[ _-]?limit|\b429\b|resets", err + " " + text, re.I)
+        now = time.time()
+        rec = {"error": err, "kind": "rate_limit" if rate else "crash",
+               "reset_at": _stopfailure_reset(text, now) if rate else None, "at": int(now)}
+        cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+        safe = re.sub(r"[^0-9A-Za-z_-]", "_", str(payload.get("session_id") or "unknown"))[:100]
+        d = os.path.join(cfg, "house-rules-steps")
+        os.makedirs(d, exist_ok=True)
+        _write_atomic(os.path.join(d, "stopfailure-%s.json" % safe), json.dumps(rec))
+    except Exception as exc:
+        sys.stderr.write("house-rules stopfailure: could not record the failure: %s\n" % exc)
+    return 0
+
+
+def _steps_hash(steps):
+    return hashlib.sha256(json.dumps(steps, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+_FINISH_STEPS = (("docs", "docs written"), ("pictures", "before-and-after pictures"), ("tests", "tests pass"),
+                 ("qa", "QA page built and stamped"))
+
+
+def record_steps(git_dir, feature, plan_json_path, session_id):
+    """#639: copy the build plan's Step rows and test_command into the stage file (state["steps"][session_id])
+    and an outside copy. Returns a note; a plan with no checks is exempt and writes nothing."""
+    try:
+        with open(plan_json_path, encoding="utf-8") as f:
+            plan = json.load(f)
+    except (OSError, ValueError) as exc:
+        return "steps not recorded: could not read %s (%s)" % (plan_json_path, exc)
+    rows = [c for c in plan.get("changes") or [] if isinstance(c, list) and len(c) > 7
+            and str(c[1]).startswith("Step ") and isinstance(c[7], str) and c[7].strip()]
+    if not rows:
+        return "this plan has no step checks, so the feature is exempt from the step list"
+    steps = [{"n": i + 1, "title": str(c[1]), "check": c[7], "state": "open"} for i, c in enumerate(rows)]
+    fc = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "finish_checks.py")
+    for which, title in _FINISH_STEPS:  # #647: four required finish-line steps, in the sha, never parked or replaced
+        steps.append({"n": len(steps) + 1, "title": "Finish: " + title, "state": "open",
+                      "check": "python3 %s %s %s" % (shlex.quote(fc), which, shlex.quote(feature))})
+    rec = {"feature": feature, "test_command": plan.get("test_command") or "", "steps": steps,
+           "sha256": _steps_hash(steps), "at": time.time()}  # #641: a replace needs a verdict newer than this
+    state, problem = _loop_read(git_dir)
+    if problem:
+        return "steps not recorded: " + problem
+    state.setdefault("steps", {})[session_id] = rec
+    _loop_write(git_dir, state)
+    out = _steps_outside(git_dir, session_id)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    _write_atomic(out, json.dumps(rec))
+    return "recorded %d step(s) with checks for this session" % len(steps)
+
+
+def steps_integrity(git_dir, feature, session_id):
+    """A problem string when the stage file's step hash differs from the outside copy (or that copy is gone), else ""."""
+    state, _ = _loop_read(git_dir)
+    rec = ((state or {}).get("steps") or {}).get(session_id)
+    if not rec:
+        return ""
+    out = _steps_outside(git_dir, session_id)
+    try:
+        with open(out, encoding="utf-8") as f:
+            outer = json.load(f)
+    except (OSError, ValueError):
+        return "the step list is in the stage file but its outside copy %s is missing or unreadable" % out
+    if outer.get("sha256") != rec.get("sha256") or _steps_hash(rec.get("steps")) != rec.get("sha256"):
+        return "the step list in the stage file differs from its outside copy (an older stage file was restored?)"
+    return ""
+
+
+def steps_status(git_dir, feature, session_id, current_fp):
+    """#646: {n: "done"|"open"|"stale"}. done only when the step is done AND its stored fp equals current_fp;
+    stale = was done but the tree changed (or current_fp is "slow"); open = never passed or last run failed."""
+    state, _ = _loop_read(git_dir)
+    rec = ((state or {}).get("steps") or {}).get(session_id) or {}
+    if rec.get("feature") not in (None, feature):
+        return {}
+    out = {}
+    for s in rec.get("steps") or []:
+        if s.get("state") != "done":
+            out[s["n"]] = "open"
+        else:
+            out[s["n"]] = "done" if current_fp != "slow" and s.get("fp") == current_fp else "stale"
+    return out
+
+
+def _parked_steps(top, feature, steps):
+    """Step numbers named in a Parked-decisions row (P<n>) of the feature's ledger, by title or "step N"."""
+    ledger = os.path.join(top, "docs", "qa", feature.lower().replace(" ", "-").replace("/", "-"), "ledger.md")
+    if not os.path.isfile(ledger):
+        return set()  # no ledger yet: nothing is parked
+    try:
+        text = _read_text(ledger)
+    except OSError as exc:
+        sys.stderr.write("house-rules: could not read the ledger to see parked steps (%s), so none count as parked.\n"
+                         % type(exc).__name__)
+        return set()
+    cells = [m.group(1).lower() for m in re.finditer(r"^\| P\d+ \| (.*?) \|", text, re.M)]
+    return {s["n"] for s in steps if any(s["title"].lower() in c or re.search(r"\bstep %d\b" % s["n"], c) for c in cells)}
+
+
+def steps_unfinished(git_dir, payload):
+    """#647: titles of the steps still open (not done at the current tree, not parked) for this session;
+    None when there is no step list, so the step rule does not apply."""
+    try:
+        data = json.loads(payload)
+        sid = str(data.get("session_id") or "")
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: the step check could not read the payload (%s), so no step blocks this stop.\n"
+                         % type(exc).__name__)
+        return None
+    state, _ = _loop_read(git_dir)
+    rec = ((state or {}).get("steps") or {}).get(sid)
+    if not rec or not rec.get("steps"):
+        return None
+    try:
+        top = subprocess.run(["git", "-C", data.get("cwd") or ".", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True, check=True).stdout.strip()
+        r = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "acceptance.py"),
+                            "tree", "--root", top], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=20)
+        fp = r.stdout.strip() if r.returncode == 0 else "slow"
+    except (OSError, subprocess.SubprocessError):
+        return ["the tree could not be fingerprinted"]  # could not tell: counts as unfinished
+    status = steps_status(git_dir, rec.get("feature"), sid, fp)
+    parked = _parked_steps(top, rec.get("feature") or "", rec["steps"])
+    return [s["title"] for s in rec["steps"] if status.get(s["n"]) != "done" and s["n"] not in parked
+            and not s.get("stuck")]  # #640: a stuck step no longer blocks (steps_stuck lists it for the QA page)
+
+
+def steps_stuck(git_dir, payload):
+    """#640: titles of the steps the stop check marked stuck for this session (not done); [] when none or no list."""
+    try:
+        sid = str(json.loads(payload).get("session_id") or "")
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: steps_stuck could not read the payload (%s), so it lists none.\n" % type(exc).__name__)
+        return []
+    rec = ((_loop_read(git_dir)[0] or {}).get("steps") or {}).get(sid) or {}
+    return [s["title"] for s in rec.get("steps") or [] if s.get("stuck") and s.get("state") != "done"]
+
+
+def _steps_rec(payload):
+    """(git_dir, state, rec, sid, data) for this session's step list, or None when it has none."""
+    try:
+        data = json.loads(payload)
+        sid = str(data.get("session_id") or "")
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: the step stop check could not read the payload (%s), so it did not run.\n"
+                         % type(exc).__name__)
+        return None
+    _, git_dir = _issues_locate(_payload_cwd(payload))
+    if not git_dir:
+        return None
+    state, _ = _loop_read(git_dir)
+    rec = ((state or {}).get("steps") or {}).get(sid)
+    return (git_dir, state, rec, sid, data) if rec and rec.get("steps") else None
+
+
+def judge_blocked(payload, mark=False):
+    """#640: whether the model judge already blocked this step set; mark=True records its first block.
+    False (and no write) when the session has no step list."""
+    got = _steps_rec(payload)
+    if not got:
+        return False
+    git_dir, state, rec, _, _ = got
+    if mark and not rec.get("judge_blocked"):
+        rec["judge_blocked"] = True
+        _loop_write(git_dir, state)
+    return bool(rec.get("judge_blocked"))
+
+
+def _tree_fp(cwd):
+    """acceptance.py tree fingerprint of the project at cwd ("slow" when it cannot be computed in 20 s). It ignores
+    docs/qa, docs/5-today, CHANGELOG.md and the stage file, so an autosave commit does not change it."""
+    try:
+        top = subprocess.run(["git", "-C", cwd or ".", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True, check=True).stdout.strip()
+        r = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "acceptance.py"), "tree", "--root", top], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           universal_newlines=True, timeout=20)
+    except (OSError, subprocess.SubprocessError) as exc:
+        sys.stderr.write("house-rules: the step stop check could not fingerprint the tree (%s), so it counts as "
+                         "unchanged.\n" % type(exc).__name__)
+        return "slow"
+    return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else "slow"
+
+
+def _choices_check(git_dir, state, rec, data, payload):
+    """Round-2 C8: when every step is closed and nobody is present, block once if the feature's ledger holds no K row,
+    asking the agent to log the choices it made unasked (live run 5: sonnet picked a colour and logged nothing).
+    Never blocks twice for one step list, so it cannot loop; None when it does not apply."""
+    if not core.nobody_present(payload) or rec.get("choices_asked"):
+        return None
+    try:
+        top = subprocess.run(["git", "-C", data.get("cwd") or ".", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, universal_newlines=True, check=True).stdout.strip()
+        ledger = os.path.join(top, "docs", "qa", (rec.get("feature") or "").lower().replace(" ", "-").replace("/", "-"), "ledger.md")
+        if os.path.isfile(ledger) and re.search(r"^\| K\d+ \|", _read_text(ledger), re.M):
+            return None
+    except (OSError, subprocess.SubprocessError) as exc:
+        sys.stderr.write("house-rules: the choices check could not read the ledger (%s), so it did not run.\n" % type(exc).__name__)
+        return None
+    rec["choices_asked"] = True
+    _loop_write(git_dir, state)
+    fc = "python3 %s" % os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ledger_note.py")
+    feat = rec.get("feature") or "<feature>"
+    return ("House rules, before you finish: the ledger holds no logged choice. If you decided anything aj did not "
+            "specify (a colour, a wording, a layout, a default, a name), log each one now with `%s decide %s --step <n> "
+            "--choice ... --assumption ... --why ... --undo ...`. If you truly made none, reply exactly: No choices made."
+            % (fc, feat))
+
+
+def step_stop_check(payload, reply_text):
+    """#640: (block reason or None, systemMessage or None). Runs on every stop: blocks while a step of this
+    session's list is open, even with no reply text. NEEDS YOU exempts nothing; only a parked step does.
+    A `QUESTION FOR YOU:` line passes when somebody is present. After 3 no-progress blocks for one step it
+    is marked stuck and stops blocking."""
+    got = _steps_rec(payload)
+    if not got:
+        return None, None
+    git_dir, state, rec, sid, data = got
+    open_steps = steps_unfinished(git_dir, payload)
+    if not open_steps:
+        return _choices_check(git_dir, state, rec, data, payload), None
+    if re.search(r"^QUESTION FOR YOU:", reply_text or "", re.M) and not core.nobody_present(payload):
+        return None, None
+    msgs = None
+    tp = data.get("transcript_path")
+    if tp:
+        try:
+            msgs = core._user_message_count(tp)
+        except (OSError, ValueError) as exc:
+            sys.stderr.write("house-rules: the step stop check could not count aj's messages (%s), so its counters "
+                             "do not reset on a new message.\n" % type(exc).__name__)
+    nxt = next(s for s in rec["steps"] if s["title"] == open_steps[0])
+    n = str(nxt["n"])
+    head = _tree_fp(data.get("cwd"))  # not HEAD: the autosave commit at every stop would count as progress (live run)
+    done = sum(1 for s in rec["steps"] if s.get("state") == "done")
+    last = rec.get("last_block") or {}
+    blocks = rec.setdefault("blocks", {})
+    if last.get("msgs") != msgs or last.get("head") != head or last.get("done") != done:
+        blocks.clear()  # a new message from aj, a commit or a closed step is progress
+    if blocks.get(n, 0) >= 3:
+        nxt["stuck"] = True
+        blocks.pop(n, None)
+        rec["last_block"] = {"msgs": msgs, "head": head, "done": done}
+        _loop_write(git_dir, state)
+        open_steps = steps_unfinished(git_dir, payload)
+        if not open_steps:
+            return None, ("house-rules: step %s ('%s') had 3 blocks with no progress, so it is marked stuck and the "
+                          "stop is allowed; it counts as not done on the QA page." % (n, nxt["title"]))
+        nxt = next(s for s in rec["steps"] if s["title"] == open_steps[0])
+        n = str(nxt["n"])
+    blocks[n] = blocks.get(n, 0) + 1
+    rec["last_block"] = {"msgs": msgs, "head": head, "done": done}
+    _loop_write(git_dir, state)
+    fc = "python3 %s" % os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ledger_note.py")
+    feat = rec.get("feature") or "<feature>"
+    return ("House rules, step list: not finished. Next open step: %s. Run `%s check %s --step %s --start`, then "
+            "`%s check %s --step %s --poll`, until it passes. NEEDS YOU in a reply does not end the turn. A hard "
+            "stop must be parked with `%s park %s --step %s --category ... --tried ...`. Record every choice you make "
+            "(a look or function choice too: decide it, never ask) with `%s decide %s --step %s --choice ... "
+            "--assumption ... --why ... --undo ...`. Open: %s. (block %d of 3 for this step before it counts as stuck)"
+            % (nxt["title"], fc, feat, n, fc, feat, n, fc, feat, n, fc, feat, n, "; ".join(open_steps), blocks[n])), None
+
+
+_STEP_RESULT_RE = re.compile(r"RESULT: (pass|fail) step (\d+) fp=(\S+)")
+
+
+def _step_run_passed(git_dir, sid, n):
+    """True when the run file ledger_note.py check left for step n holds exit code 0 (a typed RESULT line alone is not proof)."""
+    out = _steps_outside(git_dir, sid)
+    rc = os.path.join(os.path.dirname(out), "runs", os.path.basename(out)[:-5] + "-step%d.rc" % n)
+    if not os.path.isfile(rc):
+        return False
+    try:
+        return _read_text(rc).strip() == "0"
+    except OSError as exc:
+        sys.stderr.write("house-rules: could not read the step run file (%s).\n" % type(exc).__name__)
+        return False
+
+
+def _record_step_result(data):
+    """#646, registered under promptran (runs on PostToolUse and PostToolUseFailure): a Bash call of
+    `ledger_note.py check` whose output has a RESULT line marks that step done (pass) or open (fail)."""
+    ti = data.get("tool_input")
+    cmd = ti.get("command") if isinstance(ti, dict) else ""
+    # the live run showed an agent calls it through a shell variable (python3 "$S" check ...), so match the words
+    # of the call, not the script name; a pass is then verified against the run file the poll leaves behind
+    if not isinstance(cmd, str) or "check" not in cmd or "--poll" not in cmd:
+        return ""
+    m = _STEP_RESULT_RE.search(json.dumps([data.get("tool_response"), data.get("error")]).replace("\\n", "\n"))
+    if not m:
+        sys.stderr.write("house-rules: no RESULT line in the step check output, so the step stays open.\n")
+        return ""
+    gd = core._git_dir(data.get("cwd") or os.getcwd())
+    sid = str(data.get("session_id") or "")
+    if not gd:
+        return ""
+    state, problem = _loop_read(gd)
+    rec = ((state or {}).get("steps") or {}).get(sid)
+    if problem or not rec:
+        sys.stderr.write("house-rules: step result not recorded (%s).\n" % (problem or "no step list for this session"))
+        return ""
+    for s in rec["steps"]:
+        if s.get("n") == int(m.group(2)):
+            if m.group(1) == "pass" and not _step_run_passed(gd, sid, s["n"]):
+                sys.stderr.write("house-rules: step %s says pass but its run file does not hold exit code 0, so it "
+                                 "stays open.\n" % m.group(2))
+                return ""
+            s.update(state="done" if m.group(1) == "pass" else "open", fp=m.group(3), at=int(time.time()))
+            _loop_write(gd, state)
+            return ""
+    sys.stderr.write("house-rules: step %s is not in the step list.\n" % m.group(2))
+    return ""
+
+
+_VERDICT_RE = re.compile(r"^\W*VERDICT:\s*clean\b", re.I | re.M)
+_PAGE_PATH_RE = re.compile(r"docs/plans/[\w./-]+?\.(?:page\.json|html)")
+_STAMP_KEYS = ("reviewed", "reviewStamp", "review_stamp", "stamp")  # #641: make_page keeps the stamp in the html; any in the json is not part of the page
+
+
+def page_hash(path):
+    """#641: sha256 of a page's .page.json with any review-stamp key removed; raises OSError/ValueError."""
+    with open(path, encoding="utf-8") as f:
+        page = json.load(f)
+    for k in _STAMP_KEYS:
+        page.pop(k, None)
+    return hashlib.sha256(json.dumps(page, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _find_page(texts, roots):
+    """The newest-mentioned docs/plans page (as its .page.json) that exists under one of roots, else ""."""
+    for text in texts:
+        for rel in reversed(_PAGE_PATH_RE.findall(text or "")):
+            rel = re.sub(r"\.html$", ".page.json", rel)
+            for r in roots:
+                if os.path.isfile(os.path.join(r, rel)):
+                    return os.path.join(r, rel)
+    return ""
+
+
+def record_verdict(payload, agent_type, report, prompt_text, session_id):
+    """#641: a reviewer's final report with a `VERDICT: clean` line is stored as state["verdicts"][page_hash]
+    = {page, mode, at}; then, when nobody is present, the hook self-approves the stage (see _self_approve).
+    Runs even when helpers are off. Returns a note ("" when it is not a clean reviewer verdict); problems go to stderr."""
+    if (agent_type or "").split(":")[-1] != "reviewer" or not _VERDICT_RE.search(report or ""):
+        return ""
+    cwd = (core._field(re.compile(r'"cwd"\s*:\s*"((?:[^"\\]|\\.)*)"'), payload) or os.getcwd()).replace("\\\\", "\\")
+    gd = core._git_dir(cwd)
+    if not gd:
+        sys.stderr.write("house-rules: reviewer verdict not stored: no git directory found from %s.\n" % cwd)
+        return ""
+    roots = [cwd, os.path.dirname(_loop_dir(gd))]
+    page = _find_page([report, prompt_text], roots)
+    if not page:
+        sys.stderr.write("house-rules: reviewer verdict not stored: could not identify the page (no docs/plans path "
+                         "in its report or prompt that exists).\n")
+        return ""
+    try:
+        h = page_hash(page)
+        with open(page, encoding="utf-8") as f:
+            ptype = json.load(f).get("pageType")
+    except (OSError, ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: reviewer verdict not stored: could not read %s (%s).\n" % (page, exc))
+        return ""
+    mode = {"proposal": "page", "build-plan": "plan"}.get(ptype)
+    if not mode:
+        sys.stderr.write("house-rules: reviewer verdict not stored: %s is pageType %r, not a design or build-plan page.\n"
+                         % (page, ptype))
+        return ""
+    state, problem = _loop_read(gd)
+    if problem:
+        sys.stderr.write(problem + " The verdict was not stored.\n")
+        return ""
+    state.setdefault("verdicts", {})[h] = {"page": page, "mode": mode, "at": time.time()}
+    _loop_write(gd, state)
+    note = "verdict stored for %s (%s)" % (os.path.basename(page), h[:12])
+    if core.nobody_present(payload):
+        note += "; " + _self_approve(gd, state, page, h, ptype, session_id)
+    return note
+
+
+def _self_approve(gd, state, page, h, ptype, session_id):
+    """#641: nobody present + a stored clean verdict for this page's current hash: Design -> Plan on a design
+    page, Plan -> Build on a build-plan page. Recorded in state["auto_approvals"], never "approvals", so the
+    newest-approval marker is untouched. Never QA or Close. Returns a note."""
+    if state.get("verdicts", {}).get(h, {}).get("page") != page or page_hash(page) != h:
+        return "no self-approval: the stored verdict does not match this page"
+    stage = state.get("stage")
+    if (stage, ptype) == ("design", "proposal"):
+        new = "plan"
+    elif (stage, ptype) == ("plan", "build-plan"):
+        new = "build"
+    else:
+        return "no self-approval: stage %s does not take a %s page" % (stage, ptype)
+    with open(page, encoding="utf-8") as f:
+        title = str(json.load(f).get("title") or "")
+    feature = state.get("feature") or _loop_name(title.split(":")[0])
+    extra = ""
+    if new == "build":
+        steps = record_steps(gd, feature, page, session_id)
+        state, problem = _loop_read(gd)  # record_steps wrote the stage file; re-read it
+        if problem:
+            return "no self-approval: " + problem
+        extra = "; " + steps
+    state["feature"], state["stage"], state["skip"] = feature, new, False
+    if new == "plan":
+        state["redo"] = False
+    state.setdefault("auto_approvals", []).append(
+        {"stage": "Design approved" if new == "plan" else "Build plan approved", "page": page, "hash": h,
+         "at": int(time.time()), "by": "auto-unattended"})
+    _loop_write(gd, state)
+    top = os.path.dirname(_loop_dir(gd))
+    try:
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import ledger_note
+        undo = ("set \"stage\" in .claude/%s back to \"%s\" and delete this entry from auto_approvals"
+                % (LOOP_FILE, "design" if new == "plan" else "plan"))
+        ledger_note.add_row(top, feature, "S", "Verdict hash", (
+            LOOP_STAGE_NAMES[state["stage"]], os.path.relpath(page, top).replace(os.sep, "/"), h,
+            time.strftime("%Y-%m-%d %H:%M:%S"), undo))
+    except (OSError, ValueError, ImportError) as exc:
+        sys.stderr.write("house-rules: self-approval done but the ledger S row was not written (%s).\n" % exc)
+    return "self-approved: stage is now %s%s" % (LOOP_STAGE_NAMES[new], extra)
 
 
 SEEN_FILE = "house-rules-loop-seen.json"
@@ -848,7 +1321,12 @@ def _loop_wrong(labels, want):
     return wrong
 
 
-def _loop_to_qa(state, labels):
+def _steps_to_qa(git_dir, payload):
+    """#647: True when nobody is present and the step list has no unfinished step (done at this tree, or parked)."""
+    return core.nobody_present(payload) and steps_unfinished(git_dir, payload) == []
+
+
+def _loop_to_qa(state, labels, steps_done=False):
     """Build becomes QA once every issue says needs review and none says in progress. True if it moved.
 
     #504: after "QA failed" the stage is Build while every issue still says needs review. That is not a
@@ -857,7 +1335,8 @@ def _loop_to_qa(state, labels):
         if state["stage"] != "build" or any(LOOP_WORKING in (l or []) for l in labels.values()):
             state["reopened"] = False
         return False
-    if state["stage"] == "build" and labels and not _loop_wrong(labels, LOOP_REVIEW):
+    # #647: nobody present and every step done or parked moves Build to QA without labels or a pull request
+    if state["stage"] == "build" and (steps_done or (labels and not _loop_wrong(labels, LOOP_REVIEW))):
         state["stage"] = "qa"
         return True
     return False
@@ -1399,14 +1878,15 @@ def handover_record_offers(payload, have_reply, reply_text, trace_lines):
         if changed:
             _st["offered"] = offered
         # #459: a reply in Build that asks aj something holds code edits until aj's next message
-        if _st.get("stage") == "build" and _asks_aj(reply_text):
+        if _st.get("stage") == "build" and _asks_aj(reply_text) and not core.nobody_present(payload):  # #637
             if "[HARD STOP]" in _MD_FENCED_BLOCK_RE.sub("", reply_text or "").strip().split("\n\n")[-1]:
                 if not _st.get("held"):
                     _st["held"] = True
                     changed = True
             else:  # #598: a plain question in Build parks instead of holding
-                trace_lines.append("Build stage: park a reversible question with ledger_note.py park and end the "
-                                   "reply with the next step; use [HARD STOP] only for what cannot be undone.")
+                trace_lines.append("Build stage: record a reversible choice with ledger_note.py decide and end the "
+                                   "reply with the next step; park (needs --category and --tried) and [HARD STOP] "
+                                   "only for what cannot be undone.")
         if changed:
             _loop_write(_gd, _st)
     except Exception as exc:
@@ -1451,13 +1931,35 @@ def _loop_scope_note(payload):
                         "it is not clear which one, and nothing moved. Ask aj to type the line they mean."
                         % (len(offered), "; ".join(offered) or "none"))
             text = offered[0] + b.group(1)
+        was = state.get("stage")
         note = _loop_apply(state, text, top)
         if json.dumps(state, sort_keys=True) != before:
             _loop_write(git_dir, state)
+        if was != "build" and state.get("stage") == "build" and "Build plan approved" in note:
+            try:
+                sid = str(json.loads(payload).get("session_id") or "")
+            except (ValueError, AttributeError):
+                sid = ""
+            note += " Steps: " + _record_steps_for(top, git_dir, state.get("feature") or "", sid) + "."
         return note
     except Exception as exc:
         return "house-rules: the design-loop check hit an error (%s: %s), so this message moved nothing." % (
             type(exc).__name__, exc)
+
+
+def _record_steps_for(top, git_dir, feature, session_id):
+    import glob
+    plans = []
+    for p in glob.glob(os.path.join(top, "docs", "plans", "*.page.json")):
+        try:
+            with open(p, encoding="utf-8") as f:
+                if json.load(f).get("pageType") == "build-plan":
+                    plans.append(p)
+        except (OSError, ValueError):
+            continue
+    if not plans:
+        return "no build plan .page.json found, so no step list was recorded"
+    return record_steps(git_dir, feature, max(plans, key=os.path.getmtime), session_id)
 
 
 def _loop_helper_note(payload):
@@ -1475,7 +1977,8 @@ def _loop_helper_note(payload):
     return (
         "Design loop: the feature is %s and its stage is %s%s. You build only the steps aj approved in its "
         "build plan; you never design, change the plan, or approve anything - an approval only counts from "
-        "aj's own message. Park a reversible question with `ledger_note.py park` and keep going; only a "
+        "aj's own message. Record a reversible choice with `ledger_note.py decide` and keep going; `ledger_note.py park` (needs "
+        "--category and --tried) is only for a hard stop: a "
         "[HARD STOP] (cannot be undone, or touches money, secrets or other people) is reported back as a "
         "question. Code edits are refused outside Build." % (
             '"%s"' % state["feature"] if state.get("feature") else "not started",
@@ -1499,7 +2002,7 @@ def _loop_stop_line(payload):
         return None, None
     labels, src = _loop_labels(state)
     reopened = state.get("reopened")
-    if _loop_to_qa(state, labels):
+    if _loop_to_qa(state, labels, _steps_to_qa(git_dir, payload)):
         _loop_write(git_dir, state)
         return "House rules, design loop:" + _LOOP_QA_NOTE, src or None
     if state.get("reopened") != reopened:  # #504: the issues are back at in progress
@@ -1519,6 +2022,32 @@ def _loop_stop_line(payload):
             "are not: %s. Fix the labels before this turn ends.%s"
             % (state.get("feature") or "", LOOP_STAGE_NAMES[stage], want, "; ".join(wrong),
                " Code edits are refused until they are." if stage == "build" else "")), src or None
+
+
+def _shell_command(payload):
+    try:
+        return str(((json.loads(payload) or {}).get("tool_input") or {}).get("command") or "")
+    except (ValueError, AttributeError) as exc:
+        sys.stderr.write("house-rules: the design-loop lock could not read the shell command (%s); a cd check is skipped.\n" % exc)
+        return ""
+
+
+def _lock_text(state, feature, nobody, shell_files=""):
+    """The refusal for a source write in a stage that is not Build; with nobody present it names the self-approval route."""
+    stage = LOOP_STAGE_NAMES[state["stage"]]
+    of = ' of "%s"' % feature if feature else ""
+    if nobody:
+        return ("House rules, design loop: code edits are closed in the %s stage%s%s. Nobody is present, so you run the "
+                "loop yourself: write the design as a page (make_page.py start proposal, then build), have a "
+                "house-rules reviewer judge it in page mode, and when its verdict is clean the hook moves the stage; "
+                "then the same for the build plan. docs/, .claude/ and .md files stay open for this. Run `python3 "
+                "${CLAUDE_PLUGIN_ROOT}/scripts/make_page.py start proposal` first. See rules/detail/show-dont-tell.md."
+                % (stage, of, " (this command writes %s)" % shell_files if shell_files else ""))
+    return (
+        "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
+        "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
+        "change. docs/ pages, .claude/ files other than settings, and .md, .txt and .csv files stay open, so write the design or plan as a page "
+        "now. To switch this off: HOUSE_RULES_LOOP=off." % (stage, of))
 
 
 def _loop_gate(payload):
@@ -1544,23 +2073,24 @@ def _loop_gate(payload):
             return hold, None
     if script and state["stage"] == "build":
         return None, None  # Build: nothing changes for shell commands
-    if state["stage"] == "build" and state.get("held"):
+    nobody = core.nobody_present(payload)  # #637: no question hold, no GitHub-label refusals
+    if state["stage"] == "build" and state.get("held") and not nobody:
         return ("House rules, design loop: the last reply asked aj a question, so code edits wait for their "
                 "answer."), None
     if state["stage"] == "build":
         labels, src = _loop_labels(state, record=False)
-        if src:  # D9: GitHub could not be read, and the record of an old branch is not evidence
+        if src and not nobody:  # D9: GitHub could not be read, and the record of an old branch is not evidence
             return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, but "
                     "this hook could not read GitHub (%s), so the edit is refused. It will work once gh can read the issues."
                     % (state.get("feature") or "", LOOP_WORKING, src)), None
         reopened = state.get("reopened")
-        if _loop_to_qa(state, labels):
+        if _loop_to_qa(state, labels, _steps_to_qa(git_dir, payload)):
             _loop_write(git_dir, state)
             return "House rules, design loop:" + _LOOP_QA_NOTE, None
         if state.get("reopened") != reopened:  # #504: the issues are back at in progress
             _loop_write(git_dir, state)
         wrong = _loop_wrong(labels, LOOP_WORKING)
-        if not wrong:
+        if not wrong or nobody:
             return None, src or None
         return ("House rules, design loop: code edits in Build need every issue of \"%s\" labelled `%s`, and "
                 "these are not: %s. Fix the labels, then edit again.%s"
@@ -1570,6 +2100,14 @@ def _loop_gate(payload):
         _loop_write(git_dir, state)
         return None, None
     feature = state.get("feature") or ""
+    names = [t for t in script_paths if ".git/" not in t.replace("\\", "/")]
+    rest = _LEAD_CD_RE.sub("", _shell_command(payload), count=1)
+    if names and re.search(r"(?:^|[;&|\n])\s*(?:cd|pushd)\s", rest):
+        names = []  # a later cd changes what a relative path means and the hook does not follow it, so only report (#309)
+    if script and nobody and names:
+        # Canada trial 2026-11-26: with nobody present the agent wrote every source file from the shell and
+        # skipped the loop, so no stage file or step list ever existed. Only files the hook can name are refused.
+        return _lock_text(state, feature, nobody, ", ".join(names)), None
     if script:
         # #309 (incident 4 of #303): a shell command is reported, never refused, until the restructure. The
         # refusal stopped docs and .claude/ writes made from the shell, which are meant to stay open.
@@ -1578,14 +2116,7 @@ def _loop_gate(payload):
         return None, ("house-rules design loop (report only, #309): code is locked in the %s stage, and this "
                       "shell command writes %s. It was let through; the shell-write refusal is switched off "
                       "until the restructure." % (LOOP_STAGE_NAMES[state["stage"]], what))
-    return (
-        "House rules, design loop: code edits are closed in the %s stage%s. They open when aj types "
-        "\"Build plan approved: <feature>\" after approving a design, or \"skip design\" for one small "
-        "change. docs/ pages, .claude/ files other than settings, and .md, .txt and .csv files stay open, so write the design or plan as a page "
-        "now. To switch this off: HOUSE_RULES_LOOP=off." % (
-            LOOP_STAGE_NAMES[state["stage"]], ' of "%s"' % feature if feature else ""),
-        None,
-    )
+    return _lock_text(state, feature, nobody), None
 
 
 _GH_ISSUE_CREATE_RE = re.compile(_GH_PREFIX + r"issue\s+create\b")
@@ -1988,11 +2519,30 @@ def _author_guard(subject, payload):
             % (who[0] or "?", who[1] or "?", AGENT_IDENTITY_FIX), None)
 
 
+def _pr_open_steps_deny(payload, raw):
+    """#647: a plain deny reason while nobody is present and a step is still open (not done, not parked); else None."""
+    if not core.nobody_present(raw):
+        return None
+    _, git_dir = _issues_locate(_payload_cwd(raw))
+    open_steps = steps_unfinished(git_dir, raw) if git_dir else None
+    if not open_steps:
+        return None
+    return ("House rules: no pull request yet. These steps of the build plan are not finished: %s. Run their checks "
+            "(ledger_note.py check <feature> --step N --start, then --poll) until each passes, or park a real "
+            "question with ledger_note.py park; then open the pull request." % "; ".join(open_steps))
+
+
 def _guardgithub_issue_checks(payload, raw):
     """The two checks event_guardgithub used to run first (the safe git part now loops over this
     through core.GITHUB_WRITE_HOOKS): True when the call was handled and answered."""
     # #248: an issue made with the GitHub tool needs its three sections, like one made with gh.
     ti = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    if re.match(r"^mcp__(github|GitHub)__(create|update)_pull_request$", str(payload.get("tool_name") or "")):
+        why = _pr_open_steps_deny(payload, raw)
+        if why:
+            emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                         "permissionDecisionReason": why}})
+            return True
     if (_GITHUB_ISSUE_WRITE_RE.match(str(payload.get("tool_name") or ""))
             and str(ti.get("method", "")).lower() == "create" and _issues_enabled() and _clear_writing_enabled()):
         if clarity is None:
@@ -2308,6 +2858,9 @@ def _issues_guard(subject, payload):
         return None
     cmd = _decoded_command(subject)
     if _GH_PR_CREATE_RE.search(cmd):
+        why = _pr_open_steps_deny(None, payload if isinstance(payload, str) else json.dumps(payload))
+        if why:
+            return ("deny", why, None)
         body = cmd
         fm = _PR_BODY_FILE_RE.search(cmd)
         if fm:
@@ -2856,14 +3409,42 @@ def _check_decided(ctx):
     return ""
 
 
+def _qa_count_demand(ctx):
+    """#643: the QA page is linked and the feature's ledger has K rows: the reply must say how many decisions."""
+    reply, folder = ctx.get("reply") or "", ""
+    try:
+        if SCRIPTS_DIR not in sys.path:
+            sys.path.insert(0, SCRIPTS_DIR)
+        import make_page
+        folder = make_page.qa_folder(ctx.get("qa_feature") or "")
+        if not folder:
+            return ""
+        top = _repo_root_of(os.path.join(ctx.get("cwd") or "", "x"))
+        ledger = os.path.join(top, "docs", "qa", folder, "ledger.md")
+        if not os.path.isfile(ledger):
+            return ""  # no ledger for this feature: nothing to count
+        with open(ledger, encoding="utf-8") as fh:
+            rows = [ln for ln in fh if re.match(r"\|\s*K\d+\s*\|", ln)]
+    except OSError as exc:
+        sys.stderr.write("house-rules: the QA decision count could not read the ledger (%s), so it asked for no "
+                         "count.\n" % type(exc).__name__)
+        return ""
+    if not rows or re.search(r"(?i)\bdecisions?\b.{0,20}\d|\d.{0,20}\bdecisions?\b", reply):
+        return ""
+    return ("the ledger has %d decision(s) for this feature: say in the reply how many decisions were logged "
+            "(for example \"%d decisions logged\")" % (len(rows), len(rows)))
+
+
 def _check_qa_page(ctx):
     """#269: in QA the build is handed over with a make_page.py QA page, linked in a reply. Not
     skipped by "no page": a QA page is mandatory."""
-    if ctx.get("qa_stage") != "qa" or ctx.get("qa_linked"):
+    if ctx.get("qa_stage") != "qa":
         return ""
     page = ctx.get("qa_page") or ""
+    if ctx.get("qa_linked"):  # linked on an earlier reply: only the decision count below can still apply
+        return _qa_count_demand(ctx) if page and (page in (ctx.get("reply") or "") or os.path.basename(page) in (ctx.get("reply") or "")) else ""
     if _record_qa_link(ctx):
-        return ""
+        return _qa_count_demand(ctx)
     missing = "the QA page is built but not linked in the reply" if page else "no QA page is built yet"
     return ("%s: build it with `python3 %s build docs/plans/<name>-qa.page.json`, where the content file has a "
             "`qa` block (feature, base, unverified, files), then name the page's file in the reply, beside any link"
@@ -2932,6 +3513,8 @@ CHECKPOINTS = [
 ]
 
 
+NOBODY_CHECKPOINTS = ("evidence", "commit", "deviation", "qa page", "changelog", "decided for you")
+
 CHECKPOINT_RULES = {
     "page": "A reply that offers choices, lays out a plan, or runs to %d words or more links a page." % LONG_REPLY_WORDS,
     "editor": "A page goes past @house-rules:editor before aj reads it; a long reply too when HOUSE_RULES_EDITOR=on.",
@@ -2951,8 +3534,10 @@ def _missed_checkpoints(ctx):
     """[(rule name, fix)] for every blocking checkpoint at 'reply ends' that the reply misses."""
     if not _loop_enabled():  # light mode: evidence and commit still arrive, as the stop hook's reminders
         return []
+    quiet = ctx.get("hands_off") or core.unattended()  # #637: nobody present runs only these six
     return [(name, fix) for moment, name, fn, mode in CHECKPOINTS
-            if moment == "reply ends" and mode == "block" for fix in [fn(ctx)] if fix]
+            if moment == "reply ends" and mode == "block" and (not quiet or name in NOBODY_CHECKPOINTS)
+            for fix in [fn(ctx)] if fix]
 
 
 def _checkpoint_reason(missed):
@@ -3538,7 +4123,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
                 if _pr:
                     raise OSError(_pr)
                 ctx.update(qa_stage=_st.get("stage"), qa_page=_st.get("qa_page"),
-                           qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd)
+                           qa_linked=_st.get("qa_page_linked"), qa_git_dir=_gd, qa_feature=_st.get("feature") or "")
         except Exception as exc:
             trace_lines.append("house-rules: the QA page checkpoint could not read the stage file (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
@@ -3552,7 +4137,7 @@ def handover_checkpoints(payload, transcript_path, have_reply, reply_text, long_
             trace_lines.append("house-rules: the send-page checkpoint could not read the turn (%s: %s), "
                                "so it is off for this reply." % (type(exc).__name__, exc))
         try:
-            ctx["hands_off"] = core.unattended() or core._field(core._MODE_RE, payload) == "bypassPermissions"
+            ctx["hands_off"] = core.nobody_present(payload)
             if ctx["hands_off"] and transcript_path:
                 recs, _d = core._records_since_last_user_message(transcript_path)
                 ctx["ledger_logged"] = any("ledger_note.py" in str((b.get("input") or {}).get("command", ""))
@@ -3609,4 +4194,5 @@ core.register_prompt(_scope_loop_link)
 core.register_delegate_note(_issues_plan_note)
 core.register_subagent_note(_loop_helper_note)
 core.register_tool_record(_post_tool_records)
+core.register_post_tool("promptran", _record_step_result)
 core.register_edit_gate(_edit_gates)

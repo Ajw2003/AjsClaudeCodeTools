@@ -1,0 +1,181 @@
+tools/ - verification
+=====================
+
+ 1. PASS  an action after Stop hook feedback is recorded as a turn continuation
+          1 turn, 2 continuation action(s) - expected 2 (the push and the PR update)
+ 2. PASS  the continuation names both the push and the pull-request write
+          got: ['Bash git push -u origin feature', 'github:update_pull_request ']
+ 3. PASS  both continuation actions are flagged repo-mutating
+          mutating flags: [True, True]
+ 4. PASS  work before the Stop hook is recorded, but not as a continuation
+          3 commands in the turn; git status present=True, and absent from the continuation
+ 5. PASS  a turn that never hit a Stop hook reports no continuation
+          continuation entries: 0
+ 6. PASS  GitHub reads are not logged as writes, and writes are not missed
+          5 reads and 6 writes classified correctly
+ 7. PASS  a mutating verb past the display truncation is still detected, and reads are not
+          the flag is computed on the full command; only the display is shortened
+ 8. PASS  turns split on human prompts, and a notification is recorded without starting one
+          2 turns; 1 notification(s) in turn 1
+ 9. PASS  hook injections are recorded against the event that produced them
+          events: ['PostToolUse', 'UserPromptSubmit']
+10. PASS  the rendered ledger puts the continuation in its own section, above everything else
+          the section exists, names the push, and the header counts it
+11. PASS  session_ledger given a transcript that does not exist says so and exits non-zero
+          exit 1, stderr: session_ledger: no such transcript: /nonexistent-transcript.jsonl
+12. PASS  session_ledger given a session id that matches nothing says so and exits non-zero
+          exit 1, stderr: session_ledger: no transcript found for session 'no-such-session-anywhere' under /root/.cl
+13. PASS  session_ledger given an unparseable transcript names the problem and exits non-zero
+          exit 1, stderr: session_ledger: /tmp/tmpl58eluee.jsonl parsed to zero records - the format may have change
+14. PASS  clean_install_test calls a machine dirty only when OUR entries remain
+          6 states classified correctly
+15. PASS  split_output keeps a reminder and a trace apart when one call emits both
+          reminder='REMINDER', trace='TRACE'
+16. PASS  split_output handles a trace-only call and a non-JSON stdout without raising
+          trace-only='TRACE ONLY'; non-json reminder='not json'
+17. PASS  split_output counts guard's permission prompt as the reminder it is
+          reminder='BECAUSE'
+18. PASS  install.py refreshes the marketplace clone, not just declares it
+          marketplace update present at step 2 of 4
+19. PASS  marketplace add runs before marketplace update
+          add at 1, update at 2 - add declares it, update re-fetches it
+20. PASS  the clone is refreshed before the plugin registration is re-pointed
+          marketplace update at 2, plugin update at 4 - reversed, the registration would be re-pointed at a stale clone
+21. PASS  plugin install runs before plugin update
+          install at 3, update at 4 - install is a no-op once registered, update is the verb that re-points it
+22. PASS  every install step is a `claude plugin` subcommand
+          4 steps, all under `plugin`: ['plugin marketplace add https://github.com/Ajw2003/AjsClaudeCodeTools.git', 'plugin marketplace update aj-house-rules', 'plugin install house-rules@aj-house-rules -y', 'plugin update house-rules@aj-house-rules']
+23. PASS  every install step carries a failure message, so none can fail silently
+          4 steps, 4 non-empty messages
+24. PASS  the steps name this repo's marketplace and remote, not a hardcoded copy
+          marketplace='aj-house-rules', repo='https://github.com/Ajw2003/AjsClaudeCodeTools.git'
+25. PASS  install_steps explains why the order matters, not just what the order is
+          the docstring names the add-does-not-re-fetch trap the order exists to avoid
+26. PASS  tools/update.bat exists, so the plugin can be updated by double-click
+          /home/user/AjsClaudeCodeTools/tools/update.bat present
+27. PASS  update.bat issues exactly install_steps(), in the same order
+          both run the same 4 commands in the same order
+28. PASS  every claude invocation in update.bat uses `call`
+          without it the batch file stops after the first command, since claude is claude.cmd
+29. PASS  update.bat pauses before exiting, so a double-click is readable
+          pause present; without it the console closes before the result can be read
+30. PASS  update.bat checks every command and reports a failure rather than pressing on
+          errorlevel checks and a :failed branch are present
+31. PASS  update.bat is CRLF throughout, which cmd.exe needs for its goto labels
+          84 CRLF line endings, 0 bare LF
+32. PASS  .gitattributes pins *.bat to CRLF so checkout does not depend on core.autocrlf
+          the attribute is declared, so a Windows clone gets CRLF regardless of local git config
+33. PASS  check_plugin_version_bump.decide() gates on a real increase, not just a change
+          9 cases matched
+34. PASS  decide() names an unparseable version as a failure rather than silently passing
+          VersionBumpCheckError raised for a non-semver version string
+35. PASS  changed_paths()/plugin_version_at() against real git match a real bumped commit
+          changed=['claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json', 'claude-house-rules/plugins/house-rules/rules/house-rules.md'], old=1.0.0, new=1.1.0, ok=True (claude-house-rules/plugins/house-rules/.claude-plugin/plugin.json, claude-house-rules/plugins/house-rules/rules/house-rules.md changed, and the version bumped from 1.0.0 to 1.1.0)
+36. PASS  plugin_version_at() fails loud on a bad ref rather than returning None
+          VersionBumpCheckError raised for a nonexistent ref
+37. PASS  install.py's self-heal step does not reinstall when the cache already matches source
+          matched=True, reinstall attempted=False
+38. PASS  install.py's self-heal step reinstalls on a mismatch and re-verifies
+          healed=True, reinstall attempted 1 time(s)
+39. PASS  install.py's self-heal step reports failure loudly when the reinstall does not fix it
+          still_broken(ok)=False, bad() called 1 time(s)
+40. PASS  install.py: a failed settings write keeps the old settings.json
+          after a simulated disk-full write the file read back as {'mine': 'keep me'}
+41. PASS  install.py writes attribution into a missing settings file
+          got {'commit': 'Committed by Edens Agent', 'pr': 'Opened by Edens Agent', 'sessionUrl': False}
+42. PASS  install.py writes attribution and preserves every other key
+          got {'theme': 'dark', 'hooks': {'a': 1}, 'verbose': True, 'model': 'opusplan', 'attribution': {'commit': 'Committed by Edens Agent', 'pr': 'Opened by Edens Agent', 'sessionUrl': False}}
+43. PASS  install.py replaces a different existing attribution exactly
+          got '{\n  "attribution": {\n    "commit": "Committed by Edens Agent",\n    "pr": "Opened by Edens Agent",\n    "sessionUrl": false\n  },\n  "verbose": true,\n  "model": "opusplan"\n}'
+44. PASS  install.py --no-attribution leaves attribution alone
+          got '{\n  "attribution": {\n    "commit": "mine"\n  },\n  "verbose": true,\n  "model": "opusplan"\n}'
+45. PASS  install.py reads attribution back after writing
+          ok lines ['set verbose = True (default to the verbose transcript view)', 'set model = opusplan (Opus while planning, Sonnet to execute)', "set attribution = {'commit': 'Committed by Edens Agent', 'pr': 'Opened by Edens Agent', 'sessionUrl': False} (credit Edens Agent on commits and PRs, not Claude)", 'settings.json still parses and reads back verbose = True', 'settings.json still parses and reads back model = opusplan', "settings.json still parses and reads back attribution = {'commit': 'Committed by Edens Agent', 'pr': 'Opened by Edens Agent', 'sessionUrl': False}"]
+46. PASS  install.py reports a settings file that does not parse and does not overwrite it
+          file now '{not json', bad ['/tmp/install-settings-eftozhr8/settings.json could not be read as JSON (Expecting property name enclosed in double quotes: line 1 column 2 (char 1)) - left untouched, no settings applied']
+47. PASS  diff_parts: the totals equal git diff --numstat
+          got 6 1, git ['6', '1']
+48. PASS  diff_parts: a changed line belongs to its function, and a comment above a function to that function
+          got {'c': (5, 0), 'b': (1, 1)}
+49. PASS  A13: tree_hash ignores __pycache__, .pyc and .python-cache
+          diff []
+50. PASS  A16: force_update says the plugin is UNINSTALLED when the reinstall fails, and the command to fix it
+          rc=1 out='-marketplace-update)\n==> Uninstalling house-rules@aj-house-rules\n==> Reinstalling house-rules@aj-house-rules\nReinstalling house-rules@aj-house-rules failed (exit 1).\nThe plugin is now UNINSTALLED, so its guard hooks are off. Install it again with: claude plugin install house-rules@aj-house-rules -y\n'
+51. PASS  A18: diff_parts counts a removed --- line, so removed equals git's numstat (2)
+          removed=2
+52. PASS  A20: a failed self-heal is one failure: bad() once, and main() adds none of its own
+          bad() called 1 time(s)
+        claude plugin uninstall house-rules@aj-house-rules
+        × Failed to uninstall plugin "house-rules@aj-house-rules": Plugin "house-rules@aj-house-rules" not found in installed plugins
+        claude plugin marketplace remove aj-house-rules
+        × Failed to remove marketplace: Marketplace 'aj-house-rules' not found
+        claude plugin marketplace add Ajw2003/AjsClaudeCodeTools#AjsAgent/phase-3-handoff
+        Adding marketplace…Cloning via HTTPS: https://github.com/Ajw2003/AjsClaudeCodeTools.git
+        Refreshing marketplace cache (timeout: 120s)…
+        Cloning repository (timeout: 120s): https://github.com/Ajw2003/AjsClaudeCodeTools.git (ref: AjsAgent/phase-3-handoff)
+        Clone complete, validating marketplace…
+        Cleaning up old marketplace cache…
+        √ Successfully added marketplace: aj-house-rules (declared in user settings)
+        claude plugin install house-rules@aj-house-rules -y
+        Installing plugin "house-rules@aj-house-rules"...√ Successfully installed plugin: house-rules@aj-house-rules (scope: user)
+        claude plugin update house-rules@aj-house-rules
+        Checking for updates for plugin "house-rules@aj-house-rules"…
+        √ house-rules is already at the latest version (2.81.2).
+53. PASS  #532: use_branch switches to the branch: ref and commit match origin
+          got ref=AjsAgent/phase-3-handoff commit=4124620, origin AjsAgent/phase-3-handoff=4124620
+        claude plugin uninstall house-rules@aj-house-rules
+        √ Successfully uninstalled plugin: house-rules (scope: user)
+        claude plugin marketplace remove aj-house-rules
+        √ Successfully removed marketplace: aj-house-rules
+        claude plugin marketplace add Ajw2003/AjsClaudeCodeTools
+        Adding marketplace…Cloning via HTTPS: https://github.com/Ajw2003/AjsClaudeCodeTools.git
+        Refreshing marketplace cache (timeout: 120s)…
+        Cloning repository (timeout: 120s): https://github.com/Ajw2003/AjsClaudeCodeTools.git
+        Clone complete, validating marketplace…
+        Cleaning up old marketplace cache…
+        √ Successfully added marketplace: aj-house-rules (declared in user settings)
+        claude plugin install house-rules@aj-house-rules -y
+        Installing plugin "house-rules@aj-house-rules"...√ Successfully installed plugin: house-rules@aj-house-rules (scope: user)
+        claude plugin update house-rules@aj-house-rules
+        Checking for updates for plugin "house-rules@aj-house-rules"…
+        √ house-rules is already at the latest version (2.94.7).
+54. PASS  #532: use_branch main: ref gone, commit equals origin/main
+          got ref=None commit=ef87a40, origin main=ef87a40
+55. PASS  overnight.sh --interactive exports both variables and runs claude once with the permission flag and its arguments
+          got 'on unattended --dangerously-skip-permissions -p hi\n' ''
+56. PASS  overnight.sh loop: first call --session-id, one --resume with the same id and resume text, cap exported, no --continue
+          got ['1000|a6f5a0c7-ee74-41d5-909b-80cafedbe530|-p do the work --session-id a6f5a0c7-ee74-41d5-909b-80cafedbe530 --dangerously-skip-permissions', '1000|a6f5a0c7-ee74-41d5-909b-80cafedbe530|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume a6f5a0c7-ee74-41d5-909b-80cafedbe530 --dangerously-skip-permissions', '1000|a6f5a0c7-ee74-41d5-909b-80cafedbe530|-p [Subagent hand-back] Final pass: the run is ending (all steps closed, but some are stuck: 1 STUCK: Step 1). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume a6f5a0c7-ee74-41d5-909b-80cafedbe530 --dangerously-skip-permissions'] ''
+57. PASS  overnight.sh resume text matches core._RELAYED_PROMPT_RE
+          [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step.
+58. PASS  overnight.sh stops after HOUSE_RULES_OVERNIGHT_NO_PROGRESS no-progress restarts, says so and makes the final call
+          got ['1000|718d6196-780a-481b-b0ef-3d26febef910|-p do the work --session-id 718d6196-780a-481b-b0ef-3d26febef910 --dangerously-skip-permissions', '1000|718d6196-780a-481b-b0ef-3d26febef910|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 718d6196-780a-481b-b0ef-3d26febef910 --dangerously-skip-permissions', '1000|718d6196-780a-481b-b0ef-3d26febef910|-p [Subagent hand-back] Final pass: the run is ending (5 restarts with no step closed). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume 718d6196-780a-481b-b0ef-3d26febef910 --dangerously-skip-permissions'] 'OPEN 1\nOPEN 1\novernight: loop ended: 5 restarts with no step closed\n'
+59. PASS  overnight.sh: no stopfailure file means no wait
+          got ['1000|8d02e45f-390e-47ed-b8df-172b1c7d44e8|-p do the work --session-id 8d02e45f-390e-47ed-b8df-172b1c7d44e8 --dangerously-skip-permissions', '1000|8d02e45f-390e-47ed-b8df-172b1c7d44e8|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 8d02e45f-390e-47ed-b8df-172b1c7d44e8 --dangerously-skip-permissions', '1000|8d02e45f-390e-47ed-b8df-172b1c7d44e8|-p [Subagent hand-back] Final pass: the run is ending (all steps closed, but some are stuck: 1 STUCK: Step 1). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume 8d02e45f-390e-47ed-b8df-172b1c7d44e8 --dangerously-skip-permissions'] [] 'OPEN 1\nALL DONE (1 STUCK: Step 1)\novernight: loop ended: all steps closed, but some are stuck: 1 STUCK: Step 1\n'
+60. PASS  overnight.sh: a rate_limit file with no reset time waits HOUSE_RULES_OVERNIGHT_RATE_WAIT (300) and spends no resume
+          got ['1000|9f4d1067-ce2d-475a-a24c-9f54ad473aed|-p do the work --session-id 9f4d1067-ce2d-475a-a24c-9f54ad473aed --dangerously-skip-permissions', '1000|9f4d1067-ce2d-475a-a24c-9f54ad473aed|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 9f4d1067-ce2d-475a-a24c-9f54ad473aed --dangerously-skip-permissions', '1000|9f4d1067-ce2d-475a-a24c-9f54ad473aed|-p [Subagent hand-back] Final pass: the run is ending (5 restarts with no step closed). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume 9f4d1067-ce2d-475a-a24c-9f54ad473aed --dangerously-skip-permissions'] ['300'] 'overnight: rate limit hit; waiting 300 s for it to reset (this resume is not counted)\nOPEN 1\nOPEN 1\novernight: loop ended: 5 restarts with no step closed\n'
+61. PASS  overnight.sh: a rate_limit file with reset_at waits until reset_at plus 30 s
+          got ['1030']
+62. PASS  overnight.sh: crash files back off 30, 60, 120 s, each resume counts (2 no-progress stops after 3 calls plus the final), file deleted
+          got ['1000|d8cb015a-aaa6-4485-9d13-6df05c6bb104|-p do the work --session-id d8cb015a-aaa6-4485-9d13-6df05c6bb104 --dangerously-skip-permissions', '1000|d8cb015a-aaa6-4485-9d13-6df05c6bb104|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume d8cb015a-aaa6-4485-9d13-6df05c6bb104 --dangerously-skip-permissions', '1000|d8cb015a-aaa6-4485-9d13-6df05c6bb104|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume d8cb015a-aaa6-4485-9d13-6df05c6bb104 --dangerously-skip-permissions', '1000|d8cb015a-aaa6-4485-9d13-6df05c6bb104|-p [Subagent hand-back] Final pass: the run is ending (5 restarts with no step closed). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume d8cb015a-aaa6-4485-9d13-6df05c6bb104 --dangerously-skip-permissions'] ['30', '60', '120'] [] 'overnight: claude crashed; backing off 30 s before the next resume\nOPEN 1\novernight: claude crashed; backing off 60 s before the next resume\nOPEN 1\novernight: claude crashed; backing off 120 s before the next resume\nOPEN 1\novernight: loop ended: 5 restarts with no step closed\n'
+63. PASS  overnight.sh: 24 hours of work ends the loop with the 24-hour limit final call
+          got ['1000|288b5b3d-190d-432a-9638-0f7e535b5531|-p do the work --session-id 288b5b3d-190d-432a-9638-0f7e535b5531 --dangerously-skip-permissions', '1000|288b5b3d-190d-432a-9638-0f7e535b5531|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 288b5b3d-190d-432a-9638-0f7e535b5531 --dangerously-skip-permissions', '1000|288b5b3d-190d-432a-9638-0f7e535b5531|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 288b5b3d-190d-432a-9638-0f7e535b5531 --dangerously-skip-permissions', '1000|288b5b3d-190d-432a-9638-0f7e535b5531|-p [Subagent hand-back] Final pass: the run is ending (24-hour limit). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume 288b5b3d-190d-432a-9638-0f7e535b5531 --dangerously-skip-permissions'] 'OPEN 1\nOPEN 1\nOPEN 1\novernight: loop ended: 24-hour limit\n'
+64. PASS  overnight.sh: 5 restarts with no step closed end the loop (first call, 5 resumes, final call)
+          got ['1000|3fc7b298-351c-4c84-ae89-d8d62890f780|-p do the work --session-id 3fc7b298-351c-4c84-ae89-d8d62890f780 --dangerously-skip-permissions', '1000|3fc7b298-351c-4c84-ae89-d8d62890f780|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 3fc7b298-351c-4c84-ae89-d8d62890f780 --dangerously-skip-permissions', '1000|3fc7b298-351c-4c84-ae89-d8d62890f780|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 3fc7b298-351c-4c84-ae89-d8d62890f780 --dangerously-skip-permissions', '1000|3fc7b298-351c-4c84-ae89-d8d62890f780|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 3fc7b298-351c-4c84-ae89-d8d62890f780 --dangerously-skip-permissions', '1000|3fc7b298-351c-4c84-ae89-d8d62890f780|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 3fc7b298-351c-4c84-ae89-d8d62890f780 --dangerously-skip-permissions', '1000|3fc7b298-351c-4c84-ae89-d8d62890f780|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 3fc7b298-351c-4c84-ae89-d8d62890f780 --dangerously-skip-permissions', '1000|3fc7b298-351c-4c84-ae89-d8d62890f780|-p [Subagent hand-back] Final pass: the run is ending (5 restarts with no step closed). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume 3fc7b298-351c-4c84-ae89-d8d62890f780 --dangerously-skip-permissions'] 'OPEN 1\nOPEN 1\nOPEN 1\nOPEN 1\nOPEN 1\nOPEN 1\novernight: loop ended: 5 restarts with no step closed\n'
+65. PASS  overnight.sh: a resume that closes a step resets the no-progress count (cap 3 not hit)
+          got ['1000|24d32fea-ac98-4047-bc1d-49cbb923ef6e|-p x --session-id 24d32fea-ac98-4047-bc1d-49cbb923ef6e --dangerously-skip-permissions', '1000|24d32fea-ac98-4047-bc1d-49cbb923ef6e|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 24d32fea-ac98-4047-bc1d-49cbb923ef6e --dangerously-skip-permissions', '1000|24d32fea-ac98-4047-bc1d-49cbb923ef6e|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 24d32fea-ac98-4047-bc1d-49cbb923ef6e --dangerously-skip-permissions', '1000|24d32fea-ac98-4047-bc1d-49cbb923ef6e|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 24d32fea-ac98-4047-bc1d-49cbb923ef6e --dangerously-skip-permissions', '1000|24d32fea-ac98-4047-bc1d-49cbb923ef6e|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 24d32fea-ac98-4047-bc1d-49cbb923ef6e --dangerously-skip-permissions', '1000|24d32fea-ac98-4047-bc1d-49cbb923ef6e|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume 24d32fea-ac98-4047-bc1d-49cbb923ef6e --dangerously-skip-permissions', '1000|24d32fea-ac98-4047-bc1d-49cbb923ef6e|-p [Subagent hand-back] Final pass: the run is ending (all steps done). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume 24d32fea-ac98-4047-bc1d-49cbb923ef6e --dangerously-skip-permissions'] 'OPEN 2\nOPEN 2\nOPEN 1\nOPEN 1\nOPEN 1\nALL DONE\novernight: loop ended: all steps done\n'
+66. PASS  overnight.sh: rate-limit wait seconds are not counted toward the 24 hours
+          got ['1000|bb2d2462-3e02-4111-a9ff-112c58261372|-p do the work --session-id bb2d2462-3e02-4111-a9ff-112c58261372 --dangerously-skip-permissions', '1000|bb2d2462-3e02-4111-a9ff-112c58261372|-p [Subagent hand-back] Resume: you stopped before every step in the guarded step list was done. Carry on with the next open step. --resume bb2d2462-3e02-4111-a9ff-112c58261372 --dangerously-skip-permissions', '1000|bb2d2462-3e02-4111-a9ff-112c58261372|-p [Subagent hand-back] Final pass: the run is ending (5 restarts with no step closed). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work. --resume bb2d2462-3e02-4111-a9ff-112c58261372 --dangerously-skip-permissions'] 'overnight: rate limit hit; waiting 100000 s for it to reset (this resume is not counted)\nOPEN 1\nOPEN 1\novernight: loop ended: 5 restarts with no step closed\n'
+67. PASS  overnight.sh final-pass text matches core._RELAYED_PROMPT_RE
+          [Subagent hand-back] Final pass: the run is ending (all steps done). Build the QA page now from the ledger, list every open or stuck step first, and do not start new work.
+68. PASS  ledger_note.py steps-status prints NO STEP LIST, OPEN n, ALL DONE with the right exit codes
+          got ((0, 'NO STEP LIST'), (1, 'OPEN 1'), (0, 'ALL DONE (1 STUCK: Step 1)'))
+69. PASS  time_hooks.py --quick prints a millisecond number for every Write and Bash hook (a pre and a post line each since #628)
+          got 'Write call: 145.8 ms total, 4 processes started (sh + python per hook)\n    Pre/pretool              73.0 ms\n    Post/posttool            72.8 ms\nBash call: 159.3 ms total, 4 processes started (sh + python per hook)\n    Pre/pretool              81.2 ms\n    Post/posttool            78.1 ms\n' ''
+
+--------------------------------
+RESULT: PASS - all 69 checks passed. The tools behave as written.
+
+Not covered here: anything that shells out to the claude CLI or changes a real
+machine's config. clean_install_test.py's strip and install steps are proven by
+running that script; what is covered is the decision logic lifted out of it.
+exit 0

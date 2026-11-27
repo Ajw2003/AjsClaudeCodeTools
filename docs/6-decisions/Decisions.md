@@ -19,6 +19,8 @@ pointer, when a later entry replaces it.
 
 ## 2026-11-24 - The roadblock judge is tuned, not removed, and every long wait becomes one-minute segments
 
+> Reversed in part on 2026-11-25: see "a step list blocks every stop until it is done, not two" below, in the entries headed "Reversed:".
+
 **Decision.** aj approved "Design approved: judge blocking fix and one-minute segments 1A 2A 3A" on the page `docs/plans/judge-blocking-fix.html`. The roadblock judge stays. It gets five written criteria (C1 to C5) and a reason standard (the check run, what it returned, the logic to the claim), it moves into the scripted Stop hook so it can read the real tool calls (1A), it shares one cap of two blocks with the record check and the goal check, reset only after real tool work (2A), and steps that pass data use named checkpoint files (3A). The launch guard refuses a foreground or background launch over 60 seconds unless it says `Cannot split:` with a reason that passes C5. Parent issue #605, steps #606 to #613.
 
 **Why.** A test session was blocked 12 times in a row even when three different methods had been tried: the model judge had a one-sentence rule, could not see the tool calls, and kept no count. aj also wants no wait over a minute, so failures are caught early. Systems doc: `docs/4-systems/roadblock-judge-and-segments.md`.
@@ -43,6 +45,8 @@ pointer, when a later entry replaces it.
 
 ## 2026-11-24 - Design review loop reversals (plugin 2.92.0)
 
+> Reversed in part on 2026-11-25: see "a design point is decided and logged, not put to aj as options" below, in the entries headed "Reversed:".
+
 **Context.** The design review loop (#592) is built. Four earlier decisions it replaces are recorded here, each in its own paragraph, so the older entries are not left standing unchallenged.
 
 **Decision 1, the editor is no longer the only pass before a page (reverses #249, #325).** A design, plan or other page needs a review stamp from the reviewer helper (hunts for design holes, then checks wording); the editor remains for long replies. Review and QA pages are exempt.
@@ -60,6 +64,8 @@ pointer, when a later entry replaces it.
 ---
 
 ## 2026-11-24 - Design review loop: a reviewer, an acceptance run, parked questions, a deviations ledger
+
+> Reversed in part on 2026-11-25: see "only aj's own message moves a stage, except a hook-recorded self-approval when nobody is present" below, in the entries headed "Reversed:".
 
 **Context.** The editor checked only wording, aj did the final testing, and routine work stopped for questions and approvals. aj's goal: a smoother loop from idea to finished product, with nothing left for aj to test by hand and no stops mid-work that can wait for a stage boundary. Unattended mode 2.87.0 is in main; "never wait" 2.90.0 (issues #587 to #591) is on branch `AjsAgent/affectionate-lovelace-r0zfgg` and not yet merged.
 
@@ -84,6 +90,8 @@ pointer, when a later entry replaces it.
 
 ## 2026-11-23 - Roadblock check audit: model judge, method classes, and a goal check for stalls
 
+> Reversed in part on 2026-11-25: see "stall phrases and the step check apply in every mode" below, in the entries headed "Reversed:".
+
 **Decision.** aj approved "Design approved: roadblock check audit 1B 2A 3A 4* 5A". (1B) A model judge runs on every turn end. (2A) A different method means a different class from a closed table. (3A) A licence, login, purchase or destructive step is marked NEEDS YOU and exempts that part only. (4, aj's own) Stall phrases are checked only at the end of the turn, then a separate goal check reads the session's goal and decides whether the session genuinely cannot move forward unattended or can carry on until the goals are reached. (5A) Unattended runs and bypass mode only.
 **Why.** An audit of the plan found eight weak spots, measured on real transcripts: a curly apostrophe and blockquotes, the loose probe test, tools other than `Bash` being invisible, an undefined failure, weak fallbacks, false alarms (`next step` in 2 of 28 final replies), non-human messages resetting the turn, and environment limits. A model judge and a goal check were tested and worked; see [roadblocks.md](../4-systems/roadblocks.md), "Plan after the audit".
 **Replaces.** Refines the detection-fix entry below: the "any three failed results" fallback and the plain stall-phrase flag are replaced by related attempts, method classes and the goal check.
@@ -91,12 +99,16 @@ pointer, when a later entry replaces it.
 
 ## 2026-11-23 - Roadblock detection fix: evidence, a longer phrase list, and never waiting in unattended or bypass mode
 
+> Reversed in part on 2026-11-25: see "the approval gate before source edits can be passed by a hook when nobody is present" below, in the entries headed "Reversed:".
+
 **Decision.** aj approved "Design approved: roadblock detection fix 1* 2* 3*" with three answers of their own. (1) A roadblock claim passes only when the turn tried the claimed thing and shows evidence it cannot run. (2) The flagged wording grows to include can't, won't or unable to verify, don't have access, not available here, isn't available, not done, I've stopped, I've stopped here, the next step and next step. (3) In unattended or bypass-permission mode, a design decision that comes up while building is chosen by the agent (reasonable and reversible), recorded, and work carries on; the session never waits.
 **Why.** The Castle session on aj's PC let two replies through while running 2.89.0. Two causes were reproduced: a curly apostrophe is not matched, and a turn that ran `git ls-files` counts as a probe. Planning also found that the approved "blocks twice" never happens in a real session, because the check returns at the `stop_hook_active` retry (confirmed with a test hook: a second block is allowed, and Claude Code itself caps consecutive blocks at 8). aj also added, twice on 2026-11-23: a first try never counts as "I cannot"; only after the first try and two further attempts by different methods all fail (three attempts in total, corrected by aj the same day from "two") may the agent say something could not be verified, tested or done, and the reply must list every method tried; and the wording list gains the general inability phrases (unable to, genuinely unable, could not, couldn't). Detail: [roadblocks.md](../4-systems/roadblocks.md), "Detection fix".
 **Replaces.** Refines the 2026-11-22 roadblocks entry (probe test and phrase list). Answer 3 overrides, in those two modes only, the rule that aj makes the design decisions; the approval gate before source edits stays.
 **Status.** Current. Not built.
 
 ## 2026-11-22 - Roadblocks: a rule plus a check that blocks twice, then warns
+
+> Reversed in part on 2026-11-25: see "a step check does not warn and let the reply through" below, in the entries headed "Reversed:".
 
 **Decision.** aj approved "Design approved: clear roadblocks 1C 2A". The agent probes before claiming a blocker, installs missing tools itself (without asking in bypass mode), and tries other routes before stopping. An end-of-reply check blocks a roadblock claim made with no probe twice, then lets it through with a warning line. Only licences, logins, purchases and destructive actions stay aj's. The session-start line for bypass mode was dropped.
 **Why.** A session on aj's PC claimed Unity was missing and that it was on the wrong machine; both were false. Rule text alone was ignored, and a check that blocks without end would hang a session. Detail: [roadblocks.md](../4-systems/roadblocks.md).
@@ -120,15 +132,21 @@ pointer, when a later entry replaces it.
 
 ## 2026-11-22 - Unattended mode is a typed switch, shared with art-pipeline
 
+> Reversed in part on 2026-11-25: see "unattended mode keeps the design loop, and agents cannot write the switch file" below, in the entries headed "Reversed:".
+
 **Decision.** `unattended on|off` is a typed switch group (saved in `house-rules-mode.json`), not only an environment variable, so aj can turn it on at any point in a session with one line. The art-pipeline plugin reads the same file instead of getting its own command. It is kept out of `house rules off`, and the agent is told not to commit the file while it is on.
 **Why.** aj asked for a single simple command to run at any point; an environment variable needs a restart and the launcher. One file means one line covers both plugins. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
 
 ## 2026-11-22 - Unattended mode: three guards relax to a note
 
+> Reversed in part on 2026-11-25: see "credit lines in commits stay relaxed, and pull requests with credit lines are denied" below, in the entries headed "Reversed:".
+
 **Decision.** When `HOUSE_RULES_UNATTENDED=on`, the whole-file Write guard, the big-file commit guard and the Claude-credit check allow the action and say so in a note, instead of refusing. Attended they refuse exactly as before. The destructive-command guard and main-branch guard do not change. aj approved this in the coordinator session on 2026-11-22, after Claude Code's auto-mode safety check refused the builder's edit; the edit was then made directly in the coordinator session.
 **Why.** Each refusal needs aj to answer ("approval by name", "LFS approved", the credit line), and nobody is there overnight, so the run would stop on it. The notes list what was allowed so the morning review can undo it. A note could be lost on the guard's two allow paths; they now carry it. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
 
 ## 2026-11-22 - Unattended mode: rule text overridden by the session note, not forked
+
+> Reversed in part on 2026-11-25: see "the rule files themselves say decide and log, they are no longer only overridden by a note" below, in the entries headed "Reversed:".
 
 **Decision.** The rules files are not forked for unattended runs. The unattended SessionStart note says the wait-for-the-user and ask-before instructions are overridden for this run, and versioncheck emits one line instead of the update-and-wait banner. aj approved these in the coordinator session on 2026-11-22.
 **Why.** One copy of the rules text; the note is injected last, so it wins. Detail: [speed-switches.md](../4-systems/speed-switches.md), "Unattended mode".
@@ -137,6 +155,8 @@ pointer, when a later entry replaces it.
 ---
 
 ## 2026-11-22 - Unattended mode: guard asks are refused outright
+
+> Reversed in part on 2026-11-25: see "a refusal goes to the ledger, not under 'Waiting on you' in the reply"; "unattended no longer turns off every switch, and a plan-exit prompt is allowed" below, in the entries headed "Reversed:".
 
 **Decision.** With `HOUSE_RULES_UNATTENDED=on`, a guard `ask` is always a refusal (deny, "Refused, not asked", listed under "Waiting on you"), not an ask that is refused after `HOUSE_RULES_PROMPT_TIMEOUT`.
 **Why.** prompttimer only times prompts a guard raised, and a 5 minute wait per prompt overnight is a stall. Nobody is there to answer, so waiting gains nothing.
@@ -2500,6 +2520,8 @@ specific enough is not a string match.
 finished in 62 seconds: it was called with a bare class name while its verdict script matched by
 full-name prefix, and it was piped through `tail`, so nothing showed until it ended.
 
+> Reversed in part on 2026-11-25: see "decisions are not announced until the QA page" below, in the entries headed "Reversed:".
+
 **Decision.** A rule under "Nothing fails silently" (core line plus
 `rules/detail/fails-silently.md`): before leaving a wait or background task, check its target
 name against the source and run one status check. `guard` gains a `GUARD_R1` pattern that prompts
@@ -3757,3 +3779,134 @@ approval (`docs/4-systems/issue-closing.md`, "As built").
 **Why.** Code, planted-bug file: both models found 6 of 6; Sonnet took 10.4 s against 39.0 s. Code, real six-file batch: Opus 26 findings (43,196 tokens, 98.9 s), Sonnet 21 (35,815 tokens, 27.3 s); each found a real bug the other missed, Opus the cross-project transcript read in `session_ledger.py`, Sonnet the merge-base mismatch in `check_plugin_version_bump.py`. Page, the speed first plan: Opus 17 findings (81,316 tokens, 137.4 s), Sonnet 12 (77,323 tokens, 80.9 s); only Opus opened the saved baseline and found that step 2 cannot be built as written, so plan, which cross-checks a plan against code the same way, goes back to Opus. Diff of commit 09be0861: Opus 8 findings, Sonnet 7, close to parity. Dollar cost was not measured (the agent reports give one token total); image and style were not run.
 
 **Status.** Standing. Supersedes the plan and code on Sonnet default of plugin 2.94.5 and refines the reviewer on Opus tier line of the earlier tier entry. Open to a larger sample.
+
+## 2026-11-25 — Quiet unattended mode: design and build plan approved
+
+**Context.** Unattended mode still stopped and asked: rule text said to ask, a check blocked "I went with", unattended switched the design loop off, and nothing held a session open until its goal was met. Two design review rounds and two build plan review rounds found 83 holes; all are applied or decided on `docs/plans/2026-11-25-quiet-unattended-mode.html` and `docs/plans/2026-11-25-quiet-unattended-mode-plan.html`.
+
+**Decision.** aj wrote "Design approved: quiet unattended mode 1A" and "Build plan approved: quiet unattended mode". Unattended and bypass mean nobody is present and run the design loop to QA alone; auto stays attended; every list ends in four required finish-line steps; decisions show only on the QA page. Parent issue #634, steps #635 to #649. Decided by me while planning and listed on the build plan page: the verdict rule, staleness by tree fingerprint, the step list filed by session id, checks as start and poll calls, K and S ledger letters, speed first restored under features, the block cap set to 1000, and the finish order.
+
+**Why.** aj asked that unattended mode decide for itself, keep working until its goal is met, and leave only what truly needs aj for QA. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+**Status.** Building. The twelve reversals of earlier decisions get their own dated entries in step 14 (#645).
+
+
+## 2026-11-25 - Reversed: a step list blocks every stop until it is done, not two
+
+**Context.** The judge and the checks shared one cap of two blocks in a row, then let the reply through. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** A session with a guarded step list is blocked on every stop while a step is open, with no cap of two; after 3 blocks with no step closed and no commit the step is marked stuck and the check moves on. The judge blocks once per step set. Sessions with no step list keep the old cap of two.
+
+**Why.** aj asked that a run never stops part-way; a cap that lets the reply through is exactly the quit he saw ('is not done').
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: a design point is decided and logged, not put to aj as options
+
+**Context.** Decision 4 let helpers park questions, but the `decided for you` check (#460) still sent back any reply saying 'I went with'. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** That check is now a reminder to log the choice with `ledger_note.py decide`. aj is asked only about choices that change how something looks or what it does, and only when present; in unattended or bypass those are decided too with a stated assumption.
+
+**Why.** aj wants fewer decisions and the choices shown only on the QA page.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: stall phrases and the step check apply in every mode
+
+**Context.** Answer 5A limited stall checks to unattended runs and bypass mode. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** The step check runs on every stop in every mode once a step list exists; a reply ending `QUESTION FOR YOU:` is allowed through only when aj is present. The old goal check still runs for sessions with no step list, and only in unattended or bypass.
+
+**Why.** aj said no mode may stop part-way once a goal is set.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: the approval gate before source edits can be passed by a hook when nobody is present
+
+**Context.** Answer 3 kept the approval gate before source edits unchanged in unattended and bypass sessions. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** When nobody is present a hook (not a command I can run) records self-approval, only with a stored `VERDICT: clean` from a house-rules reviewer for the page's hash. Self-approvals are stored apart from aj's, shown first on the QA page, and QA passed and Close approved stay aj's.
+
+**Why.** Otherwise an unattended run stalls at a gate nobody can answer.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: a step check does not warn and let the reply through
+
+**Context.** A roadblock claim is blocked twice, then the reply goes out with a warning line. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** Roadblock claims keep that rule. The step check does not: it blocks until the step is done, stuck or parked. Claude Code's own limit of 8 blocks is raised to 1000 by the overnight launcher.
+
+**Why.** Letting the reply through is how a session ends with work left.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: unattended mode keeps the design loop, and agents cannot write the switch file
+
+**Context.** `unattended on` turned the design loop off along with every other group except autosave. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** It keeps the design loop and the handover hook on (evidence, commit, deviation, QA page, changelog and decision checks), and agent writes to `.claude/house-rules-mode.json` or to `HOUSE_RULES_` keys in `.claude/settings*.json` are refused, so only aj or the launcher turns it on. Bypass mode counts as unattended; auto stays attended.
+
+**Why.** The loop is how decisions reach the QA page, and an agent that could switch itself unattended could approve its own plan.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: credit lines in commits stay relaxed, and pull requests with credit lines are denied
+
+**Context.** A whole-file write, a big-file commit and a credit line were let through with a note when unattended. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** Bypass mode now relaxes the same three guards. A pull request title or body with a Claude credit line is denied in every mode, and the agent removes the lines.
+
+**Why.** The credit lines are fixed at the pull request instead of in the morning.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: the rule files themselves say decide and log, they are no longer only overridden by a note
+
+**Context.** The rule text kept saying 'ask' and 'wait' and a session note overrode it for unattended runs. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** The lines that told the agent to ask, wait or hand over are rewritten in place (`show-dont-tell.md`, `house-rules.md`, `clear-writing.md`, `handover-command.md`, `commit-branches.md`, `coding-philosophy.md`, `builder.md`, the every-prompt reminder). `show-dont-tell.md` may now be 3600 characters, up from 3307.
+
+**Why.** A note cannot reliably beat rule text that says the opposite, and auto mode never got the note.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: a refusal goes to the ledger, not under 'Waiting on you' in the reply
+
+**Context.** A refused guard ask was to be listed under 'Waiting on you' in the reply. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** A refusal, a denied question and the unattended note now say: write it to the ledger with `ledger_note.py decide` (or `park --category ... --tried ...` for a hard stop) and carry on. aj sees it on the QA page.
+
+**Why.** aj wants decisions shown only on the QA page, after the work is done and tested.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: unattended no longer turns off every switch, and a plan-exit prompt is allowed
+
+**Context.** Every switch group except autosave went off, and `noask` denied `AskUserQuestion` and `ExitPlanMode`. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** The loop and the handover hook stay on; pages, issues, builders, writing checks stay off. `ExitPlanMode` is allowed when nobody is present, a permission prompt is denied at once, and the pause-goal tool is denied.
+
+**Why.** The same reason: the loop carries the run to QA, and a plan-exit dialog nobody answers would stall it.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: only aj's own message moves a stage, except a hook-recorded self-approval when nobody is present
+
+**Context.** The design loop's founding rule: approval counts only from aj's own message. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** Unchanged for QA passed, Close approved and every attended mode. When nobody is present the hook may move Design to Plan and Plan to Build on a clean reviewer verdict (see the self-approval reversal).
+
+**Why.** Without it an unattended run cannot get past Plan.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
+
+## 2026-11-25 - Reversed: decisions are not announced until the QA page
+
+**Context.** The 'Nothing fails silently' rule says to say what was decided and what failed. Reversed by the quiet unattended mode build (#634).
+
+**Decision.** Failures are still announced. Decisions are not: they are written to the ledger as they are made and shown first on the QA page, and the final reply says how many were logged.
+
+**Why.** aj asked that decisions arrive only after all the work is done and tested.
+
+**Status.** Standing. Detail: [quiet-unattended-mode.md](../4-systems/quiet-unattended-mode.md).
